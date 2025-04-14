@@ -91,17 +91,17 @@ export default function RegisterPage() {
   };
 
   return (
-    <div className="h-screen flex items-center justify-center bg-gradient-to-br from-red-50 via-white to-red-50 p-4">
+    <div className="h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-white to-blue-50 p-4">
       <div className="w-full max-w-md bg-white rounded-2xl shadow-xl border border-gray-100 p-6">
         <div className="flex flex-col items-center mb-4">
-          <div className="w-16 h-16 rounded-full bg-gradient-to-r from-red-600 to-red-700 text-white flex items-center justify-center mb-3">
+          <div className="w-16 h-16 rounded-full bg-gradient-to-r from-blue-500 to-blue-600 text-white flex items-center justify-center mb-3 transform hover:scale-105 transition-transform duration-200">
             <UserPlus2 size={32} />
           </div>
-          <h1 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-red-600 to-red-700">
-            MTTB Hesap Oluşturma
+          <h1 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-blue-700">
+            BilgeVerse'e Katılın
           </h1>
           <p className="text-sm text-gray-600 mt-1">
-            Talebiniz bir yönetici tarafından incelenecektir
+            Bilgi dolu bir yolculuğa başlamak için hesap oluşturun
           </p>
         </div>
 
@@ -126,7 +126,7 @@ export default function RegisterPage() {
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-3">
+        <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label htmlFor="firstName" className="block text-sm font-medium text-gray-700 mb-1">
@@ -138,7 +138,7 @@ export default function RegisterPage() {
                 name="firstName"
                 value={formData.firstName}
                 onChange={handleChange}
-                className="block w-full px-3 py-2 rounded-lg border border-gray-200 shadow-sm focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all duration-200"
+                className="block w-full px-3 py-2 rounded-lg border border-gray-200 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
                 placeholder="Adınız"
                 disabled={loading || !!success}
               />
@@ -154,7 +154,7 @@ export default function RegisterPage() {
                 name="lastName"
                 value={formData.lastName}
                 onChange={handleChange}
-                className="block w-full px-3 py-2 rounded-lg border border-gray-200 shadow-sm focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all duration-200"
+                className="block w-full px-3 py-2 rounded-lg border border-gray-200 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
                 placeholder="Soyadınız"
                 disabled={loading || !!success}
               />
@@ -171,7 +171,7 @@ export default function RegisterPage() {
               name="password"
               value={formData.password}
               onChange={handleChange}
-              className="block w-full px-3 py-2 rounded-lg border border-gray-200 shadow-sm focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all duration-200"
+              className="block w-full px-3 py-2 rounded-lg border border-gray-200 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
               placeholder="••••••••"
               disabled={loading || !!success}
             />
@@ -187,7 +187,7 @@ export default function RegisterPage() {
               name="confirmPassword"
               value={formData.confirmPassword}
               onChange={handleChange}
-              className="block w-full px-3 py-2 rounded-lg border border-gray-200 shadow-sm focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all duration-200"
+              className="block w-full px-3 py-2 rounded-lg border border-gray-200 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
               placeholder="••••••••"
               disabled={loading || !!success}
             />
@@ -195,14 +195,14 @@ export default function RegisterPage() {
 
           <div>
             <label htmlFor="requestedRole" className="block text-sm font-medium text-gray-700 mb-1">
-              İstenen Rol
+              Kullanıcı Tipi
             </label>
             <select
               id="requestedRole"
               name="requestedRole"
               value={formData.requestedRole}
               onChange={handleChange}
-              className="block w-full px-3 py-2 rounded-lg border border-gray-200 shadow-sm focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all duration-200"
+              className="block w-full px-3 py-2 rounded-lg border border-gray-200 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
               disabled={loading || !!success}
             >
               <option value={UserRole.STUDENT}>Öğrenci</option>
@@ -213,26 +213,26 @@ export default function RegisterPage() {
           <button
             type="submit"
             disabled={loading || !!success}
-            className={`w-full flex items-center justify-center py-2 px-4 rounded-lg text-white text-sm font-semibold
-              bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800
-              focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 
-              transition-all duration-200 shadow-md mt-2
+            className={`w-full flex items-center justify-center py-3 px-4 rounded-lg text-white text-sm font-semibold
+              bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700
+              focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 
+              transition-all duration-200 shadow-md transform hover:translate-y-[-1px]
               ${(loading || success) ? 'opacity-75 cursor-not-allowed' : ''}`}
           >
             {loading ? (
               <>
-                <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <svg className="animate-spin -ml-1 mr-2 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                   <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                   <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                 </svg>
-                Gönderiliyor...
+                Hesap Oluşturuluyor...
               </>
             ) : success ? (
-              'Gönderildi!'
+              'Hesabınız Oluşturuldu!'
             ) : (
               <>
-                Kayıt Talebini Gönder
-                <ArrowRight className="ml-2 h-4 w-4" />
+                Hesap Oluştur
+                <ArrowRight className="ml-2 h-5 w-5" />
               </>
             )}
           </button>
@@ -241,14 +241,14 @@ export default function RegisterPage() {
         <div className="mt-4 text-center text-sm">
           <Link
             href="/login"
-            className="font-semibold text-red-600 hover:text-red-500 transition-colors duration-200"
+            className="font-semibold text-blue-600 hover:text-blue-500 transition-colors duration-200"
           >
             Zaten bir hesabınız var mı? <span className="underline">Giriş yapın</span>
           </Link>
         </div>
 
         <div className="mt-4 text-center text-xs text-gray-500">
-          © {new Date().getFullYear()} Millî Türk Talebe Birliği
+          © {new Date().getFullYear()} BilgeVerse
         </div>
       </div>
     </div>

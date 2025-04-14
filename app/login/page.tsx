@@ -28,61 +28,67 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4">
-      <div className="w-full max-w-md bg-white rounded-xl shadow-lg p-8">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-white to-blue-50 p-4">
+      <div className="w-full max-w-md bg-white rounded-2xl shadow-xl border border-gray-100 p-8">
         <div className="text-center">
-          <div className="mx-auto h-16 w-16 rounded-full bg-primary-600 flex items-center justify-center">
+          <div className="mx-auto h-16 w-16 rounded-full bg-gradient-to-r from-blue-500 to-blue-600 flex items-center justify-center mb-4 transform hover:scale-105 transition-transform duration-200">
             <User2 className="h-8 w-8 text-white" />
           </div>
-          <h1 className="mt-6 text-3xl font-bold text-gray-900">
-            MTTB Sistemine Hoş Geldiniz
+          <h1 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-blue-700">
+            BilgeVerse'e Hoş Geldiniz
           </h1>
           <p className="mt-2 text-sm text-gray-600">
-            Millî Türk Talebe Birliği Öğrenci Takip Sistemi
+            Bilgi ve Deneyimin Buluştuğu Dijital Evren
           </p>
         </div>
 
         <form onSubmit={handleSubmit} className="mt-8 space-y-6">
           <div className="space-y-4">
             <div>
-              <label htmlFor="username" className="label">
+              <label htmlFor="username" className="block text-sm font-medium text-gray-700">
                 Kullanıcı Adı
               </label>
-              <input
-                id="username"
-                type="text"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                className="input"
-                placeholder="Kullanıcı adınızı girin"
-                disabled={loading}
-                required
-              />
+              <div className="mt-1 relative">
+                <input
+                  id="username"
+                  type="text"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  className="block w-full px-4 py-3 rounded-lg border border-gray-200 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                  placeholder="Kullanıcı adınızı girin"
+                  disabled={loading}
+                  required
+                />
+              </div>
             </div>
 
             <div>
-              <label htmlFor="password" className="label">
+              <label htmlFor="password" className="block text-sm font-medium text-gray-700">
                 Şifre
               </label>
-              <input
-                id="password"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="input"
-                placeholder="••••••••"
-                disabled={loading}
-                required
-              />
+              <div className="mt-1 relative">
+                <input
+                  id="password"
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="block w-full px-4 py-3 rounded-lg border border-gray-200 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                  placeholder="••••••••"
+                  disabled={loading}
+                  required
+                />
+              </div>
             </div>
           </div>
 
           <button
             type="submit"
             disabled={loading}
-            className={`btn btn-primary w-full flex items-center justify-center ${
-              loading ? 'opacity-75 cursor-not-allowed' : ''
-            }`}
+            className={`w-full flex items-center justify-center py-3 px-4 rounded-lg text-white text-sm font-semibold
+              bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700
+              focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 
+              transition-all duration-200 shadow-md transform hover:translate-y-[-1px]
+              ${loading ? 'opacity-75 cursor-not-allowed' : ''}`}
           >
             {loading ? (
               <div className="flex items-center">
@@ -95,7 +101,7 @@ export default function LoginPage() {
             ) : (
               <div className="flex items-center">
                 Giriş Yap
-                <ArrowRight className="ml-2 h-4 w-4" />
+                <ArrowRight className="ml-2 h-5 w-5" />
               </div>
             )}
           </button>
@@ -104,12 +110,12 @@ export default function LoginPage() {
         <div className="mt-6 text-center">
           <p className="text-sm text-gray-600">
             Hesabınız yok mu?{' '}
-            <Link href="/register" className="font-medium text-primary-600 hover:text-primary-500">
+            <Link href="/register" className="font-medium text-blue-600 hover:text-blue-500 transition-colors duration-200">
               Hemen kaydolun
             </Link>
           </p>
           <p className="mt-4 text-xs text-gray-500">
-            © {new Date().getFullYear()} Millî Türk Talebe Birliği
+            © {new Date().getFullYear()} BilgeVerse
           </p>
         </div>
       </div>
