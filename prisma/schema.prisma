@@ -1,0 +1,206 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  ADMIN
+  TUTOR
+  STUDENT
+}
+
+enum RequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum TransactionType {
+  AWARD
+  REDEEM
+}
+
+enum EventType {
+  ONLINE
+  IN_PERSON
+}
+
+enum EventStatus {
+  UPCOMING
+  ONGOING
+  COMPLETED
+  CANCELLED
+}
+
+enum EventScope {
+  GLOBAL
+  GROUP
+}
+
+enum ParticipantStatus {
+  REGISTERED
+  ATTENDED
+  ABSENT
+}
+
+model User {
+  id            String    @id @default(cuid())
+  username      String    @unique
+  email         String    @unique
+  password      String
+  role          UserRole  @default(STUDENT)
+  points        Int       @default(0)
+  firstName     String?
+  lastName      String?
+  avatarUrl     String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Relations
+  tutor         User?     @relation("TutorStudents", fields: [tutorId], references: [id])
+  tutorId       String?
+  students      User[]    @relation("TutorStudents")
+  
+  // Store relation
+  storeItems    StoreItem[] @relation("TutorStore")
+  
+  // Classroom relations
+  classroomAsTutor Classroom? @relation("ClassroomTutor")
+  classroom     Classroom?  @relation("ClassroomStudents", fields: [classroomId], references: [id])
+  classroomId   String?
+  
+  // Other relations
+  eventsCreated Event[]   @relation("EventCreator")
+  eventParticipations EventParticipant[] @relation("UserParticipations")
+  itemRequests  ItemRequest[] @relation("StudentRequests")
+  tutorRequests ItemRequest[] @relation("TutorApprovals")
+  pointsReceived PointsTransaction[] @relation("StudentPoints")
+  pointsGiven   PointsTransaction[] @relation("TutorPoints")
+  registrationRequests RegistrationRequest[]
+}
+
+model Classroom {
+  id            String    @id @default(cuid())
+  name          String    @default("Sınıf")
+  description   String?   @default("Öğretmen ve öğrencileri")
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Relations
+  tutor         User      @relation("ClassroomTutor", fields: [tutorId], references: [id])
+  tutorId       String    @unique // One tutor per classroom
+  students      User[]    @relation("ClassroomStudents")
+}
+
+model Event {
+  id            String    @id @default(cuid())
+  title         String
+  description   String
+  startDateTime DateTime
+  endDateTime   DateTime?
+  location      String    @default("Online")
+  type          EventType @default(IN_PERSON)
+  capacity      Int       @default(20)
+  points        Int       @default(0)
+  tags          String[]
+  status        EventStatus @default(UPCOMING)
+  eventScope    EventScope @default(GROUP)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Relations
+  createdBy     User      @relation("EventCreator", fields: [createdById], references: [id])
+  createdById   String
+  participants  EventParticipant[] @relation("EventParticipations")
+}
+
+model EventParticipant {
+  id            String    @id @default(cuid())
+  status        ParticipantStatus @default(REGISTERED)
+  registeredAt  DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Relations
+  event         Event     @relation("EventParticipations", fields: [eventId], references: [id], onDelete: Cascade)
+  eventId       String
+  user          User      @relation("UserParticipations", fields: [userId], references: [id], onDelete: Cascade)
+  userId        String
+
+  // Unique constraint to prevent duplicate participants
+  @@unique([eventId, userId])
+}
+
+model StoreItem {
+  id              String    @id @default(cuid())
+  name            String
+  description     String
+  pointsRequired  Int
+  availableQuantity Int
+  imageUrl        String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  // Relations
+  tutor           User      @relation("TutorStore", fields: [tutorId], references: [id])
+  tutorId         String
+  itemRequests    ItemRequest[]
+
+  @@unique([name, tutorId])  // Ensure item names are unique per tutor's store
+}
+
+model RegistrationRequest {
+  id              String    @id @default(cuid())
+  username        String
+  email           String
+  password        String
+  firstName       String?
+  lastName        String?
+  requestedRole   UserRole  @default(STUDENT)
+  status          RequestStatus @default(PENDING)
+  rejectionReason String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  // Relations
+  processedBy     User?     @relation(fields: [processedById], references: [id])
+  processedById   String?
+}
+
+model ItemRequest {
+  id          String    @id @default(cuid())
+  status      RequestStatus @default(PENDING)
+  pointsSpent Int
+  note        String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  // Relations
+  student     User      @relation("StudentRequests", fields: [studentId], references: [id])
+  studentId   String
+  tutor       User      @relation("TutorApprovals", fields: [tutorId], references: [id])
+  tutorId     String
+  item        StoreItem @relation(fields: [itemId], references: [id])
+  itemId      String
+}
+
+model PointsTransaction {
+  id          String    @id @default(cuid())
+  points      Int
+  type        TransactionType
+  reason      String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  // Relations
+  student     User      @relation("StudentPoints", fields: [studentId], references: [id])
+  studentId   String
+  tutor       User      @relation("TutorPoints", fields: [tutorId], references: [id])
+  tutorId     String
+} 
