@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
-import { getUserFromRequest, isAdmin } from './lib/server-auth';
+import { getUserFromRequest, isAdmin, isTutor } from './lib/server-auth';
 
 export async function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
@@ -24,7 +24,7 @@ export async function middleware(request: NextRequest) {
     console.log('Checking auth for path:', pathname);
     
     const user = await getUserFromRequest(request);
-    console.log('Auth check result:', user ? 'authenticated' : 'not authenticated');
+    console.log('Auth check result:', { authenticated: !!user, role: user?.role });
 
     if (!user) {
       console.log('No user found, redirecting to login');
@@ -47,9 +47,22 @@ export async function middleware(request: NextRequest) {
       return response;
     }
 
+    // Check tutor routes
+    if ((pathname.startsWith('/tutor') || pathname.startsWith('/api/tutor')) && !isTutor(user)) {
+      console.log('Non-tutor user attempting to access tutor route:', pathname);
+      const response = NextResponse.json(
+        { error: 'Unauthorized: Only tutors can access this endpoint' },
+        { status: 403 }
+      );
+      response.headers.set('x-middleware-cache', 'no-cache');
+      response.headers.set('Cache-Control', 'no-store, must-revalidate');
+      return response;
+    }
+
     const response = NextResponse.next();
     // Add user info to headers for debugging
     response.headers.set('x-user-role', user.role);
+    response.headers.set('x-user-id', user.id);
     response.headers.set('x-middleware-cache', 'no-cache');
     response.headers.set('Cache-Control', 'no-store, must-revalidate');
     

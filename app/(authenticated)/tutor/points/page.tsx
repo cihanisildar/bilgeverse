@@ -186,27 +186,49 @@ function PointsManagement() {
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [activeTab, setActiveTab] = useState<string>("award");
 
+  // Debug current auth state
+  useEffect(() => {
+    console.log("Current auth state:", { user });
+  }, [user]);
+
   // Fetch students and recent transactions
   useEffect(() => {
     const fetchData = async () => {
       setIsLoading(true);
       try {
         // Fetch students assigned to this tutor
-        const studentsRes = await fetch("/api/users?role=student");
-        const studentsData = await studentsRes.json();
+        console.log("Fetching students...");
+        const studentsRes = await fetch("/api/tutor/students", {
+          credentials: 'include',
+          headers: {
+            'Content-Type': 'application/json',
+          }
+        });
         
-        if (studentsData.users) {
-          setStudents(studentsData.users.map((user: any) => ({
-            id: user._id || user.id,
+        console.log("Students response status:", studentsRes.status);
+        const studentsData = await studentsRes.json();
+        console.log("Students data:", studentsData);
+        
+        if (studentsData.students) {
+          setStudents(studentsData.students.map((user: any) => ({
+            id: user.id,
             username: user.username,
             firstName: user.firstName,
             lastName: user.lastName,
             points: user.points || 0
           })));
+        } else if (studentsData.error) {
+          console.error("Error from API:", studentsData.error);
+          toast.error(`API Error: ${studentsData.error}`);
         }
         
         // Fetch recent transactions
-        const transactionsRes = await fetch("/api/points");
+        const transactionsRes = await fetch("/api/points", {
+          credentials: 'include',
+          headers: {
+            'Content-Type': 'application/json',
+          }
+        });
         const transactionsData = await transactionsRes.json();
         
         if (transactionsData.transactions) {
@@ -250,29 +272,25 @@ function PointsManagement() {
       return;
     }
     
-    if (!reason.trim()) {
-      toast.error("Lütfen bir sebep belirtin");
-      return;
-    }
-    
     setIsSubmitting(true);
     
     try {
       const response = await fetch("/api/points", {
         method: "POST",
+        credentials: 'include',
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
           studentId: selectedStudent.id,
           points,
-          reason,
-          type: "award",
+          reason: reason.trim() || undefined,
         }),
       });
       
       if (!response.ok) {
-        throw new Error("Puan verme işlemi başarısız oldu");
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Puan verme işlemi başarısız oldu");
       }
       
       toast.success(`${points} puan başarıyla verildi`);
@@ -283,16 +301,28 @@ function PointsManagement() {
       setSelectedStudent(null);
       
       // Refresh data
-      const transactionsRes = await fetch("/api/points");
+      const transactionsRes = await fetch("/api/points", {
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+        }
+      });
       const transactionsData = await transactionsRes.json();
       setRecentTransactions(transactionsData.transactions.slice(0, 10));
       
-      const studentsRes = await fetch("/api/users?role=student");
+      const studentsRes = await fetch("/api/tutor/students", {
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+        }
+      });
       const studentsData = await studentsRes.json();
-      setStudents(studentsData.users);
+      if (studentsData.students) {
+        setStudents(studentsData.students);
+      }
     } catch (error) {
       console.error("Error:", error);
-      toast.error("Bir hata oluştu");
+      toast.error(error instanceof Error ? error.message : "Bir hata oluştu");
     } finally {
       setIsSubmitting(false);
     }
@@ -420,15 +450,14 @@ function PointsManagement() {
                         placeholder="Puanın neden verildiğini açıklayın..."
                         value={reason}
                         onChange={(e) => setReason(e.target.value)}
-                        required
                         className="w-full min-h-[100px]"
                       />
                     </div>
                     
                     <Button
                       type="submit" 
-                      className="w-full bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700"
-                      disabled={isSubmitting || !selectedStudent || points <= 0 || !reason.trim()}
+                      className="w-full bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white"
+                      disabled={isSubmitting || !selectedStudent || points <= 0}
                     >
                       {isSubmitting ? (
                         <>
