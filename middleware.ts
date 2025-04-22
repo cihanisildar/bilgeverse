@@ -66,14 +66,11 @@ export async function middleware(request: NextRequest) {
     response.headers.set('x-middleware-cache', 'no-cache');
     response.headers.set('Cache-Control', 'no-store, must-revalidate');
     
+    console.log('Auth check passed, proceeding with request');
     return response;
   } catch (error) {
     console.error('Middleware error:', error);
-    const redirectUrl = new URL('/login', request.url);
-    const response = NextResponse.redirect(redirectUrl);
-    response.headers.set('x-middleware-cache', 'no-cache');
-    response.headers.set('Cache-Control', 'no-store, must-revalidate');
-    return response;
+    return NextResponse.redirect(new URL('/login', request.url));
   }
 }
 

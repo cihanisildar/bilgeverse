@@ -8,10 +8,10 @@ CREATE TYPE "RequestStatus" AS ENUM ('PENDING', 'APPROVED', 'REJECTED');
 CREATE TYPE "TransactionType" AS ENUM ('AWARD', 'REDEEM');
 
 -- CreateEnum
-CREATE TYPE "EventType" AS ENUM ('ONLINE', 'IN_PERSON');
+CREATE TYPE "EventType" AS ENUM ('CEVRIMICI', 'YUZ_YUZE', 'KARMA');
 
 -- CreateEnum
-CREATE TYPE "EventStatus" AS ENUM ('UPCOMING', 'ONGOING', 'COMPLETED', 'CANCELLED');
+CREATE TYPE "EventStatus" AS ENUM ('YAKINDA', 'DEVAM_EDIYOR', 'TAMAMLANDI', 'IPTAL_EDILDI');
 
 -- CreateEnum
 CREATE TYPE "EventScope" AS ENUM ('GLOBAL', 'GROUP');
@@ -41,11 +41,11 @@ CREATE TABLE "Event" (
     "startDateTime" TIMESTAMP(3) NOT NULL,
     "endDateTime" TIMESTAMP(3),
     "location" TEXT NOT NULL DEFAULT 'Online',
-    "type" "EventType" NOT NULL DEFAULT 'IN_PERSON',
+    "type" "EventType" NOT NULL DEFAULT 'YUZ_YUZE',
     "capacity" INTEGER NOT NULL DEFAULT 20,
     "points" INTEGER NOT NULL DEFAULT 0,
     "tags" TEXT[],
-    "status" "EventStatus" NOT NULL DEFAULT 'UPCOMING',
+    "status" "EventStatus" NOT NULL DEFAULT 'YAKINDA',
     "eventScope" "EventScope" NOT NULL DEFAULT 'GROUP',
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,

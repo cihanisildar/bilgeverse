@@ -17,16 +17,16 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { studentId, points, reason } = body;
 
-    if (!studentId || !points) {
+    if (!studentId || points === undefined || points === null) {
       return NextResponse.json(
         { error: 'Student ID and points are required' },
         { status: 400 }
       );
     }
 
-    if (points <= 0) {
+    if (Math.abs(points) <= 0) {
       return NextResponse.json(
-        { error: 'Points must be greater than 0' },
+        { error: 'Points amount must be greater than 0' },
         { status: 400 }
       );
     }
@@ -50,14 +50,19 @@ export async function POST(request: NextRequest) {
         throw new Error('Unauthorized: Student not assigned to this tutor');
       }
 
+      // Check if decreasing points would result in negative balance
+      if (points < 0 && Math.abs(points) > student.points) {
+        throw new Error('Cannot decrease more points than student has');
+      }
+
       // Create transaction record
       const transaction = await tx.pointsTransaction.create({
         data: {
           studentId,
           tutorId: currentUser.id,
-          points,
+          points: Math.abs(points),
           type: TransactionType.AWARD,
-          reason: reason || 'Points awarded'
+          reason: reason || (points >= 0 ? 'Points awarded' : 'Points deducted')
         }
       });
 
@@ -68,6 +73,10 @@ export async function POST(request: NextRequest) {
           points: {
             increment: points
           }
+        },
+        select: {
+          id: true,
+          points: true
         }
       });
 
@@ -76,14 +85,14 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(
       {
-        message: 'Points awarded successfully',
+        message: points >= 0 ? 'Points awarded successfully' : 'Points deducted successfully',
         transaction: result.transaction,
         newBalance: result.newBalance
       },
       { status: 200 }
     );
   } catch (error: any) {
-    console.error('Award points error:', error);
+    console.error('Points operation error:', error);
     
     if (error.message === 'Student not found') {
       return NextResponse.json(
@@ -98,9 +107,24 @@ export async function POST(request: NextRequest) {
         { status: 403 }
       );
     }
+
+    if (error.message === 'Cannot decrease more points than student has') {
+      return NextResponse.json(
+        { error: error.message },
+        { status: 400 }
+      );
+    }
     
+    // Log the detailed error for debugging
+    console.error('Detailed error:', {
+      name: error.name,
+      message: error.message,
+      stack: error.stack,
+      cause: error.cause
+    });
+
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: 'Internal server error', details: error.message },
       { status: 500 }
     );
   }

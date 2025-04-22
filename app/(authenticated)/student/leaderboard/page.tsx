@@ -16,21 +16,22 @@ import { cn } from "@/lib/utils";
 import { AlertCircle, Award, Medal, Trophy } from "lucide-react";
 import Link from 'next/link';
 import { useEffect, useState } from "react";
+import { LevelBadge } from "@/components/LevelBadge";
 
 interface LeaderboardEntry {
   id: string;
   username: string;
   firstName: string | null;
   lastName: string | null;
-  currentPoints: number;
-  totalEarnedPoints: number;
+  points: number;
+  experience: number;
   rank: number;
 }
 
 interface UserRanking {
   rank: number;
-  currentPoints: number;
-  totalEarnedPoints: number;
+  points: number;
+  experience: number;
 }
 
 function HeaderSkeleton() {
@@ -224,10 +225,7 @@ export default function StudentLeaderboardPage() {
                     </h3>
                     <div className="flex flex-col gap-1">
                       <p className="text-gray-600">
-                        Toplam <span className="font-medium">{userRank.totalEarnedPoints}</span> puan kazandınız
-                      </p>
-                      <p className="text-gray-600">
-                        Mevcut <span className="font-medium">{userRank.currentPoints}</span> puanınız var
+                        Toplam <span className="font-medium">{userRank.experience}</span> tecrübe puanı
                       </p>
                     </div>
                   </div>
@@ -319,24 +317,18 @@ export default function StudentLeaderboardPage() {
                               )}>
                                 {isCurrentUser ? "Siz" : getDisplayName(student)}
                               </span>
+                              <LevelBadge 
+                                points={student.experience} 
+                                showProgress={isCurrentUser}
+                                className="mt-1"
+                              />
                             </div>
                           </div>
                         </td>
                         <td className="px-4 py-3 whitespace-nowrap text-right">
-                          <div className="flex flex-col items-end gap-2">
-                            <div className="flex items-center gap-2">
-                              <span className="text-xs text-gray-500 font-medium">Kazanılan:</span>
-                              <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold bg-gradient-to-r from-green-500 to-emerald-600 text-white shadow-sm">
-                                {student.totalEarnedPoints}
-                              </span>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <span className="text-xs text-gray-500 font-medium">Mevcut:</span>
-                              <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold bg-gradient-to-r from-indigo-500 to-purple-600 text-white shadow-sm">
-                                {student.currentPoints}
-                              </span>
-                            </div>
-                          </div>
+                          <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold bg-gradient-to-r from-green-500 to-emerald-600 text-white shadow-sm">
+                            {student.experience}
+                          </span>
                         </td>
                       </tr>
                     );

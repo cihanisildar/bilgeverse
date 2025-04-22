@@ -31,6 +31,7 @@ type Student = {
   lastName?: string;
   email?: string;
   points: number;
+  experience: number;
   rank?: number;
   totalStudents?: number;
   createdAt?: string;
@@ -222,6 +223,11 @@ export default function StudentDetailPage() {
                 <div className="flex-1 min-w-[120px]">
                   <div className="text-sm text-gray-500 mb-1">Toplam Puan</div>
                   <div className="text-3xl font-bold text-blue-600">{student.points}</div>
+                </div>
+                
+                <div className="flex-1 min-w-[120px]">
+                  <div className="text-sm text-gray-500 mb-1">Deneyim</div>
+                  <div className="text-3xl font-bold text-green-600">{student.experience}</div>
                 </div>
                 
                 <div className="flex-1 min-w-[120px]">

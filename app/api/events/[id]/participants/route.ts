@@ -270,10 +270,35 @@ export async function PATCH(
             username: true,
             firstName: true,
             lastName: true,
+            points: true,
           },
         },
       },
     });
+
+    // If status is changed to ATTENDED, award points to the student
+    if (status === 'ATTENDED') {
+      // Award points to the student
+      await prisma.user.update({
+        where: { id: userId },
+        data: {
+          points: {
+            increment: event.points
+          }
+        }
+      });
+
+      // Create a points transaction record
+      await prisma.pointsTransaction.create({
+        data: {
+          points: event.points,
+          type: 'AWARD',
+          reason: `Points awarded for attending event: ${event.title}`,
+          studentId: userId,
+          tutorId: currentUser.id,
+        }
+      });
+    }
 
     return NextResponse.json({
       participant: {

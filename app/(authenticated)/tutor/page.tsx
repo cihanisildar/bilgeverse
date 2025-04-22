@@ -8,6 +8,8 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import toast from 'react-hot-toast';
 import { AlertCircle, Award, Bell, Clock, Plus, Search, TrendingUp, ArrowRight, Users } from 'lucide-react';
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 
 interface TutorStats {
   totalStudents: number;
@@ -424,6 +426,9 @@ function RecentTransactions() {
   const [transactions, setTransactions] = useState<RecentTransaction[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
+  const [searchTerm, setSearchTerm] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const transactionsPerPage = 5;
 
   useEffect(() => {
     if (isTutor) {
@@ -441,6 +446,22 @@ function RecentTransactions() {
     }
   }, [isTutor]);
 
+  // Filter transactions based on search term
+  const filteredTransactions = transactions.filter((transaction) =>
+    transaction.student.firstName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    transaction.student.username?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    transaction.reason.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  // Calculate pagination
+  const totalPages = Math.ceil(filteredTransactions.length / transactionsPerPage);
+  const indexOfLastTransaction = currentPage * transactionsPerPage;
+  const indexOfFirstTransaction = indexOfLastTransaction - transactionsPerPage;
+  const currentTransactions = filteredTransactions.slice(
+    indexOfFirstTransaction,
+    indexOfLastTransaction
+  );
+
   if (isLoading) {
     return <LoadingTransactions />;
   }
@@ -456,19 +477,36 @@ function RecentTransactions() {
   return (
     <Card className="border-0 shadow-md">
       <CardContent className="p-6">
-          <div className="flex justify-between items-center mb-5">
-            <h2 className="text-xl font-bold text-gray-800">Son İşlemler</h2>
-            <Link
-              href="/tutor/points/history"
-              className="text-sm text-indigo-600 hover:text-indigo-800 flex items-center"
-            >
-              Tümünü Görüntüle <ArrowRight className="ml-1" size={14} />
-            </Link>
-          </div>
+        <div className="flex justify-between items-center mb-5">
+          <h2 className="text-xl font-bold text-gray-800">Son İşlemler</h2>
+          <Link
+            href="/tutor/points/history"
+            className="text-sm text-indigo-600 hover:text-indigo-800 flex items-center"
+          >
+            Tümünü Görüntüle <ArrowRight className="ml-1" size={14} />
+          </Link>
+        </div>
 
-        {transactions.length > 0 ? (
+        {/* Search Bar */}
+        <div className="mb-4">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500" />
+            <Input
+              className="pl-9"
+              placeholder="İşlemlerde ara..."
+              value={searchTerm}
+              onChange={(e) => {
+                setSearchTerm(e.target.value);
+                setCurrentPage(1); // Reset to first page when searching
+              }}
+            />
+          </div>
+        </div>
+
+        {currentTransactions.length > 0 ? (
+          <>
             <div className="space-y-4">
-            {transactions.map((transaction) => (
+              {currentTransactions.map((transaction) => (
                 <div
                   key={transaction.id}
                   className={`rounded-lg p-4 ${
@@ -502,17 +540,49 @@ function RecentTransactions() {
                 </div>
               ))}
             </div>
-          ) : (
-            <div className="bg-gray-50 rounded-lg p-8 text-center">
-              <div className="inline-block p-3 bg-gray-100 rounded-full mb-4">
-                <Award className="text-gray-400" size={24} />
+
+            {/* Pagination Controls */}
+            {totalPages > 1 && (
+              <div className="flex justify-center gap-2 mt-6">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+                  disabled={currentPage === 1}
+                >
+                  Önceki
+                </Button>
+                <span className="flex items-center px-3 py-1 rounded-md bg-gray-100">
+                  {currentPage} / {totalPages}
+                </span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() =>
+                    setCurrentPage((prev) => Math.min(totalPages, prev + 1))
+                  }
+                  disabled={currentPage === totalPages}
+                >
+                  Sonraki
+                </Button>
               </div>
-              <p className="text-gray-600 mb-2">Henüz işlem yok</p>
-              <p className="text-sm text-gray-500">
-                Öğrencilere puan verdiğinizde burada görüntülenecek
-              </p>
+            )}
+          </>
+        ) : (
+          <div className="bg-gray-50 rounded-lg p-8 text-center">
+            <div className="inline-block p-3 bg-gray-100 rounded-full mb-4">
+              <Award className="text-gray-400" size={24} />
             </div>
-          )}
+            <p className="text-gray-600 mb-2">
+              {searchTerm ? "Aramanızla eşleşen işlem bulunamadı" : "Henüz işlem yok"}
+            </p>
+            <p className="text-sm text-gray-500">
+              {searchTerm
+                ? "Farklı bir arama terimi deneyin"
+                : "Öğrencilere puan verdiğinizde burada görüntülenecek"}
+            </p>
+          </div>
+        )}
       </CardContent>
     </Card>
   );

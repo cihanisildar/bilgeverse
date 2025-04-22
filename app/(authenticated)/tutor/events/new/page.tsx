@@ -27,7 +27,7 @@ export default function CreateEventPage() {
     startDate: '',
     startTime: '',
     location: '',
-    type: 'IN_PERSON',
+    type: 'YUZ_YUZE',
     capacity: 20,
     points: 0,
     tags: [] as string[]
@@ -264,16 +264,16 @@ export default function CreateEventPage() {
                       Tür *
                     </label>
                     <Select
-                      value={formData.type}
-                      onValueChange={(value) => handleSelectChange('type', value)}
+                      onValueChange={(value) => handleSelectChange('type', value as "CEVRIMICI" | "YUZ_YUZE" | "KARMA")}
+                      defaultValue={formData.type}
                     >
                       <SelectTrigger>
-                        <SelectValue placeholder="Etkinlik türü" />
+                        <SelectValue placeholder="Etkinlik türünü seçin" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="IN_PERSON">Yüz yüze</SelectItem>
-                        <SelectItem value="ONLINE">Online</SelectItem>
-                        <SelectItem value="HYBRID">Karma</SelectItem>
+                        <SelectItem value="YUZ_YUZE">Yüz yüze</SelectItem>
+                        <SelectItem value="CEVRIMICI">Çevrimiçi</SelectItem>
+                        <SelectItem value="KARMA">Karma</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -361,7 +361,7 @@ export default function CreateEventPage() {
               </Button>
               <Button 
                 type="submit" 
-                className="bg-gradient-to-r from-blue-600 to-indigo-600"
+                className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white hover:bg-blue-700"
                 disabled={isSubmitting}
               >
                 {isSubmitting ? (

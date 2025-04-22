@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { getUserFromRequest, isAuthenticated, isAdmin, isTutor } from '@/lib/server-auth';
-import { EventType, EventStatus, EventScope } from '@prisma/client';
+import { EventStatus, EventScope, EventType } from '@prisma/client';
 
 export async function GET(request: NextRequest) {
   try {
@@ -100,12 +100,12 @@ export async function POST(request: NextRequest) {
         startDateTime: startDateTimeObj,
         endDateTime: startDateTimeObj,
         location: location || 'Online',
-        type: (type?.toUpperCase() as EventType) || EventType.IN_PERSON,
+        type: (type?.toUpperCase() as EventType) || EventType.YUZ_YUZE,
         capacity: capacity || 20,
         points: points || 0,
         tags: tags || [],
         createdById: currentUser.id,
-        status: EventStatus.UPCOMING,
+        status: EventStatus.YAKINDA,
         eventScope
       },
       include: {

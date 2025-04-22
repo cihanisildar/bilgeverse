@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { getUserFromRequest, isAuthenticated, isTutor } from '@/lib/server-auth';
-import { EventScope, EventType } from '@prisma/client';
+import { EventScope, EventType, EventStatus } from '@prisma/client';
 
 export async function POST(request: NextRequest) {
   try {
@@ -45,7 +45,7 @@ export async function POST(request: NextRequest) {
         points: parseInt(String(data.points)) || 0,
         tags: data.tags || [],
         createdById: currentUser.id,
-        status: 'UPCOMING',
+        status: EventStatus.YAKINDA,
         eventScope: EventScope.GROUP
       }
     });

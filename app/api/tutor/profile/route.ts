@@ -49,7 +49,7 @@ export async function GET(request: NextRequest) {
       prisma.event.count({
         where: {
           createdById: currentUser.id,
-          status: EventStatus.COMPLETED
+          status: EventStatus.TAMAMLANDI
         }
       })
     ]);

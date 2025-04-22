@@ -16,7 +16,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
-import { AlertCircle, Award, Clock, Search } from 'lucide-react';
+import { AlertCircle, Award, Clock, Search, ArrowLeft, User, UserCheck, MinusCircle, PlusCircle } from 'lucide-react';
+import { Switch } from '@/components/ui/switch';
 
 // Types
 type Student = {
@@ -25,6 +26,7 @@ type Student = {
   firstName?: string;
   lastName?: string;
   points: number;
+  experience: number;
 };
 
 type Transaction = {
@@ -178,13 +180,16 @@ function PointsManagement() {
   
   const [students, setStudents] = useState<Student[]>([]);
   const [recentTransactions, setRecentTransactions] = useState<Transaction[]>([]);
-  const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
+  const [selectedStudentIds, setSelectedStudentIds] = useState<Set<string>>(new Set());
   const [points, setPoints] = useState<number>(0);
   const [reason, setReason] = useState<string>("");
   const [searchTerm, setSearchTerm] = useState<string>("");
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
-  const [activeTab, setActiveTab] = useState<string>("award");
+  const [isDecreasing, setIsDecreasing] = useState<boolean>(false);
+  const [transactionSearchTerm, setTransactionSearchTerm] = useState<string>("");
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const transactionsPerPage = 5;
 
   // Debug current auth state
   useEffect(() => {
@@ -215,7 +220,8 @@ function PointsManagement() {
             username: user.username,
             firstName: user.firstName,
             lastName: user.lastName,
-            points: user.points || 0
+            points: user.points || 0,
+            experience: user.experience || 0
           })));
         } else if (studentsData.error) {
           console.error("Error from API:", studentsData.error);
@@ -254,78 +260,91 @@ function PointsManagement() {
 
   // Handle student selection
   const handleSelectStudent = (student: Student) => {
-    setSelectedStudent(student);
-    setActiveTab("award");
+    setSelectedStudentIds(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(student.id)) {
+        newSet.delete(student.id);
+      } else {
+        newSet.add(student.id);
+      }
+      return newSet;
+    });
   };
 
-  // Handle award points submission
-  const handleAwardPoints = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (!selectedStudent) {
-      toast.error("Lütfen bir öğrenci seçin");
-      return;
-    }
-    
-    if (points <= 0) {
-      toast.error("Puan 0'dan büyük olmalıdır");
-      return;
-    }
-    
+    if (selectedStudentIds.size === 0) return;
+
     setIsSubmitting(true);
-    
     try {
-      const response = await fetch("/api/points", {
-        method: "POST",
-        credentials: 'include',
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          studentId: selectedStudent.id,
-          points,
-          reason: reason.trim() || undefined,
-        }),
-      });
+      // Process each selected student
+      const updatedStudents = [...students]; // Create a copy of students array
+      const newTransactions: Transaction[] = []; // Collect all new transactions with proper typing
       
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || "Puan verme işlemi başarısız oldu");
+      for (const studentId of selectedStudentIds) {
+        const selectedStudent = students.find(s => s.id === studentId);
+        if (!selectedStudent) continue;
+
+        // Handle points modification
+        const response = await fetch(`/api/points`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            studentId: studentId,
+            points: isDecreasing ? -points : points,
+            reason
+          }),
+        });
+
+        if (!response.ok) {
+          throw new Error(`Failed to modify points for ${selectedStudent.username}`);
+        }
+
+        const data = await response.json();
+        
+        // Update the student in our copy of the array
+        const studentIndex = updatedStudents.findIndex(s => s.id === studentId);
+        if (studentIndex !== -1) {
+          updatedStudents[studentIndex] = {
+            ...updatedStudents[studentIndex],
+            points: data.newBalance
+          };
+        }
+
+        // Add transaction to our collection
+        if (data.transaction) {
+          newTransactions.push(data.transaction);
+        }
       }
-      
-      toast.success(`${points} puan başarıyla verildi`);
-      
+
+      // Update all state at once
+      setStudents(updatedStudents);
+      setRecentTransactions(prev => [...newTransactions, ...prev]);
+
+      const count = selectedStudentIds.size;
+      toast.success(`${isDecreasing ? 'Decreased' : 'Added'} ${points} points ${isDecreasing ? 'from' : 'to'} ${count} student${count > 1 ? 's' : ''}`);
+
       // Reset form
       setPoints(0);
       setReason("");
-      setSelectedStudent(null);
-      
-      // Refresh data
-      const transactionsRes = await fetch("/api/points", {
-        credentials: 'include',
-        headers: {
-          'Content-Type': 'application/json',
-        }
-      });
-      const transactionsData = await transactionsRes.json();
-      setRecentTransactions(transactionsData.transactions.slice(0, 10));
-      
-      const studentsRes = await fetch("/api/tutor/students", {
-        credentials: 'include',
-        headers: {
-          'Content-Type': 'application/json',
-        }
-      });
-      const studentsData = await studentsRes.json();
-      if (studentsData.students) {
-        setStudents(studentsData.students);
-      }
+      setSelectedStudentIds(new Set());
+      setIsDecreasing(false);
     } catch (error) {
-      console.error("Error:", error);
-      toast.error(error instanceof Error ? error.message : "Bir hata oluştu");
+      console.error('Submit error:', error);
+      toast.error('Failed to process request');
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  // Helper function to get display name
+  const getDisplayName = (student: { firstName?: string | null; lastName?: string | null; username: string }) => {
+    if (student.firstName && student.lastName) {
+      return `${student.firstName} ${student.lastName}`;
+    }
+    return student.username;
   };
 
   // Format date
@@ -339,204 +358,231 @@ function PointsManagement() {
     });
   };
 
+  // Filter transactions based on search term
+  const filteredTransactions = recentTransactions.filter(transaction => {
+    const searchLower = transactionSearchTerm.toLowerCase();
+    const studentName = getDisplayName(transaction.student).toLowerCase();
+    const reason = transaction.reason.toLowerCase();
+    return studentName.includes(searchLower) || reason.includes(searchLower);
+  });
+
+  // Calculate pagination
+  const totalPages = Math.ceil(filteredTransactions.length / transactionsPerPage);
+  const startIndex = (currentPage - 1) * transactionsPerPage;
+  const endIndex = startIndex + transactionsPerPage;
+  const currentTransactions = filteredTransactions.slice(startIndex, endIndex);
+
   if (isLoading) {
     return <PointsPageSkeleton />;
   }
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-      {/* Left Column - Student List */}
-      <div className="lg:col-span-1 space-y-4">
+    <div>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Left Column - Student List */}
+        <div className="lg:col-span-1 space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center text-blue-700">
+                <Search className="mr-2" />
+                Öğrenci Ara
+              </CardTitle>
+              <CardDescription>
+                {isDecreasing ? 'Puan düşmek' : 'Puan vermek'} için öğrenci seçin
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div className="relative">
+                  <Input
+                    type="text"
+                    placeholder="İsim veya kullanıcı adı ile ara..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="w-full pl-10"
+                  />
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+                </div>
+                
+                <div className="space-y-2">
+                  {filteredStudents.map((student) => (
+                    <button
+                      key={student.id}
+                      onClick={() => handleSelectStudent(student)}
+                      className={`w-full text-left px-3 py-2 rounded-md transition-all ${
+                        selectedStudentIds.has(student.id)
+                          ? "bg-blue-100 text-blue-800"
+                          : "hover:bg-gray-100"
+                      }`}
+                    >
+                      <div className="flex justify-between items-center">
+                        <div>
+                          <span className="font-medium">
+                            {student.firstName && student.lastName
+                              ? `${student.firstName} ${student.lastName}`
+                              : student.username}
+                          </span>
+                          {(student.firstName || student.lastName) && (
+                            <p className="text-xs text-gray-500">@{student.username}</p>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
+                            {student.points} puan
+                          </Badge>
+                          {selectedStudentIds.has(student.id) && (
+                            <div className="w-4 h-4 rounded-full bg-blue-500 flex items-center justify-center">
+                              <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                              </svg>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Right Column - Points Management Form */}
+        <div className="lg:col-span-2">
+          <Card>
+            <CardHeader>
+              <CardTitle>Puan Yönetimi</CardTitle>
+              <CardDescription>
+                Öğrencilere puan ekleyin veya çıkarın
+              </CardDescription>
+            </CardHeader>
+            
+            <CardContent>
+              <form onSubmit={handleSubmit} className="space-y-4">
+                {/* Value Input */}
+                <div className="space-y-2">
+                  <Label>Puan Miktarı</Label>
+                  <div className="flex items-center space-x-4">
+                    <Input
+                      type="number"
+                      min="0"
+                      value={points}
+                      onChange={(e) => {
+                        const value = parseInt(e.target.value) || 0;
+                        setPoints(value);
+                      }}
+                      className="w-32"
+                    />
+                    <div className="flex items-center space-x-2">
+                      <Switch
+                        checked={isDecreasing}
+                        onCheckedChange={setIsDecreasing}
+                      />
+                      <Label>{isDecreasing ? 'Azalt' : 'Ekle'}</Label>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Reason Input */}
+                <div className="space-y-2">
+                  <Label>Sebep</Label>
+                  <Textarea
+                    value={reason}
+                    onChange={(e) => setReason(e.target.value)}
+                    placeholder="Puan verme/azaltma sebebi..."
+                  />
+                </div>
+
+                <Button
+                  type="submit"
+                  disabled={
+                    selectedStudentIds.size === 0 ||
+                    isSubmitting ||
+                    points <= 0 ||
+                    !reason.trim()
+                  }
+                  className="w-full bg-blue-600 hover:bg-blue-700 text-white"
+                >
+                  {isSubmitting ? (
+                    "İşleniyor..."
+                  ) : (
+                    `${selectedStudentIds.size} öğrenciye ${isDecreasing ? 'Azalt' : 'Ekle'}`
+                  )}
+                </Button>
+              </form>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+
+      {/* Recent Transactions - Now full width */}
+      <div className="mt-6">
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center text-blue-700">
-              <Search className="mr-2" />
-              Öğrenci Ara
+            <CardTitle className="flex items-center gap-2">
+              <Clock className="h-5 w-5" />
+              Son İşlemler
             </CardTitle>
             <CardDescription>
-              Puan vermek için öğrenci seçin
+              Öğrencilere verilen son puanların listesi
             </CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
               <div className="relative">
+                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500" />
                 <Input
-                  type="text"
-                  placeholder="İsim veya kullanıcı adı ile ara..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full pl-10"
+                  className="pl-9"
+                  placeholder="İşlemlerde ara..."
+                  value={transactionSearchTerm}
+                  onChange={(e) => setTransactionSearchTerm(e.target.value)}
                 />
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
               </div>
-              
-              <div className="space-y-2">
-                {filteredStudents.map((student) => (
-                  <button
-                    key={student.id}
-                    onClick={() => handleSelectStudent(student)}
-                    className={`w-full text-left px-3 py-2 rounded-md transition-all ${
-                      selectedStudent?.id === student.id
-                        ? "bg-blue-100 text-blue-800"
-                        : "hover:bg-gray-100"
-                    }`}
-                  >
-                    <div className="flex justify-between items-center">
-                      <div>
-                        <span className="font-medium">
-                          {student.firstName && student.lastName
-                            ? `${student.firstName} ${student.lastName}`
-                            : student.username}
-                        </span>
-                        {(student.firstName || student.lastName) && (
-                          <p className="text-xs text-gray-500">@{student.username}</p>
-                        )}
-                      </div>
-                      <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
-                        {student.points} puan
-                      </Badge>
+              {currentTransactions.map((transaction) => (
+                <div
+                  key={transaction.id}
+                  className="flex items-center justify-between rounded-lg border border-gray-100 p-3 hover:bg-gray-50"
+                >
+                  <div>
+                    <p className="font-medium">{getDisplayName(transaction.student)}</p>
+                    <div className="flex items-center gap-2 text-sm text-gray-600">
+                      <Clock className="h-4 w-4" />
+                      {formatDate(transaction.createdAt)}
                     </div>
-                  </button>
-                ))}
+                    <p className="mt-1 text-sm text-gray-600">{transaction.reason}</p>
+                  </div>
+                  <div className="text-right">
+                    <Badge variant={transaction.points > 0 ? "default" : "destructive"}>
+                      {transaction.points > 0 ? "+" : ""}{transaction.points} puan
+                    </Badge>
+                  </div>
+                </div>
+              ))}
+              {/* Pagination Controls */}
+              <div className="flex justify-center gap-2 mt-4">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                  disabled={currentPage === 1}
+                >
+                  Önceki
+                </Button>
+                <span className="flex items-center px-3 py-1 rounded-md bg-gray-100">
+                  {currentPage} / {totalPages || 1}
+                </span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                  disabled={currentPage === totalPages || totalPages === 0}
+                >
+                  Sonraki
+                </Button>
               </div>
             </div>
           </CardContent>
         </Card>
-      </div>
-
-      {/* Right Column - Award Points Form and History */}
-      <div className="lg:col-span-2">
-        <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsContent value="award">
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-blue-700">
-                  {selectedStudent ? (
-                    <span>
-                      {selectedStudent.firstName && selectedStudent.lastName
-                        ? `${selectedStudent.firstName} ${selectedStudent.lastName}`
-                        : selectedStudent.username} için Puan Ver
-                    </span>
-                  ) : (
-                    "Puan Ver"
-                  )}
-                </CardTitle>
-                <CardDescription>
-                  {selectedStudent 
-                    ? `Öğrencinin mevcut puanı: ${selectedStudent.points}`
-                    : "Puan vermek için önce bir öğrenci seçin"}
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                {selectedStudent ? (
-                  <form onSubmit={handleAwardPoints} className="space-y-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="points">Puan Miktarı</Label>
-                      <Input
-                        id="points"
-                        type="number"
-                        min="1"
-                        value={points}
-                        onChange={(e) => setPoints(parseInt(e.target.value) || 0)}
-                        required
-                        className="w-full"
-                      />
-                    </div>
-                    
-                    <div className="space-y-2">
-                      <Label htmlFor="reason">Sebep</Label>
-                      <Textarea
-                        id="reason"
-                        placeholder="Puanın neden verildiğini açıklayın..."
-                        value={reason}
-                        onChange={(e) => setReason(e.target.value)}
-                        className="w-full min-h-[100px]"
-                      />
-                    </div>
-                    
-                    <Button
-                      type="submit" 
-                      className="w-full bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white"
-                      disabled={isSubmitting || !selectedStudent || points <= 0}
-                    >
-                      {isSubmitting ? (
-                        <>
-                          <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-b-transparent"></div>
-                          İşleniyor...
-                        </>
-                      ) : (
-                        <>
-                          <Award className="mr-2" /> Puan Ver
-                        </>
-                      )}
-                    </Button>
-                  </form>
-                ) : (
-                  <div className="text-center py-8 text-gray-500 bg-gray-50 rounded-lg">
-                    <AlertCircle className="mx-auto mb-2 h-10 w-10 text-gray-400" />
-                    <p>Puan vermek için sol taraftan bir öğrenci seçin</p>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
-          
-          <TabsContent value="history">
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-blue-700">Son Puan İşlemleri</CardTitle>
-                <CardDescription>
-                  Öğrencilerinize verdiğiniz puanların geçmişi
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                {recentTransactions.length > 0 ? (
-                  <div className="space-y-4">
-                    {recentTransactions.map((transaction) => (
-                      <div 
-                        key={transaction.id} 
-                        className="bg-white border border-gray-100 rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow"
-                      >
-                        <div className="flex justify-between items-start">
-                          <div>
-                            <p className="font-medium text-gray-800">
-                              {transaction.student.firstName && transaction.student.lastName
-                                ? `${transaction.student.firstName} ${transaction.student.lastName}`
-                                : transaction.student.username}
-                            </p>
-                            <p className="text-sm text-gray-500">
-                              {formatDate(transaction.createdAt)}
-                            </p>
-                          </div>
-                          <Badge className="bg-green-100 text-green-800 border-green-200">
-                            +{transaction.points} puan
-                          </Badge>
-                        </div>
-                        <p className="mt-2 text-gray-600 text-sm">
-                          {transaction.reason}
-                        </p>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="text-center py-8 text-gray-500 bg-gray-50 rounded-lg">
-                    <Clock className="mx-auto mb-2 h-10 w-10 text-gray-400" />
-                    <p>Henüz hiç puan işlemi yok</p>
-                  </div>
-                )}
-              </CardContent>
-              <CardFooter className="flex justify-end">
-                <Button 
-                  variant="outline" 
-                  className="text-blue-600"
-                  onClick={() => router.push("/tutor/points/history")}
-                >
-                  Tüm İşlemleri Görüntüle
-                </Button>
-              </CardFooter>
-            </Card>
-          </TabsContent>
-        </Tabs>
       </div>
     </div>
   );

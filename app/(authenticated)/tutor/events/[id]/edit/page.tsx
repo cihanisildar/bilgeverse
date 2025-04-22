@@ -47,18 +47,16 @@ import * as z from 'zod';
 
 // Form validation schema
 const eventFormSchema = z.object({
-  title: z.string().min(5, { message: 'Etkinlik başlığı en az 5 karakter olmalıdır.' }),
-  description: z.string().min(20, { message: 'Etkinlik açıklaması en az 20 karakter olmalıdır.' }),
-  startDate: z.string(),
-  startTime: z.string(),
-  endDate: z.string(),
-  endTime: z.string(),
-  location: z.string().min(3, { message: 'Konum alanı doldurulmalıdır.' }),
-  type: z.enum(['ONLINE', 'IN_PERSON']),
-  status: z.enum(['UPCOMING', 'ONGOING', 'COMPLETED', 'CANCELLED']),
-  capacity: z.coerce.number().min(1, { message: 'Kapasite en az 1 olmalıdır.' }),
-  points: z.coerce.number().min(0, { message: 'Puan değeri negatif olamaz.' }),
-  tags: z.string(),
+  title: z.string().min(1, "Başlık zorunludur"),
+  description: z.string().min(1, "Açıklama zorunludur"),
+  startDateTime: z.date(),
+  endDateTime: z.date(),
+  location: z.string().min(1, "Konum zorunludur"),
+  type: z.enum(['CEVRIMICI', 'YUZ_YUZE', 'KARMA']),
+  status: z.enum(['YAKINDA', 'DEVAM_EDIYOR', 'TAMAMLANDI', 'IPTAL_EDILDI']),
+  capacity: z.number().min(1, "Kapasite en az 1 olmalıdır"),
+  points: z.number().min(0, "Puan 0'dan küçük olamaz"),
+  tags: z.array(z.string()),
 });
 
 type EventFormValues = z.infer<typeof eventFormSchema>;
@@ -70,8 +68,8 @@ type Event = {
   startDateTime: string;
   endDateTime: string;
   location: string;
-  type: 'ONLINE' | 'IN_PERSON';
-  status: 'UPCOMING' | 'ONGOING' | 'COMPLETED' | 'CANCELLED';
+  type: 'CEVRIMICI' | 'YUZ_YUZE' | 'KARMA';
+  status: 'YAKINDA' | 'DEVAM_EDIYOR' | 'TAMAMLANDI' | 'IPTAL_EDILDI';
   capacity: number;
   points: number;
   tags: string[];
@@ -97,16 +95,14 @@ export default function EditEvent() {
     defaultValues: {
       title: '',
       description: '',
-      startDate: '',
-      startTime: '',
-      endDate: '',
-      endTime: '',
+      startDateTime: new Date(),
+      endDateTime: new Date(),
       location: '',
-      type: 'ONLINE',
-      status: 'UPCOMING',
+      type: 'CEVRIMICI',
+      status: 'YAKINDA',
       capacity: 1,
       points: 0,
-      tags: '',
+      tags: [],
     },
   });
 
@@ -141,16 +137,14 @@ export default function EditEvent() {
           form.reset({
             title: event.title,
             description: event.description,
-            startDate: formatDate(startDate),
-            startTime: formatTime(startDate),
-            endDate: formatDate(endDate),
-            endTime: formatTime(endDate),
+            startDateTime: startDate,
+            endDateTime: endDate,
             location: event.location,
             type: event.type,
             status: event.status,
             capacity: event.capacity,
             points: event.points,
-            tags: event.tags.join(', '),
+            tags: event.tags,
           });
         }
       } catch (err: any) {
@@ -172,13 +166,6 @@ export default function EditEvent() {
 
   const onSubmit = async (data: EventFormValues) => {
     try {
-      // Combine date and time strings into ISO date strings
-      const startDateTime = new Date(`${data.startDate}T${data.startTime}`).toISOString();
-      const endDateTime = new Date(`${data.endDate}T${data.endTime}`).toISOString();
-      
-      // Convert tags string to array
-      const tags = data.tags.split(',').map(tag => tag.trim()).filter(tag => tag);
-
       const response = await fetch(`/api/events/${eventId}`, {
         method: 'PUT',
         headers: {
@@ -187,14 +174,14 @@ export default function EditEvent() {
         body: JSON.stringify({
           title: data.title,
           description: data.description,
-          startDateTime,
-          endDateTime,
+          startDateTime: data.startDateTime.toISOString(),
+          endDateTime: data.endDateTime.toISOString(),
           location: data.location,
           type: data.type,
           status: data.status,
           capacity: data.capacity,
           points: data.points,
-          tags,
+          tags: data.tags,
         }),
       });
 
@@ -313,12 +300,16 @@ export default function EditEvent() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <FormField
                     control={form.control}
-                    name="startDate"
+                    name="startDateTime"
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Başlangıç Tarihi*</FormLabel>
                         <FormControl>
-                          <Input type="date" {...field} />
+                          <Input 
+                            type="date" 
+                            {...field}
+                            value={field.value.toISOString().split('T')[0]}
+                          />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -327,40 +318,16 @@ export default function EditEvent() {
 
                   <FormField
                     control={form.control}
-                    name="startTime"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Başlangıç Saati*</FormLabel>
-                        <FormControl>
-                          <Input type="time" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="endDate"
+                    name="endDateTime"
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Bitiş Tarihi*</FormLabel>
                         <FormControl>
-                          <Input type="date" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="endTime"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Bitiş Saati*</FormLabel>
-                        <FormControl>
-                          <Input type="time" {...field} />
+                          <Input 
+                            type="date" 
+                            {...field}
+                            value={field.value.toISOString().split('T')[0]}
+                          />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -397,25 +364,36 @@ export default function EditEvent() {
                       <FormLabel>Etkinlik Türü*</FormLabel>
                       <FormControl>
                         <RadioGroup
-                          onValueChange={field.onChange}
-                          defaultValue={field.value}
-                          className="flex gap-4"
+                          onValueChange={(value) =>
+                            form.setValue("type", value as "CEVRIMICI" | "YUZ_YUZE" | "KARMA")
+                          }
+                          defaultValue={form.getValues("type")}
+                          className="grid grid-cols-3 gap-4"
                         >
-                          <div className="flex items-center space-x-2">
-                            <RadioGroupItem value="ONLINE" id="online" />
-                            <Label htmlFor="online">
-                              <div className="flex items-center">
-                                <Video className="h-4 w-4 mr-1" />
-                                <span>Online</span>
+                          <div>
+                            <RadioGroupItem value="CEVRIMICI" id="cevrimici" />
+                            <Label htmlFor="cevrimici">
+                              <div className="flex items-center gap-2">
+                                <Video className="h-4 w-4" />
+                                <span>Çevrimiçi</span>
                               </div>
                             </Label>
                           </div>
-                          <div className="flex items-center space-x-2">
-                            <RadioGroupItem value="IN_PERSON" id="in-person" />
-                            <Label htmlFor="in-person">
-                              <div className="flex items-center">
-                                <User className="h-4 w-4 mr-1" />
+                          <div>
+                            <RadioGroupItem value="YUZ_YUZE" id="yuz_yuze" />
+                            <Label htmlFor="yuz_yuze">
+                              <div className="flex items-center gap-2">
+                                <User className="h-4 w-4" />
                                 <span>Yüz Yüze</span>
+                              </div>
+                            </Label>
+                          </div>
+                          <div>
+                            <RadioGroupItem value="KARMA" id="karma" />
+                            <Label htmlFor="karma">
+                              <div className="flex items-center gap-2">
+                                <Globe className="h-4 w-4" />
+                                <span>Karma</span>
                               </div>
                             </Label>
                           </div>
@@ -432,17 +410,20 @@ export default function EditEvent() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Durum*</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Etkinlik durumunu seçin" />
-                          </SelectTrigger>
-                        </FormControl>
+                      <Select
+                        onValueChange={(value) =>
+                          form.setValue("status", value as "YAKINDA" | "DEVAM_EDIYOR" | "TAMAMLANDI" | "IPTAL_EDILDI")
+                        }
+                        defaultValue={form.getValues("status")}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Durum seçin" />
+                        </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="UPCOMING">Yaklaşan</SelectItem>
-                          <SelectItem value="ONGOING">Devam Eden</SelectItem>
-                          <SelectItem value="COMPLETED">Tamamlandı</SelectItem>
-                          <SelectItem value="CANCELLED">İptal Edildi</SelectItem>
+                          <SelectItem value="YAKINDA">Yakında</SelectItem>
+                          <SelectItem value="DEVAM_EDIYOR">Devam Ediyor</SelectItem>
+                          <SelectItem value="TAMAMLANDI">Tamamlandı</SelectItem>
+                          <SelectItem value="IPTAL_EDILDI">İptal Edildi</SelectItem>
                         </SelectContent>
                       </Select>
                       <FormMessage />

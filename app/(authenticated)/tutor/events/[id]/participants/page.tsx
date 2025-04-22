@@ -1,9 +1,9 @@
-'use client';
+"use client";
 
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
@@ -11,16 +11,16 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger
-} from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
+} from "@/components/ui/select";
 import {
   Check,
   CheckCircle,
@@ -29,11 +29,11 @@ import {
   RefreshCw,
   UserPlus,
   Users,
-  X
-} from 'lucide-react';
-import Link from 'next/link';
-import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+  X,
+} from "lucide-react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 
 import {
   AlertDialog,
@@ -45,16 +45,16 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Checkbox } from '@/components/ui/checkbox';
-import { useToast } from '@/hooks/use-toast';
-import { useParams } from 'next/navigation';
+import { Checkbox } from "@/components/ui/checkbox";
+import { useToast } from "@/hooks/use-toast";
+import { useParams } from "next/navigation";
 
 type Participant = {
   id: string;
   username: string;
   firstName?: string;
   lastName?: string;
-  status: 'REGISTERED' | 'ATTENDED' | 'ABSENT';
+  status: "REGISTERED" | "ATTENDED" | "ABSENT";
   registeredAt: string;
 };
 
@@ -65,7 +65,7 @@ type Event = {
   endDateTime: string;
   capacity: number;
   points: number;
-  status: 'UPCOMING' | 'ONGOING' | 'COMPLETED' | 'CANCELLED';
+  status: "UPCOMING" | "ONGOING" | "COMPLETED" | "CANCELLED";
 };
 
 type Student = {
@@ -81,22 +81,26 @@ export default function EventParticipantsPage() {
   const params = useParams();
   const eventId = params.id as string;
   const { toast } = useToast();
-  
+
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
   const [event, setEvent] = useState<Event | null>(null);
   const [participants, setParticipants] = useState<Participant[]>([]);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState<string>('all');
-  const [selectedParticipant, setSelectedParticipant] = useState<Participant | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [selectedParticipant, setSelectedParticipant] =
+    useState<Participant | null>(null);
   const [changeStatusDialog, setChangeStatusDialog] = useState(false);
-  const [newStatus, setNewStatus] = useState<'REGISTERED' | 'ATTENDED' | 'ABSENT'>('REGISTERED');
+  const [newStatus, setNewStatus] = useState<
+    "REGISTERED" | "ATTENDED" | "ABSENT"
+  >("REGISTERED");
   const [students, setStudents] = useState<Student[]>([]);
   const [selectedStudents, setSelectedStudents] = useState<string[]>([]);
   const [addParticipantsDialog, setAddParticipantsDialog] = useState(false);
-  const [searchStudentQuery, setSearchStudentQuery] = useState('');
+  const [searchStudentQuery, setSearchStudentQuery] = useState("");
   const [isAddingParticipants, setIsAddingParticipants] = useState(false);
-  const [participantToDelete, setParticipantToDelete] = useState<Participant | null>(null);
+  const [participantToDelete, setParticipantToDelete] =
+    useState<Participant | null>(null);
 
   useEffect(() => {
     fetchEventAndParticipants();
@@ -110,19 +114,20 @@ export default function EventParticipantsPage() {
       // Fetch event details
       const eventResponse = await fetch(`/api/events/${eventId}`);
       if (!eventResponse.ok) {
-        throw new Error('Etkinlik bilgileri yüklenirken bir hata oluştu');
+        throw new Error("Etkinlik bilgileri yüklenirken bir hata oluştu");
       }
       const eventData = await eventResponse.json();
       setEvent(eventData.event);
 
       // Fetch participants
-      const participantsResponse = await fetch(`/api/events/${eventId}/participants`);
+      const participantsResponse = await fetch(
+        `/api/events/${eventId}/participants`
+      );
       if (!participantsResponse.ok) {
-        throw new Error('Katılımcı bilgileri yüklenirken bir hata oluştu');
+        throw new Error("Katılımcı bilgileri yüklenirken bir hata oluştu");
       }
       const participantsData = await participantsResponse.json();
       setParticipants(participantsData.participants);
-
     } catch (err: any) {
       setError(err.message);
       toast({
@@ -137,14 +142,14 @@ export default function EventParticipantsPage() {
 
   const fetchStudents = async () => {
     try {
-      const response = await fetch('/api/tutor/students');
+      const response = await fetch("/api/tutor/students");
       if (!response.ok) {
-        throw new Error('Failed to fetch students');
+        throw new Error("Failed to fetch students");
       }
       const data = await response.json();
       setStudents(data.students || []);
     } catch (err: any) {
-      console.error('Error fetching students:', err);
+      console.error("Error fetching students:", err);
       toast({
         variant: "destructive",
         title: "Hata",
@@ -153,44 +158,68 @@ export default function EventParticipantsPage() {
     }
   };
 
-  const updateParticipantStatus = async (participantId: string, newStatus: string) => {
+  const updateParticipantStatus = async (
+    participantId: string,
+    newStatus: string
+  ) => {
     try {
-      const response = await fetch(`/api/events/${eventId}/participants/${participantId}`, {
-        method: 'PATCH',
+      console.log("Updating status:", { participantId, newStatus }); // Debug log
+
+      const response = await fetch(`/api/events/${eventId}/participants`, {
+        method: "PATCH",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
-        body: JSON.stringify({ status: newStatus }),
+        body: JSON.stringify({
+          userId: participantId,
+          status: newStatus,
+        }),
       });
 
       if (!response.ok) {
-        throw new Error('Katılımcı durumu güncellenirken bir hata oluştu');
+        const errorData = await response.json().catch(() => ({}));
+        console.error("Error response:", errorData); // Debug log
+        throw new Error(
+          errorData.message || "Katılımcı durumu güncellenirken bir hata oluştu"
+        );
       }
 
-      // Refresh participants list
-      fetchEventAndParticipants();
+      // Update local state immediately for better UX
+      setParticipants((prev) =>
+        prev.map((p) =>
+          p.id === participantId ? { ...p, status: newStatus as any } : p
+        )
+      );
+
+      // Refresh the full list after update
+      await fetchEventAndParticipants();
 
       toast({
         title: "Başarılı",
         description: "Katılımcı durumu güncellendi",
       });
     } catch (err: any) {
+      console.error("Error updating status:", err); // Debug log
       toast({
         variant: "destructive",
         title: "Hata",
-        description: err.message,
+        description:
+          err.message || "Katılımcı durumu güncellenirken bir hata oluştu",
       });
     }
   };
 
   const removeParticipant = async (participantId: string) => {
     try {
-      const response = await fetch(`/api/events/${eventId}/participants?userId=${participantId}`, {
-        method: 'DELETE',
-      });
+      const response = await fetch(
+        `/api/events/${eventId}/participants?userId=${participantId}`,
+        {
+          method: "DELETE",
+        }
+      );
 
       if (!response.ok) {
-        throw new Error('Katılımcı kaldırılırken bir hata oluştu');
+        throw new Error("Katılımcı kaldırılırken bir hata oluştu");
       }
 
       // Refresh participants list
@@ -210,28 +239,45 @@ export default function EventParticipantsPage() {
   };
 
   const getFilteredParticipants = () => {
-    return participants.filter(participant => {
-      const matchesSearch = 
-        participant.username.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        (participant.firstName && participant.firstName.toLowerCase().includes(searchQuery.toLowerCase())) ||
-        (participant.lastName && participant.lastName.toLowerCase().includes(searchQuery.toLowerCase()));
-      
-      const matchesStatus = statusFilter === 'all' || participant.status === statusFilter;
-      
+    return participants.filter((participant) => {
+      const matchesSearch =
+        participant.username
+          .toLowerCase()
+          .includes(searchQuery.toLowerCase()) ||
+        (participant.firstName &&
+          participant.firstName
+            .toLowerCase()
+            .includes(searchQuery.toLowerCase())) ||
+        (participant.lastName &&
+          participant.lastName
+            .toLowerCase()
+            .includes(searchQuery.toLowerCase()));
+
+      const matchesStatus =
+        statusFilter === "all" || participant.status === statusFilter;
+
       return matchesSearch && matchesStatus;
     });
   };
 
   const getFilteredStudents = () => {
-    return students.filter(student => {
-      const searchMatch = 
-        student.username.toLowerCase().includes(searchStudentQuery.toLowerCase()) ||
-        (student.firstName && student.firstName.toLowerCase().includes(searchStudentQuery.toLowerCase())) ||
-        (student.lastName && student.lastName.toLowerCase().includes(searchStudentQuery.toLowerCase()));
-      
+    return students.filter((student) => {
+      const searchMatch =
+        student.username
+          .toLowerCase()
+          .includes(searchStudentQuery.toLowerCase()) ||
+        (student.firstName &&
+          student.firstName
+            .toLowerCase()
+            .includes(searchStudentQuery.toLowerCase())) ||
+        (student.lastName &&
+          student.lastName
+            .toLowerCase()
+            .includes(searchStudentQuery.toLowerCase()));
+
       // Also filter out students who are already participants
-      const isNotParticipant = !participants.some(p => p.id === student.id);
-      
+      const isNotParticipant = !participants.some((p) => p.id === student.id);
+
       return searchMatch && isNotParticipant;
     });
   };
@@ -262,12 +308,33 @@ export default function EventParticipantsPage() {
 
   const getStatusBadge = (status: string) => {
     switch (status) {
-      case 'REGISTERED':
-        return <Badge variant="outline" className="bg-blue-50 text-blue-600 border-blue-200">Kayıtlı</Badge>;
-      case 'ATTENDED':
-        return <Badge variant="outline" className="bg-green-50 text-green-600 border-green-200">Katıldı</Badge>;
-      case 'ABSENT':
-        return <Badge variant="outline" className="bg-red-50 text-red-600 border-red-200">Katılmadı</Badge>;
+      case "REGISTERED":
+        return (
+          <Badge
+            variant="outline"
+            className="bg-blue-50 text-blue-600 border-blue-200"
+          >
+            Kayıtlı
+          </Badge>
+        );
+      case "ATTENDED":
+        return (
+          <Badge
+            variant="outline"
+            className="bg-green-50 text-green-600 border-green-200"
+          >
+            Katıldı
+          </Badge>
+        );
+      case "ABSENT":
+        return (
+          <Badge
+            variant="outline"
+            className="bg-red-50 text-red-600 border-red-200"
+          >
+            Katılmadı
+          </Badge>
+        );
       default:
         return null;
     }
@@ -275,12 +342,12 @@ export default function EventParticipantsPage() {
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
-    return new Intl.DateTimeFormat('tr-TR', {
-      day: 'numeric',
-      month: 'long',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
+    return new Intl.DateTimeFormat("tr-TR", {
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
     }).format(date);
   };
 
@@ -292,24 +359,24 @@ export default function EventParticipantsPage() {
 
   const saveStatusChange = async () => {
     if (!selectedParticipant) return;
-    
+
     try {
       // In a real app, send to API
       // Here, we'll just update the local state
-      const updatedParticipants = participants.map(p => 
+      const updatedParticipants = participants.map((p) =>
         p.id === selectedParticipant.id ? { ...p, status: newStatus } : p
       );
-      
+
       setParticipants(updatedParticipants);
-      
+
       toast({
         title: "Durum güncellendi",
         description: `${selectedParticipant.username} için katılım durumu güncellendi.`,
       });
-      
+
       setChangeStatusDialog(false);
     } catch (error) {
-      console.error('Error updating participant status:', error);
+      console.error("Error updating participant status:", error);
       toast({
         title: "Hata",
         description: "Katılımcı durumu güncellenirken bir hata oluştu.",
@@ -329,29 +396,29 @@ export default function EventParticipantsPage() {
   const handleAddParticipants = async () => {
     try {
       setIsAddingParticipants(true);
-      
+
       // Add each selected student as a participant
       for (const studentId of selectedStudents) {
         const response = await fetch(`/api/events/${eventId}/participants`, {
-          method: 'POST',
+          method: "POST",
           headers: {
-            'Content-Type': 'application/json',
+            "Content-Type": "application/json",
           },
           body: JSON.stringify({ userId: studentId }),
         });
 
         if (!response.ok) {
-          throw new Error('Failed to add participant');
+          throw new Error("Failed to add participant");
         }
       }
 
       // Refresh participants list
       await fetchEventAndParticipants();
-      
+
       // Reset selection
       setSelectedStudents([]);
       setAddParticipantsDialog(false);
-      
+
       toast({
         title: "Başarılı",
         description: "Seçilen öğrenciler etkinliğe eklendi.",
@@ -414,7 +481,7 @@ export default function EventParticipantsPage() {
             <Button
               variant="outline"
               className="mt-4"
-              onClick={() => router.push('/tutor/events')}
+              onClick={() => router.push("/tutor/events")}
             >
               Etkinliklere Dön
             </Button>
@@ -451,13 +518,14 @@ export default function EventParticipantsPage() {
                   Katılımcılar
                 </span>
               </h1>
-              <p className="text-gray-500 mt-1">
-                {event.title}
-              </p>
+              <p className="text-gray-500 mt-1">{event.title}</p>
             </div>
-            <Dialog open={addParticipantsDialog} onOpenChange={setAddParticipantsDialog}>
+            <Dialog
+              open={addParticipantsDialog}
+              onOpenChange={setAddParticipantsDialog}
+            >
               <DialogTrigger asChild>
-                <Button className="bg-gradient-to-r from-blue-600 to-indigo-600">
+                <Button className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white">
                   <UserPlus className="h-4 w-4 mr-2" />
                   Katılımcı Ekle
                 </Button>
@@ -485,10 +553,10 @@ export default function EventParticipantsPage() {
                         <Checkbox
                           checked={selectedStudents.includes(student.id)}
                           onCheckedChange={(checked) => {
-                            setSelectedStudents(prev =>
+                            setSelectedStudents((prev) =>
                               checked
                                 ? [...prev, student.id]
-                                : prev.filter(id => id !== student.id)
+                                : prev.filter((id) => id !== student.id)
                             );
                           }}
                         />
@@ -498,8 +566,12 @@ export default function EventParticipantsPage() {
                           </AvatarFallback>
                         </Avatar>
                         <div className="flex-1">
-                          <div className="font-medium">{getStudentFullName(student)}</div>
-                          <div className="text-sm text-gray-500">{student.username}</div>
+                          <div className="font-medium">
+                            {getStudentFullName(student)}
+                          </div>
+                          <div className="text-sm text-gray-500">
+                            {student.username}
+                          </div>
                         </div>
                       </div>
                     ))}
@@ -519,8 +591,10 @@ export default function EventParticipantsPage() {
                   </Button>
                   <Button
                     onClick={handleAddParticipants}
-                    disabled={selectedStudents.length === 0 || isAddingParticipants}
-                    className="bg-gradient-to-r from-blue-600 to-indigo-600"
+                    disabled={
+                      selectedStudents.length === 0 || isAddingParticipants
+                    }
+                    className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white"
                   >
                     {isAddingParticipants ? (
                       <>
@@ -549,7 +623,9 @@ export default function EventParticipantsPage() {
             <CardContent>
               <div className="flex items-center">
                 <Users className="h-6 w-6 text-blue-600 mr-2" />
-                <span className="text-2xl font-bold">{participants.length} / {event.capacity}</span>
+                <span className="text-2xl font-bold">
+                  {participants.length} / {event.capacity}
+                </span>
               </div>
             </CardContent>
           </Card>
@@ -563,8 +639,14 @@ export default function EventParticipantsPage() {
                 <CheckCircle className="h-6 w-6 text-green-600 mr-2" />
                 <span className="text-2xl font-bold">
                   {participants.length > 0
-                    ? Math.round((participants.filter(p => p.status === 'ATTENDED').length / participants.length) * 100)
-                    : 0}%
+                    ? Math.round(
+                        (participants.filter((p) => p.status === "ATTENDED")
+                          .length /
+                          participants.length) *
+                          100
+                      )
+                    : 0}
+                  %
                 </span>
               </div>
             </CardContent>
@@ -594,10 +676,7 @@ export default function EventParticipantsPage() {
                 className="w-full"
               />
             </div>
-            <Select
-              value={statusFilter}
-              onValueChange={setStatusFilter}
-            >
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
               <SelectTrigger className="w-[180px]">
                 <SelectValue placeholder="Durum Filtrele" />
               </SelectTrigger>
@@ -624,17 +703,23 @@ export default function EventParticipantsPage() {
                       </AvatarFallback>
                     </Avatar>
                     <div>
-                      <div className="font-medium">{getFullName(participant)}</div>
-                      <div className="text-sm text-gray-500">{participant.username}</div>
+                      <div className="font-medium">
+                        {getFullName(participant)}
+                      </div>
+                      <div className="text-sm text-gray-500">
+                        {participant.username}
+                      </div>
                     </div>
                   </div>
-                  
+
                   <div className="flex items-center space-x-4">
                     {getStatusBadge(participant.status)}
-                    
+
                     <Select
                       value={participant.status}
-                      onValueChange={(value) => updateParticipantStatus(participant.id, value)}
+                      onValueChange={(value) =>
+                        updateParticipantStatus(participant.id, value)
+                      }
                     >
                       <SelectTrigger className="w-[140px]">
                         <SelectValue />
@@ -663,27 +748,125 @@ export default function EventParticipantsPage() {
               <div className="mx-auto rounded-full bg-gray-100 w-12 h-12 flex items-center justify-center mb-4">
                 <Users className="h-6 w-6 text-gray-400" />
               </div>
-              <h3 className="text-lg font-medium text-gray-900 mb-1">Katılımcı Bulunamadı</h3>
-              <p className="text-gray-500 mb-4">Bu etkinlik için henüz katılımcı bulunmuyor.</p>
-              <Link href={`/tutor/events/${eventId}/participants/add`}>
-                <Button variant="outline">
-                  <UserPlus className="h-4 w-4 mr-2" />
-                  Katılımcı Ekle
-                </Button>
-              </Link>
+              <h3 className="text-lg font-medium text-gray-900 mb-1">
+                Katılımcı Bulunamadı
+              </h3>
+              <p className="text-gray-500 mb-4">
+                Bu etkinlik için henüz katılımcı bulunmuyor.
+              </p>
+              <Dialog
+                open={addParticipantsDialog}
+                onOpenChange={setAddParticipantsDialog}
+              >
+                <DialogTrigger asChild>
+                  <Button className="bg-slate-50 text-black hover:bg-slate-200">
+                    <UserPlus className="h-4 w-4 mr-2" />
+                    Katılımcı Ekle
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="sm:max-w-[500px]">
+                  <DialogHeader>
+                    <DialogTitle>Katılımcı Ekle</DialogTitle>
+                    <DialogDescription>
+                      Etkinliğe eklemek istediğiniz öğrencileri seçin.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="space-y-4 py-4">
+                    <Input
+                      placeholder="Öğrenci ara..."
+                      value={searchStudentQuery}
+                      onChange={(e) => setSearchStudentQuery(e.target.value)}
+                      className="mb-4"
+                    />
+                    <div className="max-h-[300px] overflow-y-auto space-y-2">
+                      {getFilteredStudents().map((student) => (
+                        <div
+                          key={student.id}
+                          className="flex items-center space-x-3 p-2 hover:bg-gray-50 rounded-lg"
+                        >
+                          <Checkbox
+                            checked={selectedStudents.includes(student.id)}
+                            onCheckedChange={(checked) => {
+                              setSelectedStudents((prev) =>
+                                checked
+                                  ? [...prev, student.id]
+                                  : prev.filter((id) => id !== student.id)
+                              );
+                            }}
+                          />
+                          <Avatar className="h-8 w-8">
+                            <AvatarFallback className="bg-blue-50 text-blue-600">
+                              {getStudentInitials(student)}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div className="flex-1">
+                            <div className="font-medium">
+                              {getStudentFullName(student)}
+                            </div>
+                            <div className="text-sm text-gray-500">
+                              {student.username}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                      {getFilteredStudents().length === 0 && (
+                        <div className="text-center py-4 text-gray-500">
+                          Eklenebilecek öğrenci bulunamadı.
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  <DialogFooter>
+                    <Button
+                      variant="outline"
+                      onClick={() => setAddParticipantsDialog(false)}
+                    >
+                      İptal
+                    </Button>
+                    <Button
+                      onClick={handleAddParticipants}
+                      disabled={
+                        selectedStudents.length === 0 || isAddingParticipants
+                      }
+                      className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white"
+                    >
+                      {isAddingParticipants ? (
+                        <>
+                          <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                          Ekleniyor...
+                        </>
+                      ) : (
+                        <>
+                          <Check className="h-4 w-4 mr-2" />
+                          {selectedStudents.length} Öğrenci Ekle
+                        </>
+                      )}
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
             </div>
           )}
         </div>
 
         {/* Delete Confirmation Dialog */}
-        <AlertDialog open={!!participantToDelete} onOpenChange={(open: boolean) => !open && setParticipantToDelete(null)}>
+        <AlertDialog
+          open={!!participantToDelete}
+          onOpenChange={(open: boolean) =>
+            !open && setParticipantToDelete(null)
+          }
+        >
           <AlertDialogContent>
             <AlertDialogHeader>
               <AlertDialogTitle>Katılımcıyı Kaldır</AlertDialogTitle>
               <AlertDialogDescription>
                 {participantToDelete && (
                   <>
-                    <span className="font-medium">{getFullName(participantToDelete)}</span> adlı katılımcıyı etkinlikten kaldırmak istediğinize emin misiniz?
+                    <span className="font-medium">
+                      {getFullName(participantToDelete)}
+                    </span>{" "}
+                    adlı katılımcıyı etkinlikten kaldırmak istediğinize emin
+                    misiniz?
                     <br />
                     Bu işlem geri alınamaz.
                   </>
@@ -693,7 +876,7 @@ export default function EventParticipantsPage() {
             <AlertDialogFooter>
               <AlertDialogCancel>İptal</AlertDialogCancel>
               <AlertDialogAction
-                className="bg-red-600 hover:bg-red-700"
+                className="bg-red-600 hover:bg-red-700 text-white"
                 onClick={() => {
                   if (participantToDelete) {
                     removeParticipant(participantToDelete.id);
@@ -707,7 +890,7 @@ export default function EventParticipantsPage() {
           </AlertDialogContent>
         </AlertDialog>
       </div>
-      
+
       <Dialog open={changeStatusDialog} onOpenChange={setChangeStatusDialog}>
         <DialogContent>
           <DialogHeader>
@@ -716,10 +899,13 @@ export default function EventParticipantsPage() {
               {selectedParticipant?.username} için katılım durumunu değiştir.
             </DialogDescription>
           </DialogHeader>
-          
+
           <div className="grid gap-4 py-4">
             <div className="space-y-2">
-              <Select value={newStatus} onValueChange={(value: any) => setNewStatus(value)}>
+              <Select
+                value={newStatus}
+                onValueChange={(value: any) => setNewStatus(value)}
+              >
                 <SelectTrigger>
                   <SelectValue placeholder="Durum seçin" />
                 </SelectTrigger>
@@ -731,17 +917,18 @@ export default function EventParticipantsPage() {
               </Select>
             </div>
           </div>
-          
+
           <DialogFooter>
-            <Button variant="outline" onClick={() => setChangeStatusDialog(false)}>
+            <Button
+              variant="outline"
+              onClick={() => setChangeStatusDialog(false)}
+            >
               İptal
             </Button>
-            <Button onClick={saveStatusChange}>
-              Değişiklikleri Kaydet
-            </Button>
+            <Button onClick={saveStatusChange}>Değişiklikleri Kaydet</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
   );
-} 
+}

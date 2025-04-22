@@ -6,9 +6,12 @@ import bcrypt from 'bcrypt';
 
 export async function GET(request: NextRequest) {
   try {
+    console.log('GET /api/tutor/students - Start');
     const currentUser = await getUserFromRequest(request);
+    console.log('Current user:', { id: currentUser?.id, role: currentUser?.role });
     
     if (!isAuthenticated(currentUser) || !isTutor(currentUser)) {
+      console.log('Unauthorized access attempt');
       return NextResponse.json(
         { error: 'Unauthorized: Only tutors can access this endpoint' },
         { status: 403 }
@@ -16,6 +19,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Get all students assigned to this tutor
+    console.log('Fetching students for tutor:', currentUser.id);
     const students = await prisma.user.findMany({ 
       where: {
         role: UserRole.STUDENT,
@@ -26,9 +30,11 @@ export async function GET(request: NextRequest) {
         username: true,
         firstName: true,
         lastName: true,
-        points: true
+        points: true,
+        experience: true
       }
     });
+    console.log('Found students:', students.length);
 
     return NextResponse.json({ students }, { status: 200 });
   } catch (error: any) {
@@ -92,7 +98,8 @@ export async function POST(request: NextRequest) {
         tutorId: currentUser.id,
         firstName: firstName?.trim(),
         lastName: lastName?.trim(),
-        points: 0
+        points: 0,
+        experience: 0
       },
       select: {
         id: true,
@@ -100,7 +107,8 @@ export async function POST(request: NextRequest) {
         email: true,
         firstName: true,
         lastName: true,
-        points: true
+        points: true,
+        experience: true
       }
     });
 

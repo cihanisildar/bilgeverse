@@ -1,52 +1,44 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
-import Link from "next/link";
-import {
-  Calendar,
-  Clock,
-  MapPin,
-  Tag,
-  Users,
-  Edit,
-  Trash2,
-  Share2,
-  ChevronLeft,
-  Award,
-  CalendarClock,
-  FileText,
-  UserCheck,
-  UserPlus,
-  Globe,
-  Video,
-  User,
-  CheckCircle2,
-  XCircle,
-  AlertCircle,
-} from "lucide-react";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
-  CardFooter,
   CardHeader,
-  CardTitle,
+  CardTitle
 } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogFooter,
   DialogHeader,
-  DialogTitle,
-  DialogTrigger,
+  DialogTitle
 } from "@/components/ui/dialog";
-import { useParams } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
+import {
+  AlertCircle,
+  Award,
+  Calendar,
+  CalendarClock,
+  CheckCircle2,
+  ChevronLeft,
+  Clock,
+  Edit,
+  Globe,
+  MapPin,
+  Share2,
+  Trash2,
+  User,
+  Users,
+  Video,
+  XCircle
+} from "lucide-react";
+import Link from "next/link";
+import { useParams, useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 
 type Event = {
   id: string;
@@ -55,8 +47,8 @@ type Event = {
   startDate: string;
   endDate: string;
   location: string;
-  type: "online" | "in-person" | "hybrid";
-  status: "upcoming" | "ongoing" | "completed" | "cancelled";
+  type: "cevrimici" | "yuz_yuze" | "karma";
+  status: "yakinda" | "devam_ediyor" | "tamamlandi" | "iptal_edildi";
   capacity: number;
   enrolledStudents: number;
   points: number;
@@ -154,13 +146,13 @@ export default function EventDetails() {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case "upcoming":
+      case "yakinda":
         return "bg-blue-100 text-blue-800";
-      case "ongoing":
+      case "devam_ediyor":
         return "bg-green-100 text-green-800";
-      case "completed":
+      case "tamamlandi":
         return "bg-gray-100 text-gray-800";
-      case "cancelled":
+      case "iptal_edildi":
         return "bg-red-100 text-red-800";
       default:
         return "bg-gray-100 text-gray-800";
@@ -169,13 +161,13 @@ export default function EventDetails() {
 
   const getStatusText = (status: string) => {
     switch (status) {
-      case "upcoming":
-        return "Yaklaşan";
-      case "ongoing":
+      case "yakinda":
+        return "Yakında";
+      case "devam_ediyor":
         return "Devam Ediyor";
-      case "completed":
+      case "tamamlandi":
         return "Tamamlandı";
-      case "cancelled":
+      case "iptal_edildi":
         return "İptal Edildi";
       default:
         return status;
@@ -184,11 +176,11 @@ export default function EventDetails() {
 
   const getTypeIcon = (type: string) => {
     switch (type) {
-      case "online":
+      case "cevrimici":
         return <Video className="h-4 w-4 text-blue-600" />;
-      case "in-person":
+      case "yuz_yuze":
         return <User className="h-4 w-4 text-green-600" />;
-      case "hybrid":
+      case "karma":
         return <Globe className="h-4 w-4 text-purple-600" />;
       default:
         return <Calendar className="h-4 w-4 text-gray-600" />;
@@ -197,11 +189,11 @@ export default function EventDetails() {
 
   const getTypeText = (type: string) => {
     switch (type) {
-      case "online":
-        return "Online";
-      case "in-person":
+      case "cevrimici":
+        return "Çevrimiçi";
+      case "yuz_yuze":
         return "Yüz Yüze";
-      case "hybrid":
+      case "karma":
         return "Karma";
       default:
         return type;
@@ -343,12 +335,12 @@ export default function EventDetails() {
               </h1>
               <div className="flex flex-wrap gap-2 items-center">
                 <Badge className="bg-white/20 text-white hover:bg-white/30">
-                  {getTypeText(event.type)}
+                  {getTypeText(event.type.toLowerCase())}
                 </Badge>
                 <Badge
                   className={`${getStatusColor(event.status)} border-none`}
                 >
-                  {getStatusText(event.status)}
+                  {getStatusText(event.status.toLowerCase())}
                 </Badge>
                 {event.tags.map((tag) => (
                   <Badge
@@ -484,7 +476,7 @@ export default function EventDetails() {
                   <div className="flex items-center p-3 bg-gray-50 rounded-lg">
                     {getTypeIcon(event.type)}
                     <span className="text-gray-900 ml-2 font-medium">
-                      {getTypeText(event.type)}
+                      {getTypeText(event.type.toLowerCase())}
                     </span>
                   </div>
                 </div>
@@ -610,8 +602,8 @@ const mockEvents: Event[] = [
     startDate: "2023-06-01T09:00:00Z",
     endDate: "2023-06-01T12:00:00Z",
     location: "Zoom (Online)",
-    type: "online",
-    status: "upcoming",
+    type: "cevrimici",
+    status: "yakinda",
     capacity: 30,
     enrolledStudents: 18,
     points: 50,
@@ -629,8 +621,8 @@ const mockEvents: Event[] = [
     startDate: "2023-05-15T13:00:00Z",
     endDate: "2023-05-15T15:30:00Z",
     location: "Fizik Laboratuvarı",
-    type: "in-person",
-    status: "ongoing",
+    type: "yuz_yuze",
+    status: "devam_ediyor",
     capacity: 20,
     enrolledStudents: 20,
     points: 30,
@@ -648,8 +640,8 @@ const mockEvents: Event[] = [
     startDate: "2023-05-10T16:00:00Z",
     endDate: "2023-05-10T17:30:00Z",
     location: "Dil Laboratuvarı",
-    type: "in-person",
-    status: "completed",
+    type: "yuz_yuze",
+    status: "tamamlandi",
     capacity: 15,
     enrolledStudents: 12,
     points: 20,

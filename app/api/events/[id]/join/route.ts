@@ -39,7 +39,7 @@ export async function POST(
     }
 
     // Check if event is upcoming
-    if (event.status !== 'UPCOMING') {
+    if (event.status !== 'YAKINDA') {
       return NextResponse.json(
         { error: 'You can only join upcoming events' },
         { status: 400 }

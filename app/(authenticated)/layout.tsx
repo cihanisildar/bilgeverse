@@ -6,7 +6,7 @@ import { useAuth } from '../contexts/AuthContext';
 import Link from 'next/link';
 import { Button } from "../../components/ui/button";
 import { Avatar, AvatarFallback } from "../../components/ui/avatar";
-import { LogOut, LayoutDashboard, Users, FileText, Calendar, ShoppingBag, PieChart, GraduationCap, Trophy, ShoppingCart, ClipboardList, School } from "lucide-react";
+import { LogOut, LayoutDashboard, Users, FileText, Calendar, ShoppingBag, PieChart, GraduationCap, Trophy, ShoppingCart, ClipboardList, School, Award, TrendingUp } from "lucide-react";
 import { UserRole } from '@prisma/client';
 
 // Define the type for navigation links
@@ -56,7 +56,8 @@ export default function AuthenticatedLayout({
     { href: '/tutor', label: 'Gösterge Paneli', icon: <LayoutDashboard className="h-5 w-5" /> },
     { href: '/tutor/students', label: 'Öğrencilerim', icon: <GraduationCap className="h-5 w-5" /> },
     { href: '/tutor/events', label: 'Etkinlikler', icon: <Calendar className="h-5 w-5" /> },
-    { href: '/tutor/points', label: 'Puan Ver', icon: <PieChart className="h-5 w-5" /> },
+    { href: '/tutor/points', label: 'Puan Yönetimi', icon: <Award className="h-5 w-5" /> },
+    { href: '/tutor/experience', label: 'Tecrübe Yönetimi', icon: <TrendingUp className="h-5 w-5" /> },
     { href: '/tutor/leaderboard', label: 'Liderlik Tablosu', icon: <Trophy className="h-5 w-5" /> },
     { href: '/tutor/store', label: 'Mağaza', icon: <ShoppingCart className="h-5 w-5" /> },
     { href: '/tutor/requests', label: 'Ürün İstekleri', icon: <ClipboardList className="h-5 w-5" /> },

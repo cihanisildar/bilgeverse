@@ -22,14 +22,15 @@ import {
   Users,
 } from "lucide-react";
 import { useEffect, useState } from "react";
+import { LevelBadge } from "@/components/LevelBadge";
 
 interface Student {
   id: string;
   username: string;
-  firstName: string | null;
-  lastName: string | null;
-  currentPoints: number;
-  totalEarnedPoints: number;
+  firstName?: string;
+  lastName?: string;
+  points: number;
+  experience: number;
   rank: number;
 }
 
@@ -85,8 +86,8 @@ function LeaderboardContent({ leaderboardData, tutorStudents }: LeaderboardConte
     avgRank: myStudentsLeaderboard.length > 0 
       ? Math.round(myStudentsLeaderboard.reduce((sum: number, student: any) => sum + student.rank, 0) / myStudentsLeaderboard.length) 
       : 0,
-    avgPoints: myStudentsLeaderboard.length > 0 
-      ? Math.round(myStudentsLeaderboard.reduce((sum: number, student: any) => sum + student.totalEarnedPoints, 0) / myStudentsLeaderboard.length) 
+    avgExperience: myStudentsLeaderboard.length > 0 
+      ? Math.round(myStudentsLeaderboard.reduce((sum: number, student: any) => sum + student.experience, 0) / myStudentsLeaderboard.length) 
       : 0,
     topRank: myStudentsLeaderboard.length > 0 
       ? Math.min(...myStudentsLeaderboard.map((student: any) => student.rank)) 
@@ -132,8 +133,8 @@ function LeaderboardContent({ leaderboardData, tutorStudents }: LeaderboardConte
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-500">Ortalama Puan</p>
-                <h3 className="text-2xl font-bold text-gray-900 mt-1">{stats.avgPoints}</h3>
+                <p className="text-sm font-medium text-gray-500">Ortalama Deneyim</p>
+                <h3 className="text-2xl font-bold text-gray-900 mt-1">{stats.avgExperience}</h3>
               </div>
               <div className="w-12 h-12 flex items-center justify-center rounded-full bg-purple-100 text-purple-600">
                 <Award className="h-6 w-6" />
@@ -183,7 +184,7 @@ function LeaderboardContent({ leaderboardData, tutorStudents }: LeaderboardConte
                       <tr className="bg-gray-50 border-b border-gray-100">
                         <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-16">Sıra</th>
                         <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Öğrenci</th>
-                        <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider w-24">Puan</th>
+                        <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider w-24">Deneyim</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -227,24 +228,17 @@ function LeaderboardContent({ leaderboardData, tutorStudents }: LeaderboardConte
                                 <span className="text-sm font-medium text-gray-900">
                                   {getDisplayName(student)}
                                 </span>
+                                <LevelBadge 
+                                  points={student.experience}
+                                  className="mt-1"
+                                />
                               </div>
                             </div>
                           </td>
                           <td className="px-4 py-3 whitespace-nowrap text-right">
-                            <div className="flex flex-col items-end gap-2">
-                              <div className="flex items-center gap-2">
-                                <span className="text-xs text-gray-500 font-medium">Kazanılan:</span>
-                                <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold bg-gradient-to-r from-green-500 to-emerald-600 text-white shadow-sm">
-                                  {student.totalEarnedPoints}
-                                </span>
-                              </div>
-                              <div className="flex items-center gap-2">
-                                <span className="text-xs text-gray-500 font-medium">Mevcut:</span>
-                                <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold bg-gradient-to-r from-indigo-500 to-purple-600 text-white shadow-sm">
-                                  {student.currentPoints}
-                                </span>
-                              </div>
-                            </div>
+                            <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold bg-gradient-to-r from-green-500 to-emerald-600 text-white shadow-sm">
+                              {student.experience}
+                            </span>
                           </td>
                         </tr>
                       ))}
@@ -267,7 +261,7 @@ function LeaderboardContent({ leaderboardData, tutorStudents }: LeaderboardConte
                     <tr className="bg-gray-50 border-b border-gray-100">
                       <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-16">Sıra</th>
                       <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Öğrenci</th>
-                      <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider w-24">Puan</th>
+                      <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider w-24">Deneyim</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -313,6 +307,10 @@ function LeaderboardContent({ leaderboardData, tutorStudents }: LeaderboardConte
                               <span className="text-sm font-medium text-gray-900">
                                 {getDisplayName(student)}
                               </span>
+                              <LevelBadge 
+                                points={student.experience}
+                                className="mt-1"
+                              />
                               {tutorStudents.some((tutorStudent: any) => tutorStudent.id === student.id) && (
                                 <span className="text-xs text-indigo-600">Sizin öğrenciniz</span>
                               )}
@@ -320,20 +318,9 @@ function LeaderboardContent({ leaderboardData, tutorStudents }: LeaderboardConte
                           </div>
                         </td>
                         <td className="px-4 py-3 whitespace-nowrap text-right">
-                          <div className="flex flex-col items-end gap-2">
-                            <div className="flex items-center gap-2">
-                              <span className="text-xs text-gray-500 font-medium">Kazanılan:</span>
-                              <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold bg-gradient-to-r from-green-500 to-emerald-600 text-white shadow-sm">
-                                {student.totalEarnedPoints}
-                              </span>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <span className="text-xs text-gray-500 font-medium">Mevcut:</span>
-                              <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold bg-gradient-to-r from-indigo-500 to-purple-600 text-white shadow-sm">
-                                {student.currentPoints}
-                              </span>
-                            </div>
-                          </div>
+                          <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold bg-gradient-to-r from-green-500 to-emerald-600 text-white shadow-sm">
+                            {student.experience}
+                          </span>
                         </td>
                       </tr>
                     ))}
@@ -462,7 +449,7 @@ function LoadingLeaderboard() {
                   Öğretmen
                 </th>
                 <th className="px-6 py-4 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Puan
+                  Deneyim
                 </th>
               </tr>
             </thead>

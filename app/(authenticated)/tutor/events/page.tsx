@@ -1,37 +1,5 @@
 "use client";
 
-import { Suspense } from "react";
-import { useState, useEffect } from "react";
-import Link from "next/link";
-import { 
-  Calendar, 
-  Plus, 
-  Search, 
-  Filter, 
-  ChevronDown, 
-  Tag, 
-  Users, 
-  CheckCircle2, 
-  Clock, 
-  CalendarClock,
-  Info,
-  Share2,
-  AlertCircle,
-  MoreVertical,
-  Edit,
-  Award
-} from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Separator } from "@/components/ui/separator";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { EventListSkeleton } from "@/app/components/ui/EventListSkeleton";
-import { HeaderSkeleton } from "@/app/components/ui/skeleton-shimmer";
-import { Skeleton } from "@/components/ui/skeleton";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -42,7 +10,29 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Input } from "@/components/ui/input";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
+import {
+  AlertCircle,
+  Award,
+  Calendar,
+  ChevronDown,
+  Clock,
+  Filter,
+  Info,
+  MoreVertical,
+  Plus,
+  Search,
+  Users
+} from "lucide-react";
+import Link from "next/link";
+import { useEffect, useState } from "react";
 
 type Event = {
   id: string;
@@ -51,8 +41,8 @@ type Event = {
   startDate: string;  // This will be populated from startDateTime
   endDate: string;    // This will be populated from endDateTime
   location: string;
-  type: 'online' | 'in-person' | 'hybrid';
-  status: 'upcoming' | 'ongoing' | 'completed' | 'cancelled';
+  type: 'CEVRIMICI' | 'YUZ_YUZE' | 'KARMA';
+  status: 'YAKINDA' | 'DEVAM_EDIYOR' | 'TAMAMLANDI' | 'IPTAL_EDILDI';
   capacity: number;
   enrolledStudents: number;
   points: number;
@@ -94,9 +84,9 @@ function EventsFilter({
           <Calendar className="h-5 w-5 text-blue-600" />
           <span className="font-medium text-gray-700">
             {activeFilter === "all" ? "Tüm Etkinlikler" : 
-             activeFilter === "upcoming" ? "Yaklaşan Etkinlikler" :
-             activeFilter === "ongoing" ? "Devam Eden Etkinlikler" :
-             activeFilter === "completed" ? "Tamamlanan Etkinlikler" : "İptal Edilen Etkinlikler"}
+             activeFilter === "YAKINDA" ? "Yaklaşan Etkinlikler" :
+             activeFilter === "DEVAM_EDIYOR" ? "Devam Eden Etkinlikler" :
+             activeFilter === "TAMAMLANDI" ? "Tamamlanan Etkinlikler" : "İptal Edilen Etkinlikler"}
           </span>
         </div>
         
@@ -112,16 +102,16 @@ function EventsFilter({
             <DropdownMenuItem onClick={() => setActiveFilter("all")}>
               Tümü
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => setActiveFilter("upcoming")}>
+            <DropdownMenuItem onClick={() => setActiveFilter("YAKINDA")}>
               Yaklaşan Etkinlikler
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => setActiveFilter("ongoing")}>
+            <DropdownMenuItem onClick={() => setActiveFilter("DEVAM_EDIYOR")}>
               Devam Eden Etkinlikler
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => setActiveFilter("completed")}>
+            <DropdownMenuItem onClick={() => setActiveFilter("TAMAMLANDI")}>
               Tamamlanan Etkinlikler
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => setActiveFilter("cancelled")}>
+            <DropdownMenuItem onClick={() => setActiveFilter("IPTAL_EDILDI")}>
               İptal Edilen Etkinlikler
             </DropdownMenuItem>
           </DropdownMenuContent>
@@ -315,13 +305,13 @@ function EventsList() {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'upcoming':
+      case 'YAKINDA':
         return 'secondary';
-      case 'ongoing':
+      case 'DEVAM_EDIYOR':
         return 'default';
-      case 'completed':
+      case 'TAMAMLANDI':
         return 'outline';
-      case 'cancelled':
+      case 'IPTAL_EDILDI':
         return 'destructive';
       default:
         return 'secondary';
@@ -330,13 +320,13 @@ function EventsList() {
 
   const getStatusText = (status: string) => {
     switch (status) {
-      case 'upcoming':
+      case 'YAKINDA':
         return 'Yaklaşan';
-      case 'ongoing':
+      case 'DEVAM_EDIYOR':
         return 'Devam Ediyor';
-      case 'completed':
+      case 'TAMAMLANDI':
         return 'Tamamlandı';
-      case 'cancelled':
+      case 'IPTAL_EDILDI':
         return 'İptal Edildi';
       default:
         return status;
@@ -370,9 +360,9 @@ function EventsList() {
           <Tabs defaultValue={activeFilter} onValueChange={setActiveFilter}>
             <TabsList>
               <TabsTrigger value="all">All</TabsTrigger>
-              <TabsTrigger value="upcoming">Upcoming</TabsTrigger>
-              <TabsTrigger value="ongoing">Ongoing</TabsTrigger>
-              <TabsTrigger value="completed">Completed</TabsTrigger>
+              <TabsTrigger value="YAKINDA">Yaklaşan</TabsTrigger>
+              <TabsTrigger value="DEVAM_EDIYOR">Devam Eden</TabsTrigger>
+              <TabsTrigger value="TAMAMLANDI">Tamamlanan</TabsTrigger>
             </TabsList>
           </Tabs>
         </div>
@@ -560,13 +550,13 @@ export default function TutorEventsPage() {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'upcoming':
+      case 'YAKINDA':
         return 'secondary';
-      case 'ongoing':
+      case 'DEVAM_EDIYOR':
         return 'default';
-      case 'completed':
+      case 'TAMAMLANDI':
         return 'outline';
-      case 'cancelled':
+      case 'IPTAL_EDILDI':
         return 'destructive';
       default:
         return 'secondary';
@@ -575,13 +565,13 @@ export default function TutorEventsPage() {
 
   const getStatusText = (status: string) => {
     switch (status) {
-      case 'upcoming':
+      case 'YAKINDA':
         return 'Yaklaşan';
-      case 'ongoing':
+      case 'DEVAM_EDIYOR':
         return 'Devam Ediyor';
-      case 'completed':
+      case 'TAMAMLANDI':
         return 'Tamamlandı';
-      case 'cancelled':
+      case 'IPTAL_EDILDI':
         return 'İptal Edildi';
       default:
         return status;
@@ -655,9 +645,9 @@ export default function TutorEventsPage() {
               <Tabs defaultValue={activeFilter} onValueChange={setActiveFilter}>
                 <TabsList>
                   <TabsTrigger value="all">Tümü</TabsTrigger>
-                  <TabsTrigger value="upcoming">Yaklaşan</TabsTrigger>
-                  <TabsTrigger value="ongoing">Devam Eden</TabsTrigger>
-                  <TabsTrigger value="completed">Tamamlanan</TabsTrigger>
+                  <TabsTrigger value="YAKINDA">Yaklaşan</TabsTrigger>
+                  <TabsTrigger value="DEVAM_EDIYOR">Devam Eden</TabsTrigger>
+                  <TabsTrigger value="TAMAMLANDI">Tamamlanan</TabsTrigger>
                 </TabsList>
               </Tabs>
             </div>

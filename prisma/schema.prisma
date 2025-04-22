@@ -28,15 +28,16 @@ enum TransactionType {
 }
 
 enum EventType {
-  ONLINE
-  IN_PERSON
+  CEVRIMICI
+  YUZ_YUZE
+  KARMA
 }
 
 enum EventStatus {
-  UPCOMING
-  ONGOING
-  COMPLETED
-  CANCELLED
+  YAKINDA
+  DEVAM_EDIYOR
+  TAMAMLANDI
+  IPTAL_EDILDI
 }
 
 enum EventScope {
@@ -51,12 +52,13 @@ enum ParticipantStatus {
 }
 
 model User {
-  id            String    @id @default(cuid())
+  id            String    @id @default(uuid())
   username      String    @unique
   email         String    @unique
   password      String
   role          UserRole  @default(STUDENT)
   points        Int       @default(0)
+  experience    Int       @default(0)
   firstName     String?
   lastName      String?
   avatarUrl     String?
@@ -84,10 +86,14 @@ model User {
   pointsReceived PointsTransaction[] @relation("StudentPoints")
   pointsGiven   PointsTransaction[] @relation("TutorPoints")
   registrationRequests RegistrationRequest[]
+
+  // Experience relations
+  experienceReceived ExperienceTransaction[] @relation("StudentExperience")
+  experienceGiven ExperienceTransaction[] @relation("TutorExperience")
 }
 
 model Classroom {
-  id            String    @id @default(cuid())
+  id            String    @id @default(uuid())
   name          String    @default("Sınıf")
   description   String?   @default("Öğretmen ve öğrencileri")
   createdAt     DateTime  @default(now())
@@ -100,17 +106,17 @@ model Classroom {
 }
 
 model Event {
-  id            String    @id @default(cuid())
+  id            String    @id @default(uuid())
   title         String
   description   String
   startDateTime DateTime
   endDateTime   DateTime?
   location      String    @default("Online")
-  type          EventType @default(IN_PERSON)
+  type          EventType @default(YUZ_YUZE)
   capacity      Int       @default(20)
   points        Int       @default(0)
   tags          String[]
-  status        EventStatus @default(UPCOMING)
+  status        EventStatus @default(YAKINDA)
   eventScope    EventScope @default(GROUP)
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
@@ -122,7 +128,7 @@ model Event {
 }
 
 model EventParticipant {
-  id            String    @id @default(cuid())
+  id            String    @id @default(uuid())
   status        ParticipantStatus @default(REGISTERED)
   registeredAt  DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
@@ -138,7 +144,7 @@ model EventParticipant {
 }
 
 model StoreItem {
-  id              String    @id @default(cuid())
+  id              String    @id @default(uuid())
   name            String
   description     String
   pointsRequired  Int
@@ -156,7 +162,7 @@ model StoreItem {
 }
 
 model RegistrationRequest {
-  id              String    @id @default(cuid())
+  id              String    @id @default(uuid())
   username        String
   email           String
   password        String
@@ -174,7 +180,7 @@ model RegistrationRequest {
 }
 
 model ItemRequest {
-  id          String    @id @default(cuid())
+  id          String    @id @default(uuid())
   status      RequestStatus @default(PENDING)
   pointsSpent Int
   note        String?
@@ -191,7 +197,7 @@ model ItemRequest {
 }
 
 model PointsTransaction {
-  id          String    @id @default(cuid())
+  id          String    @id @default(uuid())
   points      Int
   type        TransactionType
   reason      String?
@@ -202,5 +208,18 @@ model PointsTransaction {
   student     User      @relation("StudentPoints", fields: [studentId], references: [id])
   studentId   String
   tutor       User      @relation("TutorPoints", fields: [tutorId], references: [id])
+  tutorId     String
+}
+
+model ExperienceTransaction {
+  id          String    @id @default(uuid())
+  amount      Int
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  // Relations
+  student     User      @relation("StudentExperience", fields: [studentId], references: [id])
+  studentId   String
+  tutor       User      @relation("TutorExperience", fields: [tutorId], references: [id])
   tutorId     String
 } 

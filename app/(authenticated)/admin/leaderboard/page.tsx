@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from '@/components/ui/select';
 import { HeaderSkeleton, StatsCardSkeleton, LeaderboardEntrySkeleton } from '@/app/components/ui/skeleton-shimmer';
+import { LevelBadge } from "@/components/LevelBadge";
 
 interface LeaderboardEntry {
   rank: number;
@@ -578,6 +579,10 @@ export default function AdminLeaderboardPage() {
                               <span className="text-sm font-medium text-gray-900">
                                 {getDisplayName(entry)}
                               </span>
+                              <LevelBadge 
+                                points={entry.totalEarnedPoints}
+                                className="mt-1"
+                              />
                               <span className="text-xs text-gray-500 md:hidden">
                                 {entry.tutor && `Öğretmen: ${entry.tutor.firstName || entry.tutor.username}`}
                               </span>

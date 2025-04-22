@@ -153,7 +153,7 @@ export async function PUT(
       description: description.trim(),
       startDateTime: new Date(startDateTime),
       location: location?.trim() || 'Online',
-      type: (type as EventType) || EventType.IN_PERSON,
+      type: (type as EventType) || EventType.YUZ_YUZE,
       capacity: Number(capacity) || 20,
       points: Number(points) || 0,
       tags: Array.isArray(tags) ? tags : [],

@@ -9,10 +9,11 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { Switch } from '@/components/ui/switch';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
-import { ArrowLeft, Award, Search, User, UserCheck } from 'lucide-react';
+import { ArrowLeft, Award, Search, User, UserCheck, MinusCircle } from 'lucide-react';
 
 // Types
 type Student = {
@@ -33,46 +34,110 @@ const AWARD_REASON_PRESETS = [
   { label: 'Ekstra Çalışma', description: 'Ders dışı ekstra çalışma ve araştırma için' },
 ];
 
+// Decrease reasons presets
+const DECREASE_REASON_PRESETS = [
+  { label: 'Derse Katılmama', description: 'Derslere düzenli katılım göstermediği için' },
+  { label: 'Ödev Eksikliği', description: 'Ödevlerini zamanında tamamlamadığı için' },
+  { label: 'Kural İhlali', description: 'Belirlenen kuralları ihlal ettiği için' },
+  { label: 'Performans Düşüklüğü', description: 'Beklenen performansın altında kaldığı için' },
+  { label: 'Devamsızlık', description: 'Uzun süreli devamsızlık yaptığı için' },
+  { label: 'Uygunsuz Davranış', description: 'Uygunsuz davranışlar sergilediği için' },
+];
+
+// Add new loading state types
+type LoadingStates = {
+  students: boolean;
+  submission: boolean;
+  pointsUpdate: boolean;
+};
+
+// Add new types for API response
+type ApiResponse = {
+  error?: string;
+  details?: string;
+  newBalance?: number;
+};
+
+// Add retry configuration
+const RETRY_CONFIG = {
+  maxRetries: 3,
+  baseDelay: 1000, // 1 second
+};
+
+// Add utility function for exponential backoff
+const wait = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
 export default function AwardPointsPage() {
   const { user } = useAuth();
   const router = useRouter();
+  const searchParams = new URLSearchParams(window.location.search);
+  const studentIdFromUrl = searchParams.get('studentId');
   
   const [students, setStudents] = useState<Student[]>([]);
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
-  const [points, setPoints] = useState<number>(10); // Default to 10 points
+  const [points, setPoints] = useState<number>(10);
   const [reason, setReason] = useState<string>('');
   const [searchTerm, setSearchTerm] = useState<string>('');
-  const [isLoading, setIsLoading] = useState<boolean>(false);
-  const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
+  const [loadingStates, setLoadingStates] = useState<LoadingStates>({
+    students: true,
+    submission: false,
+    pointsUpdate: false
+  });
   const [success, setSuccess] = useState<boolean>(false);
+  const [isDecreasing, setIsDecreasing] = useState<boolean>(false);
+  const [error, setError] = useState<string | null>(null);
   
-  // Fetch students
+  // Add retry count state
+  const [retryCount, setRetryCount] = useState(0);
+  
+  // Fetch students and handle studentId from URL
   useEffect(() => {
     const fetchStudents = async () => {
-      setIsLoading(true);
+      setLoadingStates(prev => ({ ...prev, students: true }));
+      setError(null);
+      
       try {
-        const response = await fetch('/api/users?role=student');
+        const response = await fetch('/api/tutor/students', {
+          credentials: 'include',
+          headers: {
+            'Cache-Control': 'no-cache',
+          },
+        });
+        
+        if (!response.ok) {
+          throw new Error('Öğrenci listesi alınamadı');
+        }
+        
         const data = await response.json();
         
-        if (data.users) {
-          setStudents(data.users.map((user: any) => ({
-            id: user._id || user.id,
+        if (data.students) {
+          const fetchedStudents = data.students.map((user: any) => ({
+            id: user.id,
             username: user.username,
             firstName: user.firstName,
             lastName: user.lastName,
             points: user.points || 0
-          })));
+          }));
+          setStudents(fetchedStudents);
+          
+          if (studentIdFromUrl) {
+            const studentFromUrl = fetchedStudents.find((s: Student) => s.id === studentIdFromUrl);
+            if (studentFromUrl) {
+              setSelectedStudent(studentFromUrl);
+            }
+          }
         }
-      } catch (error) {
+      } catch (error: any) {
         console.error('Error fetching students:', error);
-        toast.error('Öğrenciler yüklenirken bir hata oluştu.');
+        setError(error.message || 'Öğrenciler yüklenirken bir hata oluştu');
+        toast.error('Öğrenciler yüklenirken bir hata oluştu');
       } finally {
-        setIsLoading(false);
+        setLoadingStates(prev => ({ ...prev, students: false }));
       }
     };
     
     fetchStudents();
-  }, []);
+  }, [studentIdFromUrl]);
   
   // Filter students based on search term
   const filteredStudents = students.filter(student => 
@@ -86,70 +151,135 @@ export default function AwardPointsPage() {
     setReason(preset.description);
   };
   
-  // Handle award points submission
+  // Modified handleAwardPoints with retry logic
   const handleAwardPoints = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError(null);
+    setRetryCount(0);
     
     if (!selectedStudent) {
-      toast.error('Lütfen bir öğrenci seçin');
+      setError('Lütfen bir öğrenci seçin');
       return;
     }
     
     if (points <= 0) {
-      toast.error('Puan 0\'dan büyük olmalıdır');
+      setError('Puan miktarı 0\'dan büyük olmalıdır');
+      return;
+    }
+
+    if (isDecreasing && points > selectedStudent.points) {
+      setError('Düşürülecek puan miktarı mevcut puandan fazla olamaz');
       return;
     }
     
     if (!reason.trim()) {
-      toast.error('Lütfen bir sebep belirtin');
+      setError('Lütfen bir sebep belirtin');
       return;
     }
+
+    const finalPoints = isDecreasing ? -Math.abs(points) : Math.abs(points);
     
-    setIsSubmitting(true);
+    const attemptUpdate = async (attempt: number): Promise<ApiResponse> => {
+      try {
+        const response = await fetch('/api/points', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Cache-Control': 'no-cache',
+          },
+          credentials: 'include',
+          body: JSON.stringify({
+            studentId: selectedStudent.id,
+            points: finalPoints,
+            reason,
+            retryAttempt: attempt, // Pass retry attempt to backend
+          }),
+        });
+        
+        const data: ApiResponse = await response.json();
+        
+        if (!response.ok) {
+          // Check if it's a transaction timeout error
+          if (data.details?.includes('Transaction already closed') || 
+              data.details?.includes('transaction timeout')) {
+            throw new Error('TRANSACTION_TIMEOUT');
+          }
+          throw new Error(data.error || 'Puan işlemi başarısız oldu');
+        }
+        
+        return data;
+      } catch (error: any) {
+        if (error.message === 'TRANSACTION_TIMEOUT' && attempt < RETRY_CONFIG.maxRetries) {
+          // If it's a timeout and we haven't exceeded max retries, throw to trigger retry
+          throw error;
+        }
+        throw new Error(error.message || 'Puan işlemi sırasında bir hata oluştu');
+      }
+    };
+
+    setLoadingStates(prev => ({ ...prev, submission: true }));
     
     try {
-      const response = await fetch('/api/points', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          studentId: selectedStudent.id,
-          points,
-          reason,
-        }),
-      });
+      let result: ApiResponse | null = null;
       
-      const data = await response.json();
-      
-      if (!response.ok) {
-        throw new Error(data.error || 'Puan verme işlemi başarısız oldu');
+      for (let attempt = 0; attempt < RETRY_CONFIG.maxRetries; attempt++) {
+        try {
+          if (attempt > 0) {
+            // Wait with exponential backoff before retrying
+            const delay = RETRY_CONFIG.baseDelay * Math.pow(2, attempt - 1);
+            await wait(delay);
+            setRetryCount(attempt);
+          }
+          
+          result = await attemptUpdate(attempt);
+          break; // If successful, exit retry loop
+        } catch (error: any) {
+          if (error.message === 'TRANSACTION_TIMEOUT' && attempt < RETRY_CONFIG.maxRetries - 1) {
+            continue; // Try again if it's a timeout and we haven't exceeded max retries
+          }
+          throw error; // Otherwise, propagate the error
+        }
+      }
+
+      if (!result) {
+        throw new Error('İşlem zaman aşımına uğradı. Lütfen tekrar deneyin.');
       }
       
-      // Update the student's points in the local state
+      // Update student points with loading state
+      setLoadingStates(prev => ({ ...prev, pointsUpdate: true }));
       setStudents(prev => 
-        prev.map(s => 
+        prev.map((s: Student) => 
           s.id === selectedStudent.id 
-            ? { ...s, points: data.newBalance } 
+            ? { ...s, points: result?.newBalance || s.points } 
             : s
         )
       );
+      setLoadingStates(prev => ({ ...prev, pointsUpdate: false }));
       
       setSuccess(true);
-      toast.success(`${selectedStudent.username} kullanıcısına ${points} puan verildi`);
+      toast.success(`${selectedStudent.username} kullanıcısının ${
+        isDecreasing ? 'puanından ' + points + ' düşürüldü' : 'puanına ' + points + ' eklendi'
+      }`);
       
-      // Reset form
+      // Reset form with delay
       setTimeout(() => {
         setSelectedStudent(null);
         setPoints(10);
         setReason('');
         setSuccess(false);
+        setIsDecreasing(false);
+        setRetryCount(0);
       }, 3000);
     } catch (error: any) {
-      console.error('Error awarding points:', error);
+      console.error('Error processing points:', error);
+      setError(
+        error.message === 'TRANSACTION_TIMEOUT'
+          ? 'İşlem zaman aşımına uğradı. Lütfen tekrar deneyin.'
+          : error.message || 'Puan işlemi sırasında bir hata oluştu'
+      );
       toast.error(error.message || 'Bir hata oluştu');
     } finally {
-      setIsSubmitting(false);
+      setLoadingStates(prev => ({ ...prev, submission: false }));
     }
   };
   
@@ -163,33 +293,125 @@ export default function AwardPointsPage() {
   
   return (
     <div className="max-w-7xl mx-auto px-4 py-6 space-y-8">
-      {/* Header */}
-      <div className="flex items-center mb-6">
-        <Button 
-          variant="ghost" 
-          className="mr-2" 
-          onClick={() => router.push('/tutor/points')}
-        >
-          <ArrowLeft className="mr-1" />
-        </Button>
-        <h1 className="text-3xl font-bold text-gray-800">
-          <span className="bg-gradient-to-r from-blue-600 to-green-600 bg-clip-text text-transparent">
-            Puan Ver
-          </span>
-        </h1>
+      {/* Enhanced Header with Mode Selection */}
+      <div className="flex items-center justify-between mb-6 bg-white p-4 rounded-lg shadow-sm">
+        <div className="flex items-center">
+          <Button 
+            variant="ghost" 
+            className="mr-2" 
+            onClick={() => router.push('/tutor/points')}
+          >
+            <ArrowLeft className="mr-1" />
+            Geri
+          </Button>
+          <h1 className="text-3xl font-bold text-gray-800">
+            Puan Yönetimi
+          </h1>
+        </div>
+        
+        <div className="flex items-center space-x-6 bg-gray-50 p-3 rounded-lg">
+          <div className="flex items-center space-x-2">
+            <Award className={`w-5 h-5 ${!isDecreasing ? 'text-green-600' : 'text-gray-400'}`} />
+            <Label 
+              htmlFor="mode-switch" 
+              className={`font-medium cursor-pointer ${
+                !isDecreasing ? 'text-green-600' : 'text-gray-400'
+              }`}
+            >
+              Puan Ver
+            </Label>
+          </div>
+          <Switch
+            id="mode-switch"
+            checked={isDecreasing}
+            onCheckedChange={setIsDecreasing}
+            className={`${
+              isDecreasing 
+                ? 'bg-red-600 hover:bg-red-700' 
+                : 'bg-green-600 hover:bg-green-700'
+            } transition-colors duration-200`}
+          />
+          <div className="flex items-center space-x-2">
+            <MinusCircle className={`w-5 h-5 ${isDecreasing ? 'text-red-600' : 'text-gray-400'}`} />
+            <Label 
+              htmlFor="mode-switch" 
+              className={`font-medium cursor-pointer ${
+                isDecreasing ? 'text-red-600' : 'text-gray-400'
+              }`}
+            >
+              Puan Düş
+            </Label>
+          </div>
+        </div>
       </div>
+
+      {/* Mode Indicator Banner */}
+      <div className={`
+        p-4 rounded-lg border flex items-center justify-between
+        ${isDecreasing 
+          ? 'bg-red-50 border-red-200 text-red-700' 
+          : 'bg-green-50 border-green-200 text-green-700'
+        }
+      `}>
+        <div className="flex items-center space-x-3">
+          {isDecreasing ? (
+            <>
+              <MinusCircle className="w-6 h-6" />
+              <div>
+                <h3 className="font-medium">Puan Düşürme Modu</h3>
+                <p className="text-sm opacity-75">Öğrencinin mevcut puanından düşürme yapabilirsiniz</p>
+              </div>
+            </>
+          ) : (
+            <>
+              <Award className="w-6 h-6" />
+              <div>
+                <h3 className="font-medium">Puan Verme Modu</h3>
+                <p className="text-sm opacity-75">Öğrencinin mevcut puanına ekleme yapabilirsiniz</p>
+              </div>
+            </>
+          )}
+        </div>
+        <Button
+          type="button"
+          variant="outline"
+          onClick={() => setIsDecreasing(!isDecreasing)}
+          className={`
+            border-2 transition-colors duration-200
+            ${isDecreasing 
+              ? 'border-red-200 text-red-700 hover:bg-red-100' 
+              : 'border-green-200 text-green-700 hover:bg-green-100'
+            }
+          `}
+        >
+          {isDecreasing ? 'Puan Verme Moduna Geç' : 'Puan Düşürme Moduna Geç'}
+        </Button>
+      </div>
+
+      {/* Error display */}
+      {error && (
+        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
+          <p className="flex items-center">
+            <span className="mr-2">⚠️</span>
+            {error}
+          </p>
+        </div>
+      )}
       
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {/* Left Column - Student Selection */}
         <div className="md:col-span-1">
-          <Card>
+          <Card className="sticky top-4">
             <CardHeader>
               <CardTitle className="flex items-center text-blue-700">
                 <User className="mr-2" />
                 Öğrenci Seç
               </CardTitle>
               <CardDescription>
-                Puan vermek istediğiniz öğrenciyi seçin
+                {isDecreasing 
+                  ? 'Puanını düşürmek istediğiniz öğrenciyi seçin'
+                  : 'Puan vermek istediğiniz öğrenciyi seçin'
+                }
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -201,14 +423,16 @@ export default function AwardPointsPage() {
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                     className="w-full pl-10"
+                    disabled={loadingStates.students}
                   />
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
                 </div>
                 
-                <div className="bg-gray-50 rounded-md p-2 max-h-[500px] overflow-y-auto">
-                  {isLoading ? (
-                    <div className="flex justify-center items-center h-32">
-                      <div className="animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-blue-500"></div>
+                <div className="bg-gray-50 rounded-md p-2 max-h-[calc(100vh-300px)] overflow-y-auto">
+                  {loadingStates.students ? (
+                    <div className="flex flex-col items-center justify-center h-32 space-y-2">
+                      <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500"></div>
+                      <p className="text-sm text-gray-500">Öğrenciler yükleniyor...</p>
                     </div>
                   ) : filteredStudents.length > 0 ? (
                     <ul className="space-y-2">
@@ -233,9 +457,18 @@ export default function AwardPointsPage() {
                                   <p className="text-xs text-gray-500">@{student.username}</p>
                                 )}
                               </div>
-                              <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
-                                {student.points} puan
-                              </Badge>
+                              <div className="flex items-center">
+                                {loadingStates.pointsUpdate && selectedStudent?.id === student.id ? (
+                                  <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-blue-500 mr-2"></div>
+                                ) : null}
+                                <Badge variant="outline" className={`
+                                  ${selectedStudent?.id === student.id 
+                                    ? 'bg-blue-100 text-blue-700 border-blue-300' 
+                                    : 'bg-blue-50 text-blue-700 border-blue-200'}
+                                `}>
+                                  {student.points} puan
+                                </Badge>
+                              </div>
                             </div>
                           </button>
                         </li>
@@ -252,41 +485,81 @@ export default function AwardPointsPage() {
           </Card>
         </div>
         
-        {/* Right Column - Award Points Form */}
+        {/* Right Column - Points Form */}
         <div className="md:col-span-2">
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center text-green-700">
-                <Award className="mr-2" />
-                {selectedStudent 
-                  ? `${getStudentDisplayName(selectedStudent)} için Puan Ver` 
-                  : 'Puan Verme Formu'}
-              </CardTitle>
-              <CardDescription>
-                {selectedStudent 
-                  ? `Mevcut puanı: ${selectedStudent.points}` 
-                  : 'Sol taraftan bir öğrenci seçin'}
-              </CardDescription>
+              <div className="flex justify-between items-center">
+                <CardTitle className={`flex items-center ${isDecreasing ? 'text-red-700' : 'text-green-700'}`}>
+                  {isDecreasing ? <MinusCircle className="mr-2" /> : <Award className="mr-2" />}
+                  {selectedStudent 
+                    ? `${getStudentDisplayName(selectedStudent)} için ${isDecreasing ? 'Puan Düşürme' : 'Puan Verme'}` 
+                    : 'Puan İşlemi Formu'
+                  }
+                </CardTitle>
+              </div>
+              {selectedStudent && (
+                <CardDescription className="flex items-center space-x-4">
+                  <div className="flex items-center">
+                    <span className="font-medium mr-2">Mevcut puan:</span>
+                    <Badge variant="outline" className="bg-gray-50">
+                      {selectedStudent.points}
+                    </Badge>
+                  </div>
+                  {points > 0 && (
+                    <>
+                      <span className="text-gray-400">→</span>
+                      <div className="flex items-center">
+                        <span className="font-medium mr-2">İşlem sonrası:</span>
+                        <Badge 
+                          variant="outline" 
+                          className={`
+                            ${isDecreasing 
+                              ? 'bg-red-50 text-red-700 border-red-200' 
+                              : 'bg-green-50 text-green-700 border-green-200'
+                            }
+                          `}
+                        >
+                          {selectedStudent.points + (isDecreasing ? -points : points)}
+                        </Badge>
+                      </div>
+                    </>
+                  )}
+                </CardDescription>
+              )}
             </CardHeader>
             <CardContent>
               {selectedStudent ? (
                 <form onSubmit={handleAwardPoints} className="space-y-6">
-                  <div className="bg-blue-50 border border-blue-100 rounded-lg p-4 mb-4">
+                  <div className={`${
+                    isDecreasing ? 'bg-red-50 border-red-100' : 'bg-blue-50 border-blue-100'
+                  } border rounded-lg p-4 mb-4 transition-colors duration-200`}>
                     <div className="flex items-center">
-                      <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center text-blue-700 mr-4">
+                      <div className={`w-12 h-12 rounded-full flex items-center justify-center mr-4 ${
+                        isDecreasing ? 'bg-red-100 text-red-700' : 'bg-blue-100 text-blue-700'
+                      }`}>
                         <UserCheck size={24} />
                       </div>
                       <div>
-                        <h3 className="font-medium text-blue-800">
+                        <h3 className={`font-medium ${isDecreasing ? 'text-red-800' : 'text-blue-800'}`}>
                           {getStudentDisplayName(selectedStudent)}
                         </h3>
-                        <p className="text-sm text-blue-600">@{selectedStudent.username}</p>
+                        <p className={`text-sm ${isDecreasing ? 'text-red-600' : 'text-blue-600'}`}>
+                          @{selectedStudent.username}
+                        </p>
                       </div>
                     </div>
                   </div>
                   
                   <div className="space-y-2">
-                    <Label htmlFor="points" className="text-gray-700">Puan Miktarı</Label>
+                    <Label htmlFor="points" className="text-gray-700 flex items-center justify-between">
+                      <span>Puan Miktarı</span>
+                      {points > 0 && (
+                        <span className={`text-sm ${isDecreasing ? 'text-red-600' : 'text-green-600'}`}>
+                          Yeni puan: {selectedStudent.points + (isDecreasing ? -points : points)}
+                        </span>
+                      )}
+                    </Label>
                     <div className="flex items-center space-x-2">
                       <Input
                         id="points"
@@ -296,6 +569,7 @@ export default function AwardPointsPage() {
                         onChange={(e) => setPoints(parseInt(e.target.value) || 0)}
                         required
                         className="w-full"
+                        disabled={loadingStates.submission}
                       />
                       <div className="flex space-x-1">
                         {[5, 10, 20, 50].map((preset) => (
@@ -303,8 +577,15 @@ export default function AwardPointsPage() {
                             key={preset}
                             type="button"
                             variant="outline"
-                            className={`px-3 py-1 h-10 ${points === preset ? 'bg-green-100 border-green-300 text-green-700' : ''}`}
+                            className={`px-3 py-1 h-10 ${
+                              points === preset 
+                                ? isDecreasing
+                                  ? 'bg-red-100 border-red-300 text-red-700'
+                                  : 'bg-green-100 border-green-300 text-green-700'
+                                : ''
+                            }`}
                             onClick={() => setPoints(preset)}
+                            disabled={loadingStates.submission}
                           >
                             {preset}
                           </Button>
@@ -315,62 +596,97 @@ export default function AwardPointsPage() {
                   
                   <div className="space-y-4">
                     <div>
-                      <Label htmlFor="reason" className="text-gray-700 block mb-1">Sebep</Label>
+                      <Label htmlFor="reason" className="text-gray-700 block mb-1">
+                        {isDecreasing ? 'Düşürme Sebebi' : 'Veriliş Sebebi'}
+                      </Label>
                       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2 mb-3">
-                        {AWARD_REASON_PRESETS.map((preset, index) => (
+                        {(isDecreasing ? DECREASE_REASON_PRESETS : AWARD_REASON_PRESETS).map((preset, index) => (
                           <Button
                             key={index}
                             type="button"
                             variant="outline"
                             className={`justify-start h-auto py-2 px-3 text-left ${
                               reason === preset.description 
-                                ? 'bg-green-50 border-green-200 text-green-700' 
+                                ? isDecreasing
+                                  ? 'bg-red-50 border-red-200 text-red-700'
+                                  : 'bg-green-50 border-green-200 text-green-700'
                                 : 'text-gray-700 hover:bg-gray-50'
                             }`}
                             onClick={() => selectReasonPreset(preset)}
+                            disabled={loadingStates.submission}
                           >
                             <div>
                               <p className="font-medium">{preset.label}</p>
-                              <p className="text-xs text-gray-500 truncate">{preset.description.substring(0, 20)}...</p>
+                              <p className="text-xs text-gray-500 truncate">
+                                {preset.description.substring(0, 20)}...
+                              </p>
                             </div>
                           </Button>
                         ))}
                       </div>
                       <Textarea
                         id="reason"
-                        placeholder="Puanın neden verildiğini açıklayın..."
+                        placeholder={
+                          isDecreasing 
+                            ? "Puanın neden düşürüldüğünü açıklayın..." 
+                            : "Puanın neden verildiğini açıklayın..."
+                        }
                         value={reason}
                         onChange={(e) => setReason(e.target.value)}
                         required
                         className="w-full min-h-[120px]"
+                        disabled={loadingStates.submission}
                       />
                     </div>
                   </div>
                   
                   <div className="pt-4">
                     {success ? (
-                      <div className="bg-green-50 text-green-700 p-4 rounded-lg border border-green-200 text-center">
-                        <Award className="mx-auto h-8 w-8 text-green-500 mb-2" />
-                        <p className="font-medium">Puan başarıyla verildi!</p>
-                        <p className="text-sm text-green-600 mt-1">
-                          {selectedStudent.username} kullanıcısına {points} puan verildi.
+                      <div className={`${
+                        isDecreasing 
+                          ? 'bg-red-50 text-red-700 border-red-200' 
+                          : 'bg-green-50 text-green-700 border-green-200'
+                      } p-4 rounded-lg border text-center transition-all duration-300`}>
+                        {isDecreasing ? (
+                          <MinusCircle className="mx-auto h-8 w-8 text-red-500 mb-2" />
+                        ) : (
+                          <Award className="mx-auto h-8 w-8 text-green-500 mb-2" />
+                        )}
+                        <p className="font-medium">İşlem başarıyla tamamlandı!</p>
+                        <p className={`text-sm ${isDecreasing ? 'text-red-600' : 'text-green-600'} mt-1`}>
+                          {selectedStudent.username} kullanıcısının {
+                            isDecreasing 
+                              ? 'puanından ' + points + ' düşürüldü' 
+                              : 'puanına ' + points + ' eklendi'
+                          }.
                         </p>
                       </div>
                     ) : (
                       <Button 
                         type="submit" 
-                        className="w-full bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 h-12 text-lg"
-                        disabled={isSubmitting || !selectedStudent || points <= 0 || !reason.trim()}
+                        className={`w-full ${
+                          isDecreasing
+                            ? 'bg-gradient-to-r from-red-500 to-orange-600 hover:from-red-600 hover:to-orange-700'
+                            : 'bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700'
+                        } h-12 text-lg transition-all duration-200`}
+                        disabled={
+                          loadingStates.submission || 
+                          !selectedStudent || 
+                          points <= 0 || 
+                          !reason.trim() ||
+                          (isDecreasing && points > selectedStudent.points)
+                        }
                       >
-                        {isSubmitting ? (
-                          <>
-                            <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-b-transparent"></div>
-                            İşleniyor...
-                          </>
+                        {loadingStates.submission ? (
+                          <div className="flex items-center justify-center text-white">
+                            <div className="mr-2 h-5 w-5 animate-spin rounded-full border-2 border-white border-b-transparent"></div>
+                            {retryCount > 0 ? `Yeniden deneniyor (${retryCount}/${RETRY_CONFIG.maxRetries})...` : 'İşleniyor...'}
+                          </div>
                         ) : (
-                          <>
-                            <Award className="mr-2" /> Puan Ver
-                          </>
+                          <div className="flex items-center justify-center text-white">
+                            {isDecreasing ? <MinusCircle className="mr-2" /> : <Award className="mr-2" />}
+                            {isDecreasing ? 'Puan Düş' : 'Puan Ver'}
+                          </div>
                         )}
                       </Button>
                     )}
@@ -383,7 +699,8 @@ export default function AwardPointsPage() {
                   </div>
                   <h3 className="text-lg font-medium text-gray-700 mb-2">Öğrenci Seçilmedi</h3>
                   <p className="text-gray-500 max-w-md mx-auto">
-                    Puan vermek için lütfen sol taraftan bir öğrenci seçin. Arama kutusunu kullanarak öğrenciyi daha hızlı bulabilirsiniz.
+                    Puan vermek için lütfen sol taraftan bir öğrenci seçin. 
+                    Arama kutusunu kullanarak öğrenciyi daha hızlı bulabilirsiniz.
                   </p>
                 </div>
               )}
