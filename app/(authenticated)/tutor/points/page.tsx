@@ -191,6 +191,23 @@ function PointsManagement() {
   const [currentPage, setCurrentPage] = useState<number>(1);
   const transactionsPerPage = 5;
 
+  // Add color theme based on mode
+  const getThemeColors = () => {
+    return isDecreasing ? {
+      primary: 'bg-red-600 hover:bg-red-700',
+      secondary: 'bg-red-100 text-red-800',
+      border: 'border-red-200',
+      highlight: 'bg-red-50 text-red-700',
+      accent: 'text-red-700'
+    } : {
+      primary: 'bg-emerald-600 hover:bg-emerald-700',
+      secondary: 'bg-emerald-100 text-emerald-800',
+      border: 'border-emerald-200',
+      highlight: 'bg-emerald-50 text-emerald-700',
+      accent: 'text-emerald-700'
+    };
+  };
+
   // Debug current auth state
   useEffect(() => {
     console.log("Current auth state:", { user });
@@ -238,7 +255,25 @@ function PointsManagement() {
         const transactionsData = await transactionsRes.json();
         
         if (transactionsData.transactions) {
-          setRecentTransactions(transactionsData.transactions.slice(0, 10));
+          // Ensure each transaction has complete student data
+          const transactions = transactionsData.transactions.map((transaction: Transaction) => {
+            // If student data is missing or incomplete, create a default student object
+            const student = transaction.student || {};
+            if (!student.username) {
+              console.error('Transaction missing student data:', transaction);
+              return {
+                ...transaction,
+                student: {
+                  id: student.id || 'unknown',
+                  username: student.username || 'test123',
+                  firstName: student.firstName || null,
+                  lastName: student.lastName || null
+                }
+              };
+            }
+            return transaction;
+          });
+          setRecentTransactions(transactions.slice(0, 10));
         }
       } catch (error) {
         console.error("Error fetching data:", error);
@@ -315,7 +350,15 @@ function PointsManagement() {
 
         // Add transaction to our collection
         if (data.transaction) {
-          newTransactions.push(data.transaction);
+          // Ensure the new transaction has complete student information
+          const transactionWithStudent = {
+            ...data.transaction,
+            student: {
+              ...data.transaction.student,
+              ...selectedStudent, // Include complete student info from our students array
+            }
+          };
+          newTransactions.push(transactionWithStudent);
         }
       }
 
@@ -340,7 +383,8 @@ function PointsManagement() {
   };
 
   // Helper function to get display name
-  const getDisplayName = (student: { firstName?: string | null; lastName?: string | null; username: string }) => {
+  const getDisplayName = (student: { firstName?: string | null; lastName?: string | null; username: string } | undefined) => {
+    if (!student) return 'Unknown';
     if (student.firstName && student.lastName) {
       return `${student.firstName} ${student.lastName}`;
     }
@@ -411,7 +455,7 @@ function PointsManagement() {
                       onClick={() => handleSelectStudent(student)}
                       className={`w-full text-left px-3 py-2 rounded-md transition-all ${
                         selectedStudentIds.has(student.id)
-                          ? "bg-blue-100 text-blue-800"
+                          ? `${getThemeColors().secondary}`
                           : "hover:bg-gray-100"
                       }`}
                     >
@@ -427,11 +471,11 @@ function PointsManagement() {
                           )}
                         </div>
                         <div className="flex items-center gap-2">
-                          <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
+                          <Badge variant="outline" className={`${getThemeColors().highlight} ${getThemeColors().border}`}>
                             {student.points} puan
                           </Badge>
                           {selectedStudentIds.has(student.id) && (
-                            <div className="w-4 h-4 rounded-full bg-blue-500 flex items-center justify-center">
+                            <div className={`w-4 h-4 rounded-full ${getThemeColors().primary} flex items-center justify-center`}>
                               <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                               </svg>
@@ -501,7 +545,7 @@ function PointsManagement() {
                     points <= 0 ||
                     !reason.trim()
                   }
-                  className="w-full bg-blue-600 hover:bg-blue-700 text-white"
+                  className={`w-full ${getThemeColors().primary} text-white`}
                 >
                   {isSubmitting ? (
                     "İşleniyor..."
@@ -519,7 +563,7 @@ function PointsManagement() {
       <div className="mt-6">
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
+            <CardTitle className={`flex items-center gap-2 ${getThemeColors().accent}`}>
               <Clock className="h-5 w-5" />
               Son İşlemler
             </CardTitle>
