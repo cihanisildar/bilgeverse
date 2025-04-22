@@ -91,8 +91,8 @@ export default function RegisterPage() {
   };
 
   return (
-    <div className="h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-white to-blue-50 p-4">
-      <div className="w-full max-w-md bg-white rounded-2xl shadow-xl border border-gray-100 p-6">
+    <div className="h-screen flex items-center justify-center bg-[url('/7458554.jpg')] bg-cover bg-center bg-no-repeat before:content-[''] before:absolute before:inset-0 before:bg-gradient-to-br before:from-blue-900/40 before:via-blue-800/30 before:to-blue-900/40 relative p-4">
+      <div className="w-full max-w-md bg-white backdrop-blur-sm rounded-2xl shadow-xl border border-gray-100 p-8 relative z-10">
         <div className="flex flex-col items-center mb-4">
           <div className="w-16 h-16 rounded-full bg-gradient-to-r from-blue-500 to-blue-600 text-white flex items-center justify-center mb-3 transform hover:scale-105 transition-transform duration-200">
             <UserPlus2 size={32} />

@@ -33,16 +33,17 @@ function SettingsContent() {
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState("profile");
   const [saving, setSaving] = useState(false);
-  const [successMessage, setSuccessMessage] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
   // Profile form state
   const [profileForm, setProfileForm] = useState({
-    firstName: user?.firstName || "",
-    lastName: user?.lastName || "",
-    email: user?.email || "",
-    phone: "+90 555 123 4567", // Example data
-    specialization: "Matematik ve Fen Bilimleri", // Example data
-    bio: "Öğrencilerin matematiksel düşünce ve problem çözme becerilerini geliştirmelerine yardımcı olmak için 5 yıllık deneyime sahibim. Matematiği sevdirmek ve öğretmek benim tutkum.",
+    firstName: "",
+    lastName: "",
+    email: "",
+    phone: "",
+    specialization: "",
+    bio: "",
   });
 
   // Security form state
@@ -68,6 +69,52 @@ function SettingsContent() {
     highContrast: false,
     fontSize: "medium",
   });
+
+  useEffect(() => {
+    const fetchSettings = async () => {
+      try {
+        setLoading(true);
+        const response = await fetch('/api/tutor/settings', {
+          credentials: 'include'
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to fetch settings');
+        }
+
+        const data = await response.json();
+        const { tutor } = data;
+
+        // Update profile form
+        setProfileForm({
+          firstName: tutor.firstName || "",
+          lastName: tutor.lastName || "",
+          email: tutor.email || "",
+          phone: tutor.phone || "",
+          specialization: tutor.specialization || "",
+          bio: tutor.bio || "",
+        });
+
+        // Update preferences if they exist
+        if (tutor.preferences) {
+          const { notifications, appearance } = tutor.preferences;
+          if (notifications) {
+            setNotificationPreferences(notifications);
+          }
+          if (appearance) {
+            setAppearancePreferences(appearance);
+          }
+        }
+      } catch (err) {
+        console.error("Error fetching settings:", err);
+        setError("Ayarlar yüklenirken bir hata oluştu. Lütfen daha sonra tekrar deneyin.");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchSettings();
+  }, []);
 
   const handleProfileChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -135,13 +182,47 @@ function SettingsContent() {
         toast.success("Şifreniz başarıyla güncellendi");
       }
 
-      // Show success message
-      setSuccessMessage("Ayarlarınız başarıyla güncellendi.");
-      
-      // Clear success message after 3 seconds
-      setTimeout(() => {
-        setSuccessMessage("");
-      }, 3000);
+      // Update other settings based on active tab
+      if (activeTab === "profile") {
+        const response = await fetch('/api/tutor/settings', {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            ...profileForm
+          })
+        });
+
+        if (!response.ok) {
+          throw new Error('Profil güncellenirken bir hata oluştu');
+        }
+        
+        toast.success("Profil bilgileriniz başarıyla güncellendi");
+      } else if (activeTab === "notifications" || activeTab === "appearance") {
+        const response = await fetch('/api/tutor/settings', {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            preferences: {
+              notifications: notificationPreferences,
+              appearance: appearancePreferences
+            }
+          })
+        });
+
+        if (!response.ok) {
+          throw new Error('Tercihler güncellenirken bir hata oluştu');
+        }
+        
+        toast.success(
+          activeTab === "notifications" 
+            ? "Bildirim tercihleriniz başarıyla güncellendi"
+            : "Görünüm tercihleriniz başarıyla güncellendi"
+        );
+      }
     } catch (error: any) {
       console.error('Settings update error:', error);
       toast.error(error.message || 'Ayarlar güncellenirken bir hata oluştu');
@@ -150,484 +231,485 @@ function SettingsContent() {
     }
   };
 
+  if (loading) {
+    return <LoadingSettings />;
+  }
+
+  if (error) {
+    return (
+      <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg shadow-sm">
+        {error}
+      </div>
+    );
+  }
+
   return (
-    <>
-      {successMessage && (
-        <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg shadow-sm flex justify-between items-center">
-          <span>{successMessage}</span>
-          <button onClick={() => setSuccessMessage("")} className="text-green-500 hover:text-green-700">
-            <XCircle size={20} />
-          </button>
+    <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+      {/* Sidebar */}
+      <div className="md:col-span-1">
+        <div className="bg-white rounded-xl shadow-md overflow-hidden">
+          <nav className="space-y-1">
+            <button
+              onClick={() => setActiveTab("profile")}
+              className={`w-full px-4 py-3 flex items-center justify-between ${
+                activeTab === "profile" 
+                  ? "bg-indigo-50 text-indigo-700 border-l-4 border-indigo-500" 
+                  : "text-gray-700 hover:bg-gray-50"
+              }`}
+            >
+              <div className="flex items-center">
+                <User className={`mr-3 h-5 w-5 ${activeTab === "profile" ? "text-indigo-500" : "text-gray-400"}`} />
+                <span className="font-medium">Profil Bilgileri</span>
+              </div>
+              <ChevronRight className="h-4 w-4" />
+            </button>
+            
+            <button
+              onClick={() => setActiveTab("security")}
+              className={`w-full px-4 py-3 flex items-center justify-between ${
+                activeTab === "security" 
+                  ? "bg-indigo-50 text-indigo-700 border-l-4 border-indigo-500" 
+                  : "text-gray-700 hover:bg-gray-50"
+              }`}
+            >
+              <div className="flex items-center">
+                <Lock className={`mr-3 h-5 w-5 ${activeTab === "security" ? "text-indigo-500" : "text-gray-400"}`} />
+                <span className="font-medium">Güvenlik</span>
+              </div>
+              <ChevronRight className="h-4 w-4" />
+            </button>
+            
+            <button
+              onClick={() => setActiveTab("notifications")}
+              className={`w-full px-4 py-3 flex items-center justify-between ${
+                activeTab === "notifications" 
+                  ? "bg-indigo-50 text-indigo-700 border-l-4 border-indigo-500" 
+                  : "text-gray-700 hover:bg-gray-50"
+              }`}
+            >
+              <div className="flex items-center">
+                <Bell className={`mr-3 h-5 w-5 ${activeTab === "notifications" ? "text-indigo-500" : "text-gray-400"}`} />
+                <span className="font-medium">Bildirimler</span>
+              </div>
+              <ChevronRight className="h-4 w-4" />
+            </button>
+            
+            <button
+              onClick={() => setActiveTab("appearance")}
+              className={`w-full px-4 py-3 flex items-center justify-between ${
+                activeTab === "appearance" 
+                  ? "bg-indigo-50 text-indigo-700 border-l-4 border-indigo-500" 
+                  : "text-gray-700 hover:bg-gray-50"
+              }`}
+            >
+              <div className="flex items-center">
+                <Layout className={`mr-3 h-5 w-5 ${activeTab === "appearance" ? "text-indigo-500" : "text-gray-400"}`} />
+                <span className="font-medium">Görünüm</span>
+              </div>
+              <ChevronRight className="h-4 w-4" />
+            </button>
+          </nav>
         </div>
-      )}
-
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        {/* Sidebar */}
-        <div className="md:col-span-1">
-          <div className="bg-white rounded-xl shadow-md overflow-hidden">
-            <nav className="space-y-1">
-              <button
-                onClick={() => setActiveTab("profile")}
-                className={`w-full px-4 py-3 flex items-center justify-between ${
-                  activeTab === "profile" 
-                    ? "bg-indigo-50 text-indigo-700 border-l-4 border-indigo-500" 
-                    : "text-gray-700 hover:bg-gray-50"
-                }`}
-              >
-                <div className="flex items-center">
-                  <User className={`mr-3 h-5 w-5 ${activeTab === "profile" ? "text-indigo-500" : "text-gray-400"}`} />
-                  <span className="font-medium">Profil Bilgileri</span>
-                </div>
-                <ChevronRight className="h-4 w-4" />
-              </button>
-              
-              <button
-                onClick={() => setActiveTab("security")}
-                className={`w-full px-4 py-3 flex items-center justify-between ${
-                  activeTab === "security" 
-                    ? "bg-indigo-50 text-indigo-700 border-l-4 border-indigo-500" 
-                    : "text-gray-700 hover:bg-gray-50"
-                }`}
-              >
-                <div className="flex items-center">
-                  <Lock className={`mr-3 h-5 w-5 ${activeTab === "security" ? "text-indigo-500" : "text-gray-400"}`} />
-                  <span className="font-medium">Güvenlik</span>
-                </div>
-                <ChevronRight className="h-4 w-4" />
-              </button>
-              
-              <button
-                onClick={() => setActiveTab("notifications")}
-                className={`w-full px-4 py-3 flex items-center justify-between ${
-                  activeTab === "notifications" 
-                    ? "bg-indigo-50 text-indigo-700 border-l-4 border-indigo-500" 
-                    : "text-gray-700 hover:bg-gray-50"
-                }`}
-              >
-                <div className="flex items-center">
-                  <Bell className={`mr-3 h-5 w-5 ${activeTab === "notifications" ? "text-indigo-500" : "text-gray-400"}`} />
-                  <span className="font-medium">Bildirimler</span>
-                </div>
-                <ChevronRight className="h-4 w-4" />
-              </button>
-              
-              <button
-                onClick={() => setActiveTab("appearance")}
-                className={`w-full px-4 py-3 flex items-center justify-between ${
-                  activeTab === "appearance" 
-                    ? "bg-indigo-50 text-indigo-700 border-l-4 border-indigo-500" 
-                    : "text-gray-700 hover:bg-gray-50"
-                }`}
-              >
-                <div className="flex items-center">
-                  <Layout className={`mr-3 h-5 w-5 ${activeTab === "appearance" ? "text-indigo-500" : "text-gray-400"}`} />
-                  <span className="font-medium">Görünüm</span>
-                </div>
-                <ChevronRight className="h-4 w-4" />
-              </button>
-            </nav>
-          </div>
-        </div>
-        
-        {/* Main Content */}
-        <div className="md:col-span-3">
-          <div className="bg-white rounded-xl shadow-md p-6 border border-gray-100">
-            {activeTab === "profile" && (
-              <div>
-                <h2 className="text-xl font-bold text-gray-800 mb-6">Profil Bilgileri</h2>
-                <div className="space-y-6">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div>
-                      <label htmlFor="firstName" className="block text-sm font-medium text-gray-700 mb-1">
-                        Ad
-                      </label>
-                      <input
-                        type="text"
-                        id="firstName"
-                        name="firstName"
-                        value={profileForm.firstName}
-                        onChange={handleProfileChange}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
-                      />
-                    </div>
-                    <div>
-                      <label htmlFor="lastName" className="block text-sm font-medium text-gray-700 mb-1">
-                        Soyad
-                      </label>
-                      <input
-                        type="text"
-                        id="lastName"
-                        name="lastName"
-                        value={profileForm.lastName}
-                        onChange={handleProfileChange}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
-                      />
-                    </div>
-                  </div>
-                  
+      </div>
+      
+      {/* Main Content */}
+      <div className="md:col-span-3">
+        <div className="bg-white rounded-xl shadow-md p-6 border border-gray-100">
+          {activeTab === "profile" && (
+            <div>
+              <h2 className="text-xl font-bold text-gray-800 mb-6">Profil Bilgileri</h2>
+              <div className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
-                    <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
-                      E-posta Adresi
-                    </label>
-                    <input
-                      type="email"
-                      id="email"
-                      name="email"
-                      value={profileForm.email}
-                      onChange={handleProfileChange}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
-                    />
-                  </div>
-                  
-                  <div>
-                    <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-1">
-                      Telefon Numarası
+                    <label htmlFor="firstName" className="block text-sm font-medium text-gray-700 mb-1">
+                      Ad
                     </label>
                     <input
                       type="text"
-                      id="phone"
-                      name="phone"
-                      value={profileForm.phone}
+                      id="firstName"
+                      name="firstName"
+                      value={profileForm.firstName}
                       onChange={handleProfileChange}
                       className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
                     />
                   </div>
-
                   <div>
-                    <label htmlFor="specialization" className="block text-sm font-medium text-gray-700 mb-1">
-                      Uzmanlık Alanı
+                    <label htmlFor="lastName" className="block text-sm font-medium text-gray-700 mb-1">
+                      Soyad
                     </label>
                     <input
                       type="text"
-                      id="specialization"
-                      name="specialization"
-                      value={profileForm.specialization}
-                      onChange={handleProfileChange}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
-                    />
-                  </div>
-                  
-                  <div>
-                    <label htmlFor="bio" className="block text-sm font-medium text-gray-700 mb-1">
-                      Hakkımda
-                    </label>
-                    <textarea
-                      id="bio"
-                      name="bio"
-                      rows={4}
-                      value={profileForm.bio}
+                      id="lastName"
+                      name="lastName"
+                      value={profileForm.lastName}
                       onChange={handleProfileChange}
                       className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
                     />
                   </div>
                 </div>
-              </div>
-            )}
-            
-            {activeTab === "security" && (
-              <div>
-                <h2 className="text-xl font-bold text-gray-800 mb-6">Güvenlik Ayarları</h2>
-                <div className="space-y-6">
-                  <div>
-                    <label htmlFor="currentPassword" className="block text-sm font-medium text-gray-700 mb-1">
-                      Mevcut Şifre
-                    </label>
-                    <input
-                      type="password"
-                      id="currentPassword"
-                      name="currentPassword"
-                      value={securityForm.currentPassword}
-                      onChange={handleSecurityChange}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
-                    />
-                  </div>
-                  
-                  <div>
-                    <label htmlFor="newPassword" className="block text-sm font-medium text-gray-700 mb-1">
-                      Yeni Şifre
-                    </label>
-                    <input
-                      type="password"
-                      id="newPassword"
-                      name="newPassword"
-                      value={securityForm.newPassword}
-                      onChange={handleSecurityChange}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
-                    />
-                  </div>
-                  
-                  <div>
-                    <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 mb-1">
-                      Yeni Şifre (Tekrar)
-                    </label>
-                    <input
-                      type="password"
-                      id="confirmPassword"
-                      name="confirmPassword"
-                      value={securityForm.confirmPassword}
-                      onChange={handleSecurityChange}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
-                    />
-                  </div>
-                  
-                  <div className="bg-yellow-50 p-4 rounded-md border border-yellow-100">
-                    <p className="text-sm text-yellow-700">
-                      Güvenli bir şifre en az 8 karakter uzunluğunda olmalı ve büyük harf, küçük harf, rakam ve özel karakter içermelidir.
-                    </p>
-                  </div>
-                </div>
-              </div>
-            )}
-            
-            {activeTab === "notifications" && (
-              <div>
-                <h2 className="text-xl font-bold text-gray-800 mb-6">Bildirim Ayarları</h2>
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between py-3 border-b border-gray-100">
-                    <div>
-                      <h3 className="text-md font-medium text-gray-700">E-posta Bildirimleri</h3>
-                      <p className="text-sm text-gray-500">Önemli güncellemeler için e-posta alın</p>
-                    </div>
-                    <div className="flex items-center">
-                      <button
-                        type="button"
-                        className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
-                          notificationPreferences.emailNotifications ? "bg-indigo-600" : "bg-gray-200"
-                        }`}
-                        role="switch"
-                        aria-checked={notificationPreferences.emailNotifications}
-                        onClick={() => handleNotificationToggle("emailNotifications")}
-                      >
-                        <span
-                          className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
-                            notificationPreferences.emailNotifications ? "translate-x-5" : "translate-x-0"
-                          }`}
-                        />
-                      </button>
-                    </div>
-                  </div>
-                  
-                  <div className="flex items-center justify-between py-3 border-b border-gray-100">
-                    <div>
-                      <h3 className="text-md font-medium text-gray-700">Anlık Bildirimler</h3>
-                      <p className="text-sm text-gray-500">Uygulama içi anlık bildirimler</p>
-                    </div>
-                    <div className="flex items-center">
-                      <button
-                        type="button"
-                        className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
-                          notificationPreferences.pushNotifications ? "bg-indigo-600" : "bg-gray-200"
-                        }`}
-                        role="switch"
-                        aria-checked={notificationPreferences.pushNotifications}
-                        onClick={() => handleNotificationToggle("pushNotifications")}
-                      >
-                        <span
-                          className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
-                            notificationPreferences.pushNotifications ? "translate-x-5" : "translate-x-0"
-                          }`}
-                        />
-                      </button>
-                    </div>
-                  </div>
-                  
-                  <div className="flex items-center justify-between py-3 border-b border-gray-100">
-                    <div>
-                      <h3 className="text-md font-medium text-gray-700">Etkinlik Hatırlatıcıları</h3>
-                      <p className="text-sm text-gray-500">Yaklaşan etkinlikler için hatırlatıcılar</p>
-                    </div>
-                    <div className="flex items-center">
-                      <button
-                        type="button"
-                        className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
-                          notificationPreferences.eventReminders ? "bg-indigo-600" : "bg-gray-200"
-                        }`}
-                        role="switch"
-                        aria-checked={notificationPreferences.eventReminders}
-                        onClick={() => handleNotificationToggle("eventReminders")}
-                      >
-                        <span
-                          className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
-                            notificationPreferences.eventReminders ? "translate-x-5" : "translate-x-0"
-                          }`}
-                        />
-                      </button>
-                    </div>
-                  </div>
-                  
-                  <div className="flex items-center justify-between py-3 border-b border-gray-100">
-                    <div>
-                      <h3 className="text-md font-medium text-gray-700">Öğrenci Güncellemeleri</h3>
-                      <p className="text-sm text-gray-500">Öğrencilerinizle ilgili önemli güncellemeler</p>
-                    </div>
-                    <div className="flex items-center">
-                      <button
-                        type="button"
-                        className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
-                          notificationPreferences.studentUpdates ? "bg-indigo-600" : "bg-gray-200"
-                        }`}
-                        role="switch"
-                        aria-checked={notificationPreferences.studentUpdates}
-                        onClick={() => handleNotificationToggle("studentUpdates")}
-                      >
-                        <span
-                          className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
-                            notificationPreferences.studentUpdates ? "translate-x-5" : "translate-x-0"
-                          }`}
-                        />
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-            
-            {activeTab === "appearance" && (
-              <div>
-                <h2 className="text-xl font-bold text-gray-800 mb-6">Görünüm Ayarları</h2>
                 
-                <div className="space-y-6">
+                <div>
+                  <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
+                    E-posta Adresi
+                  </label>
+                  <input
+                    type="email"
+                    id="email"
+                    name="email"
+                    value={profileForm.email}
+                    onChange={handleProfileChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+                  />
+                </div>
+                
+                <div>
+                  <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-1">
+                    Telefon Numarası
+                  </label>
+                  <input
+                    type="text"
+                    id="phone"
+                    name="phone"
+                    value={profileForm.phone}
+                    onChange={handleProfileChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+                  />
+                </div>
+
+                <div>
+                  <label htmlFor="specialization" className="block text-sm font-medium text-gray-700 mb-1">
+                    Uzmanlık Alanı
+                  </label>
+                  <input
+                    type="text"
+                    id="specialization"
+                    name="specialization"
+                    value={profileForm.specialization}
+                    onChange={handleProfileChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+                  />
+                </div>
+                
+                <div>
+                  <label htmlFor="bio" className="block text-sm font-medium text-gray-700 mb-1">
+                    Hakkımda
+                  </label>
+                  <textarea
+                    id="bio"
+                    name="bio"
+                    rows={4}
+                    value={profileForm.bio}
+                    onChange={handleProfileChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+          
+          {activeTab === "security" && (
+            <div>
+              <h2 className="text-xl font-bold text-gray-800 mb-6">Güvenlik Ayarları</h2>
+              <div className="space-y-6">
+                <div>
+                  <label htmlFor="currentPassword" className="block text-sm font-medium text-gray-700 mb-1">
+                    Mevcut Şifre
+                  </label>
+                  <input
+                    type="password"
+                    id="currentPassword"
+                    name="currentPassword"
+                    value={securityForm.currentPassword}
+                    onChange={handleSecurityChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+                  />
+                </div>
+                
+                <div>
+                  <label htmlFor="newPassword" className="block text-sm font-medium text-gray-700 mb-1">
+                    Yeni Şifre
+                  </label>
+                  <input
+                    type="password"
+                    id="newPassword"
+                    name="newPassword"
+                    value={securityForm.newPassword}
+                    onChange={handleSecurityChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+                  />
+                </div>
+                
+                <div>
+                  <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 mb-1">
+                    Yeni Şifre (Tekrar)
+                  </label>
+                  <input
+                    type="password"
+                    id="confirmPassword"
+                    name="confirmPassword"
+                    value={securityForm.confirmPassword}
+                    onChange={handleSecurityChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+                  />
+                </div>
+                
+                <div className="bg-yellow-50 p-4 rounded-md border border-yellow-100">
+                  <p className="text-sm text-yellow-700">
+                    Güvenli bir şifre en az 8 karakter uzunluğunda olmalı ve büyük harf, küçük harf, rakam ve özel karakter içermelidir.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+          
+          {activeTab === "notifications" && (
+            <div>
+              <h2 className="text-xl font-bold text-gray-800 mb-6">Bildirim Ayarları</h2>
+              <div className="space-y-4">
+                <div className="flex items-center justify-between py-3 border-b border-gray-100">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Tema</label>
-                    <div className="grid grid-cols-3 gap-4">
-                      <button
-                        onClick={() => handleAppearanceChange("theme", "light")}
-                        className={`p-4 rounded-lg border ${
-                          appearancePreferences.theme === "light"
-                            ? "border-indigo-500 ring-2 ring-indigo-200"
-                            : "border-gray-200 hover:border-gray-300"
-                        }`}
-                      >
-                        <div className="h-16 bg-white rounded-md border border-gray-200 mb-2"></div>
-                        <span className="text-sm font-medium text-gray-900">Açık</span>
-                      </button>
-                      
-                      <button
-                        onClick={() => handleAppearanceChange("theme", "dark")}
-                        className={`p-4 rounded-lg border ${
-                          appearancePreferences.theme === "dark"
-                            ? "border-indigo-500 ring-2 ring-indigo-200"
-                            : "border-gray-200 hover:border-gray-300"
-                        }`}
-                      >
-                        <div className="h-16 bg-gray-800 rounded-md border border-gray-700 mb-2"></div>
-                        <span className="text-sm font-medium text-gray-900">Koyu</span>
-                      </button>
-                      
-                      <button
-                        onClick={() => handleAppearanceChange("theme", "system")}
-                        className={`p-4 rounded-lg border ${
-                          appearancePreferences.theme === "system"
-                            ? "border-indigo-500 ring-2 ring-indigo-200"
-                            : "border-gray-200 hover:border-gray-300"
-                        }`}
-                      >
-                        <div className="h-16 bg-gradient-to-r from-white to-gray-800 rounded-md border border-gray-200 mb-2"></div>
-                        <span className="text-sm font-medium text-gray-900">Sistem</span>
-                      </button>
-                    </div>
+                    <h3 className="text-md font-medium text-gray-700">E-posta Bildirimleri</h3>
+                    <p className="text-sm text-gray-500">Önemli güncellemeler için e-posta alın</p>
                   </div>
-                  
-                  <div>
-                    <h3 className="text-md font-medium text-gray-700 mb-3">Görünüm Seçenekleri</h3>
-                    <div className="space-y-4">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <span className="text-sm text-gray-700">Sıkıştırılmış Mod</span>
-                          <p className="text-xs text-gray-500">Daha kompakt bir yerleşim için</p>
-                        </div>
-                        <button
-                          type="button"
-                          className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
-                            appearancePreferences.compactMode ? "bg-indigo-600" : "bg-gray-200"
-                          }`}
-                          role="switch"
-                          aria-checked={appearancePreferences.compactMode}
-                          onClick={() => handleAppearanceChange("compactMode", !appearancePreferences.compactMode)}
-                        >
-                          <span
-                            className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
-                              appearancePreferences.compactMode ? "translate-x-5" : "translate-x-0"
-                            }`}
-                          />
-                        </button>
-                      </div>
-                      
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <span className="text-sm text-gray-700">Yüksek Kontrast</span>
-                          <p className="text-xs text-gray-500">Daha yüksek kontrast için</p>
-                        </div>
-                        <button
-                          type="button"
-                          className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
-                            appearancePreferences.highContrast ? "bg-indigo-600" : "bg-gray-200"
-                          }`}
-                          role="switch"
-                          aria-checked={appearancePreferences.highContrast}
-                          onClick={() => handleAppearanceChange("highContrast", !appearancePreferences.highContrast)}
-                        >
-                          <span
-                            className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
-                              appearancePreferences.highContrast ? "translate-x-5" : "translate-x-0"
-                            }`}
-                          />
-                        </button>
-                      </div>
-                    </div>
+                  <div className="flex items-center">
+                    <button
+                      type="button"
+                      className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                        notificationPreferences.emailNotifications ? "bg-indigo-600" : "bg-gray-200"
+                      }`}
+                      role="switch"
+                      aria-checked={notificationPreferences.emailNotifications}
+                      onClick={() => handleNotificationToggle("emailNotifications")}
+                    >
+                      <span
+                        className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                          notificationPreferences.emailNotifications ? "translate-x-5" : "translate-x-0"
+                        }`}
+                      />
+                    </button>
                   </div>
-                  
+                </div>
+                
+                <div className="flex items-center justify-between py-3 border-b border-gray-100">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Yazı Boyutu</label>
-                    <div className="grid grid-cols-4 gap-4">
-                      {["small", "medium", "large", "x-large"].map((size) => (
-                        <button
-                          key={size}
-                          onClick={() => handleAppearanceChange("fontSize", size)}
-                          className={`py-2 px-4 rounded-lg border ${
-                            appearancePreferences.fontSize === size
-                              ? "border-indigo-500 bg-indigo-50 text-indigo-700"
-                              : "border-gray-200 hover:border-gray-300 text-gray-700"
-                          }`}
-                        >
-                          {size === "small" && "Küçük"}
-                          {size === "medium" && "Orta"}
-                          {size === "large" && "Büyük"}
-                          {size === "x-large" && "Çok Büyük"}
-                        </button>
-                      ))}
-                    </div>
+                    <h3 className="text-md font-medium text-gray-700">Anlık Bildirimler</h3>
+                    <p className="text-sm text-gray-500">Uygulama içi anlık bildirimler</p>
+                  </div>
+                  <div className="flex items-center">
+                    <button
+                      type="button"
+                      className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                        notificationPreferences.pushNotifications ? "bg-indigo-600" : "bg-gray-200"
+                      }`}
+                      role="switch"
+                      aria-checked={notificationPreferences.pushNotifications}
+                      onClick={() => handleNotificationToggle("pushNotifications")}
+                    >
+                      <span
+                        className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                          notificationPreferences.pushNotifications ? "translate-x-5" : "translate-x-0"
+                        }`}
+                      />
+                    </button>
+                  </div>
+                </div>
+                
+                <div className="flex items-center justify-between py-3 border-b border-gray-100">
+                  <div>
+                    <h3 className="text-md font-medium text-gray-700">Etkinlik Hatırlatıcıları</h3>
+                    <p className="text-sm text-gray-500">Yaklaşan etkinlikler için hatırlatıcılar</p>
+                  </div>
+                  <div className="flex items-center">
+                    <button
+                      type="button"
+                      className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                        notificationPreferences.eventReminders ? "bg-indigo-600" : "bg-gray-200"
+                      }`}
+                      role="switch"
+                      aria-checked={notificationPreferences.eventReminders}
+                      onClick={() => handleNotificationToggle("eventReminders")}
+                    >
+                      <span
+                        className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                          notificationPreferences.eventReminders ? "translate-x-5" : "translate-x-0"
+                        }`}
+                      />
+                    </button>
+                  </div>
+                </div>
+                
+                <div className="flex items-center justify-between py-3 border-b border-gray-100">
+                  <div>
+                    <h3 className="text-md font-medium text-gray-700">Öğrenci Güncellemeleri</h3>
+                    <p className="text-sm text-gray-500">Öğrencilerinizle ilgili önemli güncellemeler</p>
+                  </div>
+                  <div className="flex items-center">
+                    <button
+                      type="button"
+                      className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                        notificationPreferences.studentUpdates ? "bg-indigo-600" : "bg-gray-200"
+                      }`}
+                      role="switch"
+                      aria-checked={notificationPreferences.studentUpdates}
+                      onClick={() => handleNotificationToggle("studentUpdates")}
+                    >
+                      <span
+                        className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                          notificationPreferences.studentUpdates ? "translate-x-5" : "translate-x-0"
+                        }`}
+                      />
+                    </button>
                   </div>
                 </div>
               </div>
-            )}
-            
-            <div className="mt-6">
-              <button
-                type="button"
-                disabled={saving}
-                onClick={saveSettings}
-                className={`px-4 py-2 bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded-lg shadow-sm hover:shadow-md transition-all flex items-center ${
-                  saving ? "opacity-70 cursor-not-allowed" : ""
-                }`}
-              >
-                {saving ? (
-                  <>
-                    <span className="mr-2 h-4 w-4 rounded-full border-2 border-white border-t-transparent animate-spin"></span>
-                    Kaydediliyor...
-                  </>
-                ) : (
-                  <>
-                    <Save className="mr-2" />
-                    Değişiklikleri Kaydet
-                  </>
-                )}
-              </button>
             </div>
+          )}
+          
+          {activeTab === "appearance" && (
+            <div>
+              <h2 className="text-xl font-bold text-gray-800 mb-6">Görünüm Ayarları</h2>
+              
+              <div className="space-y-6">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Tema</label>
+                  <div className="grid grid-cols-3 gap-4">
+                    <button
+                      onClick={() => handleAppearanceChange("theme", "light")}
+                      className={`p-4 rounded-lg border ${
+                        appearancePreferences.theme === "light"
+                          ? "border-indigo-500 ring-2 ring-indigo-200"
+                          : "border-gray-200 hover:border-gray-300"
+                      }`}
+                    >
+                      <div className="h-16 bg-white rounded-md border border-gray-200 mb-2"></div>
+                      <span className="text-sm font-medium text-gray-900">Açık</span>
+                    </button>
+                    
+                    <button
+                      onClick={() => handleAppearanceChange("theme", "dark")}
+                      className={`p-4 rounded-lg border ${
+                        appearancePreferences.theme === "dark"
+                          ? "border-indigo-500 ring-2 ring-indigo-200"
+                          : "border-gray-200 hover:border-gray-300"
+                      }`}
+                    >
+                      <div className="h-16 bg-gray-800 rounded-md border border-gray-700 mb-2"></div>
+                      <span className="text-sm font-medium text-gray-900">Koyu</span>
+                    </button>
+                    
+                    <button
+                      onClick={() => handleAppearanceChange("theme", "system")}
+                      className={`p-4 rounded-lg border ${
+                        appearancePreferences.theme === "system"
+                          ? "border-indigo-500 ring-2 ring-indigo-200"
+                          : "border-gray-200 hover:border-gray-300"
+                      }`}
+                    >
+                      <div className="h-16 bg-gradient-to-r from-white to-gray-800 rounded-md border border-gray-200 mb-2"></div>
+                      <span className="text-sm font-medium text-gray-900">Sistem</span>
+                    </button>
+                  </div>
+                </div>
+                
+                <div>
+                  <h3 className="text-md font-medium text-gray-700 mb-3">Görünüm Seçenekleri</h3>
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <span className="text-sm text-gray-700">Sıkıştırılmış Mod</span>
+                        <p className="text-xs text-gray-500">Daha kompakt bir yerleşim için</p>
+                      </div>
+                      <button
+                        type="button"
+                        className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                          appearancePreferences.compactMode ? "bg-indigo-600" : "bg-gray-200"
+                        }`}
+                        role="switch"
+                        aria-checked={appearancePreferences.compactMode}
+                        onClick={() => handleAppearanceChange("compactMode", !appearancePreferences.compactMode)}
+                      >
+                        <span
+                          className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                            appearancePreferences.compactMode ? "translate-x-5" : "translate-x-0"
+                          }`}
+                        />
+                      </button>
+                    </div>
+                    
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <span className="text-sm text-gray-700">Yüksek Kontrast</span>
+                        <p className="text-xs text-gray-500">Daha yüksek kontrast için</p>
+                      </div>
+                      <button
+                        type="button"
+                        className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                          appearancePreferences.highContrast ? "bg-indigo-600" : "bg-gray-200"
+                        }`}
+                        role="switch"
+                        aria-checked={appearancePreferences.highContrast}
+                        onClick={() => handleAppearanceChange("highContrast", !appearancePreferences.highContrast)}
+                      >
+                        <span
+                          className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                            appearancePreferences.highContrast ? "translate-x-5" : "translate-x-0"
+                          }`}
+                        />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Yazı Boyutu</label>
+                  <div className="grid grid-cols-4 gap-4">
+                    {["small", "medium", "large", "x-large"].map((size) => (
+                      <button
+                        key={size}
+                        onClick={() => handleAppearanceChange("fontSize", size)}
+                        className={`py-2 px-4 rounded-lg border ${
+                          appearancePreferences.fontSize === size
+                            ? "border-indigo-500 bg-indigo-50 text-indigo-700"
+                            : "border-gray-200 hover:border-gray-300 text-gray-700"
+                        }`}
+                      >
+                        {size === "small" && "Küçük"}
+                        {size === "medium" && "Orta"}
+                        {size === "large" && "Büyük"}
+                        {size === "x-large" && "Çok Büyük"}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+          
+          <div className="mt-6">
+            <button
+              type="button"
+              disabled={saving}
+              onClick={saveSettings}
+              className={`px-4 py-2 bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded-lg shadow-sm hover:shadow-md transition-all flex items-center ${
+                saving ? "opacity-70 cursor-not-allowed" : ""
+              }`}
+            >
+              {saving ? (
+                <>
+                  <span className="mr-2 h-4 w-4 rounded-full border-2 border-white border-t-transparent animate-spin"></span>
+                  Kaydediliyor...
+                </>
+              ) : (
+                <>
+                  <Save className="mr-2" />
+                  Değişiklikleri Kaydet
+                </>
+              )}
+            </button>
           </div>
         </div>
       </div>
-    </>
+    </div>
   );
 }
 

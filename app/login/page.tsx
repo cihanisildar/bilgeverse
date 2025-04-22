@@ -28,8 +28,8 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-white to-blue-50 p-4">
-      <div className="w-full max-w-md bg-white rounded-2xl shadow-xl border border-gray-100 p-8">
+    <div className="min-h-screen flex items-center justify-center bg-[url('/7458557.jpg')] bg-cover bg-center bg-no-repeat before:content-[''] before:absolute before:inset-0 before:bg-gradient-to-br before:from-blue-900/40 before:via-blue-800/30 before:to-blue-900/40 relative p-4">
+      <div className="w-full max-w-md bg-white/95 backdrop-blur-sm rounded-2xl shadow-xl border border-gray-100 p-8 relative z-10">
         <div className="text-center">
           <div className="mx-auto h-16 w-16 rounded-full bg-gradient-to-r from-blue-500 to-blue-600 flex items-center justify-center mb-4 transform hover:scale-105 transition-transform duration-200">
             <User2 className="h-8 w-8 text-white" />

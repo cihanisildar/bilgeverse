@@ -242,7 +242,7 @@ function PointsManagement() {
           })));
         } else if (studentsData.error) {
           console.error("Error from API:", studentsData.error);
-          toast.error(`API Error: ${studentsData.error}`);
+          toast.error(`API Hatası: ${studentsData.error}`);
         }
         
         // Fetch recent transactions
@@ -367,7 +367,7 @@ function PointsManagement() {
       setRecentTransactions(prev => [...newTransactions, ...prev]);
 
       const count = selectedStudentIds.size;
-      toast.success(`${isDecreasing ? 'Decreased' : 'Added'} ${points} points ${isDecreasing ? 'from' : 'to'} ${count} student${count > 1 ? 's' : ''}`);
+      toast.success(`${isDecreasing ? 'Azaltıldı' : 'Eklendi'} ${count} öğrenci${count > 1 ? 'ye' : 'ye'} ${points} puan ${isDecreasing ? 'dan' : ''}`);
 
       // Reset form
       setPoints(0);
@@ -376,7 +376,7 @@ function PointsManagement() {
       setIsDecreasing(false);
     } catch (error) {
       console.error('Submit error:', error);
-      toast.error('Failed to process request');
+      toast.error('İşlem başarısız oldu');
     } finally {
       setIsSubmitting(false);
     }

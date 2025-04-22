@@ -6,8 +6,9 @@ import { useAuth } from '../contexts/AuthContext';
 import Link from 'next/link';
 import { Button } from "../../components/ui/button";
 import { Avatar, AvatarFallback } from "../../components/ui/avatar";
-import { LogOut, LayoutDashboard, Users, FileText, Calendar, ShoppingBag, PieChart, GraduationCap, Trophy, ShoppingCart, ClipboardList, School, Award, TrendingUp } from "lucide-react";
+import { LogOut, LayoutDashboard, Users, FileText, Calendar, ShoppingBag, PieChart, GraduationCap, Trophy, ShoppingCart, ClipboardList, School, Award, TrendingUp, Menu } from "lucide-react";
 import { UserRole } from '@prisma/client';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "../../components/ui/sheet";
 
 // Define the type for navigation links
 interface NavLink {
@@ -25,6 +26,7 @@ export default function AuthenticatedLayout({
   const router = useRouter();
   const pathname = usePathname();
   const [isExpanded, setIsExpanded] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -70,6 +72,7 @@ export default function AuthenticatedLayout({
     { href: '/student/leaderboard', label: 'Liderlik Tablosu', icon: <Trophy className="h-5 w-5" /> },
     { href: '/student/store', label: 'Mağaza', icon: <ShoppingCart className="h-5 w-5" /> },
     { href: '/student/requests', label: 'İsteklerim', icon: <ClipboardList className="h-5 w-5" /> },
+    { href: '/student/tips', label: 'Başarı Rehberi', icon: <TrendingUp className="h-5 w-5" /> },
   ];
 
   // Determine which set of links to show based on user role AND path
@@ -124,19 +127,98 @@ export default function AuthenticatedLayout({
     activeIconBg = isAdmin ? "bg-indigo-100" : isTutor ? "bg-blue-100" : "bg-teal-100";
   }
 
+  const NavigationLinks = () => (
+    <ul className="space-y-2">
+      {navLinks.map((link) => (
+        <li key={link.href}>
+          <Link 
+            href={link.href} 
+            className={`flex items-center justify-start px-4 py-2 rounded-lg transition-all duration-200 ${
+              isActive(link.href) 
+                ? `${activeIconBg} ${activeLinkColor} font-medium` 
+                : 'text-gray-500 hover:bg-gray-50 hover:text-gray-800'
+            }`}
+            onClick={() => setIsMobileMenuOpen(false)}
+          >
+            <div className="flex-shrink-0 mr-3">
+              {link.icon}
+            </div>
+            <span className="truncate text-sm tracking-wide">{link.label}</span>
+          </Link>
+        </li>
+      ))}
+    </ul>
+  );
+
+  const UserProfile = ({ expanded = true }) => (
+    <div className={`flex ${expanded ? 'items-center px-3' : 'justify-center'}`}>
+      <Avatar className="h-10 w-10 bg-indigo-100 text-indigo-600 flex-shrink-0" title={user?.username}>
+        <AvatarFallback>
+          {user?.username?.charAt(0).toUpperCase()}
+        </AvatarFallback>
+      </Avatar>
+      
+      {expanded && (
+        <>
+          <div className="ml-3 overflow-hidden">
+            <p className="text-sm font-medium text-gray-800 truncate tracking-wide">{user?.username}</p>
+            <p className="text-xs text-gray-500 tracking-wide">
+              {user?.role === UserRole.ADMIN ? 'Yönetici' : user?.role === UserRole.TUTOR ? 'Öğretmen' : 'Öğrenci'}
+            </p>
+          </div>
+          <Button
+            size="icon"
+            variant="ghost"
+            onClick={() => router.push('/login')}
+            className="ml-auto text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full"
+            title="Çıkış Yap"
+          >
+            <LogOut className="h-5 w-5" />
+          </Button>
+        </>
+      )}
+    </div>
+  );
+
   return (
     <div className="flex min-h-screen font-sans">
-      {/* Sidebar - Narrow Fixed with Hover Expand */}
+      {/* Mobile Header */}
+      <div className="lg:hidden fixed top-0 left-0 right-0 h-16 bg-white border-b border-gray-100 z-20 flex items-center px-4">
+        <Sheet open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
+          <SheetTrigger asChild>
+            <Button variant="ghost" size="icon" className="mr-4">
+              <Menu className="h-6 w-6" />
+            </Button>
+          </SheetTrigger>
+          <SheetContent side="left" className="w-[300px] sm:w-[300px] p-0">
+            <SheetHeader className="border-b border-gray-100 p-5">
+              <SheetTitle className="text-lg font-semibold bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-purple-600">
+                {sidebarTitle}
+              </SheetTitle>
+            </SheetHeader>
+            <div className="flex flex-col h-full">
+              <div className="flex-1 py-4 px-3">
+                <NavigationLinks />
+              </div>
+              <div className="p-3 border-t border-gray-100">
+                <UserProfile />
+              </div>
+            </div>
+          </SheetContent>
+        </Sheet>
+        <h1 className="text-lg font-semibold bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-purple-600">
+          {sidebarTitle}
+        </h1>
+      </div>
+
+      {/* Desktop Sidebar */}
       <div 
-        className={`fixed top-0 left-0 bottom-0 ${isExpanded ? 'w-[240px]' : 'w-[60px]'} h-full bg-white border-r border-gray-100 shadow-sm z-10 transition-all duration-300 ease-in-out`}
+        className={`hidden lg:block fixed top-0 left-0 bottom-0 ${isExpanded ? 'w-[240px]' : 'w-[60px]'} h-full bg-white border-r border-gray-100 shadow-sm z-10 transition-all duration-300 ease-in-out`}
         onMouseEnter={() => setIsExpanded(true)}
         onMouseLeave={() => setIsExpanded(false)}
       >
-        {/* Purple top border */}
         <div className="h-1 w-full bg-indigo-600"></div>
-        
         <div className="flex flex-col h-full">
-          {/* Title area */}
           <div className={`border-b border-gray-100 flex ${isExpanded ? 'justify-start p-5' : 'justify-center p-4'}`}>
             {isExpanded ? (
               <h1 className="text-lg font-semibold bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-purple-600 whitespace-nowrap tracking-tight">
@@ -148,64 +230,18 @@ export default function AuthenticatedLayout({
               </span>
             )}
           </div>
-          
-          {/* Navigation Links */}
           <div className="flex-1 py-4">
-            <ul className="space-y-2">
-              {navLinks.map((link) => (
-                <li key={link.href} className={isExpanded ? 'px-3' : 'px-3'}>
-                  <Link 
-                    href={link.href} 
-                    className={`flex items-center ${isExpanded ? 'justify-start px-4' : 'justify-center'} py-2 rounded-lg transition-all duration-200 ${isActive(link.href) ? `${activeIconBg} ${activeLinkColor} font-medium` : 'text-gray-500 hover:bg-gray-50 hover:text-gray-800'}`}
-                    title={isExpanded ? '' : link.label}
-                  >
-                    <div className={`flex-shrink-0 ${isExpanded ? 'mr-3' : ''}`}>
-                      {link.icon}
-                    </div>
-                    {isExpanded && (
-                      <span className="truncate text-sm tracking-wide">{link.label}</span>
-                    )}
-                  </Link>
-                </li>
-              ))}
-            </ul>
+            <NavigationLinks />
           </div>
-          
-          {/* User Avatar */}
           <div className="p-3 border-t border-gray-100">
-            <div className={`flex ${isExpanded ? 'items-center px-3' : 'justify-center'}`}>
-              <Avatar className="h-10 w-10 bg-indigo-100 text-indigo-600 flex-shrink-0" title={user?.username}>
-                <AvatarFallback>
-                  {user?.username?.charAt(0).toUpperCase()}
-                </AvatarFallback>
-              </Avatar>
-              
-              {isExpanded && (
-                <div className="ml-3 overflow-hidden">
-                  <p className="text-sm font-medium text-gray-800 truncate tracking-wide">{user?.username}</p>
-                  <p className="text-xs text-gray-500 tracking-wide">{user?.role === UserRole.ADMIN ? 'Yönetici' : user?.role === UserRole.TUTOR ? 'Öğretmen' : 'Öğrenci'}</p>
-                </div>
-              )}
-              
-              {isExpanded && (
-                <Button
-                  size="icon"
-                  variant="ghost"
-                  onClick={() => router.push('/login')}
-                  className="ml-auto text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full"
-                  title="Çıkış Yap"
-                >
-                  <LogOut className="h-5 w-5" />
-                </Button>
-              )}
-            </div>
+            <UserProfile expanded={isExpanded} />
           </div>
         </div>
       </div>
 
       {/* Main Content */}
-      <div className={`${isExpanded ? 'ml-[240px]' : 'ml-[60px]'} flex-1 transition-all duration-300 ease-in-out`}>
-        <main>
+      <div className={`flex-1 transition-all duration-300 ease-in-out ${isExpanded ? 'lg:ml-[240px]' : 'lg:ml-[60px]'} ${pathname !== '/' ? 'mt-16 lg:mt-0' : ''}`}>
+        <main className="">
           {children}
         </main>
       </div>

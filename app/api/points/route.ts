@@ -61,7 +61,7 @@ export async function POST(request: NextRequest) {
           studentId,
           tutorId: currentUser.id,
           points: Math.abs(points),
-          type: TransactionType.AWARD,
+          type: points >= 0 ? TransactionType.AWARD : TransactionType.REDEEM,
           reason: reason || (points >= 0 ? 'Points awarded' : 'Points deducted')
         }
       });
