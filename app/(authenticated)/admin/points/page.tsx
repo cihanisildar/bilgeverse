@@ -150,7 +150,7 @@ function PointsManagement() {
           },
           body: JSON.stringify({
             points: points,
-            reason: isDecreasing ? "Points subtracted by admin" : reason,
+            reason: isDecreasing ? "Admin tarafından puan azaltıldı" : reason,
             action: isDecreasing ? 'subtract' : 'add'
           }),
         });

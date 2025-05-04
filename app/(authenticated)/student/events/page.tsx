@@ -164,12 +164,15 @@ function LoadingEvents() {
   );
 }
 
-function EventsList() {
+function EventsList({
+  initialSearchQuery,
+  initialStatusFilter,
+}: {
+  initialSearchQuery: string;
+  initialStatusFilter: string;
+}) {
   const [events, setEvents] = useState<Event[]>([]);
   const [filteredEvents, setFilteredEvents] = useState<Event[]>([]);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState('all');
-  const [scopeFilter, setScopeFilter] = useState('all');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
@@ -243,8 +246,8 @@ function EventsList() {
     let filtered = [...events];
     
     // Apply search filter
-    if (searchQuery) {
-      const query = searchQuery.toLowerCase();
+    if (initialSearchQuery) {
+      const query = initialSearchQuery.toLowerCase();
       filtered = filtered.filter(event => 
         event.title.toLowerCase().includes(query) ||
         event.description.toLowerCase().includes(query) ||
@@ -254,17 +257,12 @@ function EventsList() {
     }
     
     // Apply status filter
-    if (statusFilter !== 'all') {
-      filtered = filtered.filter(event => event.status === statusFilter);
-    }
-
-    // Apply scope filter
-    if (scopeFilter !== 'all') {
-      filtered = filtered.filter(event => event.eventScope === scopeFilter);
+    if (initialStatusFilter !== 'all') {
+      filtered = filtered.filter(event => event.status === initialStatusFilter);
     }
     
     setFilteredEvents(filtered);
-  }, [events, searchQuery, statusFilter, scopeFilter]);
+  }, [events, initialSearchQuery, initialStatusFilter]);
 
   if (loading) {
     return <LoadingEvents />;
@@ -367,6 +365,9 @@ function EventsList() {
 }
 
 export default function StudentEventsPage() {
+  const [searchQuery, setSearchQuery] = useState('');
+  const [activeFilter, setActiveFilter] = useState('all');
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Hero Section */}
@@ -383,7 +384,18 @@ export default function StudentEventsPage() {
 
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 sm:py-6">
-        <EventsList />
+        <EventsFilter 
+          searchQuery={searchQuery}
+          setSearchQuery={setSearchQuery}
+          activeFilter={activeFilter}
+          setActiveFilter={setActiveFilter}
+        />
+        <div className="mt-6">
+          <EventsList 
+            initialSearchQuery={searchQuery}
+            initialStatusFilter={activeFilter}
+          />
+        </div>
       </div>
     </div>
   );

@@ -20,14 +20,14 @@ export async function POST(request: NextRequest) {
 
     if (!studentId || points === undefined || points === null) {
       return NextResponse.json(
-        { error: 'Student ID and points are required' },
+        { error: 'Öğrenci numarası ve puan gerekli' },
         { status: 400 }
       );
     }
 
     if (Math.abs(points) <= 0) {
       return NextResponse.json(
-        { error: 'Points amount must be greater than 0' },
+        { error: 'Eklenmek istenen puan 0 dan fazla olmalı' },
         { status: 400 }
       );
     }
@@ -63,7 +63,7 @@ export async function POST(request: NextRequest) {
           tutorId: session.user.id,
           points: Math.abs(points),
           type: points >= 0 ? TransactionType.AWARD : TransactionType.REDEEM,
-          reason: reason || (points >= 0 ? 'Points awarded' : 'Points deducted')
+          reason: reason || (points >= 0 ? 'Puan eklendi' : 'Puan azaltıldı')
         }
       });
 
@@ -93,7 +93,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(
       {
-        message: points >= 0 ? 'Points awarded successfully' : 'Points deducted successfully',
+        message: points >= 0 ? 'Puan başarıyla eklendi' : 'Puan başarıyla azaltıldı',
         transaction: result.transaction,
         newBalance: result.newBalance
       },
