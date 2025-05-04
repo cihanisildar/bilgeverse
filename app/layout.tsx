@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Quicksand } from "next/font/google";
 import "./globals.css";
-import { Toaster } from 'react-hot-toast';
+import { Toaster } from "react-hot-toast";
 import Providers from "./components/Providers";
 
 const quicksand = Quicksand({
@@ -14,7 +14,7 @@ export const metadata: Metadata = {
   title: "BilgeVerse",
   description: "Öğrenci takip ve puan yönetim sistemi",
   icons: {
-    icon: '/favicon.ico',
+    icon: "/favicon.ico",
   },
 };
 
@@ -27,13 +27,15 @@ export default function RootLayout({
     <html lang="tr" suppressHydrationWarning>
       <head>
         <meta charSet="utf-8" />
-        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <meta
+          name="viewport"
+          content="width=device-width, initial-scale=1"
+        />{" "}
+        <link rel="icon" href="/favicon.ico" />
       </head>
       <body className={`${quicksand.className} min-h-screen bg-background`}>
         <Providers>
-          <main className="min-h-screen">
-            {children}
-          </main>
+          <main className="min-h-screen">{children}</main>
         </Providers>
         <Toaster position="top-center" />
       </body>
