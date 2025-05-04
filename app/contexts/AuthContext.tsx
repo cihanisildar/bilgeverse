@@ -176,6 +176,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
   const login = async (username: string, password: string) => {
     try {
+      console.log('Login attempt started for user:', username);
       setLoading(true);
       const result = await signIn('credentials', {
         username,
@@ -183,16 +184,21 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         redirect: false,
       });
 
+      console.log('SignIn result:', { error: result?.error, ok: result?.ok });
+
       if (result?.error) {
+        console.error('Login error:', result.error);
         toast.error(result.error || "Giriş başarısız. Lütfen tekrar deneyin.");
         setLoading(false);
         return;
       }
 
       // Wait a bit for the session to be set
+      console.log('Waiting for session to be set...');
       await new Promise(resolve => setTimeout(resolve, 500));
 
       // Fetch user data after successful login
+      console.log('Fetching user data...');
       const res = await fetch("/api/auth/me", {
         credentials: 'include',
         headers: {
@@ -200,16 +206,24 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         },
       });
 
+      console.log('User data response status:', res.status);
+
       if (!res.ok) {
+        console.error('Failed to fetch user data:', res.status);
         toast.error("Kullanıcı bilgileri alınamadı.");
         setLoading(false);
         return;
       }
 
       const data = await res.json();
-      console.log('Login successful, user data:', data);
+      console.log('User data received:', { 
+        hasUser: !!data.user, 
+        role: data.user?.role,
+        id: data.user?.id 
+      });
       
       if (!data.user || !data.user.role) {
+        console.error('Invalid user data received:', data);
         toast.error("Kullanıcı rolü bulunamadı.");
         setLoading(false);
         return;
@@ -225,13 +239,15 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
           ? "/tutor" 
           : "/student";
 
-      console.log('Redirecting to:', redirectPath);
+      console.log('Attempting redirect to:', redirectPath);
       
       // Use router for navigation
       try {
         await router.push(redirectPath);
+        console.log('Router push completed');
       } catch (error) {
         console.error('Router navigation error:', error);
+        console.log('Falling back to window.location');
         window.location.href = redirectPath;
       }
     } catch (error) {
