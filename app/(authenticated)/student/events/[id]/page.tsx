@@ -103,13 +103,19 @@ export default function EventDetailsPage() {
           name: data.event.createdBy.username || data.event.createdBy.name
         }
       };
-      console.log('Event data from API:', data.event);
-      console.log('Mapped event data:', eventData);
       
-      // If enrolledStudents is 1 and we're viewing the event details, it means we're the one who joined
-      setHasJoined(data.event.enrolledStudents === 1);
+      // Check if the current user has joined by making a separate API call
+      const participationResponse = await fetch(`/api/events/${eventId}/participation`, {
+        credentials: 'include'
+      });
+      
+      if (participationResponse.ok) {
+        const participationData = await participationResponse.json();
+        setHasJoined(participationData.hasJoined);
+      }
+      
       setEvent(eventData);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error fetching event details:', error);
       setError('Etkinlik detayları yüklenirken bir hata oluştu');
     } finally {
