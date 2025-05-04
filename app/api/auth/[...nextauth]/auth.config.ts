@@ -68,7 +68,7 @@ export const authOptions: AuthOptions = {
         token.username = user.username;
         token.email = user.email;
         token.role = user.role;
-        token.tutorId = user.tutorId;
+        token.tutorId = user.tutorId ?? undefined;
         token.tutor = user.tutor;
       }
       return token;
