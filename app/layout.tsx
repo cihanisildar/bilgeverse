@@ -1,10 +1,10 @@
 import type { Metadata } from "next";
-import { Poppins } from "next/font/google";
+import { Quicksand } from "next/font/google";
 import "./globals.css";
-import { AuthProvider } from "./contexts/AuthContext";
 import { Toaster } from 'react-hot-toast';
+import Providers from "./components/Providers";
 
-const poppins = Poppins({
+const quicksand = Quicksand({
   subsets: ["latin"],
   weight: ["300", "400", "500", "600", "700"],
   variable: "--font-poppins",
@@ -26,12 +26,12 @@ export default function RootLayout({
         <meta charSet="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
       </head>
-      <body className={`${poppins.variable} font-sans antialiased min-h-screen bg-background`}>
-        <AuthProvider>
+      <body className={`${quicksand.className} min-h-screen bg-background`}>
+        <Providers>
           <main className="min-h-screen">
             {children}
           </main>
-        </AuthProvider>
+        </Providers>
         <Toaster position="top-center" />
       </body>
     </html>

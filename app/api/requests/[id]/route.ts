@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
-import { RequestStatus, TransactionType } from '@prisma/client';
-import { getUserFromRequest, isAuthenticated, isAdmin, isTutor } from '@/lib/server-auth';
+import { RequestStatus, TransactionType, UserRole } from '@prisma/client';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '../../auth/[...nextauth]/auth.config';
 
 // Get a specific request by ID
 export async function GET(
@@ -9,9 +10,9 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   try {
-    const currentUser = await getUserFromRequest(request);
+    const session = await getServerSession(authOptions);
     
-    if (!isAuthenticated(currentUser)) {
+    if (!session?.user) {
       return NextResponse.json(
         { error: 'Unauthorized' },
         { status: 401 }
@@ -53,9 +54,9 @@ export async function GET(
     
     // Check permissions: admin can see all, tutor only their students, student only their own
     if (
-      !isAdmin(currentUser) && 
-      !(isTutor(currentUser) && itemRequest.tutorId === currentUser.id) &&
-      !(itemRequest.studentId === currentUser.id)
+      session.user.role !== UserRole.ADMIN && 
+      !(session.user.role === UserRole.TUTOR && itemRequest.tutorId === session.user.id) &&
+      !(itemRequest.studentId === session.user.id)
     ) {
       return NextResponse.json(
         { error: 'Unauthorized to view this request' },
@@ -79,9 +80,9 @@ export async function PUT(
   { params }: { params: { id: string } }
 ) {
   try {
-    const currentUser = await getUserFromRequest(request);
+    const session = await getServerSession(authOptions);
     
-    if (!isAuthenticated(currentUser) || !(isAdmin(currentUser) || isTutor(currentUser))) {
+    if (!session?.user || (session.user.role !== UserRole.ADMIN && session.user.role !== UserRole.TUTOR)) {
       return NextResponse.json(
         { error: 'Unauthorized: Only admin or tutor can update requests' },
         { status: 403 }
@@ -139,7 +140,7 @@ export async function PUT(
       }
 
       // Tutor can only process their own students' requests
-      if (isTutor(currentUser) && itemRequest.tutorId !== currentUser.id) {
+      if (session.user.role === UserRole.TUTOR && itemRequest.tutorId !== session.user.id) {
         throw new Error('Unauthorized: This request belongs to another tutor');
       }
 
@@ -199,7 +200,8 @@ export async function PUT(
               id: true,
               username: true,
               firstName: true,
-              lastName: true
+              lastName: true,
+              points: true
             }
           },
           tutor: {
@@ -217,62 +219,65 @@ export async function PUT(
       return updatedRequest;
     });
 
-    return NextResponse.json({
-      message: `Request ${status.toLowerCase()} successfully`,
-      request: result
-    }, { status: 200 });
+    return NextResponse.json(
+      {
+        message: `Request ${status.toLowerCase()} successfully`,
+        request: result
+      },
+      { status: 200 }
+    );
   } catch (error: any) {
     console.error('Update request error:', error);
-    console.error('Error stack:', error.stack);
-    console.error('Error details:', {
-      name: error.name,
-      message: error.message,
-      code: error.code
-    });
-
+    
     if (error.message === 'Request not found') {
       return NextResponse.json(
         { error: 'Request not found' },
         { status: 404 }
       );
     }
-
+    
+    if (error.message === 'Invalid request: missing required relationships') {
+      return NextResponse.json(
+        { error: error.message },
+        { status: 400 }
+      );
+    }
+    
+    if (error.message === 'Invalid request: missing tutor assignment') {
+      return NextResponse.json(
+        { error: error.message },
+        { status: 400 }
+      );
+    }
+    
     if (error.message === 'Request has already been processed') {
       return NextResponse.json(
         { error: error.message },
         { status: 400 }
       );
     }
-
+    
     if (error.message === 'Unauthorized: This request belongs to another tutor') {
       return NextResponse.json(
         { error: error.message },
         { status: 403 }
       );
     }
-
+    
     if (error.message === 'Item is out of stock') {
       return NextResponse.json(
         { error: error.message },
         { status: 400 }
       );
     }
-
+    
     if (error.message === 'Student no longer has enough points') {
       return NextResponse.json(
         { error: error.message },
         { status: 400 }
       );
     }
-
-    if (error.message === 'Invalid request: missing required relationships' ||
-        error.message === 'Invalid request: missing tutor assignment') {
-      return NextResponse.json(
-        { error: error.message },
-        { status: 400 }
-      );
-    }
-
+    
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

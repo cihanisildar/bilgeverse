@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
-import { RequestStatus, UserRole } from '@prisma/client';
 import bcrypt from 'bcryptjs';
 
 export async function POST(request: NextRequest) {
@@ -9,44 +8,43 @@ export async function POST(request: NextRequest) {
     const { username, email, password, firstName, lastName, requestedRole } = body;
 
     // Validate required fields
-    if (!username || !email || !password || !firstName || !lastName) {
+    if (!username || !email || !password || !firstName || !lastName || !requestedRole) {
       return NextResponse.json(
         { error: 'All fields are required' },
         { status: 400 }
       );
     }
 
-    // Check if username or email already exists in Users collection
+    // Check if username or email already exists in users or registration requests
     const existingUser = await prisma.user.findFirst({
       where: {
         OR: [
-          { username },
-          { email }
-        ]
-      }
+          { username: username.toLowerCase() },
+          { email: email.toLowerCase() }
+        ],
+      },
+    });
+
+    const existingRequest = await prisma.registrationRequest.findFirst({
+      where: {
+        OR: [
+          { username: username.toLowerCase() },
+          { email: email.toLowerCase() }
+        ],
+        status: 'PENDING',
+      },
     });
 
     if (existingUser) {
       return NextResponse.json(
-        { error: 'An account with similar information already exists' },
+        { error: 'Username or email already exists' },
         { status: 409 }
       );
     }
 
-    // Check if username or email already exists in RegistrationRequest collection
-    const existingRequest = await prisma.registrationRequest.findFirst({
-      where: {
-        OR: [
-          { username },
-          { email }
-        ],
-        status: RequestStatus.PENDING
-      }
-    });
-
     if (existingRequest) {
       return NextResponse.json(
-        { error: 'A registration request with similar information is already pending' },
+        { error: 'A pending registration request already exists for this username or email' },
         { status: 409 }
       );
     }
@@ -58,35 +56,25 @@ export async function POST(request: NextRequest) {
     // Create registration request
     const registrationRequest = await prisma.registrationRequest.create({
       data: {
-        username,
-        email,
+        username: username.toLowerCase(),
+        email: email.toLowerCase(),
         password: hashedPassword,
         firstName,
         lastName,
-        requestedRole: requestedRole as UserRole,
-        status: RequestStatus.PENDING
-      }
+        requestedRole,
+        status: 'PENDING',
+      },
     });
-
-    // TODO: Send email notification to admin (implement later)
 
     return NextResponse.json(
       { 
-        message: 'Registration request submitted successfully. An administrator will review your request.',
-        requestId: registrationRequest.id
+        message: 'Registration request submitted successfully. Please wait for admin approval.',
+        requestId: registrationRequest.id 
       },
       { status: 201 }
     );
-  } catch (error) {
+  } catch (error: any) {
     console.error('Registration request error:', error);
-    
-    if (error && typeof error === 'object' && 'code' in error && error.code === 'P2002') {
-      return NextResponse.json(
-        { error: 'An account with similar information already exists' },
-        { status: 409 }
-      );
-    }
-    
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

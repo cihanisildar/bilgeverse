@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
-import { getUserFromRequest, isAdmin, isTutor } from './lib/server-auth';
+import { getToken } from 'next-auth/jwt';
+import { UserRole } from '@prisma/client';
+import { withAuth } from "next-auth/middleware";
 
 export async function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
@@ -9,6 +11,7 @@ export async function middleware(request: NextRequest) {
   // Skip middleware for public assets and auth API routes
   if (pathname.startsWith('/_next/') || 
       pathname.startsWith('/api/auth/') ||
+      pathname === '/api/register' ||
       pathname === '/favicon.ico') {
     console.log('Skipping middleware for:', pathname);
     return NextResponse.next();
@@ -23,46 +26,69 @@ export async function middleware(request: NextRequest) {
   try {
     console.log('Checking auth for path:', pathname);
     
-    const user = await getUserFromRequest(request);
-    console.log('Auth check result:', { authenticated: !!user, role: user?.role });
+    const token = await getToken({ 
+      req: request,
+      secret: process.env.NEXTAUTH_SECRET || process.env.JWT_SECRET,
+    });
+    
+    console.log('Auth check result:', { 
+      authenticated: !!token, 
+      role: token?.role,
+      path: pathname 
+    });
 
-    if (!user) {
-      console.log('No user found, redirecting to login');
-      const redirectUrl = new URL('/login', request.url);
-      const response = NextResponse.redirect(redirectUrl);
-      response.headers.set('x-middleware-cache', 'no-cache');
-      response.headers.set('Cache-Control', 'no-store, must-revalidate');
-      return response;
+    const isApiRoute = pathname.startsWith('/api/');
+
+    if (!token) {
+      console.log('No token found');
+      return isApiRoute 
+        ? NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+        : NextResponse.redirect(new URL('/login', request.url));
     }
 
+    // Helper function to check if a path matches a route pattern
+    const matchesRoute = (path: string, pattern: string) => {
+      // Convert URL pattern to regex pattern
+      const regexPattern = pattern
+        .replace(/\//g, '\\/') // Escape forward slashes
+        .replace(/\*/g, '.*'); // Convert * to .*
+      return new RegExp(`^${regexPattern}$`).test(path);
+    };
+
+    // Define protected route patterns
+    const adminRoutes = ['/admin*', '/api/admin*'];
+    const tutorRoutes = ['/tutor*', '/api/tutor*'];
+    const studentRoutes = ['/student*', '/api/student*'];
+
     // Check admin routes
-    if ((pathname.startsWith('/admin') || pathname.startsWith('/api/admin')) && !isAdmin(user)) {
+    if (adminRoutes.some(pattern => matchesRoute(pathname, pattern)) && token.role !== UserRole.ADMIN) {
       console.log('Non-admin user attempting to access admin route:', pathname);
-      const response = NextResponse.json(
-        { error: 'Unauthorized: Only admin can access this endpoint' },
-        { status: 403 }
-      );
-      response.headers.set('x-middleware-cache', 'no-cache');
-      response.headers.set('Cache-Control', 'no-store, must-revalidate');
-      return response;
+      return isApiRoute
+        ? NextResponse.json({ error: 'Forbidden: Admin access required' }, { status: 403 })
+        : NextResponse.redirect(new URL('/', request.url));
     }
 
     // Check tutor routes
-    if ((pathname.startsWith('/tutor') || pathname.startsWith('/api/tutor')) && !isTutor(user)) {
+    if (tutorRoutes.some(pattern => matchesRoute(pathname, pattern)) && token.role !== UserRole.TUTOR) {
       console.log('Non-tutor user attempting to access tutor route:', pathname);
-      const response = NextResponse.json(
-        { error: 'Unauthorized: Only tutors can access this endpoint' },
-        { status: 403 }
-      );
-      response.headers.set('x-middleware-cache', 'no-cache');
-      response.headers.set('Cache-Control', 'no-store, must-revalidate');
-      return response;
+      return isApiRoute
+        ? NextResponse.json({ error: 'Forbidden: Tutor access required' }, { status: 403 })
+        : NextResponse.redirect(new URL('/', request.url));
+    }
+
+    // Check student routes
+    if (studentRoutes.some(pattern => matchesRoute(pathname, pattern)) && token.role !== UserRole.STUDENT) {
+      console.log('Non-student user attempting to access student route:', pathname);
+      return isApiRoute
+        ? NextResponse.json({ error: 'Forbidden: Student access required' }, { status: 403 })
+        : NextResponse.redirect(new URL('/', request.url));
     }
 
     const response = NextResponse.next();
+    
     // Add user info to headers for debugging
-    response.headers.set('x-user-role', user.role);
-    response.headers.set('x-user-id', user.id);
+    response.headers.set('x-user-role', token.role as string);
+    response.headers.set('x-user-id', token.id as string);
     response.headers.set('x-middleware-cache', 'no-cache');
     response.headers.set('Cache-Control', 'no-store, must-revalidate');
     
@@ -70,21 +96,49 @@ export async function middleware(request: NextRequest) {
     return response;
   } catch (error) {
     console.error('Middleware error:', error);
-    return NextResponse.redirect(new URL('/login', request.url));
+    const isApiRoute = pathname.startsWith('/api/');
+    return isApiRoute
+      ? NextResponse.json({ error: 'Internal Server Error' }, { status: 500 })
+      : NextResponse.redirect(new URL('/login', request.url));
   }
 }
 
-// Configure the middleware to run on specific paths
+export function corsMiddleware(request: NextRequest) {
+  try {
+    // Add CORS headers
+    const response = NextResponse.next();
+    response.headers.set('Access-Control-Allow-Origin', '*');
+    response.headers.set('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+    response.headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+
+    return response;
+  } catch (error) {
+    // Return JSON error instead of HTML
+    return NextResponse.json(
+      { error: 'Internal Server Error' },
+      { status: 500 }
+    );
+  }
+}
+
+export default withAuth({
+  callbacks: {
+    authorized: ({ token }) => !!token,
+  },
+});
+
+// Consolidated config for all matchers
 export const config = {
   matcher: [
-    /*
-     * Match all request paths except for the ones starting with:
-     * - _next/static (static files)
-     * - _next/image (image optimization files)
-     * - favicon.ico (favicon file)
-     * - api/auth (auth endpoints)
-     */
-    '/((?!_next/static|_next/image|favicon.ico).*)',
-    '/api/:path*'
+    // Protected API routes
+    "/api/admin/:path*",
+    "/api/tutor/:path*",
+    "/api/student/:path*",
+    // Protected pages
+    "/admin/:path*",
+    "/tutor/:path*",
+    "/student/:path*",
+    // Exclude certain paths
+    "/((?!_next/static|_next/image|favicon.ico|api/auth|api/register).*)",
   ],
 }; 

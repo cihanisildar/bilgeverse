@@ -1,12 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
-import { getUserFromRequest, isAuthenticated, isAdmin } from '@/lib/server-auth';
+import { getServerSession } from 'next-auth';
+import { UserRole } from '@prisma/client';
+import { authOptions } from '../../auth/[...nextauth]/auth.config';
 
 export async function GET(request: NextRequest) {
   try {
-    const currentUser = await getUserFromRequest(request);
+    const session = await getServerSession(authOptions);
     
-    if (!isAuthenticated(currentUser) || !isAdmin(currentUser)) {
+    if (!session?.user || session.user.role !== UserRole.ADMIN) {
       return NextResponse.json(
         { error: 'Unauthorized: Only admin can access this endpoint' },
         { status: 403 }
@@ -49,9 +51,9 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const currentUser = await getUserFromRequest(request);
+    const session = await getServerSession(authOptions);
     
-    if (!isAuthenticated(currentUser) || !isAdmin(currentUser)) {
+    if (!session?.user || session.user.role !== UserRole.ADMIN) {
       return NextResponse.json(
         { error: 'Unauthorized: Only admin can access this endpoint' },
         { status: 403 }
@@ -147,9 +149,9 @@ export async function POST(request: NextRequest) {
 
 export async function DELETE(request: NextRequest) {
   try {
-    const currentUser = await getUserFromRequest(request);
+    const session = await getServerSession(authOptions);
     
-    if (!isAuthenticated(currentUser) || !isAdmin(currentUser)) {
+    if (!session?.user || session.user.role !== UserRole.ADMIN) {
       return NextResponse.json(
         { error: 'Unauthorized: Only admin can access this endpoint' },
         { status: 403 }

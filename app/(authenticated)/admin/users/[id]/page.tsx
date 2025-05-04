@@ -92,21 +92,14 @@ export default function EditUserPage() {
 
     const fetchTutors = async () => {
       try {
-        const response = await fetch("/api/users?role=tutor");
+        const response = await fetch("/api/admin/tutors");
 
         if (!response.ok) {
           throw new Error("Öğretmenler alınamadı");
         }
 
         const data = await response.json();
-        setTutors(
-          data.users.map((tutor: any) => ({
-            id: tutor.id,
-            username: tutor.username,
-            firstName: tutor.firstName,
-            lastName: tutor.lastName,
-          }))
-        );
+        setTutors(data.tutors);
       } catch (err) {
         console.error("Öğretmenleri alırken hata:", err);
       }

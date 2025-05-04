@@ -1,15 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { UserRole } from '@prisma/client';
-import { getUserFromRequest, isAuthenticated, isTutor } from '@/lib/server-auth';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '../../auth/[...nextauth]/auth.config';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET(request: NextRequest) {
   try {
-    const currentUser = await getUserFromRequest(request);
+    const session = await getServerSession(authOptions);
     
-    if (!isAuthenticated(currentUser) || !isTutor(currentUser)) {
+    if (!session?.user || session.user.role !== UserRole.TUTOR) {
       return NextResponse.json(
         { error: 'Unauthorized: Only tutors can access this endpoint' },
         { status: 403 }

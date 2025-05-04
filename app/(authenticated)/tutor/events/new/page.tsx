@@ -1,156 +1,170 @@
-'use client';
+"use client";
 
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardFooter } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Textarea } from '@/components/ui/textarea';
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardFooter } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import {
-  ChevronLeft,
-  Info,
-  Save,
-  X
-} from 'lucide-react';
-import Link from 'next/link';
-import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
+import { Textarea } from "@/components/ui/textarea";
+import { ChevronLeft, Info, Save, X } from "lucide-react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
+import { cn } from "@/lib/utils";
 
 export default function CreateEventPage() {
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [newTag, setNewTag] = useState('');
-  
+  const [newTag, setNewTag] = useState("");
+
   const [formData, setFormData] = useState({
-    title: '',
-    description: '',
-    startDate: '',
-    startTime: '',
-    location: '',
-    type: 'YUZ_YUZE',
+    title: "",
+    description: "",
+    startDate: "",
+    startTime: "",
+    location: "",
+    type: "YUZ_YUZE",
     capacity: 20,
     points: 0,
-    tags: [] as string[]
+    tags: [] as string[],
+    eventScope: "GROUP" as "GROUP" | "GLOBAL",
   });
-  
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+
+  const handleInputChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+  ) => {
     const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+    setFormData((prev) => ({ ...prev, [name]: value }));
   };
-  
+
   const handleSelectChange = (name: string, value: string) => {
-    setFormData(prev => ({ ...prev, [name]: value }));
+    setFormData((prev) => ({ ...prev, [name]: value }));
   };
-  
+
   const handleAddTag = () => {
     if (newTag.trim() && !formData.tags.includes(newTag.trim())) {
-      setFormData(prev => ({
+      setFormData((prev) => ({
         ...prev,
-        tags: [...prev.tags, newTag.trim()]
+        tags: [...prev.tags, newTag.trim()],
       }));
-      setNewTag('');
+      setNewTag("");
     }
   };
-  
+
   const handleRemoveTag = (tagToRemove: string) => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      tags: prev.tags.filter(tag => tag !== tagToRemove)
+      tags: prev.tags.filter((tag) => tag !== tagToRemove),
     }));
   };
-  
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     try {
       setIsSubmitting(true);
-      
+
       // Log the form data before processing
-      console.log('Form data before processing:', formData);
-      
+      console.log("Form data before processing:", formData);
+
       // If no dates are provided, use current date/time
       const now = new Date();
-      const currentDate = now.toISOString().split('T')[0];
-      const currentTime = now.toTimeString().split(' ')[0].slice(0, 5);
+      const currentDate = now.toISOString().split("T")[0];
+      const currentTime = now.toTimeString().split(" ")[0].slice(0, 5);
 
       // Create consolidated datetime string in TR timezone
-      const startDateTime = formData.startDate && formData.startTime ? 
-        new Date(`${formData.startDate}T${formData.startTime}`).toISOString() : 
-        new Date(`${currentDate}T${currentTime}`).toISOString();
-      
+      const startDateTime =
+        formData.startDate && formData.startTime
+          ? new Date(
+              `${formData.startDate}T${formData.startTime}`
+            ).toISOString()
+          : new Date(`${currentDate}T${currentTime}`).toISOString();
+
       // Log the processed datetime values
-      console.log('Processed datetime values:', { startDateTime });
-      
+      console.log("Processed datetime values:", { startDateTime });
+
       const eventData = {
         title: formData.title,
         description: formData.description,
         startDateTime,
-        endDateTime: new Date(new Date(startDateTime).getTime() + (2 * 60 * 60 * 1000)).toISOString(), // Default 2 hours duration
-        location: formData.location || 'Online',
-        type: formData.type.replace('-', '_'),
+        endDateTime: new Date(
+          new Date(startDateTime).getTime() + 2 * 60 * 60 * 1000
+        ).toISOString(), // Default 2 hours duration
+        location: formData.location || "Online",
+        type: formData.type.replace("-", "_"),
         capacity: parseInt(String(formData.capacity)),
         points: parseInt(String(formData.points)),
         tags: formData.tags,
-        eventScope: 'GROUP'
+        eventScope: formData.eventScope,
       };
 
       // Log the final event data being sent
-      console.log('Event data being sent to API:', eventData);
+      console.log("Event data being sent to API:", eventData);
 
-      const response = await fetch('/api/tutor/events', {
-        method: 'POST',
+      const response = await fetch("/api/tutor/events", {
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify(eventData),
       });
 
       // Log the response status and headers
-      console.log('API Response status:', response.status);
-      console.log('API Response headers:', Object.fromEntries(response.headers.entries()));
+      console.log("API Response status:", response.status);
+      console.log(
+        "API Response headers:",
+        Object.fromEntries(response.headers.entries())
+      );
 
       if (!response.ok) {
         // Try to get error details from response
-        let errorMessage = 'Failed to create event';
+        let errorMessage = "Failed to create event";
         try {
           const errorData = await response.json();
           errorMessage = errorData.error || errorMessage;
-          console.error('API Error details:', errorData);
+          console.error("API Error details:", errorData);
         } catch (parseError) {
-          console.error('Error parsing error response:', parseError);
+          console.error("Error parsing error response:", parseError);
         }
         throw new Error(errorMessage);
       }
 
       const responseData = await response.json();
-      console.log('API Response data:', responseData);
+      console.log("API Response data:", responseData);
 
-      router.push('/tutor/events');
+      router.push("/tutor/events");
     } catch (error: unknown) {
-      console.error('Detailed error creating event:', error);
+      console.error("Detailed error creating event:", error);
       if (error instanceof Error) {
         // Log the full error object
-        console.error('Full error object:', {
+        console.error("Full error object:", {
           name: error.name,
           message: error.message,
           stack: error.stack,
         });
-        alert('Etkinlik oluşturulurken bir hata oluştu: ' + error.message);
+        alert("Etkinlik oluşturulurken bir hata oluştu: " + error.message);
       } else {
-        console.error('An unknown error occurred:', error);
-        alert('Etkinlik oluşturulurken bir hata oluştu: ' + error);
+        console.error("An unknown error occurred:", error);
+        alert("Etkinlik oluşturulurken bir hata oluştu: " + error);
       }
     } finally {
       setIsSubmitting(false);
     }
   };
-  
+
   // Helper function to set today as default for date inputs
   const getTodayDate = () => {
     const today = new Date();
-    return today.toISOString().split('T')[0];
+    return today.toISOString().split("T")[0];
   };
-  
+
   return (
     <div className="min-h-screen bg-gray-50 pb-8">
       {/* Hero Section */}
@@ -165,7 +179,9 @@ export default function CreateEventPage() {
             </Button>
             <div>
               <h1 className="text-2xl font-bold">Yeni Etkinlik Oluştur</h1>
-              <p className="text-sm text-white/80">Grubunuz için yeni bir etkinlik oluşturun</p>
+              <p className="text-sm text-white/80">
+                Grubunuz için yeni bir etkinlik oluşturun
+              </p>
             </div>
           </div>
         </div>
@@ -173,14 +189,48 @@ export default function CreateEventPage() {
 
       {/* Main Content */}
       <div className="max-w-5xl mx-auto px-4 -mt-8">
-        <Card className="border-0 shadow-lg">
+        <Card
+          className={cn(
+            "border-0 shadow-lg transition-colors duration-300",
+            formData.eventScope === "GLOBAL"
+              ? "bg-slate-50"
+              : "bg-white"
+          )}
+        >
           <form onSubmit={handleSubmit}>
             <CardContent className="p-8 space-y-6">
               {/* Basic Info Section */}
               <div className="space-y-4">
-                <h2 className="text-lg font-semibold">Temel Bilgiler</h2>
+                <div className="flex items-center justify-between w-full">
+                  <h2 className="text-lg font-semibold">Temel Bilgiler</h2>
+                  <div className="flex items-center justify-end gap-3 pb-4 border-b">
+                    <div className="flex items-center gap-3 bg-white rounded-lg p-3 shadow-sm">
+                      <div className="flex flex-col items-end">
+                        <span className="text-sm font-medium text-gray-900">
+                          Genel Etkinlik
+                        </span>
+                        <span className="text-xs text-gray-500">
+                          Tüm öğrencilere açık
+                        </span>
+                      </div>
+                      <Switch
+                        checked={formData.eventScope === "GLOBAL"}
+                        onCheckedChange={(checked) =>
+                          handleSelectChange(
+                            "eventScope",
+                            checked ? "GLOBAL" : "GROUP"
+                          )
+                        }
+                        className="data-[state=checked]:bg-blue-600"
+                      />
+                    </div>
+                  </div>
+                </div>
                 <div>
-                  <label htmlFor="title" className="block text-sm font-medium text-gray-700 mb-1">
+                  <label
+                    htmlFor="title"
+                    className="block text-sm font-medium text-gray-700 mb-1"
+                  >
                     Başlık *
                   </label>
                   <Input
@@ -194,7 +244,10 @@ export default function CreateEventPage() {
                 </div>
 
                 <div>
-                  <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-1">
+                  <label
+                    htmlFor="description"
+                    className="block text-sm font-medium text-gray-700 mb-1"
+                  >
                     Açıklama *
                   </label>
                   <Textarea
@@ -214,7 +267,10 @@ export default function CreateEventPage() {
                 <h2 className="text-lg font-semibold">Tarih ve Saat</h2>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label htmlFor="startDate" className="block text-sm font-medium text-gray-700 mb-1">
+                    <label
+                      htmlFor="startDate"
+                      className="block text-sm font-medium text-gray-700 mb-1"
+                    >
                       Başlangıç Tarihi *
                     </label>
                     <Input
@@ -227,7 +283,10 @@ export default function CreateEventPage() {
                     />
                   </div>
                   <div>
-                    <label htmlFor="startTime" className="block text-sm font-medium text-gray-700 mb-1">
+                    <label
+                      htmlFor="startTime"
+                      className="block text-sm font-medium text-gray-700 mb-1"
+                    >
                       Başlangıç Saati *
                     </label>
                     <Input
@@ -247,7 +306,10 @@ export default function CreateEventPage() {
                 <h2 className="text-lg font-semibold">Etkinlik Detayları</h2>
                 <div className="grid grid-cols-4 gap-4">
                   <div className="col-span-2">
-                    <label htmlFor="location" className="block text-sm font-medium text-gray-700 mb-1">
+                    <label
+                      htmlFor="location"
+                      className="block text-sm font-medium text-gray-700 mb-1"
+                    >
                       Konum *
                     </label>
                     <Input
@@ -260,11 +322,19 @@ export default function CreateEventPage() {
                     />
                   </div>
                   <div>
-                    <label htmlFor="type" className="block text-sm font-medium text-gray-700 mb-1">
+                    <label
+                      htmlFor="type"
+                      className="block text-sm font-medium text-gray-700 mb-1"
+                    >
                       Tür *
                     </label>
                     <Select
-                      onValueChange={(value) => handleSelectChange('type', value as "CEVRIMICI" | "YUZ_YUZE" | "KARMA")}
+                      onValueChange={(value) =>
+                        handleSelectChange(
+                          "type",
+                          value as "CEVRIMICI" | "YUZ_YUZE" | "KARMA"
+                        )
+                      }
                       defaultValue={formData.type}
                     >
                       <SelectTrigger>
@@ -278,7 +348,10 @@ export default function CreateEventPage() {
                     </Select>
                   </div>
                   <div>
-                    <label htmlFor="capacity" className="block text-sm font-medium text-gray-700 mb-1">
+                    <label
+                      htmlFor="capacity"
+                      className="block text-sm font-medium text-gray-700 mb-1"
+                    >
                       Kontenjan *
                     </label>
                     <Input
@@ -292,7 +365,10 @@ export default function CreateEventPage() {
                     />
                   </div>
                   <div className="col-span-2">
-                    <label htmlFor="points" className="block text-sm font-medium text-gray-700 mb-1">
+                    <label
+                      htmlFor="points"
+                      className="block text-sm font-medium text-gray-700 mb-1"
+                    >
                       Puan *
                     </label>
                     <Input
@@ -317,20 +393,28 @@ export default function CreateEventPage() {
                     onChange={(e) => setNewTag(e.target.value)}
                     placeholder="Yeni etiket"
                     onKeyDown={(e) => {
-                      if (e.key === 'Enter') {
+                      if (e.key === "Enter") {
                         e.preventDefault();
                         handleAddTag();
                       }
                     }}
                     className="flex-1"
                   />
-                  <Button type="button" onClick={handleAddTag} variant="outline">
+                  <Button
+                    type="button"
+                    onClick={handleAddTag}
+                    variant="outline"
+                  >
                     Ekle
                   </Button>
                 </div>
                 <div className="flex flex-wrap gap-2">
                   {formData.tags.map((tag, index) => (
-                    <Badge key={index} variant="secondary" className="px-2 py-1">
+                    <Badge
+                      key={index}
+                      variant="secondary"
+                      className="px-2 py-1"
+                    >
                       {tag}
                       <button
                         type="button"
@@ -349,7 +433,8 @@ export default function CreateEventPage() {
                 <div className="flex gap-3">
                   <Info className="h-5 w-5 text-blue-500 flex-shrink-0" />
                   <p className="text-blue-700">
-                    Etkinlik oluşturulduktan sonra öğrenciler kayıt olabilecek ve kontenjan dolana kadar katılım devam edecektir.
+                    Etkinlik oluşturulduktan sonra öğrenciler kayıt olabilecek
+                    ve kontenjan dolana kadar katılım devam edecektir.
                   </p>
                 </div>
               </div>
@@ -359,8 +444,8 @@ export default function CreateEventPage() {
               <Button variant="outline" type="button" asChild>
                 <Link href="/tutor/events">İptal</Link>
               </Button>
-              <Button 
-                type="submit" 
+              <Button
+                type="submit"
                 className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white hover:bg-blue-700"
                 disabled={isSubmitting}
               >
@@ -382,4 +467,4 @@ export default function CreateEventPage() {
       </div>
     </div>
   );
-} 
+}

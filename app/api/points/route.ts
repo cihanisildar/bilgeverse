@@ -1,13 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
-import { getUserFromRequest, isAuthenticated, isAdmin, isStudent, isTutor } from '@/lib/server-auth';
 import { TransactionType, UserRole } from '@prisma/client';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '../auth/[...nextauth]/auth.config';
 
 export async function POST(request: NextRequest) {
   try {
-    const currentUser = await getUserFromRequest(request);
+    const session = await getServerSession(authOptions);
     
-    if (!isAuthenticated(currentUser) || !(isAdmin(currentUser) || isTutor(currentUser))) {
+    if (!session?.user || session.user.role !== UserRole.ADMIN && session.user.role !== UserRole.TUTOR) {
       return NextResponse.json(
         { error: 'Unauthorized: Only admin or tutor can award points' },
         { status: 403 }
@@ -46,7 +47,7 @@ export async function POST(request: NextRequest) {
       }
 
       // If tutor, check if the student is assigned to this tutor
-      if (isTutor(currentUser) && student.tutorId !== currentUser.id) {
+      if (session.user.role === UserRole.TUTOR && student.tutorId !== session.user.id) {
         throw new Error('Unauthorized: Student not assigned to this tutor');
       }
 
@@ -59,7 +60,7 @@ export async function POST(request: NextRequest) {
       const transaction = await tx.pointsTransaction.create({
         data: {
           studentId,
-          tutorId: currentUser.id,
+          tutorId: session.user.id,
           points: Math.abs(points),
           type: points >= 0 ? TransactionType.AWARD : TransactionType.REDEEM,
           reason: reason || (points >= 0 ? 'Points awarded' : 'Points deducted')
@@ -72,11 +73,18 @@ export async function POST(request: NextRequest) {
         data: {
           points: {
             increment: points
-          }
+          },
+          // Also update experience if points are being increased
+          ...(points > 0 && {
+            experience: {
+              increment: points
+            }
+          })
         },
         select: {
           id: true,
-          points: true
+          points: true,
+          experience: true
         }
       });
 
@@ -91,40 +99,39 @@ export async function POST(request: NextRequest) {
       },
       { status: 200 }
     );
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Points operation error:', error);
     
-    if (error.message === 'Student not found') {
+    if (error instanceof Error) {
+      if (error.message === 'Student not found') {
+        return NextResponse.json(
+          { error: 'Student not found' },
+          { status: 404 }
+        );
+      }
+      
+      if (error.message === 'Unauthorized: Student not assigned to this tutor') {
+        return NextResponse.json(
+          { error: error.message },
+          { status: 403 }
+        );
+      }
+
+      if (error.message === 'Cannot decrease more points than student has') {
+        return NextResponse.json(
+          { error: error.message },
+          { status: 400 }
+        );
+      }
+      
       return NextResponse.json(
-        { error: 'Student not found' },
-        { status: 404 }
+        { error: 'Internal server error', details: error.message },
+        { status: 500 }
       );
     }
     
-    if (error.message === 'Unauthorized: Student not assigned to this tutor') {
-      return NextResponse.json(
-        { error: error.message },
-        { status: 403 }
-      );
-    }
-
-    if (error.message === 'Cannot decrease more points than student has') {
-      return NextResponse.json(
-        { error: error.message },
-        { status: 400 }
-      );
-    }
-    
-    // Log the detailed error for debugging
-    console.error('Detailed error:', {
-      name: error.name,
-      message: error.message,
-      stack: error.stack,
-      cause: error.cause
-    });
-
     return NextResponse.json(
-      { error: 'Internal server error', details: error.message },
+      { error: 'Internal server error' },
       { status: 500 }
     );
   }
@@ -133,9 +140,9 @@ export async function POST(request: NextRequest) {
 // Get transactions for a student or for a tutor's students
 export async function GET(request: NextRequest) {
   try {
-    const currentUser = await getUserFromRequest(request);
+    const session = await getServerSession(authOptions);
     
-    if (!isAuthenticated(currentUser)) {
+    if (!session?.user) {
       return NextResponse.json(
         { error: 'Unauthorized' },
         { status: 401 }
@@ -148,19 +155,19 @@ export async function GET(request: NextRequest) {
     let where: any = {};
 
     // If admin, can see all transactions (optionally filtered by student)
-    if (isAdmin(currentUser)) {
+    if (session.user.role === UserRole.ADMIN) {
       if (studentId) {
         where.studentId = studentId;
       }
     } 
     // If tutor, can only see transactions for their students
-    else if (isTutor(currentUser)) {
+    else if (session.user.role === UserRole.TUTOR) {
       if (studentId) {
         // Check if student belongs to this tutor
         const student = await prisma.user.findFirst({
           where: {
             id: studentId,
-            tutorId: currentUser.id
+            tutorId: session.user.id
           }
         });
         
@@ -175,13 +182,13 @@ export async function GET(request: NextRequest) {
       } else {
         // Get all transactions for tutor's students
         where.student = {
-          tutorId: currentUser.id
+          tutorId: session.user.id
         };
       }
     }
     // If student, can only see their own transactions
     else {
-      where.studentId = currentUser.id;
+      where.studentId = session.user.id;
     }
 
     const transactions = await prisma.pointsTransaction.findMany({

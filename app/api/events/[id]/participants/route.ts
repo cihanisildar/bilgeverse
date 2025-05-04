@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
-import { getUserFromRequest, isAuthenticated, isTutor } from '@/lib/server-auth';
-import { ParticipantStatus } from '@prisma/client';
+import { ParticipantStatus, UserRole } from '@prisma/client';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
 
 // Get all participants for an event
 export async function GET(
@@ -9,9 +10,9 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   try {
-    const currentUser = await getUserFromRequest(request);
+    const session = await getServerSession(authOptions);
     
-    if (!isAuthenticated(currentUser)) {
+    if (!session?.user) {
       return NextResponse.json(
         { error: 'Unauthorized' },
         { status: 401 }
@@ -35,12 +36,12 @@ export async function GET(
 
     // Only allow tutor who created the event or participants of the event
     if (
-      !isTutor(currentUser) && 
-      event.createdBy.id !== currentUser.id &&
+      session.user.role !== UserRole.TUTOR && 
+      event.createdBy.id !== session.user.id &&
       !(await prisma.eventParticipant.findFirst({
         where: {
           eventId: params.id,
-          userId: currentUser.id,
+          userId: session.user.id,
         },
       }))
     ) {
@@ -96,9 +97,9 @@ export async function POST(
   { params }: { params: { id: string } }
 ) {
   try {
-    const currentUser = await getUserFromRequest(request);
+    const session = await getServerSession(authOptions);
     
-    if (!isAuthenticated(currentUser) || !isTutor(currentUser)) {
+    if (!session?.user || session.user.role !== UserRole.TUTOR) {
       return NextResponse.json(
         { error: 'Only tutors can add participants' },
         { status: 403 }
@@ -130,7 +131,7 @@ export async function POST(
       );
     }
 
-    if (event.createdBy.id !== currentUser.id) {
+    if (event.createdBy.id !== session.user.id) {
       return NextResponse.json(
         { error: 'You do not have permission to add participants to this event' },
         { status: 403 }
@@ -211,9 +212,9 @@ export async function PATCH(
   { params }: { params: { id: string } }
 ) {
   try {
-    const currentUser = await getUserFromRequest(request);
+    const session = await getServerSession(authOptions);
     
-    if (!isAuthenticated(currentUser) || !isTutor(currentUser)) {
+    if (!session?.user || session.user.role !== UserRole.TUTOR) {
       return NextResponse.json(
         { error: 'Only tutors can update participant status' },
         { status: 403 }
@@ -245,7 +246,7 @@ export async function PATCH(
       );
     }
 
-    if (event.createdBy.id !== currentUser.id) {
+    if (event.createdBy.id !== session.user.id) {
       return NextResponse.json(
         { error: 'You do not have permission to update participants in this event' },
         { status: 403 }
@@ -284,6 +285,9 @@ export async function PATCH(
         data: {
           points: {
             increment: event.points
+          },
+          experience: {
+            increment: event.points
           }
         }
       });
@@ -295,7 +299,7 @@ export async function PATCH(
           type: 'AWARD',
           reason: `Points awarded for attending event: ${event.title}`,
           studentId: userId,
-          tutorId: currentUser.id,
+          tutorId: session.user.id,
         }
       });
     }
@@ -325,9 +329,9 @@ export async function DELETE(
   { params }: { params: { id: string } }
 ) {
   try {
-    const currentUser = await getUserFromRequest(request);
+    const session = await getServerSession(authOptions);
     
-    if (!isAuthenticated(currentUser) || !isTutor(currentUser)) {
+    if (!session?.user || session.user.role !== UserRole.TUTOR) {
       return NextResponse.json(
         { error: 'Only tutors can remove participants' },
         { status: 403 }
@@ -359,7 +363,7 @@ export async function DELETE(
       );
     }
 
-    if (event.createdBy.id !== currentUser.id) {
+    if (event.createdBy.id !== session.user.id) {
       return NextResponse.json(
         { error: 'You do not have permission to remove participants from this event' },
         { status: 403 }

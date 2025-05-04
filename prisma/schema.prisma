@@ -52,48 +52,61 @@ enum ParticipantStatus {
 }
 
 model User {
-  id            String    @id @default(uuid())
-  username      String    @unique
-  email         String    @unique
-  password      String
-  role          UserRole  @default(STUDENT)
-  points        Int       @default(0)
-  experience    Int       @default(0)
-  firstName     String?
-  lastName      String?
-  avatarUrl     String?
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-  phone         String?
-  specialization String?
-  bio           String?   @db.Text
-  preferences   Json?
+  id              String           @id @default(cuid())
+  username        String           @unique
+  email           String           @unique
+  password        String
+  firstName       String?
+  lastName        String?
+  role            UserRole
+  points          Int              @default(0)
+  experience      Int              @default(0)
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  avatarUrl       String?
+  phone           String?
+  specialization  String?
+  bio             String?          @db.Text
+  preferences     Json?
 
   // Relations
-  tutor         User?     @relation("TutorStudents", fields: [tutorId], references: [id])
-  tutorId       String?
-  students      User[]    @relation("TutorStudents")
+  students        User[]           @relation("TutorStudents")
+  tutor           User?            @relation("TutorStudents", fields: [tutorId], references: [id])
+  tutorId         String?
+  writtenNotes    StudentNote[]    @relation("TutorNotes")
+  receivedNotes   StudentNote[]    @relation("StudentNotes")
+  writtenReports  StudentReport[]    @relation("TutorReports")
+  receivedReports StudentReport[]    @relation("StudentReports")
   
   // Store relation
-  storeItems    StoreItem[] @relation("TutorStore")
+  storeItems      StoreItem[]      @relation("TutorStore")
   
   // Classroom relations
-  classroomAsTutor Classroom? @relation("ClassroomTutor")
-  classroom     Classroom?  @relation("ClassroomStudents", fields: [classroomId], references: [id])
-  classroomId   String?
+  classroomAsTutor Classroom?       @relation("ClassroomTutor")
+  classroom       Classroom?        @relation("ClassroomStudents", fields: [classroomId], references: [id])
+  classroomId     String?
   
   // Other relations
-  eventsCreated Event[]   @relation("EventCreator")
+  eventsCreated   Event[]          @relation("EventCreator")
+  tutorEvents     Event[]          @relation("TutorEvents")
   eventParticipations EventParticipant[] @relation("UserParticipations")
-  itemRequests  ItemRequest[] @relation("StudentRequests")
-  tutorRequests ItemRequest[] @relation("TutorApprovals")
-  pointsReceived PointsTransaction[] @relation("StudentPoints")
-  pointsGiven   PointsTransaction[] @relation("TutorPoints")
+  itemRequests    ItemRequest[]    @relation("StudentRequests")
+  tutorRequests   ItemRequest[]    @relation("TutorApprovals")
+  pointsReceived  PointsTransaction[] @relation("StudentPoints")
+  pointsGiven     PointsTransaction[] @relation("TutorPoints")
   registrationRequests RegistrationRequest[]
 
   // Experience relations
   experienceReceived ExperienceTransaction[] @relation("StudentExperience")
-  experienceGiven ExperienceTransaction[] @relation("TutorExperience")
+  experienceGiven   ExperienceTransaction[] @relation("TutorExperience")
+
+  // Wish relations
+  wishes          Wish[]           @relation("StudentWishes")
+
+  // New relation
+  createdCards PointEarningCard[] @relation("AdminCards")
+
+  @@index([tutorId])
 }
 
 model Classroom {
@@ -129,6 +142,8 @@ model Event {
   createdBy     User      @relation("EventCreator", fields: [createdById], references: [id])
   createdById   String
   participants  EventParticipant[] @relation("EventParticipations")
+  createdForTutor User?   @relation("TutorEvents", fields: [createdForTutorId], references: [id])
+  createdForTutorId String?
 }
 
 model EventParticipant {
@@ -226,4 +241,64 @@ model ExperienceTransaction {
   studentId   String
   tutor       User      @relation("TutorExperience", fields: [tutorId], references: [id])
   tutorId     String
+}
+
+model Wish {
+  id          String      @id @default(uuid())
+  title       String
+  description String      @db.Text
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  // Relations
+  student     User        @relation("StudentWishes", fields: [studentId], references: [id])
+  studentId   String
+}
+
+model StudentNote {
+  id        String   @id @default(cuid())
+  content   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  student   User     @relation("StudentNotes", fields: [studentId], references: [id])
+  studentId String
+  tutor     User     @relation("TutorNotes", fields: [tutorId], references: [id])
+  tutorId   String
+
+  @@index([studentId])
+  @@index([tutorId])
+}
+
+model StudentReport {
+  id        String   @id @default(cuid())
+  title     String
+  content   String   @db.Text
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  student   User     @relation("StudentReports", fields: [studentId], references: [id])
+  studentId String
+  tutor     User     @relation("TutorReports", fields: [tutorId], references: [id])
+  tutorId   String
+
+  @@index([studentId])
+  @@index([tutorId])
+}
+
+model PointEarningCard {
+  id          String    @id @default(uuid())
+  title       String
+  description String
+  points      Int
+  icon        String?   // Store the icon name or URL (optional)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  isActive    Boolean   @default(true)
+
+  // Relations
+  createdBy   User      @relation("AdminCards", fields: [createdById], references: [id])
+  createdById String
 } 

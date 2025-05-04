@@ -1,12 +1,13 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useAuth } from '@/app/contexts/AuthContext';
+import { useSession } from 'next-auth/react';
 import Link from 'next/link';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Users, Calendar, ShoppingBag, AlertCircle, ChevronRight, Home, User, UserPlus, BarChart2, Trophy } from "lucide-react";
 import { HeaderSkeleton, StatsCardSkeleton } from '@/app/components/ui/skeleton-shimmer';
+import { UserRole } from '@prisma/client';
 
 type Stats = {
   totalUsers: number;
@@ -18,7 +19,7 @@ type Stats = {
 };
 
 export default function AdminDashboard() {
-  const { isAdmin } = useAuth();
+  const { data: session, status } = useSession();
   const [stats, setStats] = useState<Stats | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -44,8 +45,8 @@ export default function AdminDashboard() {
           const usersData = await usersRes.json();
           if (usersData?.users) {
             defaultStats.totalUsers = usersData.users.length;
-            defaultStats.totalStudents = usersData.users.filter((u: any) => u.role === 'student').length;
-            defaultStats.totalTutors = usersData.users.filter((u: any) => u.role === 'tutor').length;
+            defaultStats.totalStudents = usersData.users.filter((u: any) => u.role === UserRole.STUDENT).length;
+            defaultStats.totalTutors = usersData.users.filter((u: any) => u.role === UserRole.TUTOR).length;
           }
         } catch (err) {
           console.error('Error fetching users:', err);
@@ -78,7 +79,7 @@ export default function AdminDashboard() {
           const requestsRes = await fetch('/api/admin/registration-requests');
           const requestsData = await requestsRes.json();
           if (requestsData?.requests) {
-            defaultStats.pendingRequests = requestsData.requests.filter((req: any) => req.status === 'pending').length;
+            defaultStats.pendingRequests = requestsData.requests.filter((req: any) => req.status === 'PENDING').length;
           }
         } catch (err) {
           console.error('Error fetching registration requests:', err);
@@ -93,12 +94,12 @@ export default function AdminDashboard() {
       }
     };
 
-    if (isAdmin) {
+    if (session?.user?.role === UserRole.ADMIN) {
       fetchStats();
     }
-  }, [isAdmin]);
+  }, [session]);
 
-  if (loading) {
+  if (status === 'loading' || loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50 p-6 lg:p-8">
         <div className="max-w-7xl mx-auto space-y-6">

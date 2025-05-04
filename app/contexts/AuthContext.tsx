@@ -9,6 +9,7 @@ import {
 import { useRouter } from "next/navigation";
 import toast from 'react-hot-toast';
 import { UserRole } from "@prisma/client";
+import { signIn, signOut } from "next-auth/react";
 
 type AuthUser = {
   id: string;
@@ -176,32 +177,62 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   const login = async (username: string, password: string) => {
     try {
       setLoading(true);
-      const res = await fetch("/api/auth/login", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+      const result = await signIn('credentials', {
+        username,
+        password,
+        redirect: false,
+      });
+
+      if (result?.error) {
+        toast.error(result.error || "Giriş başarısız. Lütfen tekrar deneyin.");
+        setLoading(false);
+        return;
+      }
+
+      // Wait a bit for the session to be set
+      await new Promise(resolve => setTimeout(resolve, 500));
+
+      // Fetch user data after successful login
+      const res = await fetch("/api/auth/me", {
         credentials: 'include',
-        body: JSON.stringify({ username, password }),
+        headers: {
+          'Cache-Control': 'no-cache',
+        },
       });
 
       if (!res.ok) {
-        const errorData = await res.json();
-        toast.error(errorData.error || "Giriş başarısız. Lütfen tekrar deneyin.");
+        toast.error("Kullanıcı bilgileri alınamadı.");
+        setLoading(false);
         return;
       }
 
       const data = await res.json();
-      setUser(data.user);
+      console.log('Login successful, user data:', data);
       
+      if (!data.user || !data.user.role) {
+        toast.error("Kullanıcı rolü bulunamadı.");
+        setLoading(false);
+        return;
+      }
+
+      setUser(data.user);
       toast.success('Giriş başarılı!');
 
-      if (data.user.role === UserRole.ADMIN) {
-        router.replace("/admin");
-      } else if (data.user.role === UserRole.TUTOR) {
-        router.replace("/tutor");
-      } else {
-        router.replace("/student");
+      // Redirect based on user role
+      const redirectPath = data.user.role === UserRole.ADMIN 
+        ? "/admin"
+        : data.user.role === UserRole.TUTOR 
+          ? "/tutor" 
+          : "/student";
+
+      console.log('Redirecting to:', redirectPath);
+      
+      // Use router for navigation
+      try {
+        await router.push(redirectPath);
+      } catch (error) {
+        console.error('Router navigation error:', error);
+        window.location.href = redirectPath;
       }
     } catch (error) {
       console.error("Login error:", error);
@@ -214,19 +245,13 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   const logout = async () => {
     try {
       setLoading(true);
-      const res = await fetch("/api/auth/logout", {
-        method: "POST",
-        credentials: 'include',
-      });
-
-      if (!res.ok) {
-        throw new Error("Logout failed");
-      }
-
+      await signOut({ redirect: false });
       setUser(null);
-      router.replace("/login");
+      router.push('/login');
+      toast.success('Çıkış başarılı!');
     } catch (error) {
       console.error("Logout error:", error);
+      toast.error("Çıkış yapılırken bir hata oluştu.");
     } finally {
       setLoading(false);
     }

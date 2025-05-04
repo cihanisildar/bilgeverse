@@ -22,7 +22,7 @@ export default function AuthenticatedLayout({
 }: {
   children: ReactNode;
 }) {
-  const { user, loading, isAdmin, isTutor, isStudent } = useAuth();
+  const { user, loading, isAdmin, isTutor, isStudent, logout } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
   const [isExpanded, setIsExpanded] = useState(false);
@@ -50,7 +50,11 @@ export default function AuthenticatedLayout({
     { href: '/admin/users', label: 'Kullanıcı Yönetimi', icon: <Users className="h-5 w-5" /> },
     { href: '/admin/registration-requests', label: 'Kayıt İstekleri', icon: <FileText className="h-5 w-5" /> },
     { href: '/admin/events', label: 'Etkinlikler', icon: <Calendar className="h-5 w-5" /> },
+    { href: '/admin/points', label: 'Puan Yönetimi', icon: <Award className="h-5 w-5" /> },
+    { href: '/admin/experience', label: 'Tecrübe Yönetimi', icon: <TrendingUp className="h-5 w-5" /> },
     { href: '/admin/store', label: 'Mağaza Yönetimi', icon: <ShoppingBag className="h-5 w-5" /> },
+    { href: '/admin/point-cards', label: 'Puan Kartları', icon: <Award className="h-5 w-5" /> },
+    { href: '/admin/wishes', label: 'İstek ve Dilekler', icon: <ClipboardList className="h-5 w-5" /> },
     { href: '/admin/leaderboard', label: 'Liderlik Tablosu', icon: <Trophy className="h-5 w-5" /> },
   ];
 
@@ -72,6 +76,7 @@ export default function AuthenticatedLayout({
     { href: '/student/leaderboard', label: 'Liderlik Tablosu', icon: <Trophy className="h-5 w-5" /> },
     { href: '/student/store', label: 'Mağaza', icon: <ShoppingCart className="h-5 w-5" /> },
     { href: '/student/requests', label: 'İsteklerim', icon: <ClipboardList className="h-5 w-5" /> },
+    { href: '/student/wishes', label: 'Dilek ve İstekler', icon: <FileText className="h-5 w-5" /> },
     { href: '/student/tips', label: 'Başarı Rehberi', icon: <TrendingUp className="h-5 w-5" /> },
   ];
 
@@ -169,7 +174,10 @@ export default function AuthenticatedLayout({
           <Button
             size="icon"
             variant="ghost"
-            onClick={() => router.push('/login')}
+            onClick={() => {
+              setIsMobileMenuOpen(false);
+              logout();
+            }}
             className="ml-auto text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full"
             title="Çıkış Yap"
           >
@@ -181,7 +189,7 @@ export default function AuthenticatedLayout({
   );
 
   return (
-    <div className="flex min-h-screen font-sans">
+    <div className="flex min-h-screen">
       {/* Mobile Header */}
       <div className="lg:hidden fixed top-0 left-0 right-0 h-16 bg-white border-b border-gray-100 z-20 flex items-center px-4">
         <Sheet open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
@@ -190,18 +198,42 @@ export default function AuthenticatedLayout({
               <Menu className="h-6 w-6" />
             </Button>
           </SheetTrigger>
-          <SheetContent side="left" className="w-[300px] sm:w-[300px] p-0">
+          <SheetContent side="left" className="w-[300px] sm:w-[300px] p-0 z-50">
             <SheetHeader className="border-b border-gray-100 p-5">
               <SheetTitle className="text-lg font-semibold bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-purple-600">
                 {sidebarTitle}
               </SheetTitle>
             </SheetHeader>
-            <div className="flex flex-col h-full">
-              <div className="flex-1 py-4 px-3">
+            <div className="flex flex-col h-[calc(100vh-80px)]">
+              <div className="flex-1 py-4 px-3 overflow-y-auto">
                 <NavigationLinks />
               </div>
-              <div className="p-3 border-t border-gray-100">
-                <UserProfile />
+              <div className="p-3 border-t border-gray-100 bg-white">
+                <div className="flex items-center px-3">
+                  <Avatar className="h-10 w-10 bg-indigo-100 text-indigo-600 flex-shrink-0">
+                    <AvatarFallback>
+                      {user?.username?.charAt(0).toUpperCase()}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="ml-3 overflow-hidden">
+                    <p className="text-sm font-medium text-gray-800 truncate tracking-wide">{user?.username}</p>
+                    <p className="text-xs text-gray-500 tracking-wide">
+                      {user?.role === UserRole.ADMIN ? 'Yönetici' : user?.role === UserRole.TUTOR ? 'Öğretmen' : 'Öğrenci'}
+                    </p>
+                  </div>
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    onClick={() => {
+                      setIsMobileMenuOpen(false);
+                      logout();
+                    }}
+                    className="ml-auto text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full"
+                    title="Çıkış Yap"
+                  >
+                    <LogOut className="h-5 w-5" />
+                  </Button>
+                </div>
               </div>
             </div>
           </SheetContent>

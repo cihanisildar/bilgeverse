@@ -1,17 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { UserRole } from '@prisma/client';
-import { getUserFromRequest, isAuthenticated, isTutor } from '@/lib/server-auth';
+import { getServerSession } from 'next-auth';
 import bcrypt from 'bcrypt';
+import logger from '@/lib/logger';
+import { authOptions } from '../../auth/[...nextauth]/auth.config';
 
 export async function GET(request: NextRequest) {
   try {
-    console.log('GET /api/tutor/students - Start');
-    const currentUser = await getUserFromRequest(request);
-    console.log('Current user:', { id: currentUser?.id, role: currentUser?.role });
+    logger.info('GET /api/tutor/students - Start');
+    const session = await getServerSession(authOptions);
+    logger.info('Current user:', { id: session?.user?.id, role: session?.user?.role });
     
-    if (!isAuthenticated(currentUser) || !isTutor(currentUser)) {
-      console.log('Unauthorized access attempt');
+    if (!session?.user || session.user.role !== UserRole.TUTOR) {
+      logger.warn('Unauthorized access attempt');
       return NextResponse.json(
         { error: 'Unauthorized: Only tutors can access this endpoint' },
         { status: 403 }
@@ -19,11 +21,11 @@ export async function GET(request: NextRequest) {
     }
 
     // Get all students assigned to this tutor
-    console.log('Fetching students for tutor:', currentUser.id);
+    logger.info('Fetching students for tutor:', session.user.id);
     const students = await prisma.user.findMany({ 
       where: {
         role: UserRole.STUDENT,
-        tutorId: currentUser.id
+        tutorId: session.user.id
       },
       select: {
         id: true,
@@ -34,11 +36,11 @@ export async function GET(request: NextRequest) {
         experience: true
       }
     });
-    console.log('Found students:', students.length);
+    logger.info('Found students:', students.length);
 
     return NextResponse.json({ students }, { status: 200 });
   } catch (error: any) {
-    console.error('Error fetching tutor students:', error);
+    logger.error('Error fetching tutor students:', error);
     return NextResponse.json(
       { error: error.message || 'Internal server error' },
       { status: 500 }
@@ -48,9 +50,9 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const currentUser = await getUserFromRequest(request);
+    const session = await getServerSession(authOptions);
     
-    if (!isAuthenticated(currentUser) || !isTutor(currentUser)) {
+    if (!session?.user || session.user.role !== UserRole.TUTOR) {
       return NextResponse.json(
         { error: 'Unauthorized: Only tutors can create students' },
         { status: 403 }
@@ -95,7 +97,7 @@ export async function POST(request: NextRequest) {
         email: email.toLowerCase().trim(),
         password: hashedPassword,
         role: UserRole.STUDENT,
-        tutorId: currentUser.id,
+        tutorId: session.user.id,
         firstName: firstName?.trim(),
         lastName: lastName?.trim(),
         points: 0,

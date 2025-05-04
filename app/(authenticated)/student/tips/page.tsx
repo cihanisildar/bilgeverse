@@ -1,234 +1,210 @@
-'use client';
+"use client";
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Award, Book, Brain, Calendar, CheckCircle2, Clock, Crown, GraduationCap, Heart, Lightbulb, Medal, PartyPopper, Target, Trophy, Users } from "lucide-react";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  Award,
+  GraduationCap,
+  X,
+  ChevronRight
+} from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { useState, useEffect } from "react";
 
-interface TipCard {
-  icon: React.ReactNode;
+interface PointCard {
+  id: string;
   title: string;
   description: string;
-  tips: string[];
-  gradient: string;
-  iconColor: string;
+  points: number;
+  icon: string | null;
+  isActive: boolean;
 }
 
-const tipCards: TipCard[] = [
-  {
-    icon: <Trophy />,
-    title: "Akademik Başarı",
-    description: "Derslerinizde başarılı olmak için temel stratejiler",
-    tips: [
-      "Her gün düzenli çalışma saatleri belirleyin",
-      "Aktif dinleme tekniklerini kullanın",
-      "Notlarınızı düzenli tutun ve gözden geçirin",
-      "Anlamadığınız konuları hemen sorun",
-    ],
-    gradient: "from-yellow-50 to-amber-50",
-    iconColor: "text-yellow-600",
-  },
-  {
-    icon: <Brain />,
-    title: "Etkili Öğrenme",
-    description: "Öğrenme sürecinizi optimize etmek için ipuçları",
-    tips: [
-      "Pomodoro tekniğini kullanın (25 dk çalışma, 5 dk mola)",
-      "Öğrendiklerinizi başkalarına anlatın",
-      "Görsel ve işitsel materyallerden faydalanın",
-      "Konuları küçük parçalara bölerek çalışın",
-    ],
-    gradient: "from-blue-50 to-cyan-50",
-    iconColor: "text-blue-600",
-  },
-  {
-    icon: <Clock />,
-    title: "Zaman Yönetimi",
-    description: "Zamanınızı etkili kullanmanın yolları",
-    tips: [
-      "Günlük ve haftalık planlar yapın",
-      "Önceliklendirme yapın",
-      "Dikkat dağıtıcıları minimize edin",
-      "Hedefleriniz için son tarihler belirleyin",
-    ],
-    gradient: "from-purple-50 to-indigo-50",
-    iconColor: "text-purple-600",
-  },
-  {
-    icon: <Heart />,
-    title: "Motivasyon",
-    description: "Motivasyonunuzu yüksek tutmanın yolları",
-    tips: [
-      "Küçük başarılarınızı kutlayın",
-      "Kendinize gerçekçi hedefler koyun",
-      "Başarı günlüğü tutun",
-      "Pozitif düşünmeyi alışkanlık haline getirin",
-    ],
-    gradient: "from-red-50 to-pink-50",
-    iconColor: "text-red-600",
-  },
-  {
-    icon: <Users />,
-    title: "Sosyal Gelişim",
-    description: "Sosyal becerilerinizi geliştirmenin yolları",
-    tips: [
-      "Grup çalışmalarına katılın",
-      "Sınıf arkadaşlarınızla iletişim kurun",
-      "Okul aktivitelerine katılın",
-      "Yardımlaşmayı öğrenin",
-    ],
-    gradient: "from-green-50 to-emerald-50",
-    iconColor: "text-green-600",
-  },
-  {
-    icon: <Target />,
-    title: "Hedef Belirleme",
-    description: "Başarıya ulaşmak için hedef belirleme stratejileri",
-    tips: [
-      "SMART hedefler belirleyin",
-      "Kısa ve uzun vadeli planlar yapın",
-      "İlerlemenizi takip edin",
-      "Hedeflerinizi görünür bir yere yazın",
-    ],
-    gradient: "from-orange-50 to-amber-50",
-    iconColor: "text-orange-600",
-  },
-];
+export default function TipsPage() {
+  const [selectedCard, setSelectedCard] = useState<PointCard | null>(null);
+  const [hoveredCard, setHoveredCard] = useState<string | null>(null);
+  const [cards, setCards] = useState<PointCard[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-const achievements = [
-  {
-    icon: <Medal className="h-8 w-8 text-yellow-500" />,
-    title: "Düzenli Katılım",
-    points: "+5 puan",
-    description: "Her derse zamanında katılım",
-  },
-  {
-    icon: <CheckCircle2 className="h-8 w-8 text-green-500" />,
-    title: "Görev Tamamlama",
-    points: "+10 puan",
-    description: "Görevleri zamanında tamamlama",
-  },
-  {
-    icon: <Crown className="h-8 w-8 text-purple-500" />,
-    title: "Yüksek Performans",
-    points: "+15 puan",
-    description: "Sınavlarda yüksek başarı",
-  },
-  {
-    icon: <PartyPopper className="h-8 w-8 text-pink-500" />,
-    title: "Ekstra Aktiviteler",
-    points: "+8 puan",
-    description: "Ek etkinliklere katılım",
-  },
-];
+  useEffect(() => {
+    const fetchCards = async () => {
+      try {
+        const response = await fetch('/api/tips');
+        if (!response.ok) {
+          throw new Error('Failed to fetch cards');
+        }
+        const data = await response.json();
+        setCards(data);
+      } catch (err) {
+        setError('Failed to load tips. Please try again later.');
+      } finally {
+        setLoading(false);
+      }
+    };
 
-export default function StudentTipsPage() {
+    fetchCards();
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50 flex items-center justify-center">
+        <div className="text-indigo-600">Loading...</div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50 flex items-center justify-center">
+        <div className="text-red-600">{error}</div>
+      </div>
+    );
+  }
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50 p-6 lg:p-8">
-      <div className="max-w-7xl mx-auto space-y-8">
+    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50 px-3 sm:px-4 md:px-6 lg:px-8 py-6 sm:py-8">
+      <div className="max-w-7xl mx-auto space-y-6 sm:space-y-8">
         {/* Header */}
-        <div className="text-center space-y-4">
-          <h1 className="text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-purple-600">
+        <div className="text-center space-y-3 sm:space-y-4">
+          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-purple-600">
             Başarı Rehberi
           </h1>
-          <p className="text-gray-600 max-w-2xl mx-auto">
-            Akademik yolculuğunuzda size yardımcı olacak ipuçları, stratejiler ve başarıya giden yolda 
-            ihtiyacınız olan tüm bilgiler burada!
+          <p className="text-sm sm:text-base text-gray-600 max-w-2xl mx-auto">
+            Akademik yolculuğunuzda size yardımcı olacak ipuçları, stratejiler
+            ve başarıya giden yolda ihtiyacınız olan tüm bilgiler burada!
+          </p>
+          <p className="text-sm italic text-indigo-600 mt-2">
+            💡 İpucu: Kartların üzerine gelerek kazanacağınız puanları görebilirsiniz
           </p>
         </div>
 
-        {/* Quick Stats */}
-        <Card className="border-0 shadow-lg">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Lightbulb className="h-5 w-5 text-indigo-500" />
-              Puan Kazanma Rehberi
-            </CardTitle>
-            <CardDescription>
-              Nasıl daha fazla puan kazanabilirsiniz?
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-              {achievements.map((achievement, index) => (
-                <div
-                  key={index}
-                  className="p-4 rounded-lg bg-white shadow-sm border border-gray-100 hover:shadow-md transition-shadow"
-                >
-                  <div className="flex items-start space-x-4">
-                    {achievement.icon}
-                    <div>
-                      <h3 className="font-medium text-gray-900">{achievement.title}</h3>
-                      <p className="text-sm text-gray-500">{achievement.description}</p>
-                      <span className="mt-1 inline-block text-sm font-semibold text-indigo-600">
-                        {achievement.points}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Tips Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {tipCards.map((card, index) => (
-            <Card 
-              key={index} 
-              className={`border-0 shadow-lg overflow-hidden bg-gradient-to-r ${card.gradient}`}
+        {/* Point Cards Grid */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+          {cards.map((card) => (
+            <motion.div
+              key={card.id}
+              layoutId={`card-${card.id}`}
+              onClick={() => setSelectedCard(card)}
+              onHoverStart={() => setHoveredCard(card.id)}
+              onHoverEnd={() => setHoveredCard(null)}
+              className="relative perspective-1000"
             >
-              <div className="h-1 bg-gradient-to-r from-indigo-500 to-purple-500"></div>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-lg">
-                  <div className={`${card.iconColor}`}>
-                    {card.icon}
-                  </div>
-                  {card.title}
-                </CardTitle>
-                <CardDescription>{card.description}</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <ul className="space-y-3">
-                  {card.tips.map((tip, tipIndex) => (
-                    <li key={tipIndex} className="flex items-start gap-2">
-                      <div className="mt-1">
-                        <div className={`h-2 w-2 rounded-full ${card.iconColor.replace('text-', 'bg-')}`} />
-                      </div>
-                      <span className="text-gray-700">{tip}</span>
-                    </li>
-                  ))}
-                </ul>
-              </CardContent>
-            </Card>
+              <motion.div
+                className="w-full relative preserve-3d transition-transform duration-300"
+                animate={{
+                  rotateY: hoveredCard === card.id ? 180 : 0,
+                }}
+                transition={{ duration: 0.1 }}
+              >
+                {/* Front of card */}
+                <Card
+                  className="border-0 shadow-lg overflow-hidden bg-gradient-to-r from-indigo-50 to-purple-50 hover:shadow-xl transition-all duration-300 h-[250px] flex flex-col relative cursor-pointer backface-hidden"
+                >
+                  <div className="h-1 bg-gradient-to-r from-indigo-500 to-purple-500"></div>
+                  <CardHeader className="p-4 sm:p-6 flex-1 flex flex-col items-center justify-center text-center">
+                    <CardTitle className="flex items-center justify-center gap-3 mb-4">
+                      <div className="text-2xl text-indigo-600">{card.icon}</div>
+                      <span className="text-base sm:text-lg">{card.title}</span>
+                    </CardTitle>
+                    <CardDescription className="text-sm sm:text-base line-clamp-4 overflow-ellipsis">
+                      {card.description}
+                    </CardDescription>
+                  </CardHeader>
+                </Card>
+
+                {/* Back of card */}
+                <Card
+                  className="border-0 shadow-lg overflow-hidden bg-gradient-to-r from-purple-50 to-indigo-50 hover:shadow-xl transition-all duration-300 h-[250px] flex flex-col absolute inset-0 cursor-pointer backface-hidden rotate-y-180"
+                >
+                  <div className="h-1 bg-gradient-to-r from-purple-500 to-indigo-500"></div>
+                  <CardHeader className="p-4 sm:p-6 flex-1 flex flex-col items-center justify-center text-center">
+                    <div className="text-4xl font-bold text-purple-600 mb-4">+{card.points}</div>
+                    <div className="text-xl text-purple-700 mb-2">puan</div>
+                    <div className="flex items-center text-sm text-indigo-600 mt-4">
+                      <span>Detaylar için tıklayın</span>
+                      <ChevronRight className="h-4 w-4 ml-1" />
+                    </div>
+                  </CardHeader>
+                </Card>
+              </motion.div>
+            </motion.div>
           ))}
         </div>
 
         {/* Bottom Motivation Card */}
         <Card className="border-0 shadow-lg bg-gradient-to-r from-indigo-600 to-purple-600 text-white">
-          <CardContent className="p-8">
-            <div className="flex flex-col md:flex-row items-center justify-between gap-6">
-              <div className="flex items-center gap-4">
-                <GraduationCap className="h-12 w-12" />
+          <CardContent className="p-4 sm:p-6 md:p-8">
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 sm:gap-6">
+              <div className="flex items-center gap-3 sm:gap-4">
+                <GraduationCap className="h-8 w-8 sm:h-10 sm:w-10 lg:h-12 lg:w-12" />
                 <div>
-                  <h3 className="text-2xl font-bold">Başarıya Giden Yol</h3>
-                  <p className="mt-1 text-indigo-100">
-                    Her gün küçük adımlarla büyük hedeflere ulaşabilirsiniz!
+                  <h3 className="text-lg sm:text-xl lg:text-2xl font-semibold">
+                    Başarıya Giden Yol
+                  </h3>
+                  <p className="text-sm sm:text-base text-indigo-100">
+                    Her gün küçük adımlarla büyük hedeflere
                   </p>
                 </div>
               </div>
-              <div className="flex items-center gap-4 text-lg">
-                <Book className="h-6 w-6" />
-                <span>Öğren</span>
-                <span className="text-indigo-200">•</span>
-                <Calendar className="h-6 w-6" />
-                <span>Uygula</span>
-                <span className="text-indigo-200">•</span>
-                <Trophy className="h-6 w-6" />
-                <span>Başar</span>
+              <div className="flex items-center gap-2 sm:gap-3">
+                <Award className="h-6 w-6" />
+                <span className="text-sm sm:text-base font-medium">
+                  Hedeflerinize ulaşmak için çabalayın!
+                </span>
               </div>
             </div>
           </CardContent>
         </Card>
       </div>
+
+      {/* Modal View */}
+      <AnimatePresence>
+        {selectedCard && (
+          <motion.div
+            initial={{ backgroundColor: "rgba(0, 0, 0, 0)" }}
+            animate={{ backgroundColor: "rgba(0, 0, 0, 0.5)" }}
+            exit={{ backgroundColor: "rgba(0, 0, 0, 0)" }}
+            onClick={() => setSelectedCard(null)}
+            className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          >
+            <motion.div
+              layoutId={`card-${selectedCard.id}`}
+              className="w-full max-w-2xl"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <Card className="border-0 shadow-2xl overflow-hidden bg-gradient-to-r from-indigo-50 to-purple-50">
+                <div className="h-1 bg-gradient-to-r from-indigo-500 to-purple-500"></div>
+                <div className="absolute top-3 right-3">
+                  <button
+                    onClick={() => setSelectedCard(null)}
+                    className="p-2 rounded-full bg-white/80 hover:bg-white transition-colors"
+                  >
+                    <X className="h-5 w-5 text-gray-600" />
+                  </button>
+                </div>
+                <CardHeader className="p-6 sm:p-8">
+                  <CardTitle className="flex items-center justify-center gap-3 mb-6 text-xl sm:text-2xl">
+                    <div className="text-3xl text-indigo-600">{selectedCard.icon}</div>
+                    <span>{selectedCard.title}</span>
+                    <div className="text-lg font-semibold text-purple-600">
+                      +{selectedCard.points} puan
+                    </div>
+                  </CardTitle>
+                  <CardDescription className="text-base sm:text-lg leading-relaxed">
+                    {selectedCard.description}
+                  </CardDescription>
+                </CardHeader>
+              </Card>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 } 

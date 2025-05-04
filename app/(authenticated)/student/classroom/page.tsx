@@ -27,40 +27,40 @@ type ClassroomInfo = {
 
 function ClassroomSkeleton() {
   return (
-    <div className="space-y-8">
+    <div className="space-y-4 sm:space-y-6 lg:space-y-8">
       <Card>
-        <CardHeader>
+        <CardHeader className="p-4 sm:p-6">
           <div className="flex items-center gap-2">
-            <Skeleton className="h-6 w-6" />
-            <Skeleton className="h-6 w-32" />
+            <Skeleton className="h-5 w-5 sm:h-6 sm:w-6" />
+            <Skeleton className="h-6 w-24 sm:h-7 sm:w-32" />
           </div>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-4 sm:p-6">
           <div className="flex items-center gap-4">
-            <Skeleton className="h-12 w-12 rounded-full" />
+            <Skeleton className="h-12 w-12 sm:h-16 sm:w-16 rounded-full" />
             <div className="space-y-2">
-              <Skeleton className="h-4 w-48" />
-              <Skeleton className="h-4 w-32" />
+              <Skeleton className="h-4 w-36 sm:h-5 sm:w-48" />
+              <Skeleton className="h-3 w-24 sm:h-4 sm:w-32" />
             </div>
           </div>
         </CardContent>
       </Card>
 
       <Card>
-        <CardHeader>
+        <CardHeader className="p-4 sm:p-6">
           <div className="flex items-center gap-2">
-            <Skeleton className="h-6 w-6" />
-            <Skeleton className="h-6 w-32" />
+            <Skeleton className="h-5 w-5 sm:h-6 sm:w-6" />
+            <Skeleton className="h-6 w-24 sm:h-7 sm:w-32" />
           </div>
         </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <CardContent className="p-4 sm:p-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4">
             {[1, 2, 3].map((i) => (
-              <div key={i} className="flex items-center gap-4">
-                <Skeleton className="h-10 w-10 rounded-full" />
-                <div className="space-y-2">
-                  <Skeleton className="h-4 w-32" />
-                  <Skeleton className="h-4 w-24" />
+              <div key={i} className="flex items-center gap-3 sm:gap-4">
+                <Skeleton className="h-10 w-10 sm:h-12 sm:w-12 rounded-full" />
+                <div className="space-y-2 flex-1">
+                  <Skeleton className="h-4 w-24 sm:h-5 sm:w-32" />
+                  <Skeleton className="h-3 w-20 sm:h-4 sm:w-24" />
                 </div>
               </div>
             ))}
@@ -73,29 +73,29 @@ function ClassroomSkeleton() {
 
 function StudentCard({ student, isCurrentUser = false }: { student: User; isCurrentUser?: boolean }) {
   return (
-    <div className={`flex items-center gap-4 p-4 rounded-lg transition-all w-full ${isCurrentUser ? 'bg-blue-50 border border-blue-100' : 'hover:bg-gray-50'}`}>
-      <Avatar className="h-12 w-12 ring-2 ring-offset-2 ring-blue-500">
+    <div className={`flex items-center gap-3 sm:gap-4 p-3 sm:p-4 rounded-lg transition-all w-full ${isCurrentUser ? 'bg-blue-50 border border-blue-100' : 'hover:bg-gray-50'}`}>
+      <Avatar className="h-10 w-10 sm:h-12 sm:w-12 ring-2 ring-offset-2 ring-blue-500">
         <AvatarImage src={student.avatarUrl} />
-        <AvatarFallback className="bg-blue-100 text-blue-700">
+        <AvatarFallback className="bg-blue-100 text-blue-700 text-sm sm:text-base">
           {student.firstName?.[0]}
           {student.lastName?.[0]}
         </AvatarFallback>
       </Avatar>
-      <div className="flex-1">
-        <div className="flex items-center gap-2">
-          <p className="font-medium text-gray-900">
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2 flex-wrap">
+          <p className="font-medium text-gray-900 text-sm sm:text-base truncate">
             {student.firstName} {student.lastName}
           </p>
           {isCurrentUser && (
-            <Badge variant="secondary" className="bg-blue-100 text-blue-700 hover:bg-blue-200">
+            <Badge variant="secondary" className="bg-blue-100 text-blue-700 hover:bg-blue-200 text-xs sm:text-sm">
               Sen
             </Badge>
           )}
         </div>
-        <p className="text-sm text-gray-500">{student.username}</p>
+        <p className="text-xs sm:text-sm text-gray-500 truncate">{student.username}</p>
         {student.points !== undefined && (
-          <div className="flex items-center gap-1 mt-1 text-sm text-yellow-600">
-            <Star className="h-4 w-4 fill-yellow-500" />
+          <div className="flex items-center gap-1 mt-1 text-xs sm:text-sm text-yellow-600">
+            <Star className="h-3 w-3 sm:h-4 sm:w-4 fill-yellow-500" />
             <span>{student.points} puan</span>
           </div>
         )}
@@ -189,54 +189,56 @@ export default function ClassroomPage() {
   }
 
   return (
-    <div className="flex-1 p-8">
-      <div className="max-w-[1400px] mx-auto space-y-8">
+    <div className="flex-1 p-4 sm:p-6 lg:p-8">
+      <div className="max-w-[1400px] mx-auto space-y-4 sm:space-y-6 lg:space-y-8">
         {/* Tutor Section */}
         <Card className="overflow-hidden border-0 bg-gradient-to-br from-blue-500 to-indigo-600 text-white shadow-xl w-full">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-xl font-semibold">
-              <GraduationCap className="h-6 w-6" />
+          <CardHeader className="p-4 sm:p-6">
+            <CardTitle className="flex items-center gap-2 text-lg sm:text-xl font-semibold">
+              <GraduationCap className="h-5 w-5 sm:h-6 sm:w-6" />
               Danışman Öğretmen
             </CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="flex items-center gap-6">
-              <Avatar className="h-16 w-16 ring-4 ring-white/20">
+          <CardContent className="p-4 sm:p-6">
+            <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4 sm:gap-6">
+              <Avatar className="h-16 w-16 sm:h-20 sm:w-20 ring-4 ring-white/20">
                 <AvatarImage src={classroom.tutor.avatarUrl} />
-                <AvatarFallback className="bg-white/10 text-white text-xl">
+                <AvatarFallback className="bg-white/10 text-white text-xl sm:text-2xl">
                   {classroom.tutor.firstName?.[0]}
                   {classroom.tutor.lastName?.[0]}
                 </AvatarFallback>
               </Avatar>
-              <div>
-                <p className="text-2xl font-semibold">
+              <div className="text-center sm:text-left">
+                <p className="text-xl sm:text-2xl font-semibold">
                   {classroom.tutor.firstName} {classroom.tutor.lastName}
                 </p>
-                <p className="text-blue-100 text-lg">{classroom.tutor.username}</p>
+                <p className="text-base sm:text-lg text-blue-100">{classroom.tutor.username}</p>
               </div>
             </div>
           </CardContent>
         </Card>
 
         {/* Students Section */}
-        <Card className="border-0 shadow-lg w-full">
-          <CardHeader className="border-b bg-gray-50/50">
-            <div className="flex items-center justify-between flex-wrap gap-4">
-              <CardTitle className="flex items-center gap-2 text-xl font-semibold">
-                <Users className="h-6 w-6" />
-                <span>Sınıf Arkadaşları</span>
-                <Badge variant="secondary" className="ml-2 bg-blue-100 text-blue-700">
+        <Card className="border-0 shadow-xl">
+          <CardHeader className="border-b bg-gray-50/50 p-4 sm:p-6">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4">
+              <div className="flex items-center gap-2 flex-wrap">
+                <CardTitle className="flex items-center gap-2 text-lg sm:text-xl font-semibold">
+                  <Users className="h-5 w-5 sm:h-6 sm:w-6" />
+                  <span>Sınıf Arkadaşları</span>
+                </CardTitle>
+                <Badge variant="secondary" className="ml-0 sm:ml-2 bg-blue-100 text-blue-700 text-xs sm:text-sm">
                   {classroom.students.length + 1} Öğrenci
                 </Badge>
-              </CardTitle>
-              <div className="flex items-center gap-2">
-                <Trophy className="h-5 w-5 text-yellow-500" />
-                <span className="text-sm font-medium text-gray-600">Toplam Puan: {user?.points || 0}</span>
+              </div>
+              <div className="flex items-center gap-2 text-sm sm:text-base">
+                <Trophy className="h-4 w-4 sm:h-5 sm:w-5 text-yellow-500" />
+                <span className="font-medium text-gray-600">Toplam Puan: {user?.points || 0}</span>
               </div>
             </div>
           </CardHeader>
-          <CardContent className="p-6">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <CardContent className="p-4 sm:p-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4">
               {/* Current User Card */}
               {user && (
                 <StudentCard

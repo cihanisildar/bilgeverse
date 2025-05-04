@@ -14,6 +14,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Calendar, Clock, MapPin, Search, Users } from 'lucide-react';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 
 type Event = {
   id: string;
@@ -23,7 +24,7 @@ type Event = {
   endDate: string;
   location: string;
   type: 'online' | 'in-person' | 'hybrid';
-  status: 'UPCOMING' | 'ONGOING' | 'COMPLETED' | 'CANCELLED';
+  status: 'UPCOMING' | 'ONGOING' | 'COMPLETED' | 'CANCELLED' | 'YAKINDA';
   capacity: number;
   enrolledStudents: number;
   points: number;
@@ -37,12 +38,12 @@ type Event = {
 
 function EventsHeader() {
   return (
-    <div className="bg-gradient-to-br from-violet-500 to-purple-600 text-white py-12">
-      <div className="max-w-7xl mx-auto px-4">
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+    <div className="bg-gradient-to-br from-violet-500 to-purple-600 text-white py-8 sm:py-12">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 sm:gap-6">
           <div>
-            <h1 className="text-3xl font-bold mb-2">Etkinlikler</h1>
-            <p className="text-white/80">Tüm etkinlikleri görüntüle ve katıl</p>
+            <h1 className="text-2xl sm:text-3xl font-bold mb-1 sm:mb-2">Etkinlikler</h1>
+            <p className="text-sm sm:text-base text-white/80">Tüm etkinlikleri görüntüle ve katıl</p>
           </div>
         </div>
       </div>
@@ -63,22 +64,22 @@ function EventsFilter({
 }) {
   return (
     <Card className="border-0 shadow-lg -mt-6 relative z-10">
-      <CardContent className="p-4">
-        <div className="flex flex-col sm:flex-row gap-4">
+      <CardContent className="p-3 sm:p-4">
+        <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
           <div className="flex-1">
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+              <Search className="absolute left-2 sm:left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
               <Input
                 placeholder="Etkinlik ara..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10"
+                className="pl-8 sm:pl-10 text-sm sm:text-base"
               />
             </div>
           </div>
           <div className="w-full sm:w-60">
             <Select value={activeFilter} onValueChange={setActiveFilter}>
-              <SelectTrigger>
+              <SelectTrigger className="text-sm sm:text-base">
                 <SelectValue placeholder="Durum seç" />
               </SelectTrigger>
               <SelectContent>
@@ -98,10 +99,10 @@ function EventsFilter({
 function EventsFilterSkeleton() {
   return (
     <Card className="border-0 shadow-lg -mt-6 relative z-10">
-      <CardContent className="p-4">
-        <div className="flex flex-col sm:flex-row gap-4">
-          <Skeleton className="h-10 flex-1" />
-          <Skeleton className="h-10 w-full sm:w-60" />
+      <CardContent className="p-3 sm:p-4">
+        <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
+          <Skeleton className="h-9 sm:h-10 flex-1" />
+          <Skeleton className="h-9 sm:h-10 w-full sm:w-60" />
         </div>
       </CardContent>
     </Card>
@@ -111,39 +112,39 @@ function EventsFilterSkeleton() {
 function EventCardSkeleton() {
   return (
     <Card className="border-0 shadow-md">
-      <CardHeader className="p-6">
-        <div className="flex justify-between items-start">
+      <CardHeader className="p-4 sm:p-6">
+        <div className="flex justify-between items-start gap-2">
           <div className="space-y-2">
-            <Skeleton className="h-6 w-48" />
-            <Skeleton className="h-4 w-32" />
+            <Skeleton className="h-5 sm:h-6 w-36 sm:w-48" />
+            <Skeleton className="h-4 w-24 sm:w-32" />
           </div>
-          <Skeleton className="h-6 w-24" />
+          <Skeleton className="h-5 sm:h-6 w-20 sm:w-24" />
         </div>
-        <div className="flex gap-2 mt-3">
+        <div className="flex flex-wrap gap-2 mt-3">
           <Skeleton className="h-5 w-16" />
           <Skeleton className="h-5 w-16" />
           <Skeleton className="h-5 w-16" />
         </div>
       </CardHeader>
-      <CardContent className="p-6 pt-0">
+      <CardContent className="p-4 sm:p-6 pt-0">
         <Skeleton className="h-4 w-full mb-2" />
         <Skeleton className="h-4 w-5/6" />
-        <div className="grid grid-cols-2 gap-4 mt-4">
+        <div className="grid grid-cols-2 gap-3 sm:gap-4 mt-4">
           <div className="flex items-center gap-2">
-            <Calendar className="h-4 w-4 text-gray-400" />
-            <Skeleton className="h-4 w-24" />
+            <Calendar className="h-3 w-3 sm:h-4 sm:w-4 text-gray-400" />
+            <Skeleton className="h-3 sm:h-4 w-20 sm:w-24" />
           </div>
           <div className="flex items-center gap-2">
-            <Clock className="h-4 w-4 text-gray-400" />
-            <Skeleton className="h-4 w-24" />
+            <Clock className="h-3 w-3 sm:h-4 sm:w-4 text-gray-400" />
+            <Skeleton className="h-3 sm:h-4 w-20 sm:w-24" />
           </div>
           <div className="flex items-center gap-2">
-            <MapPin className="h-4 w-4 text-gray-400" />
-            <Skeleton className="h-4 w-24" />
+            <MapPin className="h-3 w-3 sm:h-4 sm:w-4 text-gray-400" />
+            <Skeleton className="h-3 sm:h-4 w-20 sm:w-24" />
           </div>
           <div className="flex items-center gap-2">
-            <Users className="h-4 w-4 text-gray-400" />
-            <Skeleton className="h-4 w-24" />
+            <Users className="h-3 w-3 sm:h-4 sm:w-4 text-gray-400" />
+            <Skeleton className="h-3 sm:h-4 w-20 sm:w-24" />
           </div>
         </div>
       </CardContent>
@@ -153,8 +154,8 @@ function EventCardSkeleton() {
 
 function LoadingEvents() {
   return (
-    <div className="space-y-6">
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+    <div className="space-y-4 sm:space-y-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
         {Array.from({ length: 6 }).map((_, i) => (
           <EventCardSkeleton key={i} />
         ))}
@@ -171,12 +172,17 @@ function EventsList() {
   const [scopeFilter, setScopeFilter] = useState('all');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const router = useRouter();
 
   const fetchEvents = async () => {
     try {
       setLoading(true);
       const response = await fetch('/api/events', {
-        credentials: 'include'
+        credentials: 'include',
+        headers: {
+          'Cache-Control': 'no-cache',
+          'Pragma': 'no-cache'
+        }
       });
 
       if (!response.ok) {
@@ -192,7 +198,7 @@ function EventsList() {
         endDate: event.endDateTime || event.endDate,
         location: event.location,
         type: event.type,
-        status: event.status,
+        status: event.status === 'YAKINDA' ? 'UPCOMING' : event.status,
         capacity: event.capacity,
         enrolledStudents: event.enrolledStudents || 0,
         points: event.points,
@@ -216,6 +222,21 @@ function EventsList() {
 
   useEffect(() => {
     fetchEvents();
+  }, []);
+
+  useEffect(() => {
+    // Refresh data when page becomes visible
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        fetchEvents();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
   }, []);
 
   useEffect(() => {
@@ -266,7 +287,7 @@ function EventsList() {
   }
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
       {filteredEvents.map((event) => (
         <Link 
           href={`/student/events/${event.id}`} 
@@ -274,8 +295,8 @@ function EventsList() {
           className="block transition-transform hover:scale-[1.02]"
         >
           <Card className="border-0 shadow-lg hover:shadow-xl transition-all duration-200 h-full">
-            <CardHeader>
-              <div className="flex justify-between items-start">
+            <CardHeader className="p-4 sm:p-6">
+              <div className="flex justify-between items-start gap-2">
                 <Badge 
                   className={
                     event.status === 'UPCOMING' ? 'bg-emerald-100 text-emerald-800 hover:bg-emerald-200' :
@@ -298,38 +319,42 @@ function EventsList() {
                   {event.eventScope === 'GLOBAL' ? 'Genel Etkinlik' : 'Grup Etkinliği'}
                 </Badge>
               </div>
-              <h3 className="text-xl font-semibold mt-2">
+              <h3 className="text-base sm:text-lg font-semibold mt-2">
                 {event.title}
               </h3>
-              <div className="flex flex-wrap gap-1 mt-2">
+              <div className="flex flex-wrap gap-2 mt-2">
                 {event.tags.map((tag) => (
-                  <Badge key={tag} variant="outline">
+                  <Badge 
+                    key={tag} 
+                    variant="outline"
+                    className="text-xs sm:text-sm"
+                  >
                     {tag}
                   </Badge>
                 ))}
               </div>
             </CardHeader>
-            <CardContent>
-              <p className="text-gray-600 text-sm line-clamp-2 mb-4">{event.description}</p>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <div className="flex items-center text-sm text-gray-500">
-                    <Calendar className="h-4 w-4 mr-2" />
+            <CardContent className="p-4 sm:p-6">
+              <p className="text-xs sm:text-sm text-gray-600 line-clamp-2 mb-4">{event.description}</p>
+              <div className="grid grid-cols-2 gap-3 sm:gap-4">
+                <div className="space-y-2 sm:space-y-3">
+                  <div className="flex items-center text-xs sm:text-sm text-gray-500">
+                    <Calendar className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
                     <span>{new Date(event.startDate).toLocaleDateString('tr-TR')}</span>
                   </div>
-                  <div className="flex items-center text-sm text-gray-500">
-                    <Clock className="h-4 w-4 mr-2" />
+                  <div className="flex items-center text-xs sm:text-sm text-gray-500">
+                    <Clock className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
                     <span>{new Date(event.startDate).toLocaleTimeString('tr-TR')}</span>
                   </div>
                 </div>
-                <div className="space-y-2">
-                  <div className="flex items-center text-sm text-gray-500">
-                    <Users className="h-4 w-4 mr-2" />
+                <div className="space-y-2 sm:space-y-3">
+                  <div className="flex items-center text-xs sm:text-sm text-gray-500">
+                    <Users className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
                     <span>{event.enrolledStudents}/{event.capacity} Katılımcı</span>
                   </div>
-                  <div className="flex items-center text-sm text-gray-500">
-                    <MapPin className="h-4 w-4 mr-2" />
-                    <span>{event.location}</span>
+                  <div className="flex items-center text-xs sm:text-sm text-gray-500">
+                    <MapPin className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                    <span className="truncate">{event.location}</span>
                   </div>
                 </div>
               </div>
@@ -345,19 +370,19 @@ export default function StudentEventsPage() {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Hero Section */}
-      <div className="bg-gradient-to-br from-blue-600 to-indigo-700 text-white py-12">
-        <div className="max-w-7xl mx-auto px-4">
-          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+      <div className="bg-gradient-to-br from-violet-500 to-purple-600 text-white py-8 sm:py-12">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6">
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 sm:gap-6">
             <div>
-              <h1 className="text-3xl font-bold mb-2">Etkinlikler</h1>
-              <p className="text-white/80">Tüm etkinlikleri görüntüle ve katıl</p>
+              <h1 className="text-2xl sm:text-3xl font-bold mb-1 sm:mb-2">Etkinlikler</h1>
+              <p className="text-sm sm:text-base text-white/80">Tüm etkinlikleri görüntüle ve katıl</p>
             </div>
           </div>
         </div>
       </div>
 
       {/* Main Content */}
-      <div className="max-w-7xl mx-auto px-4 py-6">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 sm:py-6">
         <EventsList />
       </div>
     </div>

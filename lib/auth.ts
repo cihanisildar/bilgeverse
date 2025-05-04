@@ -1,41 +1,91 @@
-"use client"
+import { NextAuthOptions } from "next-auth";
+import CredentialsProvider from "next-auth/providers/credentials";
+import prisma from "./prisma";
+import { compare } from "bcrypt";
 
-import { UserRole } from '@prisma/client';
-import { SignJWT, jwtVerify } from 'jose';
+export const authOptions: NextAuthOptions = {
+  session: {
+    strategy: "jwt",
+  },
+  providers: [
+    CredentialsProvider({
+      name: "Credentials",
+      credentials: {
+        username: { label: "Username", type: "text" },
+        password: { label: "Password", type: "password" },
+      },
+      async authorize(credentials) {
+        if (!credentials?.username || !credentials?.password) {
+          return null;
+        }
 
-const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
+        const user = await prisma.user.findUnique({
+          where: {
+            username: credentials.username,
+          },
+          include: {
+            tutor: {
+              select: {
+                id: true,
+                username: true,
+                firstName: true,
+                lastName: true
+              }
+            }
+          }
+        });
 
-export interface UserJwtPayload {
-  id: string;
-  username: string;
-  email: string;
-  role: UserRole;
-  tutorId?: string | null;
-  [key: string]: string | UserRole | null | undefined;
-}
+        if (!user) {
+          return null;
+        }
 
-export async function verifyJWT(token: string): Promise<UserJwtPayload | null> {
-  try {
-    const secret = new TextEncoder().encode(JWT_SECRET);
-    const { payload } = await jwtVerify(token, secret);
-    return payload as unknown as UserJwtPayload;
-  } catch (error) {
-    return null;
-  }
-}
+        const isPasswordValid = await compare(credentials.password, user.password);
 
-export function isAuthenticated(user: UserJwtPayload | null) {
-  return user !== null;
-}
+        if (!isPasswordValid) {
+          return null;
+        }
 
-export function isAdmin(user: UserJwtPayload | null) {
-  return user?.role === UserRole.ADMIN;
-}
-
-export function isTutor(user: UserJwtPayload | null) {
-  return user?.role === UserRole.TUTOR;
-}
-
-export function isStudent(user: UserJwtPayload | null) {
-  return user?.role === UserRole.STUDENT;
-} 
+        return {
+          id: user.id,
+          username: user.username,
+          email: user.email,
+          role: user.role,
+          tutorId: user.tutorId || undefined,
+          tutor: user.tutor ? {
+            id: user.tutor.id,
+            username: user.tutor.username,
+            firstName: user.tutor.firstName || undefined,
+            lastName: user.tutor.lastName || undefined
+          } : undefined
+        };
+      },
+    }),
+  ],
+  callbacks: {
+    async session({ session, token }) {
+      return {
+        ...session,
+        user: {
+          ...session.user,
+          id: token.sub,
+          username: token.username,
+          role: token.role,
+          tutorId: token.tutorId,
+          tutor: token.tutor
+        },
+      };
+    },
+    async jwt({ token, user }) {
+      if (user) {
+        token.username = user.username;
+        token.role = user.role;
+        token.tutorId = user.tutorId;
+        token.tutor = user.tutor;
+      }
+      return token;
+    },
+  },
+  pages: {
+    signIn: '/login',
+  },
+}; 

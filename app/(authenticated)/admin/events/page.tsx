@@ -15,7 +15,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { Calendar, Edit, Loader2, Search, Trash, User, X } from 'lucide-react';
+import { Calendar, Edit, Loader2, Search, Trash, User, X, Users } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { toast, Toaster } from 'react-hot-toast';
@@ -27,7 +27,7 @@ type Event = {
   description: string;
   startDateTime: string;
   location: string;
-  type: 'online' | 'in-person';
+  type: 'YUZ_YUZE' | 'ONLINE';
   capacity: number;
   points: number;
   tags: string[];
@@ -37,21 +37,31 @@ type Event = {
     firstName?: string;
     lastName?: string;
   };
-  status: 'upcoming' | 'ongoing' | 'completed' | 'cancelled';
-  eventScope: 'global' | 'group';
+  status: 'YAKINDA' | 'DEVAM_EDIYOR' | 'TAMAMLANDI' | 'IPTAL_EDILDI';
+  eventScope: 'GLOBAL' | 'GROUP';
   createdAt: string;
+  enrolledStudents?: number;
+};
+
+type Tutor = {
+  id: string;
+  username: string;
+  firstName?: string;
+  lastName?: string;
 };
 
 export default function AdminEventsPage() {
   const router = useRouter();
   const { user, isAdmin } = useAuth();
   const [events, setEvents] = useState<Event[]>([]);
+  const [tutors, setTutors] = useState<Tutor[]>([]);
   const [filteredEvents, setFilteredEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [dateFilter, setDateFilter] = useState('');
   const [scopeFilter, setScopeFilter] = useState('all');
+  const [tutorFilter, setTutorFilter] = useState('all');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [eventForm, setEventForm] = useState({
     title: '',
@@ -59,18 +69,20 @@ export default function AdminEventsPage() {
     startDate: '',
     startTime: '',
     location: '',
-    type: 'in-person' as 'online' | 'in-person',
+    type: 'YUZ_YUZE' as 'YUZ_YUZE' | 'ONLINE',
     capacity: 20,
     points: 0,
-    eventScope: 'global' as 'global' | 'group',
-    tags: [] as string[]
+    eventScope: 'GLOBAL' as 'GLOBAL' | 'GROUP',
+    tags: [] as string[],
+    createdForTutorId: ''
   });
   const [currentEventId, setCurrentEventId] = useState<string | null>(null);
   const [formErrors, setFormErrors] = useState({
     title: '',
     description: '',
     startDate: '',
-    startTime: ''
+    startTime: '',
+    createdForTutorId: ''
   });
   const [formSubmitting, setFormSubmitting] = useState(false);
   const [deleteDialog, setDeleteDialog] = useState<{ isOpen: boolean; eventId: string; title: string }>({
@@ -78,6 +90,7 @@ export default function AdminEventsPage() {
     eventId: '',
     title: ''
   });
+  const [initialEventScope, setInitialEventScope] = useState<'GLOBAL' | 'GROUP'>('GLOBAL');
 
   const fetchEvents = async () => {
     try {
@@ -110,9 +123,43 @@ export default function AdminEventsPage() {
     }
   };
 
+  const fetchTutors = async () => {
+    try {
+      console.log('Fetching tutors...');
+      const response = await fetch('/api/admin/tutors', {
+        method: 'GET',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+          'Cache-Control': 'no-cache'
+        }
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error('Tutor fetch error response:', errorData);
+        throw new Error(errorData.error || 'Failed to fetch tutors');
+      }
+
+      const data = await response.json();
+      console.log('Fetched tutors data:', data);
+      
+      if (!data.tutors || !Array.isArray(data.tutors)) {
+        throw new Error('Invalid tutor data received');
+      }
+      
+      setTutors(data.tutors);
+    } catch (err: any) {
+      console.error('Error fetching tutors:', err);
+      toast.error('Eğitmenler yüklenirken bir hata oluştu. Lütfen sayfayı yenileyin.');
+      setTutors([]); // Set empty array to prevent undefined errors
+    }
+  };
+
   useEffect(() => {
     if (user) {
       fetchEvents();
+      fetchTutors();
     }
   }, [user]);
 
@@ -137,9 +184,30 @@ export default function AdminEventsPage() {
         event.eventScope === scopeFilter
       );
     }
+
+    if (tutorFilter !== 'all') {
+      filtered = filtered.filter(event => 
+        event.createdBy.username === tutorFilter
+      );
+    }
     
     setFilteredEvents(filtered);
-  }, [events, searchQuery, dateFilter, scopeFilter]);
+  }, [events, searchQuery, dateFilter, scopeFilter, tutorFilter]);
+
+  useEffect(() => {
+    if (isModalOpen) {
+      console.log('Modal opened with initialEventScope:', initialEventScope);
+      setEventForm(prev => {
+        const newForm = {
+          ...prev,
+          eventScope: initialEventScope,
+          createdForTutorId: initialEventScope === 'GROUP' ? '' : prev.createdForTutorId
+        };
+        console.log('Updated event form:', newForm);
+        return newForm;
+      });
+    }
+  }, [isModalOpen, initialEventScope]);
 
   const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
     setSearchQuery(e.target.value);
@@ -185,6 +253,7 @@ export default function AdminEventsPage() {
   };
 
   const openAddEventModal = () => {
+    console.log('Opening add event modal with scope:', initialEventScope);
     setCurrentEventId(null);
     setEventForm({
       title: '',
@@ -192,17 +261,19 @@ export default function AdminEventsPage() {
       startDate: '',
       startTime: '',
       location: '',
-      type: 'in-person',
+      type: 'YUZ_YUZE',
       capacity: 20,
       points: 0,
-      eventScope: 'global',
-      tags: []
+      eventScope: initialEventScope,
+      tags: [],
+      createdForTutorId: ''
     });
     setFormErrors({
       title: '',
       description: '',
       startDate: '',
-      startTime: ''
+      startTime: '',
+      createdForTutorId: ''
     });
     setIsModalOpen(true);
   };
@@ -219,13 +290,15 @@ export default function AdminEventsPage() {
       capacity: event.capacity,
       points: event.points,
       eventScope: event.eventScope,
-      tags: event.tags
+      tags: event.tags,
+      createdForTutorId: ''
     });
     setFormErrors({
       title: '',
       description: '',
       startDate: '',
-      startTime: ''
+      startTime: '',
+      createdForTutorId: ''
     });
     setIsModalOpen(true);
   };
@@ -251,7 +324,8 @@ export default function AdminEventsPage() {
       title: '',
       description: '',
       startDate: '',
-      startTime: ''
+      startTime: '',
+      createdForTutorId: ''
     };
     let isValid = true;
     
@@ -274,6 +348,11 @@ export default function AdminEventsPage() {
       errors.startTime = 'Başlangıç saati gereklidir';
       isValid = false;
     }
+
+    if (eventForm.eventScope === 'GROUP' && !eventForm.createdForTutorId) {
+      errors.createdForTutorId = 'Eğitmen seçimi gereklidir';
+      isValid = false;
+    }
     
     setFormErrors(errors);
     return isValid;
@@ -289,7 +368,6 @@ export default function AdminEventsPage() {
     try {
       setFormSubmitting(true);
       
-      // Check if user is authenticated and admin
       if (!user || !isAdmin) {
         throw new Error('Unauthorized: Only admin users can create events');
       }
@@ -305,8 +383,9 @@ export default function AdminEventsPage() {
         capacity: Number(eventForm.capacity),
         points: Number(eventForm.points),
         eventScope: eventForm.eventScope,
-        status: 'UPCOMING',
-        tags: eventForm.tags || []
+        status: 'YAKINDA',
+        tags: eventForm.tags || [],
+        createdForTutorId: eventForm.eventScope === 'GROUP' ? eventForm.createdForTutorId : undefined
       };
       
       console.log('Submitting event data:', eventData);
@@ -324,38 +403,19 @@ export default function AdminEventsPage() {
       });
       
       const responseData = await response.json();
-      console.log('Server response:', responseData);
       
       if (!response.ok) {
-        const errorMessage = responseData.error || responseData.details || 'Etkinlik kaydedilirken bir hata oluştu';
-        throw new Error(errorMessage);
+        throw new Error(responseData.error || responseData.details || 'Etkinlik kaydedilirken bir hata oluştu');
       }
       
-      if (currentEventId) {
-        setEvents(events.map(event => 
-          event.id === currentEventId ? { ...responseData.event, createdBy: event.createdBy } : event
-        ));
-      } else {
-        setEvents([...events, responseData.event]);
-      }
+      // Fetch fresh events data after successful creation/update
+      await fetchEvents();
       
       setIsModalOpen(false);
-      toast.success(currentEventId ? 'Etkinlik başarıyla güncellendi' : 'Etkinlik başarıyla oluşturuldu', {
-        duration: 3000,
-        position: 'top-center',
-      });
+      toast.success(currentEventId ? 'Etkinlik başarıyla güncellendi' : 'Etkinlik başarıyla oluşturuldu');
     } catch (err: any) {
       console.error('Save event error:', err);
-      console.error('Error details:', {
-        message: err.message,
-        stack: err.stack,
-        user: user?.username,
-        isAdmin: isAdmin
-      });
-      toast.error(err.message || 'Etkinlik kaydedilirken bir hata oluştu', {
-        duration: 4000,
-        position: 'top-center',
-      });
+      toast.error(err.message || 'Etkinlik kaydedilirken bir hata oluştu');
     } finally {
       setFormSubmitting(false);
     }
@@ -400,7 +460,7 @@ export default function AdminEventsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 pb-8">
       <Toaster position="top-center" />
       
       {/* Delete Confirmation Dialog */}
@@ -440,9 +500,22 @@ export default function AdminEventsPage() {
               <h1 className="text-3xl font-bold mb-2">Etkinlik Yönetimi</h1>
               <p className="text-white/80">Tüm etkinlikleri yönetin ve kontrol edin</p>
             </div>
-            <Button onClick={() => setIsModalOpen(true)} className="bg-white text-blue-600 hover:bg-blue-50">
-              Genel Etkinlik Oluştur
-            </Button>
+            <div className="flex gap-3">
+              <Button onClick={() => {
+                console.log('Clicked Genel Etkinlik Oluştur');
+                setInitialEventScope('GLOBAL');
+                openAddEventModal();
+              }} className="bg-white text-blue-600 hover:bg-blue-50">
+                Genel Etkinlik Oluştur
+              </Button>
+              <Button onClick={() => {
+                console.log('Clicked Eğitmen Etkinliği Oluştur');
+                setInitialEventScope('GROUP');
+                openAddEventModal();
+              }} className="bg-blue-500 text-white hover:bg-blue-600">
+                Eğitmen Etkinliği Oluştur
+              </Button>
+            </div>
           </div>
         </div>
       </div>
@@ -470,8 +543,23 @@ export default function AdminEventsPage() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Tüm Etkinlikler</SelectItem>
-                  <SelectItem value="global">Genel Etkinlikler</SelectItem>
-                  <SelectItem value="group">Grup Etkinlikleri</SelectItem>
+                  <SelectItem value="GLOBAL">Genel Etkinlikler</SelectItem>
+                  <SelectItem value="GROUP">Grup Etkinlikleri</SelectItem>
+                </SelectContent>
+              </Select>
+              <Select value={tutorFilter} onValueChange={setTutorFilter}>
+                <SelectTrigger className="w-[180px]">
+                  <SelectValue placeholder="Eğitmen Seç" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Tüm Eğitmenler</SelectItem>
+                  {tutors.map(tutor => (
+                    <SelectItem key={tutor.id} value={tutor.username}>
+                      {tutor.firstName && tutor.lastName 
+                        ? `${tutor.firstName} ${tutor.lastName} (${tutor.username})`
+                        : tutor.username}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
@@ -480,43 +568,61 @@ export default function AdminEventsPage() {
 
         {/* Events Grid */}
         <div className="grid gap-4">
-          {filteredEvents.map((event) => (
-            <Card key={event.id} className="border-0 shadow-lg hover:shadow-xl transition-all duration-200">
-              <CardHeader>
-                <div className="flex justify-between items-start">
-                  <div>
-                    <CardTitle>{event.title}</CardTitle>
-                    <p className="text-sm text-gray-500">{event.description}</p>
+          {filteredEvents.length === 0 ? (
+            <div className="text-center py-12 bg-white rounded-lg shadow">
+              <div className="mx-auto w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mb-4">
+                <Calendar className="h-12 w-12 text-gray-400" />
+              </div>
+              <h3 className="text-lg font-medium text-gray-900 mb-2">Etkinlik Bulunamadı</h3>
+              <p className="text-gray-500">
+                {events.length === 0 
+                  ? "Henüz hiç etkinlik oluşturulmamış." 
+                  : "Arama kriterlerinize uygun etkinlik bulunamadı."}
+              </p>
+            </div>
+          ) : (
+            filteredEvents.map((event) => (
+              <Card key={event.id} className="border-0 shadow-lg hover:shadow-xl transition-all duration-200">
+                <CardHeader>
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <CardTitle>{event.title}</CardTitle>
+                      <p className="text-sm text-gray-500">{event.description}</p>
+                    </div>
+                    <Badge variant={event.eventScope === 'GLOBAL' ? 'default' : 'secondary'}>
+                      {event.eventScope === 'GLOBAL' ? 'Genel Etkinlik' : 'Grup Etkinliği'}
+                    </Badge>
                   </div>
-                  <Badge variant={event.eventScope === 'global' ? 'default' : 'secondary'}>
-                    {event.eventScope === 'global' ? 'Genel Etkinlik' : 'Grup Etkinliği'}
-                  </Badge>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="flex items-center gap-4">
-                  <div className="flex items-center gap-2 text-sm text-gray-500">
-                    <Calendar className="h-4 w-4" />
-                    <span>{new Date(event.startDateTime).toLocaleDateString('tr-TR')}</span>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-2 text-sm text-gray-500">
+                      <Calendar className="h-4 w-4" />
+                      <span>{new Date(event.startDateTime).toLocaleDateString('tr-TR')}</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-sm text-gray-500">
+                      <User className="h-4 w-4" />
+                      <span>Oluşturan: {event.createdBy.username}</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-sm text-gray-500">
+                      <Users className="h-4 w-4" />
+                      <span>Katılımcı: {event.enrolledStudents || 0}/{event.capacity}</span>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-2 text-sm text-gray-500">
-                    <User className="h-4 w-4" />
-                    <span>Oluşturan: {event.createdBy.username}</span>
-                  </div>
-                </div>
-              </CardContent>
-              <CardFooter className="flex justify-end gap-2">
-                <Button variant="outline" size="sm" onClick={() => openEditEventModal(event)}>
-                  <Edit className="h-4 w-4 mr-2" />
-                  Düzenle
-                </Button>
-                <Button variant="destructive" size="sm" onClick={() => handleDeleteEvent(event.id, event.title)}>
-                  <Trash className="h-4 w-4 mr-2" />
-                  Sil
-                </Button>
-              </CardFooter>
-            </Card>
-          ))}
+                </CardContent>
+                <CardFooter className="flex justify-end gap-2">
+                  <Button variant="outline" size="sm" onClick={() => openEditEventModal(event)}>
+                    <Edit className="h-4 w-4 mr-2" />
+                    Düzenle
+                  </Button>
+                  <Button variant="destructive" size="sm" onClick={() => handleDeleteEvent(event.id, event.title)}>
+                    <Trash className="h-4 w-4 mr-2" />
+                    Sil
+                  </Button>
+                </CardFooter>
+              </Card>
+            ))
+          )}
         </div>
       </div>
 
@@ -526,7 +632,9 @@ export default function AdminEventsPage() {
           <div className="bg-white rounded-lg w-[800px] max-h-[90vh] flex flex-col">
             <div className="p-6 border-b">
               <div className="flex justify-between items-center">
-                <h2 className="text-xl font-semibold">{currentEventId ? 'Etkinliği Düzenle' : 'Yeni Etkinlik Oluştur'}</h2>
+                <h2 className="text-xl font-semibold">
+                  {currentEventId ? 'Etkinliği Düzenle' : eventForm.eventScope === 'GLOBAL' ? 'Yeni Genel Etkinlik Oluştur' : 'Yeni Eğitmen Etkinliği Oluştur'}
+                </h2>
                 <Button variant="ghost" size="icon" onClick={() => setIsModalOpen(false)}>
                   <X className="h-4 w-4" />
                 </Button>
@@ -536,8 +644,49 @@ export default function AdminEventsPage() {
             <div className="p-6 overflow-y-auto">
               <form onSubmit={handleSubmitEvent}>
                 <div className="space-y-4">
+                  {/* Debug info */}
+                  {(() => {
+                    console.log('Rendering form with eventScope:', eventForm.eventScope);
+                    return null;
+                  })()}
+                  {eventForm.eventScope === 'GROUP' && (
+                    <div>
+                      <label className="text-sm font-medium">Eğitmen Seç *</label>
+                      <Select
+                        value={eventForm.createdForTutorId}
+                        onValueChange={(value) => {
+                          console.log('Selected tutor:', value);
+                          setEventForm(prev => ({ ...prev, createdForTutorId: value }));
+                          if (formErrors.createdForTutorId) {
+                            setFormErrors(prev => ({ ...prev, createdForTutorId: '' }));
+                          }
+                        }}
+                      >
+                        <SelectTrigger className={formErrors.createdForTutorId ? "border-red-500" : ""}>
+                          <SelectValue placeholder="Eğitmen seçin" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {tutors.length === 0 ? (
+                            <SelectItem value="" disabled>Eğitmen bulunamadı</SelectItem>
+                          ) : (
+                            tutors.map(tutor => (
+                              <SelectItem key={tutor.id} value={tutor.id}>
+                                {tutor.firstName && tutor.lastName 
+                                  ? `${tutor.firstName} ${tutor.lastName} (${tutor.username})`
+                                  : tutor.username}
+                              </SelectItem>
+                            ))
+                          )}
+                        </SelectContent>
+                      </Select>
+                      {formErrors.createdForTutorId && (
+                        <p className="text-sm text-red-500 mt-1">{formErrors.createdForTutorId}</p>
+                      )}
+                    </div>
+                  )}
+
                   <div>
-                    <label className="text-sm font-medium">Başlık</label>
+                    <label className="text-sm font-medium">Başlık *</label>
                     <Input
                       name="title"
                       value={eventForm.title}
@@ -609,14 +758,14 @@ export default function AdminEventsPage() {
                       <label className="text-sm font-medium">Tür</label>
                       <Select
                         value={eventForm.type}
-                        onValueChange={(value) => setEventForm(prev => ({ ...prev, type: value as 'online' | 'in-person' }))}
+                        onValueChange={(value) => setEventForm(prev => ({ ...prev, type: value as 'YUZ_YUZE' | 'ONLINE' }))}
                       >
                         <SelectTrigger>
                           <SelectValue placeholder="Etkinlik türü seçin" />
                         </SelectTrigger>
                         <SelectContent>
-                        <SelectItem value="online">Online</SelectItem>
-                          <SelectItem value="in-person">Yüz yüze</SelectItem>
+                        <SelectItem value="YUZ_YUZE">Yüz yüze</SelectItem>
+                          <SelectItem value="ONLINE">Online</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
@@ -643,22 +792,6 @@ export default function AdminEventsPage() {
                     />
                   </div>
 
-                  <div>
-                    <label className="text-sm font-medium">Etkinlik Türü</label>
-                    <Select
-                      value={eventForm.eventScope}
-                      onValueChange={(value) => setEventForm(prev => ({ ...prev, eventScope: value as 'global' | 'group' }))}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Etkinlik türü seçin" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="global">Genel Etkinlik</SelectItem>
-                        <SelectItem value="group">Grup Etkinliği</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-  
                   <div>
                     <label className="text-sm font-medium">Etiketler</label>
                     <Textarea

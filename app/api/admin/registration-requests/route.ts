@@ -1,14 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
-import { checkIsAdmin } from '@/lib/server-auth';
+import { getServerSession } from 'next-auth';
+import { UserRole } from '@prisma/client';
 import { hash } from 'bcryptjs';
+import { authOptions } from '../../auth/[...nextauth]/auth.config';
 
 // GET - Fetch all registration requests
 export async function GET(request: NextRequest) {
   try {
     // Check if user is authenticated and is an admin
-    const isUserAdmin = await checkIsAdmin(request);
-    if (!isUserAdmin) {
+    const session = await getServerSession(authOptions);
+    if (!session?.user || session.user.role !== UserRole.ADMIN) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
     
@@ -18,7 +20,7 @@ export async function GET(request: NextRequest) {
         createdAt: 'desc'
       }
     });
-    
+     
     return NextResponse.json({ requests }, { status: 200 });
   } catch (error: any) {
     console.error('Error fetching registration requests:', error);
@@ -30,8 +32,8 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     // Check if user is authenticated and is an admin
-    const isUserAdmin = await checkIsAdmin(request);
-    if (!isUserAdmin) {
+    const session = await getServerSession(authOptions);
+    if (!session?.user || session.user.role !== UserRole.ADMIN) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
     

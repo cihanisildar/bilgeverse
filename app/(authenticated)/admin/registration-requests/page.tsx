@@ -186,15 +186,15 @@ function RegistrationRequestsContent() {
   return (
     <>
       {/* Gradient Header */}
-      <div className="bg-gradient-to-r from-indigo-700 to-blue-800 rounded-xl p-6 shadow-lg">
+      <div className="bg-gradient-to-r from-indigo-700 to-blue-800 rounded-xl px-4 sm:px-6 lg:px-8 py-4 sm:py-6 shadow-lg">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center space-y-4 md:space-y-0">
           <div>
-            <h1 className="text-3xl font-bold text-white">Kayıt İstekleri</h1>
-            <p className="text-indigo-100 mt-1">Kullanıcı kayıt isteklerini yönetin ve onaylayın</p>
+            <h1 className="text-2xl sm:text-3xl font-bold text-white">Kayıt İstekleri</h1>
+            <p className="text-sm sm:text-base text-indigo-100 mt-1">Kullanıcı kayıt isteklerini yönetin ve onaylayın</p>
           </div>
-          <div className="flex items-center gap-2">
-            <Badge variant="outline" className="bg-white/10 text-white border-white/20 px-3 py-1">
-              <Clock className="w-4 h-4 mr-1" />
+          <div className="flex items-center gap-2 w-full md:w-auto">
+            <Badge variant="outline" className="bg-white/10 text-white border-white/20 px-2 sm:px-3 py-1 text-xs sm:text-sm w-full md:w-auto justify-center">
+              <Clock className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />
               {filteredRequests.filter(r => r.status === RequestStatus.PENDING).length} Bekleyen İstek
             </Badge>
           </div>
@@ -203,7 +203,7 @@ function RegistrationRequestsContent() {
 
       {/* Search and Filter */}
       <Card className="border-0 shadow-lg">
-        <CardContent className="p-6">
+        <CardContent className="px-4 sm:px-6 lg:px-8 py-4 sm:py-6">
           <div className="flex flex-col sm:flex-row gap-4">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
@@ -211,12 +211,12 @@ function RegistrationRequestsContent() {
                 placeholder="İsim veya e-posta ile ara..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-9 bg-white"
+                className="pl-9 bg-white text-sm sm:text-base"
               />
             </div>
-            <div className="w-full sm:w-60">
+            <div className="w-full sm:w-48 md:w-60">
               <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger>
+                <SelectTrigger className="text-sm sm:text-base">
                   <Filter className="w-4 h-4 mr-2 text-gray-400" />
                   <SelectValue placeholder="Tüm İstekler" />
                 </SelectTrigger>
@@ -235,9 +235,9 @@ function RegistrationRequestsContent() {
       {/* Error State */}
       {error && (
         <Card className="border-red-200 bg-red-50 shadow-lg">
-          <CardContent className="p-4">
-            <div className="flex items-center text-red-700">
-              <AlertCircle className="h-5 w-5 mr-2" />
+          <CardContent className="p-3 sm:p-4">
+            <div className="flex items-center text-red-700 text-sm sm:text-base">
+              <AlertCircle className="h-4 w-4 sm:h-5 sm:w-5 mr-2 flex-shrink-0" />
               <p>{error}</p>
             </div>
           </CardContent>
@@ -248,15 +248,15 @@ function RegistrationRequestsContent() {
       <Suspense fallback={<LoadingState />}>
         {filteredRequests.length === 0 ? (
           <Card className="border-0 shadow-lg">
-            <CardContent className="p-12">
+            <CardContent className="px-4 sm:px-6 lg:px-8 py-6 sm:py-12">
               <div className="text-center">
-                <UserPlus className="h-12 w-12 mx-auto text-gray-400 mb-4" />
-                <h3 className="text-lg font-medium text-gray-900 mb-1">
+                <UserPlus className="h-10 w-10 sm:h-12 sm:w-12 mx-auto text-gray-400 mb-4" />
+                <h3 className="text-base sm:text-lg font-medium text-gray-900 mb-1">
                   {searchQuery || statusFilter !== 'all' 
                     ? 'Arama kriterlerine uygun istek bulunamadı'
                     : 'Henüz kayıt isteği bulunmuyor'}
                 </h3>
-                <p className="text-gray-500">
+                <p className="text-sm sm:text-base text-gray-500">
                   {searchQuery || statusFilter !== 'all'
                     ? 'Farklı arama kriterleri deneyebilir veya filtreleri temizleyebilirsiniz'
                     : 'Yeni kayıt istekleri geldiğinde burada görüntülenecektir'}
@@ -265,61 +265,63 @@ function RegistrationRequestsContent() {
             </CardContent>
           </Card>
         ) : (
-          <div className="grid gap-6">
+          <div className="grid gap-4 sm:gap-6">
             {filteredRequests.map((request) => (
               <Card key={request.id} className="border-0 shadow-lg overflow-hidden">
                 <div className="h-1 bg-gradient-to-r from-indigo-500 to-purple-500" />
-                <CardHeader className="p-6">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-4">
-                      <div className="h-12 w-12 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 font-semibold text-lg">
+                <CardHeader className="px-4 sm:px-6 lg:px-8 py-4 sm:py-6">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 sm:gap-0">
+                    <div className="flex items-center space-x-3 sm:space-x-4">
+                      <div className="h-10 w-10 sm:h-12 sm:w-12 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 font-semibold text-base sm:text-lg flex-shrink-0">
                         {request.firstName 
                           ? request.firstName.charAt(0).toUpperCase()
                           : request.username.charAt(0).toUpperCase()}
                       </div>
                       <div>
-                        <CardTitle className="text-xl font-semibold">
+                        <CardTitle className="text-lg sm:text-xl font-semibold">
                           {request.firstName && request.lastName 
                             ? `${request.firstName} ${request.lastName}`
                             : request.username}
                         </CardTitle>
-                        <CardDescription>{request.email}</CardDescription>
+                        <CardDescription className="text-sm sm:text-base">{request.email}</CardDescription>
                       </div>
                     </div>
-                    {getStatusBadge(request.status)}
+                    <div className="sm:ml-4">
+                      {getStatusBadge(request.status)}
+                    </div>
                   </div>
                 </CardHeader>
-                <CardContent className="px-6 pb-6">
+                <CardContent className="px-4 sm:px-6 lg:px-8 pb-4 sm:pb-6">
                   <div className="space-y-4">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div>
-                        <p className="text-sm font-medium text-gray-500">İstenilen Rol</p>
-                        <p className="mt-1 font-medium">
+                        <p className="text-xs sm:text-sm font-medium text-gray-500">İstenilen Rol</p>
+                        <p className="mt-1 text-sm sm:text-base font-medium">
                           {request.requestedRole === UserRole.STUDENT ? 'Öğrenci' : 
                            request.requestedRole === UserRole.TUTOR ? 'Öğretmen' : 'Yönetici'}
                         </p>
                       </div>
                       <div>
-                        <p className="text-sm font-medium text-gray-500">Kayıt Tarihi</p>
-                        <p className="mt-1 font-medium">
+                        <p className="text-xs sm:text-sm font-medium text-gray-500">Kayıt Tarihi</p>
+                        <p className="mt-1 text-sm sm:text-base font-medium">
                           {new Date(request.createdAt).toLocaleDateString('tr-TR')}
                         </p>
                       </div>
                     </div>
                     
                     {request.status === RequestStatus.REJECTED && request.rejectionReason && (
-                      <div className="p-4 bg-red-50 rounded-lg border border-red-100">
-                        <p className="text-sm font-medium text-red-800 mb-1">Red Nedeni</p>
-                        <p className="text-red-600">{request.rejectionReason}</p>
+                      <div className="p-3 sm:p-4 bg-red-50 rounded-lg border border-red-100">
+                        <p className="text-xs sm:text-sm font-medium text-red-800 mb-1">Red Nedeni</p>
+                        <p className="text-sm sm:text-base text-red-600">{request.rejectionReason}</p>
                       </div>
                     )}
 
                     {request.status === RequestStatus.PENDING && (
-                      <div className="flex gap-3 mt-6">
+                      <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 mt-4 sm:mt-6">
                         <Button
                           onClick={() => handleRequest(request.id, 'approve')}
                           disabled={actionLoading}
-                          className="bg-green-600 hover:bg-green-700 text-white"
+                          className="bg-green-600 hover:bg-green-700 text-white w-full sm:w-auto text-sm sm:text-base"
                         >
                           <CheckCircle2 className="w-4 h-4 mr-2" />
                           Onayla
@@ -331,6 +333,7 @@ function RegistrationRequestsContent() {
                             setRejectDialogOpen(true);
                           }}
                           disabled={actionLoading}
+                          className="w-full sm:w-auto text-sm sm:text-base"
                         >
                           <XCircle className="w-4 h-4 mr-2" />
                           Reddet
@@ -347,17 +350,17 @@ function RegistrationRequestsContent() {
 
       {/* Rejection Dialog */}
       <Dialog open={rejectDialogOpen} onOpenChange={setRejectDialogOpen}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-md p-4 sm:p-6">
           <DialogHeader>
-            <DialogTitle className="text-xl font-semibold text-gray-900">Kayıt İsteğini Reddet</DialogTitle>
-            <DialogDescription className="mt-2 text-gray-600">
+            <DialogTitle className="text-lg sm:text-xl font-semibold text-gray-900">Kayıt İsteğini Reddet</DialogTitle>
+            <DialogDescription className="mt-2 text-sm sm:text-base text-gray-600">
               {selectedRequest?.username} kullanıcısının kayıt isteğini reddetmek üzeresiniz.
               Lütfen red nedenini belirtin.
             </DialogDescription>
           </DialogHeader>
-          <div className="py-4">
+          <div className="py-3 sm:py-4">
             <textarea
-              className="w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              className="w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm sm:text-base"
               rows={4}
               placeholder="Red nedeni..."
               value={rejectionReason}
@@ -372,6 +375,7 @@ function RegistrationRequestsContent() {
                 setSelectedRequest(null);
                 setRejectionReason('');
               }}
+              className="w-full sm:w-auto text-sm sm:text-base"
             >
               İptal
             </Button>
@@ -383,6 +387,7 @@ function RegistrationRequestsContent() {
                 }
               }}
               disabled={!rejectionReason || actionLoading}
+              className="w-full sm:w-auto text-sm sm:text-base"
             >
               {actionLoading ? 'İşleniyor...' : 'Reddet'}
             </Button>
@@ -396,7 +401,7 @@ function RegistrationRequestsContent() {
 // Main page component
 export default function RegistrationRequestsPage() {
   return (
-    <div className="space-y-6 max-w-7xl mx-auto py-8">
+    <div className="space-y-6 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <Suspense fallback={<LoadingState />}>
         <RegistrationRequestsContent />
       </Suspense>

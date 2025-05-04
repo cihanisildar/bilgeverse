@@ -1,14 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { RequestStatus, UserRole } from '@prisma/client';
-import { getUserFromRequest, isAuthenticated, isAdmin, isStudent, isTutor } from '@/lib/server-auth';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '../auth/[...nextauth]/auth.config';
 
 // Get requests based on user role
 export async function GET(request: NextRequest) {
   try {
-    const currentUser = await getUserFromRequest(request);
+    const session = await getServerSession(authOptions);
     
-    if (!isAuthenticated(currentUser)) {
+    if (!session?.user) {
       return NextResponse.json(
         { error: 'Unauthorized' },
         { status: 401 }
@@ -26,14 +27,14 @@ export async function GET(request: NextRequest) {
     }
     
     // Filter based on user role
-    if (isAdmin(currentUser)) {
+    if (session.user.role === UserRole.ADMIN) {
       // Admin can see all requests
-    } else if (isTutor(currentUser)) {
+    } else if (session.user.role === UserRole.TUTOR) {
       // Tutor can only see requests from their students
-      where.tutorId = currentUser.id;
-    } else if (isStudent(currentUser)) {
+      where.tutorId = session.user.id;
+    } else if (session.user.role === UserRole.STUDENT) {
       // Student can only see their own requests
-      where.studentId = currentUser.id;
+      where.studentId = session.user.id;
     }
 
     const requests = await prisma.itemRequest.findMany({
@@ -75,9 +76,9 @@ export async function GET(request: NextRequest) {
 // Create a new request (student only)
 export async function POST(request: NextRequest) {
   try {
-    const currentUser = await getUserFromRequest(request);
+    const session = await getServerSession(authOptions);
     
-    if (!isAuthenticated(currentUser) || !isStudent(currentUser)) {
+    if (!session?.user || session.user.role !== UserRole.STUDENT) {
       return NextResponse.json(
         { error: 'Unauthorized: Only students can request items' },
         { status: 403 }
@@ -98,7 +99,7 @@ export async function POST(request: NextRequest) {
     const result = await prisma.$transaction(async (tx) => {
       // Get the student with their tutor information
       const student = await tx.user.findUnique({
-        where: { id: currentUser.id }
+        where: { id: session.user.id }
       });
 
       if (!student) {
@@ -156,6 +157,26 @@ export async function POST(request: NextRequest) {
             }
           },
           item: true
+        }
+      });
+
+      // Decrease item quantity
+      await tx.storeItem.update({
+        where: { id: itemId },
+        data: {
+          availableQuantity: {
+            decrement: 1
+          }
+        }
+      });
+
+      // Deduct points from student
+      await tx.user.update({
+        where: { id: student.id },
+        data: {
+          points: {
+            decrement: item.pointsRequired
+          }
         }
       });
 

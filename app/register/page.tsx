@@ -70,7 +70,7 @@ export default function RegisterPage() {
         throw new Error(data.error || 'Kayıt talebi başarısız oldu');
       }
 
-      setSuccess(data.message || 'Kayıt talebiniz gönderildi! Yönetici onayı bekleniyor.');
+      setSuccess('Kayıt talebiniz gönderildi! Yönetici onayı bekleniyor.');
       
       setFormData({
         password: '',

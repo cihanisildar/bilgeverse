@@ -1,15 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
-import { getUserFromRequest, isAuthenticated, isAdmin, isTutor } from '@/lib/server-auth';
+import { UserRole } from '@prisma/client';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/app/api/auth/[...nextauth]/auth.config';
+
+const ALLOWED_ROLES: UserRole[] = [UserRole.ADMIN, UserRole.TUTOR];
 
 export async function POST(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
   try {
-    const currentUser = await getUserFromRequest(request);
+    const session = await getServerSession(authOptions);
     
-    if (!isAuthenticated(currentUser) || !(isAdmin(currentUser) || isTutor(currentUser))) {
+    if (!session?.user || !ALLOWED_ROLES.includes(session.user.role)) {
       return NextResponse.json(
         { error: 'Unauthorized: Only admin or tutor can modify experience' },
         { status: 403 }
@@ -39,8 +43,8 @@ export async function POST(
       }
 
       // If tutor, can only modify experience of their students
-      if (isTutor(currentUser) && !isAdmin(currentUser)) {
-        if (user.tutorId !== currentUser.id) {
+      if (session.user.role === UserRole.TUTOR) {
+        if (user.tutorId !== session.user.id) {
           throw new Error('You can only modify experience for your own students');
         }
       }
@@ -59,7 +63,7 @@ export async function POST(
         data: {
           amount,
           studentId: user.id,
-          tutorId: currentUser.id
+          tutorId: session.user.id
         }
       });
 

@@ -1,17 +1,28 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { HeaderSkeleton, StatsCardSkeleton } from '@/app/components/ui/skeleton-shimmer';
 import { useAuth } from '@/app/contexts/AuthContext';
-import { Trophy, Award, Medal, Crown, BarChart2, Filter, User, Users, Search, Download, ArrowUpDown } from 'lucide-react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { Badge } from '@/components/ui/badge';
-import { Separator } from '@/components/ui/separator';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from '@/components/ui/select';
-import { HeaderSkeleton, StatsCardSkeleton, LeaderboardEntrySkeleton } from '@/app/components/ui/skeleton-shimmer';
 import { LevelBadge } from "@/components/LevelBadge";
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Skeleton } from '@/components/ui/skeleton';
+import { ArrowUpDown, Award, BarChart2, Crown, Download, Filter, Medal, Search, Trophy, User, Users } from 'lucide-react';
+import { useEffect, useState } from 'react';
+
+interface User {
+  id: string;
+  username: string;
+  firstName: string | null;
+  lastName: string | null;
+  role: string;
+}
+
+interface Tutor extends User {
+  role: 'TUTOR';
+}
 
 interface LeaderboardEntry {
   rank: number;
@@ -19,22 +30,14 @@ interface LeaderboardEntry {
   username: string;
   firstName: string | null;
   lastName: string | null;
-  currentPoints: number;
-  totalEarnedPoints: number;
-  tutor: {
-    id: string;
-    username: string;
-    firstName: string | null;
-    lastName: string | null;
-  };
+  experience: number;
+  tutor: Tutor | null;
 }
 
-interface Tutor {
-  id: string;
-  username: string;
-  firstName: string | null;
-  lastName: string | null;
-}
+// Function to check if a user is a tutor
+const isTutor = (user: User): user is Tutor => {
+  return user.role === 'TUTOR';
+};
 
 export default function AdminLeaderboardPage() {
   const { user } = useAuth();
@@ -63,10 +66,11 @@ export default function AdminLeaderboardPage() {
         
         // Fetch tutors for filtering
         const tutorsResponse = await fetch('/api/users?role=tutor');
-        if (tutorsResponse.ok) {
-          const tutorsData = await tutorsResponse.json();
-          setTutors(tutorsData.users);
+        if (!tutorsResponse.ok) {
+          throw new Error('Failed to fetch tutors');
         }
+        const tutorsData = await tutorsResponse.json();
+        setTutors(tutorsData.users.filter(isTutor));
       } catch (error) {
         console.error('Error fetching data:', error);
       } finally {
@@ -113,7 +117,7 @@ export default function AdminLeaderboardPage() {
   // Function to sort students
   const sortStudents = (students: LeaderboardEntry[], direction: 'asc' | 'desc') => {
     return [...students].sort((a, b) => {
-      return direction === 'desc' ? b.totalEarnedPoints - a.totalEarnedPoints : a.totalEarnedPoints - b.totalEarnedPoints;
+      return direction === 'desc' ? b.experience - a.experience : a.experience - b.experience;
     });
   };
 
@@ -147,12 +151,12 @@ export default function AdminLeaderboardPage() {
   // Function to export leaderboard as CSV
   const exportToCSV = () => {
     const csvContent = [
-      ['Rank', 'Username', 'Name', 'Points', 'Tutor'],
+      ['Rank', 'Username', 'Name', 'Experience', 'Tutor'],
       ...filteredLeaderboard.map(entry => [
         entry.rank,
         entry.username,
         `${entry.firstName || ''} ${entry.lastName || ''}`.trim(),
-        entry.totalEarnedPoints,
+        entry.experience,
         entry.tutor ? getDisplayName(entry.tutor) : ''
       ])
     ].map(row => row.join(',')).join('\n');
@@ -172,22 +176,22 @@ export default function AdminLeaderboardPage() {
   const calculateStats = () => {
     if (!filteredLeaderboard.length) return { avg: 0, max: 0, min: 0, median: 0 };
     
-    const sortedPoints = [...filteredLeaderboard].map(entry => entry.totalEarnedPoints).sort((a, b) => a - b);
-    const sum = sortedPoints.reduce((acc, points) => acc + points, 0);
+    const sortedExperience = [...filteredLeaderboard].map(entry => entry.experience).sort((a, b) => a - b);
+    const sum = sortedExperience.reduce((acc, exp) => acc + exp, 0);
     
     return {
-      avg: Math.round(sum / sortedPoints.length),
-      max: sortedPoints[sortedPoints.length - 1],
-      min: sortedPoints[0],
-      median: sortedPoints.length % 2 === 0 
-        ? (sortedPoints[sortedPoints.length / 2 - 1] + sortedPoints[sortedPoints.length / 2]) / 2
-        : sortedPoints[Math.floor(sortedPoints.length / 2)]
+      avg: Math.round(sum / sortedExperience.length),
+      max: sortedExperience[sortedExperience.length - 1],
+      min: sortedExperience[0],
+      median: sortedExperience.length % 2 === 0 
+        ? (sortedExperience[sortedExperience.length / 2 - 1] + sortedExperience[sortedExperience.length / 2]) / 2
+        : sortedExperience[Math.floor(sortedExperience.length / 2)]
     };
   };
 
   // Function to group students by tutor
   const getStudentsByTutor = () => {
-    const tutorMap: Record<string, { tutor: Tutor, count: number, totalPoints: number }> = {};
+    const tutorMap: Record<string, { tutor: Tutor, count: number, totalExperience: number }> = {};
     
     filteredLeaderboard.forEach(entry => {
       if (entry.tutor) {
@@ -196,30 +200,30 @@ export default function AdminLeaderboardPage() {
           tutorMap[tutorId] = {
             tutor: entry.tutor,
             count: 0,
-            totalPoints: 0
+            totalExperience: 0
           };
         }
         tutorMap[tutorId].count += 1;
-        tutorMap[tutorId].totalPoints += entry.totalEarnedPoints;
+        tutorMap[tutorId].totalExperience += entry.experience;
       }
     });
     
     return Object.values(tutorMap).sort((a, b) => b.count - a.count);
   };
 
-  // Function to group students by point ranges
+  // Function to group students by experience ranges
   const getPointsDistribution = () => {
-    const pointRanges: Record<string, number> = {};
+    const experienceRanges: Record<string, number> = {};
     const rangeSize = 50;
     
     filteredLeaderboard.forEach(entry => {
-      const rangeStart = Math.floor(entry.totalEarnedPoints / rangeSize) * rangeSize;
+      const rangeStart = Math.floor(entry.experience / rangeSize) * rangeSize;
       const rangeKey = `${rangeStart}-${rangeStart + rangeSize - 1}`;
       
-      pointRanges[rangeKey] = (pointRanges[rangeKey] || 0) + 1;
+      experienceRanges[rangeKey] = (experienceRanges[rangeKey] || 0) + 1;
     });
     
-    return Object.entries(pointRanges)
+    return Object.entries(experienceRanges)
       .map(([range, count]) => ({ range, count }))
       .sort((a, b) => {
         const aStart = parseInt(a.range.split('-')[0]);
@@ -234,42 +238,67 @@ export default function AdminLeaderboardPage() {
 
   if (loading) {
     return (
-      <div className="space-y-6 max-w-7xl mx-auto py-8">
+      <div className="space-y-6 max-w-7xl mx-auto p-4 sm:p-6 lg:p-8">
         <HeaderSkeleton />
         
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {[1, 2, 3, 4].map((i) => (
             <StatsCardSkeleton key={i} />
           ))}
         </div>
 
-        {/* Leaderboard Table */}
+        {/* Leaderboard Table Skeleton */}
         <Card className="border-0 shadow-lg">
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Sıralama
-                  </th>
-                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Öğrenci
-                  </th>
-                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Öğretmen
-                  </th>
-                  <th className="px-6 py-4 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Puan
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {[1, 2, 3, 4, 5].map((i) => (
-                  <LeaderboardEntrySkeleton key={i} />
-                ))}
-              </tbody>
-            </table>
+          <div className="overflow-hidden">
+            <div className="min-w-full align-middle">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th scope="col" className="px-3 py-2 sm:px-6 sm:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-16">
+                      Sıra
+                    </th>
+                    <th scope="col" className="px-3 py-2 sm:px-6 sm:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Öğrenci
+                    </th>
+                    <th scope="col" className="hidden md:table-cell px-3 py-2 sm:px-6 sm:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Öğretmen
+                    </th>
+                    <th scope="col" className="px-3 py-2 sm:px-6 sm:py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Deneyim
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {[1, 2, 3, 4, 5].map((i) => (
+                    <tr key={i} className="animate-pulse">
+                      <td className="px-3 py-2 sm:px-6 sm:py-3 whitespace-nowrap">
+                        <div className="flex items-center gap-1 sm:gap-2">
+                          <Skeleton className="h-5 w-6 sm:h-6 sm:w-8" />
+                          <Skeleton className="h-4 w-4 sm:h-5 sm:w-5 rounded-full" />
+                        </div>
+                      </td>
+                      <td className="px-3 py-2 sm:px-6 sm:py-3 whitespace-nowrap">
+                        <div className="flex items-center">
+                          <Skeleton className="h-8 w-8 rounded-full mr-2 sm:mr-3 hidden sm:block" />
+                          <div className="space-y-1">
+                            <Skeleton className="h-4 w-24 sm:w-32" />
+                            <Skeleton className="h-3 w-20 sm:w-24" />
+                            <Skeleton className="h-3 w-16 sm:w-20 md:hidden" />
+                          </div>
+                        </div>
+                      </td>
+                      <td className="hidden md:table-cell px-3 py-2 sm:px-6 sm:py-3 whitespace-nowrap">
+                        <Skeleton className="h-4 w-24 sm:w-32" />
+                      </td>
+                      <td className="px-3 py-2 sm:px-6 sm:py-3 whitespace-nowrap text-right">
+                        <Skeleton className="h-5 w-12 sm:h-6 sm:w-16 rounded-full ml-auto" />
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         </Card>
       </div>
@@ -277,25 +306,26 @@ export default function AdminLeaderboardPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50 p-6 lg:p-8">
-      <div className="max-w-7xl mx-auto space-y-6">
+    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50 p-4 sm:p-6 lg:p-8">
+      <div className="max-w-7xl mx-auto space-y-4 sm:space-y-6">
         {/* Header with Gradient Title */}
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div>
-            <h1 className="text-3xl font-bold">
+            <h1 className="text-2xl sm:text-3xl font-bold">
               <span className="bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-purple-600">
                 Liderlik Tablosu
               </span>
             </h1>
-            <p className="mt-1 text-gray-600">Öğrencilerin puan sıralamasını ve performansını görüntüleyin</p>
+            <p className="mt-1 text-sm sm:text-base text-gray-600">Öğrencilerin deneyim sıralamasını ve performansını görüntüleyin</p>
           </div>
           
           <Button 
             onClick={exportToCSV} 
-            className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white flex items-center gap-2 shadow-md"
+            className="w-full sm:w-auto bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white flex items-center gap-2 shadow-md"
           >
             <Download className="h-4 w-4" />
-            CSV Olarak İndir
+            <span className="hidden sm:inline">Excel Dosyası Olarak İndir</span>
+            <span className="sm:hidden">İndir</span>
           </Button>
         </div>
 
@@ -303,13 +333,13 @@ export default function AdminLeaderboardPage() {
         <Card className="border-0 shadow-lg rounded-xl overflow-hidden bg-white">
           <div className="h-1 bg-gradient-to-r from-indigo-500 to-purple-500"></div>
           <CardHeader>
-            <CardTitle className="text-lg font-medium text-gray-800 flex items-center gap-2">
+            <CardTitle className="text-base sm:text-lg font-medium text-gray-800 flex items-center gap-2">
               <Filter className="h-5 w-5 text-indigo-500" />
               Filtreler
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               <div>
                 <label className="text-sm font-medium mb-1 block text-gray-700">Öğrenci Ara</label>
                 <div className="relative">
@@ -323,15 +353,15 @@ export default function AdminLeaderboardPage() {
                 </div>
               </div>
               
-              <div className="w-full md:w-64">
+              <div className="w-full">
                 <label className="text-sm font-medium mb-1 block text-gray-700">Öğretmen Filtresi</label>
-                <Select defaultValue={selectedTutor} onValueChange={setSelectedTutor}>
+                <Select defaultValue="all" onValueChange={setSelectedTutor}>
                   <SelectTrigger>
                     <SelectValue placeholder="Tüm Öğretmenler" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">Tüm Öğretmenler</SelectItem>
-                    {tutors?.map(tutor => (
+                    {tutors.map(tutor => (
                       <SelectItem key={tutor.id} value={tutor.id}>
                         {getDisplayName(tutor)}
                       </SelectItem>
@@ -355,15 +385,15 @@ export default function AdminLeaderboardPage() {
               </div>
             </div>
           </CardContent>
-          <CardFooter className="bg-gray-50 border-t">
-            <div className="w-full flex justify-between items-center">
+          <CardFooter className="bg-gray-50 border-t px-4 sm:px-6">
+            <div className="w-full flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 sm:gap-0">
               <div className="text-sm text-gray-600">
                 Toplam <span className="font-medium">{filteredLeaderboard.length}</span> öğrenci gösteriliyor
               </div>
               <Button 
                 variant="outline" 
                 size="sm" 
-                className="border-gray-200 hover:bg-gray-100 hover:text-gray-700 text-gray-600"
+                className="w-full sm:w-auto border-gray-200 hover:bg-gray-100 hover:text-gray-700 text-gray-600"
                 onClick={() => {
                   setSearchTerm('');
                   setSelectedTutor('all');
@@ -376,7 +406,7 @@ export default function AdminLeaderboardPage() {
         </Card>
 
         {/* Stats Overview */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <Card className="border-0 shadow-lg rounded-xl overflow-hidden transition-all duration-200 hover:shadow-xl hover:-translate-y-1">
             <div className="h-1 bg-gradient-to-r from-indigo-500 to-blue-500"></div>
             <CardContent className="p-6">
@@ -397,7 +427,7 @@ export default function AdminLeaderboardPage() {
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-500">Ortalama Puan</p>
+                  <p className="text-sm font-medium text-gray-500">Ortalama Deneyim</p>
                   <h3 className="text-2xl font-bold text-gray-900 mt-1">{stats.avg}</h3>
                 </div>
                 <div className="w-12 h-12 flex items-center justify-center rounded-full bg-blue-100 text-blue-600">
@@ -412,7 +442,7 @@ export default function AdminLeaderboardPage() {
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-500">En Yüksek Puan</p>
+                  <p className="text-sm font-medium text-gray-500">En Yüksek Deneyim</p>
                   <h3 className="text-2xl font-bold text-gray-900 mt-1">{stats.max}</h3>
                 </div>
                 <div className="w-12 h-12 flex items-center justify-center rounded-full bg-yellow-100 text-yellow-600">
@@ -427,7 +457,7 @@ export default function AdminLeaderboardPage() {
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-500">Medyan Puan</p>
+                  <p className="text-sm font-medium text-gray-500">Medyan Deneyim</p>
                   <h3 className="text-2xl font-bold text-gray-900 mt-1">{stats.median}</h3>
                 </div>
                 <div className="w-12 h-12 flex items-center justify-center rounded-full bg-green-100 text-green-600">
@@ -439,7 +469,7 @@ export default function AdminLeaderboardPage() {
         </div>
 
         {/* Two columns for data visualization */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
           {/* Point Distribution Card */}
           {filteredLeaderboard.length > 0 && (
             <Card className="border-0 shadow-lg rounded-xl overflow-hidden">
@@ -447,9 +477,9 @@ export default function AdminLeaderboardPage() {
               <CardHeader>
                 <CardTitle className="text-lg font-medium flex items-center gap-2">
                   <BarChart2 className="h-5 w-5 text-indigo-500" />
-                  Puan Dağılımı
+                  Deneyim Dağılımı
                 </CardTitle>
-                <CardDescription>Öğrencilerin puan aralıklarına göre dağılımı</CardDescription>
+                <CardDescription>Öğrencilerin deneyim aralıklarına göre dağılımı</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="space-y-2">
@@ -483,7 +513,7 @@ export default function AdminLeaderboardPage() {
                   <User className="h-5 w-5 text-blue-500" />
                   Öğretmen İstatistikleri
                 </CardTitle>
-                <CardDescription>Öğretmenlere göre öğrenci dağılımı ve ortalama puan</CardDescription>
+                <CardDescription>Öğretmenlere göre öğrenci dağılımı ve ortalama deneyim</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
@@ -499,7 +529,7 @@ export default function AdminLeaderboardPage() {
                       </div>
                       <div className="flex justify-between text-sm">
                         <span className="text-gray-600">Öğrenci Sayısı: <strong>{item.count}</strong></span>
-                        <span className="text-gray-600">Ort. Puan: <strong>{Math.round(item.totalPoints / item.count)}</strong></span>
+                        <span className="text-gray-600">Ort. Deneyim: <strong>{Math.round(item.totalExperience / item.count)}</strong></span>
                       </div>
                     </div>
                   ))}
@@ -513,123 +543,125 @@ export default function AdminLeaderboardPage() {
         <Card className="border-0 shadow-lg rounded-xl overflow-hidden">
           <div className="h-1 bg-gradient-to-r from-indigo-500 to-purple-500"></div>
           <CardHeader className="pb-3">
-            <CardTitle className="text-lg font-medium flex items-center gap-2">
+            <CardTitle className="text-base sm:text-lg font-medium flex items-center gap-2">
               <Trophy className="h-5 w-5 text-indigo-500" />
               Öğrenci Sıralaması
             </CardTitle>
           </CardHeader>
           <CardContent className="p-0">
             <div className="overflow-hidden">
-              <table className="w-full">
-                <thead>
-                  <tr className="bg-gray-50 border-b border-gray-100">
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-16">Sıra</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Öğrenci</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden md:table-cell">Öğretmen</th>
-                    <th className="px-4 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider w-24 text-right">
-                      <button 
-                        onClick={toggleSortDirection}
-                        className="flex items-center justify-end w-full"
-                      >
-                        Puan
-                        <ArrowUpDown className="ml-1 h-4 w-4" />
-                      </button>
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-100 bg-white">
-                  {filteredLeaderboard.slice(0, displayLimit).map((entry) => {
-                    return (
-                      <tr 
-                        key={entry.id}
-                        className={`
-                          ${entry.rank <= 3 ? 
-                            entry.rank === 1 ? 'bg-yellow-50' : 
-                            entry.rank === 2 ? 'bg-gray-50' : 
-                            'bg-amber-50' : ''}
-                          hover:bg-gray-50 transition-colors
-                        `}
-                      >
-                        <td className="px-4 py-3 whitespace-nowrap">
-                          <div className="flex items-center gap-2">
-                            <span className={`
-                              ${entry.rank <= 3 ? 'font-bold' : ''}
-                              ${entry.rank === 1 ? 'text-yellow-500' : ''}
-                              ${entry.rank === 2 ? 'text-gray-500' : ''}
-                              ${entry.rank === 3 ? 'text-amber-600' : ''}
-                            `}>
-                              #{entry.rank}
-                            </span>
-                            {getRankIcon(entry.rank)}
-                          </div>
-                        </td>
-                        <td className="px-4 py-3 whitespace-nowrap">
-                          <div className="flex items-center">
-                            <Avatar className="h-8 w-8 mr-3">
-                              <AvatarFallback className={`
-                                ${entry.rank === 1 ? 'bg-yellow-100 text-yellow-800' : ''}
-                                ${entry.rank === 2 ? 'bg-gray-100 text-gray-800' : ''}
-                                ${entry.rank === 3 ? 'bg-amber-100 text-amber-800' : ''}
-                                ${entry.rank > 3 ? 'bg-indigo-100 text-indigo-800' : ''}
+              <div className="min-w-full align-middle">
+                <table className="min-w-full">
+                  <thead>
+                    <tr className="bg-gray-50 border-b border-gray-100">
+                      <th scope="col" className="px-3 py-2 sm:px-4 sm:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-16">
+                        Sıra
+                      </th>
+                      <th scope="col" className="px-3 py-2 sm:px-4 sm:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Öğrenci
+                      </th>
+                      <th scope="col" className="hidden md:table-cell px-3 py-2 sm:px-4 sm:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Öğretmen
+                      </th>
+                      <th scope="col" className="px-3 py-2 sm:px-4 sm:py-3 text-xs font-medium text-gray-500 uppercase tracking-wider w-20 sm:w-24 text-right">
+                        <button 
+                          onClick={toggleSortDirection}
+                          className="flex items-center justify-end w-full"
+                        >
+                          <span className="hidden sm:inline">Deneyim</span>
+                          <span className="sm:hidden">XP</span>
+                          <ArrowUpDown className="ml-1 h-3 w-3 sm:h-4 sm:w-4" />
+                        </button>
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100 bg-white">
+                    {filteredLeaderboard.slice(0, displayLimit).map((entry) => {
+                      return (
+                        <tr 
+                          key={entry.id}
+                          className={`
+                            ${entry.rank <= 3 ? 
+                              entry.rank === 1 ? 'bg-yellow-50' : 
+                              entry.rank === 2 ? 'bg-gray-50' : 
+                              'bg-amber-50' : ''}
+                            hover:bg-gray-50 transition-colors
+                          `}
+                        >
+                          <td className="px-3 py-2 sm:px-4 sm:py-3 whitespace-nowrap">
+                            <div className="flex items-center gap-1 sm:gap-2">
+                              <span className={`text-sm sm:text-base
+                                ${entry.rank <= 3 ? 'font-bold' : ''}
+                                ${entry.rank === 1 ? 'text-yellow-500' : ''}
+                                ${entry.rank === 2 ? 'text-gray-500' : ''}
+                                ${entry.rank === 3 ? 'text-amber-600' : ''}
                               `}>
-                                {getDisplayName(entry).charAt(0)}
-                              </AvatarFallback>
-                            </Avatar>
-                            <div className="flex flex-col">
-                              <span className="text-sm font-medium text-gray-900">
-                                {getDisplayName(entry)}
+                                #{entry.rank}
                               </span>
-                              <LevelBadge 
-                                points={entry.totalEarnedPoints}
-                                className="mt-1"
-                              />
-                              <span className="text-xs text-gray-500 md:hidden">
-                                {entry.tutor && `Öğretmen: ${entry.tutor.firstName || entry.tutor.username}`}
+                              <div className="flex-shrink-0">
+                                {getRankIcon(entry.rank)}
+                              </div>
+                            </div>
+                          </td>
+                          <td className="px-3 py-2 sm:px-4 sm:py-3 whitespace-nowrap">
+                            <div className="flex items-center min-w-0">
+                              <Avatar className="h-7 w-7 sm:h-8 sm:w-8 mr-2 sm:mr-3 flex-shrink-0 hidden sm:block">
+                                <AvatarFallback className={`text-xs sm:text-sm
+                                  ${entry.rank === 1 ? 'bg-yellow-100 text-yellow-800' : ''}
+                                  ${entry.rank === 2 ? 'bg-gray-100 text-gray-800' : ''}
+                                  ${entry.rank === 3 ? 'bg-amber-100 text-amber-800' : ''}
+                                  ${entry.rank > 3 ? 'bg-indigo-100 text-indigo-800' : ''}
+                                `}>
+                                  {getDisplayName(entry).charAt(0)}
+                                </AvatarFallback>
+                              </Avatar>
+                              <div className="flex flex-col min-w-0">
+                                <span className="text-sm font-medium text-gray-900 truncate">
+                                  {getDisplayName(entry)}
+                                </span>
+                                <LevelBadge 
+                                  points={entry.experience}
+                                  className="mt-0.5 sm:mt-1"
+                                />
+                                <span className="text-xs text-gray-500 md:hidden truncate">
+                                  {entry.tutor && `Öğretmen: ${entry.tutor.firstName || entry.tutor.username}`}
+                                </span>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="px-3 py-2 sm:px-4 sm:py-3 whitespace-nowrap hidden md:table-cell">
+                            {entry.tutor && (
+                              <span className="text-sm text-gray-700 truncate block max-w-[200px]">
+                                {entry.tutor.firstName && entry.tutor.lastName 
+                                  ? `${entry.tutor.firstName} ${entry.tutor.lastName}` 
+                                  : entry.tutor.username}
+                              </span>
+                            )}
+                          </td>
+                          <td className="px-3 py-2 sm:px-4 sm:py-3 whitespace-nowrap text-right">
+                            <div className="flex items-center gap-1 sm:gap-2 justify-end">
+                              <span className="inline-flex items-center px-2 sm:px-3 py-0.5 sm:py-1 rounded-full text-xs sm:text-sm font-semibold bg-gradient-to-r from-green-500 to-emerald-600 text-white shadow-sm">
+                                {entry.experience}
                               </span>
                             </div>
-                          </div>
-                        </td>
-                        <td className="px-4 py-3 whitespace-nowrap hidden md:table-cell">
-                          {entry.tutor && (
-                            <span className="text-sm text-gray-700">
-                              {entry.tutor.firstName && entry.tutor.lastName 
-                                ? `${entry.tutor.firstName} ${entry.tutor.lastName}` 
-                                : entry.tutor.username}
-                            </span>
-                          )}
-                        </td>
-                        <td className="px-4 py-3 whitespace-nowrap text-right">
-                          <div className="flex flex-col items-end gap-2">
-                            <div className="flex items-center gap-2">
-                              <span className="text-xs text-gray-500 font-medium">Kazanılan:</span>
-                              <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold bg-gradient-to-r from-green-500 to-emerald-600 text-white shadow-sm">
-                                {entry.totalEarnedPoints}
-                              </span>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <span className="text-xs text-gray-500 font-medium">Mevcut:</span>
-                              <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold bg-gradient-to-r from-indigo-500 to-purple-600 text-white shadow-sm">
-                                {entry.currentPoints}
-                              </span>
-                            </div>
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
             </div>
           </CardContent>
-          <CardFooter className="bg-gray-50 border-t py-3">
-            <div className="w-full text-center text-sm text-gray-500">
+          <CardFooter className="bg-gray-50 border-t py-2 sm:py-3">
+            <div className="w-full text-center text-xs sm:text-sm text-gray-500">
               Gösterilen: {Math.min(displayLimit, filteredLeaderboard.length)} / {filteredLeaderboard.length} öğrenci
             </div>
           </CardFooter>
         </Card>
         
         {/* Footer */}
-        <div className="text-center mt-8 text-xs text-gray-500">
+        <div className="text-center mt-6 sm:mt-8 text-xs text-gray-500">
           © {new Date().getFullYear()} Öğrenci Takip Sistemi. Tüm hakları saklıdır.
         </div>
       </div>

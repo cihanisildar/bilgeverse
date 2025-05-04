@@ -92,7 +92,7 @@ export default function EventDetailsPage() {
         endDate: data.event.endDateTime || data.event.endDate,
         location: data.event.location,
         type: data.event.type,
-        status: data.event.status,
+        status: data.event.status === 'YAKINDA' ? 'UPCOMING' : data.event.status,
         capacity: data.event.capacity,
         enrolledStudents: data.event.enrolledStudents || 0,
         points: data.event.points,
@@ -105,17 +105,10 @@ export default function EventDetailsPage() {
       };
       console.log('Event data from API:', data.event);
       console.log('Mapped event data:', eventData);
+      
+      // If enrolledStudents is 1 and we're viewing the event details, it means we're the one who joined
+      setHasJoined(data.event.enrolledStudents === 1);
       setEvent(eventData);
-
-      // Check if user has already joined
-      const participantsResponse = await fetch(`/api/events/${eventId}/participants`, {
-        credentials: 'include'
-      });
-
-      if (participantsResponse.ok) {
-        const participantsData = await participantsResponse.json();
-        setHasJoined(participantsData.participants.some((p: any) => p.status === 'REGISTERED'));
-      }
     } catch (error) {
       console.error('Error fetching event details:', error);
       setError('Etkinlik detayları yüklenirken bir hata oluştu');
@@ -309,7 +302,7 @@ export default function EventDetailsPage() {
                   onClick={handleJoinEvent}
                   disabled={isJoining || hasJoined || event.enrolledStudents >= event.capacity}
                   className={cn(
-                    "min-w-[120px] font-medium transition-all",
+                    "min-w-[120px] font-medium transition-all text-white",
                     isJoining ? "bg-gray-200" :
                     hasJoined ? "bg-green-600 hover:bg-green-700" :
                     event.enrolledStudents >= event.capacity ? "bg-gray-300" :

@@ -30,6 +30,7 @@ export default function Navigation() {
     { href: '/admin/registration-requests', label: 'Kayıt İstekleri' },
     { href: '/admin/events', label: 'Etkinlikler' },
     { href: '/admin/store', label: 'Mağaza Yönetimi' },
+    { href: '/admin/point-cards', label: 'Puan Kartları' },
   ];
 
   const tutorLinks = [

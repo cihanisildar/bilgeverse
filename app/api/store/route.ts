@@ -1,43 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
-import { getUserFromRequest, isAuthenticated, isAdmin, isTutor } from '@/lib/server-auth';
-
-// Default empty response
-const EMPTY_RESPONSE = { items: [] };
-
-// Helper to handle retries
-async function withRetry<T>(operation: () => Promise<T>, maxRetries = 3): Promise<T> {
-  let lastError;
-  
-  for (let attempt = 0; attempt < maxRetries; attempt++) {
-    try {
-      return await operation();
-    } catch (error) {
-      console.error(`Operation failed (attempt ${attempt + 1}/${maxRetries}):`, error);
-      lastError = error;
-      
-      // Wait before retrying (exponential backoff)
-      if (attempt < maxRetries - 1) {
-        await new Promise(resolve => setTimeout(resolve, 300 * Math.pow(2, attempt)));
-      }
-    }
-  }
-  
-  throw lastError;
-}
+import { getServerSession } from 'next-auth';
+import { UserRole } from '@prisma/client';
+import { authOptions } from '../auth/[...nextauth]/auth.config';
 
 export async function GET(request: NextRequest) {
   try {
-    const currentUser = await getUserFromRequest(request);
+    const session = await getServerSession(authOptions);
     console.log('Store API - Current user details:', {
-      id: currentUser?.id,
-      username: currentUser?.username,
-      role: currentUser?.role,
-      tutorId: currentUser?.tutorId,
-      hasUser: !!currentUser
+      id: session?.user?.id,
+      username: session?.user?.username,
+      role: session?.user?.role,
+      tutorId: session?.user?.tutorId,
+      hasUser: !!session?.user
     });
     
-    if (!isAuthenticated(currentUser)) {
+    if (!session?.user) {
       console.log('Store API - User not authenticated');
       return NextResponse.json(
         { error: 'Unauthorized' },
@@ -51,12 +29,12 @@ export async function GET(request: NextRequest) {
     console.log('Store API - Request details:', {
       url: request.url,
       tutorId,
-      isStudent: !isTutor(currentUser),
-      userTutorId: currentUser.tutorId
+      isStudent: session.user.role === UserRole.STUDENT,
+      userTutorId: session.user.tutorId
     });
 
     // If admin, show all items or filter by tutorId
-    if (isAdmin(currentUser)) {
+    if (session.user.role === UserRole.ADMIN) {
       console.log('Store API - Admin user, fetching all items');
       const items = await prisma.storeItem.findMany({
         where: tutorId ? {
@@ -81,15 +59,15 @@ export async function GET(request: NextRequest) {
     }
 
     // If user is a student, only show their tutor's store
-    if (!isTutor(currentUser)) {
+    if (session.user.role === UserRole.STUDENT) {
       console.log('Store API - Student user check:', {
-        hasCurrentUser: !!currentUser,
-        userRole: currentUser?.role,
-        tutorId: currentUser?.tutorId,
-        isStudent: !isTutor(currentUser)
+        hasCurrentUser: !!session.user,
+        userRole: session.user.role,
+        tutorId: session.user.tutorId,
+        isStudent: session.user.role === UserRole.STUDENT
       });
       
-      if (!currentUser.tutorId) {
+      if (!session.user.tutorId) {
         console.log('Store API - No tutor assigned to student');
         return NextResponse.json(
           { error: 'No tutor assigned' },
@@ -97,10 +75,10 @@ export async function GET(request: NextRequest) {
         );
       }
 
-      console.log('Store API - Fetching items for student with tutorId:', currentUser.tutorId);
+      console.log('Store API - Fetching items for student with tutorId:', session.user.tutorId);
       const items = await prisma.storeItem.findMany({
         where: {
-          tutorId: currentUser.tutorId
+          tutorId: session.user.tutorId
         },
         orderBy: {
           createdAt: 'desc'
@@ -123,7 +101,7 @@ export async function GET(request: NextRequest) {
     // For tutors, show their own store
     const items = await prisma.storeItem.findMany({
       where: {
-        tutorId: currentUser.id
+        tutorId: session.user.id
       },
       orderBy: {
         createdAt: 'desc'
@@ -152,9 +130,9 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const currentUser = await getUserFromRequest(request);
+    const session = await getServerSession(authOptions);
     
-    if (!isAuthenticated(currentUser) || (!isAdmin(currentUser) && !isTutor(currentUser))) {
+    if (!session?.user || !['ADMIN', 'TUTOR'].includes(session.user.role)) {
       return NextResponse.json(
         { error: 'Unauthorized: Only admin or tutor can create store items' },
         { status: 403 }
@@ -188,11 +166,11 @@ export async function POST(request: NextRequest) {
     }
 
     // If admin is creating item for a tutor, validate tutorId
-    if (isAdmin(currentUser) && tutorId) {
+    if (session.user.role === UserRole.ADMIN && tutorId) {
       const tutor = await prisma.user.findFirst({
         where: {
           id: tutorId,
-          role: 'TUTOR'
+          role: UserRole.TUTOR
         }
       });
 
@@ -212,7 +190,7 @@ export async function POST(request: NextRequest) {
           pointsRequired,
           availableQuantity,
           ...(imageUrl && { imageUrl }),
-          tutorId: isAdmin(currentUser) ? tutorId : currentUser.id
+          tutorId: session.user.role === UserRole.ADMIN ? tutorId : session.user.id
         },
         include: {
           tutor: {

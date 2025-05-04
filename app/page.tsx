@@ -30,7 +30,7 @@ export default function Home() {
   return (
     <div className="min-h-screen flex items-center justify-center">
       <div className="text-center">
-        <div className="text-2xl font-bold mb-4">Yaygın Eğitim Sistemi</div>
+        <div className="text-2xl font-bold mb-4">BilgeVerse</div>
         <div className="w-full flex items-center justify-center">
           <div className="loader"></div>
         </div>

@@ -18,11 +18,13 @@ import {
   Mail,
   TrendingUp,
   Trophy,
-  User
+  User,
 } from 'lucide-react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
+import NotesManager from '@/app/components/student/NotesManager';
+import ReportsManager from '@/app/components/student/ReportsManager';
 
 type Student = {
   id: string;
@@ -258,15 +260,19 @@ export default function StudentDetailPage() {
                   </Button>
                 </Link>
                 
-                <Button variant="outline" className="border-blue-100">
-                  <FileText className="h-4 w-4 mr-2" />
-                  Rapor Oluştur
-                </Button>
+                <Link href={`/tutor/reports/view?studentId=${student.id}`}>
+                  <Button variant="outline" className="border-blue-100">
+                    <FileText className="h-4 w-4 mr-2" />
+                    Raporlar
+                  </Button>
+                </Link>
                 
-                <Button variant="outline" className="border-amber-100 text-amber-600 hover:bg-amber-50">
-                  <AlertTriangle className="h-4 w-4 mr-2" />
-                  Not Ekle
-                </Button>
+                <Link href={`/tutor/notes/view?studentId=${student.id}`}>
+                  <Button variant="outline" className="border-amber-100 text-amber-600 hover:bg-amber-50">
+                    <AlertTriangle className="h-4 w-4 mr-2" />
+                    Notlar
+                  </Button>
+                </Link>
               </div>
             </div>
           </div>
@@ -361,18 +367,6 @@ export default function StudentDetailPage() {
               </CardContent>
             </Card>
           </div>
-          
-          <Card className="border border-gray-100 shadow-sm">
-            <CardHeader>
-              <CardTitle className="text-lg text-gray-700">Öğrenci Notları</CardTitle>
-              <CardDescription>Öğrenci hakkında not bulunmamaktadır.</CardDescription>
-            </CardHeader>
-            <CardFooter>
-              <Button variant="outline" size="sm">
-                Not Ekle
-              </Button>
-            </CardFooter>
-          </Card>
         </TabsContent>
         
         {/* Points History Tab */}

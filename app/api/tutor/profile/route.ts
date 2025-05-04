@@ -1,13 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
-import { getUserFromRequest, isAuthenticated, isTutor } from '@/lib/server-auth';
-import { RequestStatus, EventStatus } from '@prisma/client';
+import { getServerSession } from 'next-auth';
+import { EventStatus, UserRole } from '@prisma/client';
+import { authOptions } from '../../auth/[...nextauth]/auth.config';
+
+export const dynamic = 'force-dynamic';
 
 export async function GET(request: NextRequest) {
   try {
-    const currentUser = await getUserFromRequest(request);
+    const session = await getServerSession(authOptions);
     
-    if (!isAuthenticated(currentUser) || !isTutor(currentUser)) {
+    if (!session?.user || session.user.role !== UserRole.TUTOR) {
       return NextResponse.json(
         { error: 'Unauthorized: Only tutors can access this endpoint' },
         { status: 403 }
@@ -24,21 +27,21 @@ export async function GET(request: NextRequest) {
       // Count students
       prisma.user.count({
         where: {
-          tutorId: currentUser.id
+          tutorId: session.user.id
         }
       }),
       
       // Count events
       prisma.event.count({
         where: {
-          createdById: currentUser.id
+          createdById: session.user.id
         }
       }),
       
       // Sum points awarded
       prisma.pointsTransaction.aggregate({
         where: {
-          tutorId: currentUser.id
+          tutorId: session.user.id
         },
         _sum: {
           points: true
@@ -48,7 +51,7 @@ export async function GET(request: NextRequest) {
       // Count completed events
       prisma.event.count({
         where: {
-          createdById: currentUser.id,
+          createdById: session.user.id,
           status: EventStatus.TAMAMLANDI
         }
       })

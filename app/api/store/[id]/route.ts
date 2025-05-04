@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
-import { getUserFromRequest, isAuthenticated, isTutor } from '@/lib/server-auth';
+import { getServerSession } from 'next-auth';
+import { UserRole } from '@prisma/client';
+import { authOptions } from '../../auth/[...nextauth]/auth.config';
 
 // Helper to check if user owns the store item
 async function checkItemOwnership(itemId: string, userId: string) {
@@ -19,9 +21,9 @@ export async function PUT(
   { params }: { params: { id: string } }
 ) {
   try {
-    const currentUser = await getUserFromRequest(request);
+    const session = await getServerSession(authOptions);
     
-    if (!isAuthenticated(currentUser) || !isTutor(currentUser)) {
+    if (!session?.user || session.user.role !== UserRole.TUTOR) {
       return NextResponse.json(
         { error: 'Unauthorized' },
         { status: 401 }
@@ -56,7 +58,7 @@ export async function PUT(
     }
 
     // Check if user owns the item
-    if (!await checkItemOwnership(itemId, currentUser.id)) {
+    if (!await checkItemOwnership(itemId, session.user.id)) {
       return NextResponse.json(
         { error: 'You can only edit your own store items' },
         { status: 403 }
@@ -98,9 +100,9 @@ export async function DELETE(
   { params }: { params: { id: string } }
 ) {
   try {
-    const currentUser = await getUserFromRequest(request);
+    const session = await getServerSession(authOptions);
     
-    if (!isAuthenticated(currentUser) || !isTutor(currentUser)) {
+    if (!session?.user || session.user.role !== UserRole.TUTOR) {
       return NextResponse.json(
         { error: 'Unauthorized' },
         { status: 401 }
@@ -110,7 +112,7 @@ export async function DELETE(
     const itemId = params.id;
 
     // Check if user owns the item
-    if (!await checkItemOwnership(itemId, currentUser.id)) {
+    if (!await checkItemOwnership(itemId, session.user.id)) {
       return NextResponse.json(
         { error: 'You can only delete your own store items' },
         { status: 403 }

@@ -1,13 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
-import { getUserFromRequest, isAuthenticated, isStudent } from '@/lib/server-auth';
-import { RequestStatus, ParticipantStatus } from '@prisma/client';
+import { RequestStatus, ParticipantStatus, UserRole } from '@prisma/client';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '../../auth/[...nextauth]/auth.config';
 
 export async function GET(request: NextRequest) {
   try {
-    const currentUser = await getUserFromRequest(request);
+    const session = await getServerSession(authOptions);
     
-    if (!isAuthenticated(currentUser) || !isStudent(currentUser)) {
+    if (!session?.user || session.user.role !== UserRole.STUDENT) {
       return NextResponse.json(
         { error: 'Unauthorized: Only students can access this endpoint' },
         { status: 403 }
@@ -22,7 +23,7 @@ export async function GET(request: NextRequest) {
       // Count completed events
       prisma.eventParticipant.count({
         where: {
-          userId: currentUser.id,
+          userId: session.user.id,
           status: ParticipantStatus.ATTENDED
         }
       }),
@@ -30,7 +31,7 @@ export async function GET(request: NextRequest) {
       // Count approved requests
       prisma.itemRequest.count({
         where: {
-          studentId: currentUser.id,
+          studentId: session.user.id,
           status: RequestStatus.APPROVED
         }
       })

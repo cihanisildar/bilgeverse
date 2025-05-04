@@ -1,17 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
-import { getUserFromRequest, isAuthenticated } from '@/lib/server-auth';
 import { UserRole } from '@prisma/client';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '../../auth/[...nextauth]/auth.config';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET(request: NextRequest) {
   try {
     console.log('Starting classroom info fetch...');
-    const currentUser = await getUserFromRequest(request);
-    console.log('Current user:', { id: currentUser?.id, role: currentUser?.role });
+    const session = await getServerSession(authOptions);
+    console.log('Current user:', { id: session?.user?.id, role: session?.user?.role });
     
-    if (!isAuthenticated(currentUser)) {
+    if (!session?.user) {
       console.log('User not authenticated');
       return NextResponse.json(
         { error: 'Oturum açmanız gerekmektedir' },
@@ -20,19 +21,19 @@ export async function GET(request: NextRequest) {
     }
 
     // Check if user is a student
-    if (currentUser.role !== UserRole.STUDENT) {
-      console.log('User is not a student:', currentUser.role);
+    if (session.user.role !== UserRole.STUDENT) {
+      console.log('User is not a student:', session.user.role);
       return NextResponse.json(
         { error: 'Bu sayfaya erişim yetkiniz bulunmamaktadır' },
         { status: 403 }
       );
     }
 
-    console.log('Fetching student and tutor info for ID:', currentUser.id);
+    console.log('Fetching student and tutor info for ID:', session.user.id);
     
     // Get the student with their tutor and classmates
     const student = await prisma.user.findUnique({
-      where: { id: currentUser.id },
+      where: { id: session.user.id },
       include: {
         tutor: {
           select: {
@@ -44,7 +45,7 @@ export async function GET(request: NextRequest) {
             avatarUrl: true,
             students: {
               where: {
-                id: { not: currentUser.id }, // Exclude current student
+                id: { not: session.user.id }, // Exclude current student
                 role: UserRole.STUDENT
               },
               select: {

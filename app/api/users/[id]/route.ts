@@ -1,16 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { UserRole } from '@prisma/client';
-import { getUserFromRequest, isAuthenticated, isAdmin, isTutor } from '@/lib/server-auth';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '../../auth/[...nextauth]/auth.config';
 
 export async function GET(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
   try {
-    const currentUser = await getUserFromRequest(request);
+    const session = await getServerSession(authOptions);
     
-    if (!isAuthenticated(currentUser)) {
+    if (!session?.user) {
       return NextResponse.json(
         { error: 'Unauthorized' },
         { status: 401 }
@@ -53,13 +54,13 @@ export async function GET(
     // 1. User is looking at their own profile
     // 2. User is an admin
     // 3. User is a tutor looking at their own student
-    const isSelf = currentUser?.id === userId;
-    const isAdminUser = isAdmin(currentUser);
+    const isSelf = session.user.id === userId;
+    const isAdminUser = session.user.role === UserRole.ADMIN;
     const isTutorViewingStudent = 
-      isTutor(currentUser) && 
+      session.user.role === UserRole.TUTOR && 
       user.role === UserRole.STUDENT && 
       user.tutorId && 
-      user.tutorId === currentUser?.id;
+      user.tutorId === session.user.id;
     
     if (!isSelf && !isAdminUser && !isTutorViewingStudent) {
       return NextResponse.json(
@@ -83,9 +84,9 @@ export async function PUT(
   { params }: { params: { id: string } }
 ) {
   try {
-    const currentUser = await getUserFromRequest(request);
+    const session = await getServerSession(authOptions);
     
-    if (!isAuthenticated(currentUser) || !isAdmin(currentUser)) {
+    if (!session?.user || session.user.role !== UserRole.ADMIN) {
       return NextResponse.json(
         { error: 'Unauthorized: Admin access required' },
         { status: 403 }
@@ -203,9 +204,9 @@ export async function DELETE(
   { params }: { params: { id: string } }
 ) {
   try {
-    const currentUser = await getUserFromRequest(request);
+    const session = await getServerSession(authOptions);
     
-    if (!isAuthenticated(currentUser) || !isAdmin(currentUser)) {
+    if (!session?.user || session.user.role !== UserRole.ADMIN) {
       return NextResponse.json(
         { error: 'Unauthorized: Admin access required' },
         { status: 403 }
@@ -215,15 +216,76 @@ export async function DELETE(
     const userId = params.id;
     
     // Prevent deleting yourself
-    if (currentUser?.id === userId) {
+    if (session.user.id === userId) {
       return NextResponse.json(
         { error: 'Cannot delete your own account' },
         { status: 400 }
       );
     }
 
-    await prisma.user.delete({
-      where: { id: userId }
+    // Delete all related records in a transaction
+    await prisma.$transaction(async (tx) => {
+      // Delete all points transactions where user is either student or tutor
+      await tx.pointsTransaction.deleteMany({
+        where: {
+          OR: [
+            { studentId: userId },
+            { tutorId: userId }
+          ]
+        }
+      });
+
+      // Delete all experience transactions where user is either student or tutor
+      await tx.experienceTransaction.deleteMany({
+        where: {
+          OR: [
+            { studentId: userId },
+            { tutorId: userId }
+          ]
+        }
+      });
+
+      // Delete all item requests where user is either student or tutor
+      await tx.itemRequest.deleteMany({
+        where: {
+          OR: [
+            { studentId: userId },
+            { tutorId: userId }
+          ]
+        }
+      });
+
+      // Delete all store items if user is a tutor
+      await tx.storeItem.deleteMany({
+        where: { tutorId: userId }
+      });
+
+      // Delete all event participants records
+      await tx.eventParticipant.deleteMany({
+        where: { userId: userId }
+      });
+
+      // Delete all events created by this user
+      await tx.event.deleteMany({
+        where: { createdById: userId }
+      });
+
+      // Delete all registration requests processed by this user
+      await tx.registrationRequest.updateMany({
+        where: { processedById: userId },
+        data: { processedById: null }
+      });
+
+      // Remove tutor reference from any students
+      await tx.user.updateMany({
+        where: { tutorId: userId },
+        data: { tutorId: null }
+      });
+
+      // Finally delete the user
+      await tx.user.delete({
+        where: { id: userId }
+      });
     });
 
     return NextResponse.json(

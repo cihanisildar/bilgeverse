@@ -1,16 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
-import { getUserFromRequest, isAuthenticated } from '@/lib/server-auth';
 import { ParticipantStatus } from '@prisma/client';
-
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
 export async function POST(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
   try {
-    const currentUser = await getUserFromRequest(request);
+    const session = await getServerSession(authOptions);
     
-    if (!isAuthenticated(currentUser)) {
+    if (!session?.user) {
       return NextResponse.json(
         { error: 'Unauthorized' },
         { status: 401 }
@@ -39,7 +39,7 @@ export async function POST(
     }
 
     // Check if event is upcoming
-    if (event.status !== 'YAKINDA') {
+    if (event.status !== 'YAKINDA' && event.status !== 'DEVAM_EDIYOR') {
       return NextResponse.json(
         { error: 'You can only join upcoming events' },
         { status: 400 }
@@ -51,7 +51,7 @@ export async function POST(
       where: {
         eventId_userId: {
           eventId: eventId,
-          userId: currentUser.id
+          userId: session.user.id
         }
       }
     });
@@ -75,7 +75,7 @@ export async function POST(
     const participant = await prisma.eventParticipant.create({
       data: {
         eventId: eventId,
-        userId: currentUser.id,
+        userId: session.user.id,
         status: ParticipantStatus.REGISTERED,
         registeredAt: new Date()
       }

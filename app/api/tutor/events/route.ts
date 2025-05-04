@@ -1,13 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
-import { getUserFromRequest, isAuthenticated, isTutor } from '@/lib/server-auth';
-import { EventScope, EventType, EventStatus } from '@prisma/client';
+import { getServerSession } from 'next-auth';
+import { EventScope, EventType, EventStatus, UserRole } from '@prisma/client';
+import { authOptions } from '../../auth/[...nextauth]/auth.config';
+
+export const dynamic = 'force-dynamic';
 
 export async function POST(request: NextRequest) {
   try {
-    const currentUser = await getUserFromRequest(request);
+    const session = await getServerSession(authOptions);
     
-    if (!isAuthenticated(currentUser) || !isTutor(currentUser)) {
+    if (!session?.user || session.user.role !== UserRole.TUTOR) {
       return NextResponse.json(
         { error: 'Unauthorized: Only tutors can create events' },
         { status: 403 }
@@ -32,6 +35,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Validate event scope
+    if (!data.eventScope || !Object.values(EventScope).includes(data.eventScope)) {
+      return NextResponse.json(
+        { error: `Invalid event scope. Must be one of: ${Object.values(EventScope).join(', ')}` },
+        { status: 400 }
+      );
+    }
+
     // Create new event
     const newEvent = await prisma.event.create({
       data: {
@@ -44,9 +55,9 @@ export async function POST(request: NextRequest) {
         capacity: parseInt(String(data.capacity)) || 20,
         points: parseInt(String(data.points)) || 0,
         tags: data.tags || [],
-        createdById: currentUser.id,
+        createdById: session.user.id,
         status: EventStatus.YAKINDA,
-        eventScope: EventScope.GROUP
+        eventScope: data.eventScope as EventScope
       }
     });
 
@@ -81,11 +92,14 @@ export async function GET(request: NextRequest) {
   try {
     console.log('GET /api/tutor/events - Starting request');
     
-    const currentUser = await getUserFromRequest(request);
-    console.log('Current user:', currentUser);
+    const session = await getServerSession(authOptions);
+    console.log('Current user:', session?.user);
     
-    if (!isAuthenticated(currentUser) || !isTutor(currentUser)) {
-      console.log('Unauthorized access attempt:', { isAuthenticated: isAuthenticated(currentUser), isTutor: isTutor(currentUser) });
+    if (!session?.user || session.user.role !== UserRole.TUTOR) {
+      console.log('Unauthorized access attempt:', { 
+        isAuthenticated: !!session?.user, 
+        role: session?.user?.role 
+      });
       return NextResponse.json(
         { error: 'Unauthorized: Only tutors can view events' },
         { status: 403 }
@@ -93,18 +107,33 @@ export async function GET(request: NextRequest) {
     }
 
     // Get all events created by this tutor
-    console.log('Fetching events for tutor:', currentUser.id);
+    console.log('Fetching events for tutor:', session.user.id);
     const events = await prisma.event.findMany({
       where: {
-        createdById: currentUser.id
+        createdById: session.user.id
       },
       orderBy: {
         startDateTime: 'desc'
+      },
+      include: {
+        participants: {
+          where: {
+            status: 'REGISTERED'
+          }
+        }
       }
     });
     console.log('Found events:', events.length);
 
-    return NextResponse.json({ events }, { status: 200 });
+    // Add enrolledStudents count to each event
+    const eventsWithCount = events.map(event => ({
+      ...event,
+      enrolledStudents: event.participants.length,
+      // Remove participants array from response to avoid sending unnecessary data
+      participants: undefined
+    }));
+
+    return NextResponse.json({ events: eventsWithCount }, { status: 200 });
   } catch (error: any) {
     console.error('Error fetching events:', error);
     console.error('Detailed error:', {

@@ -200,6 +200,7 @@ function EventsList() {
   const [filteredEvents, setFilteredEvents] = useState<Event[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [activeFilter, setActiveFilter] = useState("all");
+  const [scopeFilter, setScopeFilter] = useState('all');
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -227,7 +228,7 @@ function EventsList() {
         type: event.type.toLowerCase(),
         status: event.status.toLowerCase(),
         capacity: event.capacity,
-        enrolledStudents: 0, // TODO: Implement this when we have enrollment data
+        enrolledStudents: event.enrolledStudents || 0,
         points: event.points,
         tags: event.tags,
         eventScope: event.eventScope.toLowerCase(),
@@ -252,7 +253,7 @@ function EventsList() {
     fetchEvents();
   }, []);
 
-  // Filter events based on search query and active filter
+  // Filter events based on search query, active filter, and scope filter
   useEffect(() => {
     let filtered = [...events];
     
@@ -267,13 +268,18 @@ function EventsList() {
       );
     }
     
-    // Apply status filter
+    // Apply status filter - Convert both sides to uppercase for comparison
     if (activeFilter !== 'all') {
-      filtered = filtered.filter(event => event.status === activeFilter);
+      filtered = filtered.filter(event => event.status === activeFilter.toUpperCase());
+    }
+
+    // Apply scope filter
+    if (scopeFilter !== 'all') {
+      filtered = filtered.filter(event => event.eventScope.toUpperCase() === scopeFilter);
     }
     
     setFilteredEvents(filtered);
-  }, [events, searchQuery, activeFilter]);
+  }, [events, searchQuery, activeFilter, scopeFilter]);
 
   if (isLoading) {
     return <LoadingEvents />;
@@ -356,13 +362,20 @@ function EventsList() {
             className="w-full"
           />
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-4">
           <Tabs defaultValue={activeFilter} onValueChange={setActiveFilter}>
             <TabsList>
-              <TabsTrigger value="all">All</TabsTrigger>
+              <TabsTrigger value="all">Tümü</TabsTrigger>
               <TabsTrigger value="YAKINDA">Yaklaşan</TabsTrigger>
               <TabsTrigger value="DEVAM_EDIYOR">Devam Eden</TabsTrigger>
               <TabsTrigger value="TAMAMLANDI">Tamamlanan</TabsTrigger>
+            </TabsList>
+          </Tabs>
+          <Tabs defaultValue={scopeFilter} onValueChange={setScopeFilter}>
+            <TabsList>
+              <TabsTrigger value="all">Tüm Kapsamlar</TabsTrigger>
+              <TabsTrigger value="GROUP">Grup</TabsTrigger>
+              <TabsTrigger value="GLOBAL">Genel</TabsTrigger>
             </TabsList>
           </Tabs>
         </div>
@@ -372,18 +385,38 @@ function EventsList() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {filteredEvents.map((event) => (
           <Link key={event.id} href={`/tutor/events/${event.id}`} className="block">
-            <Card className="border-0 shadow-lg hover:shadow-xl transition-all duration-200 h-full">
-              <CardHeader>
+            <Card className={`border-0 shadow-lg hover:shadow-xl transition-all duration-200 h-full relative overflow-hidden ${
+              event.status === 'YAKINDA' ? 'bg-gradient-to-br from-blue-50 to-white' :
+              event.status === 'DEVAM_EDIYOR' ? 'bg-gradient-to-br from-green-50 to-white' :
+              event.status === 'TAMAMLANDI' ? 'bg-gradient-to-br from-purple-50 to-white' :
+              'bg-gradient-to-br from-gray-50 to-white'
+            }`}>
+              <div className={`absolute top-0 left-0 w-1 h-full ${
+                event.status === 'YAKINDA' ? 'bg-blue-500' :
+                event.status === 'DEVAM_EDIYOR' ? 'bg-green-500' :
+                event.status === 'TAMAMLANDI' ? 'bg-purple-500' :
+                'bg-gray-500'
+              }`} />
+              <CardHeader className="relative">
                 <div className="flex justify-between items-start">
                   <Badge 
                     variant={getStatusColor(event.status) as 'default' | 'destructive' | 'outline' | 'secondary'}
-                    className="font-medium"
+                    className={`font-medium ${
+                      event.status === 'YAKINDA' ? 'bg-blue-100 text-blue-700 hover:bg-blue-200' :
+                      event.status === 'DEVAM_EDIYOR' ? 'bg-green-100 text-green-700 hover:bg-green-200' :
+                      event.status === 'TAMAMLANDI' ? 'bg-purple-100 text-purple-700 hover:bg-purple-200' :
+                      'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    }`}
                   >
                     {getStatusText(event.status)}
                   </Badge>
                   <Badge 
                     variant={event.eventScope === 'global' ? 'default' : 'secondary'}
-                    className="font-medium"
+                    className={`font-medium ${
+                      event.eventScope === 'global' 
+                        ? 'bg-indigo-100 text-indigo-700 hover:bg-indigo-200' 
+                        : 'bg-amber-100 text-amber-700 hover:bg-amber-200'
+                    }`}
                   >
                     {event.eventScope === 'global' ? 'Genel Etkinlik' : 'Grup Etkinliği'}
                   </Badge>
@@ -393,37 +426,39 @@ function EventsList() {
                 </h3>
                 <div className="flex flex-wrap gap-1 mt-2">
                   {event.tags.map((tag) => (
-                    <Badge key={tag} variant="secondary" className="bg-blue-50 text-blue-700 hover:bg-blue-100">
+                    <Badge key={tag} variant="secondary" className="bg-white/80 text-gray-700 hover:bg-white">
                       {tag}
                     </Badge>
                   ))}
                 </div>
               </CardHeader>
-              <CardContent className="pb-3">
-                <p className="text-gray-600 text-sm line-clamp-2 mb-4">{event.description}</p>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <div className="flex items-center text-sm text-gray-500">
-                      <Calendar className="h-4 w-4 mr-2" />
-                      <span>{new Date(event.startDate).toLocaleDateString('tr-TR')}</span>
+              <Link href={`/tutor/events/${event.id}`} className="block">
+                <CardContent className="pb-3">
+                  <p className="text-gray-600 text-sm line-clamp-2 mb-4">{event.description}</p>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <div className="flex items-center text-sm text-gray-500">
+                        <Calendar className="h-4 w-4 mr-2" />
+                        <span>{new Date(event.startDate).toLocaleDateString('tr-TR')}</span>
+                      </div>
+                      <div className="flex items-center text-sm text-gray-500">
+                        <Clock className="h-4 w-4 mr-2" />
+                        <span>{new Date(event.startDate).toLocaleTimeString('tr-TR')}</span>
+                      </div>
                     </div>
-                    <div className="flex items-center text-sm text-gray-500">
-                      <Clock className="h-4 w-4 mr-2" />
-                      <span>{new Date(event.startDate).toLocaleTimeString('tr-TR')}</span>
+                    <div className="space-y-2">
+                      <div className="flex items-center text-sm text-gray-500">
+                        <Users className="h-4 w-4 mr-2" />
+                        <span>{event.enrolledStudents}/{event.capacity} Katılımcı</span>
+                      </div>
+                      <div className="flex items-center text-sm text-gray-500">
+                        <Award className="h-4 w-4 mr-2" />
+                        <span>{event.points} puan</span>
+                      </div>
                     </div>
                   </div>
-                  <div className="space-y-2">
-                    <div className="flex items-center text-sm text-gray-500">
-                      <Users className="h-4 w-4 mr-2" />
-                      <span>{event.enrolledStudents}/{event.capacity} Katılımcı</span>
-                    </div>
-                    <div className="flex items-center text-sm text-gray-500">
-                      <Award className="h-4 w-4 mr-2" />
-                      <span>{event.points} puan</span>
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
+                </CardContent>
+              </Link>
             </Card>
           </Link>
         ))}
@@ -471,6 +506,7 @@ export default function TutorEventsPage() {
   const [filteredEvents, setFilteredEvents] = useState<Event[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [activeFilter, setActiveFilter] = useState('all');
+  const [scopeFilter, setScopeFilter] = useState('all');
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [eventToDelete, setEventToDelete] = useState<Event | null>(null);
@@ -500,7 +536,7 @@ export default function TutorEventsPage() {
         type: event.type.toLowerCase(),
         status: event.status.toLowerCase(),
         capacity: event.capacity,
-        enrolledStudents: 0, // TODO: Implement this when we have enrollment data
+        enrolledStudents: event.enrolledStudents || 0,
         points: event.points,
         tags: event.tags,
         eventScope: event.eventScope.toLowerCase(),
@@ -525,7 +561,7 @@ export default function TutorEventsPage() {
     fetchEvents();
   }, []);
 
-  // Filter events based on search query and active filter
+  // Filter events based on search query, active filter, and scope filter
   useEffect(() => {
     let filtered = [...events];
     
@@ -540,13 +576,18 @@ export default function TutorEventsPage() {
       );
     }
     
-    // Apply status filter
+    // Apply status filter - Convert both sides to uppercase for comparison
     if (activeFilter !== 'all') {
-      filtered = filtered.filter(event => event.status === activeFilter);
+      filtered = filtered.filter(event => event.status === activeFilter.toUpperCase());
+    }
+
+    // Apply scope filter
+    if (scopeFilter !== 'all') {
+      filtered = filtered.filter(event => event.eventScope.toUpperCase() === scopeFilter);
     }
     
     setFilteredEvents(filtered);
-  }, [events, searchQuery, activeFilter]);
+  }, [events, searchQuery, activeFilter, scopeFilter]);
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -612,8 +653,8 @@ export default function TutorEventsPage() {
         <div className="max-w-7xl mx-auto px-4">
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
             <div>
-              <h1 className="text-3xl font-bold mb-2">Grup Etkinlikleri</h1>
-              <p className="text-white/80">Grubunuz için etkinlikler oluşturun ve yönetin</p>
+              <h1 className="text-3xl font-bold mb-2">Etkinlikler</h1>
+              <p className="text-white/80">Grup ve genel etkinlikleri oluşturun ve yönetin</p>
             </div>
             <Button asChild className="bg-white text-blue-600 hover:bg-blue-50">
               <Link href="/tutor/events/new">
@@ -642,14 +683,23 @@ export default function TutorEventsPage() {
                   />
                 </div>
               </div>
-              <Tabs defaultValue={activeFilter} onValueChange={setActiveFilter}>
-                <TabsList>
-                  <TabsTrigger value="all">Tümü</TabsTrigger>
-                  <TabsTrigger value="YAKINDA">Yaklaşan</TabsTrigger>
-                  <TabsTrigger value="DEVAM_EDIYOR">Devam Eden</TabsTrigger>
-                  <TabsTrigger value="TAMAMLANDI">Tamamlanan</TabsTrigger>
-                </TabsList>
-              </Tabs>
+              <div className="flex gap-4">
+                <Tabs defaultValue={activeFilter} onValueChange={setActiveFilter}>
+                  <TabsList>
+                    <TabsTrigger value="all">Tümü</TabsTrigger>
+                    <TabsTrigger value="YAKINDA">Yaklaşan</TabsTrigger>
+                    <TabsTrigger value="DEVAM_EDIYOR">Devam Eden</TabsTrigger>
+                    <TabsTrigger value="TAMAMLANDI">Tamamlanan</TabsTrigger>
+                  </TabsList>
+                </Tabs>
+                <Tabs defaultValue={scopeFilter} onValueChange={setScopeFilter}>
+                  <TabsList>
+                    <TabsTrigger value="all">Tüm Kapsamlar</TabsTrigger>
+                    <TabsTrigger value="GROUP">Grup</TabsTrigger>
+                    <TabsTrigger value="GLOBAL">Genel</TabsTrigger>
+                  </TabsList>
+                </Tabs>
+              </div>
             </div>
           </CardContent>
         </Card>
@@ -683,19 +733,39 @@ export default function TutorEventsPage() {
         {!isLoading && !error && events.length > 0 && (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredEvents.map((event) => (
-              <Card key={event.id} className="border-0 shadow-lg hover:shadow-xl transition-all duration-200 h-full">
-                <CardHeader>
+              <Card key={event.id} className={`border-0 shadow-lg hover:shadow-xl transition-all duration-200 h-full relative overflow-hidden ${
+                event.status === 'YAKINDA' ? 'bg-gradient-to-br from-blue-50 to-white' :
+                event.status === 'DEVAM_EDIYOR' ? 'bg-gradient-to-br from-green-50 to-white' :
+                event.status === 'TAMAMLANDI' ? 'bg-gradient-to-br from-purple-50 to-white' :
+                'bg-gradient-to-br from-gray-50 to-white'
+              }`}>
+                <div className={`absolute top-0 left-0 w-1 h-full ${
+                  event.status === 'YAKINDA' ? 'bg-blue-500' :
+                  event.status === 'DEVAM_EDIYOR' ? 'bg-green-500' :
+                  event.status === 'TAMAMLANDI' ? 'bg-purple-500' :
+                  'bg-gray-500'
+                }`} />
+                <CardHeader className="relative">
                   <div className="flex justify-between items-start">
                     <Badge 
                       variant={getStatusColor(event.status) as 'default' | 'destructive' | 'outline' | 'secondary'}
-                      className="font-medium"
+                      className={`font-medium ${
+                        event.status === 'YAKINDA' ? 'bg-blue-100 text-blue-700 hover:bg-blue-200' :
+                        event.status === 'DEVAM_EDIYOR' ? 'bg-green-100 text-green-700 hover:bg-green-200' :
+                        event.status === 'TAMAMLANDI' ? 'bg-purple-100 text-purple-700 hover:bg-purple-200' :
+                        'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                      }`}
                     >
                       {getStatusText(event.status)}
                     </Badge>
                     <div className="flex items-center gap-2">
                       <Badge 
                         variant={event.eventScope === 'global' ? 'default' : 'secondary'}
-                        className="font-medium"
+                        className={`font-medium ${
+                          event.eventScope === 'global' 
+                            ? 'bg-indigo-100 text-indigo-700 hover:bg-indigo-200' 
+                            : 'bg-amber-100 text-amber-700 hover:bg-amber-200'
+                        }`}
                       >
                         {event.eventScope === 'global' ? 'Genel Etkinlik' : 'Grup Etkinliği'}
                       </Badge>
@@ -745,7 +815,7 @@ export default function TutorEventsPage() {
                     </h3>
                     <div className="flex flex-wrap gap-1 mt-2">
                       {event.tags.map((tag) => (
-                        <Badge key={tag} variant="secondary" className="bg-blue-50 text-blue-700 hover:bg-blue-100">
+                        <Badge key={tag} variant="secondary" className="bg-white/80 text-gray-700 hover:bg-white">
                           {tag}
                         </Badge>
                       ))}

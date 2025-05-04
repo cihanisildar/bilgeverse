@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
-import { getUserFromRequest, isAdmin } from '@/lib/server-auth';
-import { EventScope, EventStatus, EventType } from '@prisma/client';
+import { EventScope, EventStatus, EventType, UserRole } from '@prisma/client';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
 
 // Get a specific event by ID
 export async function GET(
@@ -9,9 +10,9 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   try {
-    const currentUser = await getUserFromRequest(request);
+    const session = await getServerSession(authOptions);
     
-    if (!currentUser) {
+    if (!session?.user) {
       return NextResponse.json(
         { error: 'Unauthorized' },
         { status: 401 }
@@ -78,10 +79,10 @@ export async function PUT(
 ) {
   try {
     console.log('PUT /api/events/[id] - Starting request');
-    const currentUser = await getUserFromRequest(request);
-    console.log('Current user:', { id: currentUser?.id, role: currentUser?.role });
+    const session = await getServerSession(authOptions);
+    console.log('Current user:', { id: session?.user?.id, role: session?.user?.role });
     
-    if (!currentUser) {
+    if (!session?.user) {
       return NextResponse.json(
         { error: 'Unauthorized' },
         { status: 401 }
@@ -111,7 +112,7 @@ export async function PUT(
     }
 
     // Check permissions based on event scope
-    if (existingEvent.eventScope === EventScope.GLOBAL && !isAdmin(currentUser)) {
+    if (existingEvent.eventScope === EventScope.GLOBAL && session.user.role !== UserRole.ADMIN) {
       return NextResponse.json(
         { error: 'Unauthorized: Only admin can update global events' },
         { status: 403 }
@@ -119,7 +120,9 @@ export async function PUT(
     }
 
     // For group events, only allow the creator or an admin
-    if (existingEvent.eventScope === EventScope.GROUP && !isAdmin(currentUser) && existingEvent.createdById !== currentUser.id) {
+    if (existingEvent.eventScope === EventScope.GROUP && 
+        session.user.role !== UserRole.ADMIN && 
+        existingEvent.createdById !== session.user.id) {
       return NextResponse.json(
         { error: 'Unauthorized: You can only update your own group events' },
         { status: 403 }
@@ -216,9 +219,9 @@ export async function DELETE(
   { params }: { params: { id: string } }
 ) {
   try {
-    const currentUser = await getUserFromRequest(request);
+    const session = await getServerSession(authOptions);
     
-    if (!currentUser) {
+    if (!session?.user) {
       return NextResponse.json(
         { error: 'Unauthorized' },
         { status: 401 }
@@ -246,7 +249,7 @@ export async function DELETE(
     }
 
     // Check if the user is the creator of the event or an admin
-    if (!isAdmin(currentUser) && event.createdById !== currentUser.id) {
+    if (session.user.role !== UserRole.ADMIN && event.createdById !== session.user.id) {
       return NextResponse.json(
         { error: 'Unauthorized: You can only delete your own events' },
         { status: 403 }

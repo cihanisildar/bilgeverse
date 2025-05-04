@@ -12,7 +12,9 @@ module.exports = {
       'picsum.photos',
       'images.unsplash.com',
       'localhost',
+      'encrypted-tbn0.gstatic.com',
       'encrypted-tbn1.gstatic.com',
+      'static.ticimax.cloud',
       // Google domains
       'lh3.googleusercontent.com',
       'storage.googleapis.com',

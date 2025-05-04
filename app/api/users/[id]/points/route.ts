@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { UserRole, TransactionType } from '@prisma/client';
-import { getUserFromRequest, isAuthenticated, isAdmin, isTutor } from '@/lib/server-auth';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/app/api/auth/[...nextauth]/auth.config';
+
+const ALLOWED_ROLES: UserRole[] = [UserRole.ADMIN, UserRole.TUTOR];
 
 // Update user points
 export async function POST(
@@ -9,9 +12,9 @@ export async function POST(
   { params }: { params: { id: string } }
 ) {
   try {
-    const currentUser = await getUserFromRequest(request);
+    const session = await getServerSession(authOptions);
     
-    if (!isAuthenticated(currentUser) || !(isAdmin(currentUser) || isTutor(currentUser))) {
+    if (!session?.user || !ALLOWED_ROLES.includes(session.user.role)) {
       return NextResponse.json(
         { error: 'Unauthorized: Only admin or tutor can modify points' },
         { status: 403 }
@@ -39,92 +42,85 @@ export async function POST(
       );
     }
 
-    // Use transaction to ensure data consistency
-    const result = await prisma.$transaction(async (tx) => {
-      // Get user
-      const user = await tx.user.findUnique({
-        where: { id: userId }
-      });
-
-      if (!user) {
-        throw new Error('User not found');
-      }
-
-      // If tutor, can only modify points of their students
-      if (isTutor(currentUser) && !isAdmin(currentUser)) {
-        if (user.role !== UserRole.STUDENT || user.tutorId !== currentUser.id) {
-          throw new Error('You can only modify points for your own students');
-        }
-      }
-
-      // Calculate new points based on action
-      let newPoints = user.points || 0;
-      let transactionPoints = pointsValue;
-      let transactionType: TransactionType = TransactionType.AWARD;
-
-      switch (action) {
-        case 'add':
-          newPoints += pointsValue;
-          break;
-        case 'subtract':
-          newPoints = Math.max(0, newPoints - pointsValue);
-          transactionType = TransactionType.REDEEM;
-          break;
-        case 'set':
-          transactionType = newPoints > pointsValue ? TransactionType.REDEEM : TransactionType.AWARD;
-          transactionPoints = Math.abs(newPoints - pointsValue);
-          newPoints = pointsValue;
-          break;
-      }
-
-      // Create points transaction record
-      if (transactionPoints > 0) {
-        await tx.pointsTransaction.create({
-          data: {
-            studentId: user.id,
-            tutorId: currentUser.id,
-            points: transactionPoints,
-            type: transactionType,
-            reason: `Points ${action}ed by ${currentUser.username}`
-          }
-        });
-      }
-
-      // Update user points
-      const updatedUser = await tx.user.update({
-        where: { id: user.id },
-        data: { points: newPoints },
-        select: {
-          id: true,
-          username: true,
-          points: true
-        }
-      });
-
-      return updatedUser;
+    // Get current user points
+    const user = await prisma.user.findUnique({
+      where: { id: userId }
     });
 
-    return NextResponse.json({
-      message: 'Points updated successfully',
-      user: result
-    }, { status: 200 });
-  } catch (error: any) {
-    console.error('Update points error:', error);
-
-    if (error.message === 'User not found') {
+    if (!user) {
       return NextResponse.json(
         { error: 'User not found' },
         { status: 404 }
       );
     }
 
-    if (error.message === 'You can only modify points for your own students') {
+    // If tutor, verify the user is their student
+    if (session.user.role === UserRole.TUTOR && user.tutorId !== session.user.id) {
       return NextResponse.json(
-        { error: error.message },
+        { error: 'Unauthorized: Can only modify points for your own students' },
         { status: 403 }
       );
     }
 
+    let newPoints;
+    let transactionType;
+
+    switch (action) {
+      case 'add':
+        newPoints = (user.points || 0) + pointsValue;
+        transactionType = TransactionType.AWARD;
+        break;
+      case 'subtract':
+        newPoints = Math.max(0, (user.points || 0) - pointsValue);
+        transactionType = TransactionType.REDEEM;
+        break;
+      case 'set':
+        newPoints = pointsValue;
+        transactionType = TransactionType.AWARD;
+        break;
+      default:
+        return NextResponse.json(
+          { error: 'Invalid action' },
+          { status: 400 }
+        );
+    }
+
+    // Update user points and create transaction record
+    const [updatedUser, transaction] = await prisma.$transaction([
+      prisma.user.update({
+        where: { id: userId },
+        data: {
+          points: newPoints,
+          // Also update experience if points are being increased
+          ...(action === 'add' && { experience: { increment: pointsValue } }),
+          ...(action === 'set' && newPoints > (user.points || 0) && { 
+            experience: { increment: newPoints - (user.points || 0) } 
+          })
+        },
+        select: {
+          id: true,
+          username: true,
+          points: true,
+          experience: true
+        }
+      }),
+      prisma.pointsTransaction.create({
+        data: {
+          studentId: userId,
+          tutorId: session.user.id,
+          points: pointsValue,
+          type: transactionType,
+          reason: `Points ${action}ed by ${session.user.username}`
+        }
+      })
+    ]);
+
+    return NextResponse.json({
+      user: updatedUser,
+      transaction
+    }, { status: 200 });
+  } catch (error) {
+    console.error('Update points error:', error);
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

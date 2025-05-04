@@ -1,14 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
-import { getUserFromRequest, isAuthenticated, isTutor } from '@/lib/server-auth';
+import { getServerSession } from 'next-auth';
+import { UserRole } from '@prisma/client';
+import { authOptions } from '../../auth/[...nextauth]/auth.config';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET(request: NextRequest) {
   try {
-    const currentUser = await getUserFromRequest(request);
+    const session = await getServerSession(authOptions);
     
-    if (!isAuthenticated(currentUser) || !isTutor(currentUser)) {
+    if (!session?.user || session.user.role !== UserRole.TUTOR) {
       return NextResponse.json(
         { error: 'Unauthorized: Only tutors can access this endpoint' },
         { status: 403 }
@@ -18,7 +20,7 @@ export async function GET(request: NextRequest) {
     // Get all experience transactions for students assigned to this tutor
     const transactions = await prisma.experienceTransaction.findMany({
       where: {
-        tutorId: currentUser.id
+        tutorId: session.user.id
       },
       include: {
         student: {
@@ -48,9 +50,9 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const currentUser = await getUserFromRequest(request);
+    const session = await getServerSession(authOptions);
     
-    if (!isAuthenticated(currentUser) || !isTutor(currentUser)) {
+    if (!session?.user || session.user.role !== UserRole.TUTOR) {
       return NextResponse.json(
         { error: 'Unauthorized: Only tutors can create experience transactions' },
         { status: 403 }
@@ -67,12 +69,28 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Verify the student is assigned to this tutor
+    const student = await prisma.user.findFirst({
+      where: {
+        id: studentId,
+        tutorId: session.user.id,
+        role: UserRole.STUDENT
+      }
+    });
+
+    if (!student) {
+      return NextResponse.json(
+        { error: 'Student not found or not assigned to you' },
+        { status: 404 }
+      );
+    }
+
     // Create the transaction
     const transaction = await prisma.experienceTransaction.create({
       data: {
         amount,
         studentId,
-        tutorId: currentUser.id
+        tutorId: session.user.id
       },
       include: {
         student: {
@@ -82,6 +100,16 @@ export async function POST(request: NextRequest) {
             firstName: true,
             lastName: true
           }
+        }
+      }
+    });
+
+    // Update student's experience
+    await prisma.user.update({
+      where: { id: studentId },
+      data: {
+        experience: {
+          increment: amount
         }
       }
     });

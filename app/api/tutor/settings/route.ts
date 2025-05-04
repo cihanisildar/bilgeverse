@@ -1,13 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
-import { getUserFromRequest, isAuthenticated, isTutor } from '@/lib/server-auth';
-import bcrypt from 'bcryptjs';
+import { getServerSession } from 'next-auth';
+import { UserRole } from '@prisma/client';
+import { authOptions } from '../../auth/[...nextauth]/auth.config';
+
+export const dynamic = 'force-dynamic';
 
 export async function GET(request: NextRequest) {
   try {
-    const currentUser = await getUserFromRequest(request);
+    const session = await getServerSession(authOptions);
     
-    if (!isAuthenticated(currentUser) || !isTutor(currentUser)) {
+    if (!session?.user || session.user.role !== UserRole.TUTOR) {
       return NextResponse.json(
         { error: 'Unauthorized: Only tutors can access this endpoint' },
         { status: 403 }
@@ -15,7 +18,7 @@ export async function GET(request: NextRequest) {
     }
 
     const tutor = await prisma.user.findUnique({
-      where: { id: currentUser.id },
+      where: { id: session.user.id },
       select: {
         id: true,
         username: true,
@@ -48,9 +51,9 @@ export async function GET(request: NextRequest) {
 
 export async function PUT(request: NextRequest) {
   try {
-    const currentUser = await getUserFromRequest(request);
+    const session = await getServerSession(authOptions);
     
-    if (!isAuthenticated(currentUser) || !isTutor(currentUser)) {
+    if (!session?.user || session.user.role !== UserRole.TUTOR) {
       return NextResponse.json(
         { error: 'Unauthorized: Only tutors can update their settings' },
         { status: 403 }
@@ -69,7 +72,7 @@ export async function PUT(request: NextRequest) {
 
     // Update tutor
     const updatedTutor = await prisma.user.update({
-      where: { id: currentUser.id },
+      where: { id: session.user.id },
       data: {
         ...(firstName !== undefined && { firstName }),
         ...(lastName !== undefined && { lastName }),

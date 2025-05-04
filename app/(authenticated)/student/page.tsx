@@ -237,64 +237,64 @@ export default function StudentDashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50/50">
-      <div className="flex justify-between items-center mb-8 px-4 md:px-6 pt-6">
-        <h1 className="text-2xl font-semibold">Öğrenci Paneli</h1>
-        <div className="flex gap-2">
+    <div className="min-h-screen bg-gray-50/50 pb-4">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 sm:gap-0 mb-6 sm:mb-8 px-4 sm:px-6 pt-4 sm:pt-6">
+        <h1 className="text-xl sm:text-2xl font-semibold">Öğrenci Paneli</h1>
+        <div className="flex w-full sm:w-auto gap-2">
           <Link
             href="/student/settings"
-            className="px-4 py-2 bg-white text-indigo-600 rounded-lg shadow-sm hover:shadow-md transition-all border border-indigo-100 flex items-center gap-2"
+            className="flex-1 sm:flex-none px-3 sm:px-4 py-2 bg-white text-indigo-600 rounded-lg shadow-sm hover:shadow-md transition-all border border-indigo-100 flex items-center justify-center gap-2 text-sm"
           >
             <Settings className="h-4 w-4" />
-            Ayarlar
+            <span>Ayarlar</span>
           </Link>
           <Link
             href="/student/profile"
-            className="px-4 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg shadow-sm hover:shadow-md transition-all flex items-center gap-2"
+            className="flex-1 sm:flex-none px-3 sm:px-4 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg shadow-sm hover:shadow-md transition-all flex items-center justify-center gap-2 text-sm"
           >
             <User className="h-4 w-4" />
-            Profilim
+            <span>Profilim</span>
           </Link>
         </div>
       </div>
       
       {stats && (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 px-4 md:px-6 mb-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 px-4 sm:px-6 mb-6 sm:mb-8">
           {/* Points Card */}
           <Card className="overflow-hidden border-0 shadow-md">
-            <div className="bg-gradient-to-r from-violet-500 to-purple-600 p-4">
+            <div className="bg-gradient-to-r from-violet-500 to-purple-600 p-3 sm:p-4">
               <div className="flex items-center justify-between">
-                <h3 className="text-lg font-medium text-white">Puanlarınız</h3>
-                <Star className="h-5 w-5 text-white/80" />
+                <h3 className="text-base sm:text-lg font-medium text-white">Puanlarınız</h3>
+                <Star className="h-4 w-4 sm:h-5 sm:w-5 text-white/80" />
               </div>
             </div>
-            <div className="p-6 flex flex-col items-center justify-center">
-              <div className="text-4xl font-bold text-gray-900">{stats.points}</div>
-              <div className="text-sm text-gray-500 mt-1">Toplam kazanılan puan</div>
+            <div className="p-4 sm:p-6 flex flex-col items-center justify-center">
+              <div className="text-3xl sm:text-4xl font-bold text-gray-900">{stats.points}</div>
+              <div className="text-xs sm:text-sm text-gray-500 mt-1">Toplam kazanılan puan</div>
               <Link
                 href="/student/store"
-                className="mt-4 inline-flex items-center px-4 py-2 bg-violet-100 text-violet-700 rounded-md text-sm font-medium hover:bg-violet-200 transition-colors"
+                className="mt-3 sm:mt-4 inline-flex items-center px-3 sm:px-4 py-1.5 sm:py-2 bg-violet-100 text-violet-700 rounded-md text-xs sm:text-sm font-medium hover:bg-violet-200 transition-colors w-full sm:w-auto justify-center"
               >
                 Puan Harca
-                <ArrowRight className="ml-1 h-4 w-4" />
+                <ArrowRight className="ml-1 h-3 w-3 sm:h-4 sm:w-4" />
               </Link>
             </div>
           </Card>
           
           {/* Rank Card */}
           <Card className="overflow-hidden border-0 shadow-md">
-            <div className="bg-gradient-to-r from-emerald-500 to-teal-600 p-4">
+            <div className="bg-gradient-to-r from-emerald-500 to-teal-600 p-3 sm:p-4">
               <div className="flex items-center justify-between">
-                <h3 className="text-lg font-medium text-white">Sıralama</h3>
-                <Trophy className="h-5 w-5 text-white/80" />
+                <h3 className="text-base sm:text-lg font-medium text-white">Sıralama</h3>
+                <Trophy className="h-4 w-4 sm:h-5 sm:w-5 text-white/80" />
               </div>
             </div>
-            <div className="p-6 flex flex-col items-center justify-center">
+            <div className="p-4 sm:p-6 flex flex-col items-center justify-center">
               <div className="flex items-baseline">
-                <span className="text-4xl font-bold text-gray-900">#{stats.rank}</span>
-                <span className="text-lg text-gray-500 ml-2">/ {stats.totalStudents}</span>
+                <span className="text-3xl sm:text-4xl font-bold text-gray-900">#{stats.rank}</span>
+                <span className="text-base sm:text-lg text-gray-500 ml-2">/ {stats.totalStudents}</span>
               </div>
-              <div className="text-sm text-gray-500 mt-1 text-center">
+              <div className="text-xs sm:text-sm text-gray-500 mt-1 text-center">
                 {stats.rank <= 3 ? "🏆 Harika! İlk 3'tesin!" : 
                  stats.rank <= 10 ? "👏 Tebrikler! İlk 10'dasın!" :
                  stats.rank <= Math.ceil(stats.totalStudents * 0.25) ? "💪 İlk %25'tesin!" :
@@ -302,76 +302,76 @@ export default function StudentDashboard() {
               </div>
               <Link
                 href="/student/leaderboard"
-                className="mt-4 inline-flex items-center px-4 py-2 bg-emerald-100 text-emerald-700 rounded-md text-sm font-medium hover:bg-emerald-200 transition-colors"
+                className="mt-3 sm:mt-4 inline-flex items-center px-3 sm:px-4 py-1.5 sm:py-2 bg-emerald-100 text-emerald-700 rounded-md text-xs sm:text-sm font-medium hover:bg-emerald-200 transition-colors w-full sm:w-auto justify-center"
               >
                 Sıralamayı Gör
-                <ArrowRight className="ml-1 h-4 w-4" />
+                <ArrowRight className="ml-1 h-3 w-3 sm:h-4 sm:w-4" />
               </Link>
             </div>
           </Card>
           
           {/* Requests Card */}
-          <Card className="overflow-hidden border-0 shadow-md">
-            <div className="bg-gradient-to-r from-orange-500 to-amber-600 p-4">
+          <Card className="overflow-hidden border-0 shadow-md sm:col-span-2 lg:col-span-1">
+            <div className="bg-gradient-to-r from-orange-500 to-amber-600 p-3 sm:p-4">
               <div className="flex items-center justify-between">
-                <h3 className="text-lg font-medium text-white">Ürün İstekleri</h3>
-                <Clock className="h-5 w-5 text-white/80" />
+                <h3 className="text-base sm:text-lg font-medium text-white">Ürün İstekleri</h3>
+                <Clock className="h-4 w-4 sm:h-5 sm:w-5 text-white/80" />
               </div>
             </div>
-            <div className="p-6">
-              <div className="grid grid-cols-2 gap-4 w-full mb-4">
-                <div className="text-center p-3 bg-yellow-50 rounded-lg">
-                  <div className="text-2xl font-bold text-yellow-600">{stats.pendingRequests}</div>
+            <div className="p-4 sm:p-6">
+              <div className="grid grid-cols-2 gap-3 sm:gap-4 w-full mb-3 sm:mb-4">
+                <div className="text-center p-2 sm:p-3 bg-yellow-50 rounded-lg">
+                  <div className="text-xl sm:text-2xl font-bold text-yellow-600">{stats.pendingRequests}</div>
                   <div className="text-xs text-gray-500">Bekleyen</div>
                 </div>
-                <div className="text-center p-3 bg-green-50 rounded-lg">
-                  <div className="text-2xl font-bold text-green-600">{stats.approvedRequests}</div>
+                <div className="text-center p-2 sm:p-3 bg-green-50 rounded-lg">
+                  <div className="text-xl sm:text-2xl font-bold text-green-600">{stats.approvedRequests}</div>
                   <div className="text-xs text-gray-500">Onaylanan</div>
                 </div>
               </div>
               <Link
                 href="/student/requests"
-                className="w-full inline-flex items-center justify-center px-4 py-2 bg-orange-100 text-orange-700 rounded-md text-sm font-medium hover:bg-orange-200 transition-colors"
+                className="w-full inline-flex items-center justify-center px-3 sm:px-4 py-1.5 sm:py-2 bg-orange-100 text-orange-700 rounded-md text-xs sm:text-sm font-medium hover:bg-orange-200 transition-colors"
               >
                 İsteklerim
-                <ArrowRight className="ml-1 h-4 w-4" />
+                <ArrowRight className="ml-1 h-3 w-3 sm:h-4 sm:w-4" />
               </Link>
             </div>
           </Card>
         </div>
       )}
       
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 px-4 md:px-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 px-4 sm:px-6">
         {/* Upcoming Events Section */}
         <Card className="border-0 shadow-md">
-          <div className="flex items-center justify-between p-4 border-b">
+          <div className="flex items-center justify-between p-3 sm:p-4 border-b">
             <div className="flex items-center">
-              <Calendar className="h-5 w-5 text-violet-500 mr-2" />
-              <h2 className="text-lg font-medium">Yaklaşan Etkinlikler</h2>
+              <Calendar className="h-4 w-4 sm:h-5 sm:w-5 text-violet-500 mr-2" />
+              <h2 className="text-base sm:text-lg font-medium">Yaklaşan Etkinlikler</h2>
             </div>
             <Link
               href="/student/events"
-              className="text-sm text-violet-600 hover:text-violet-800 font-medium inline-flex items-center"
+              className="text-xs sm:text-sm text-violet-600 hover:text-violet-800 font-medium inline-flex items-center"
             >
               Tümünü Gör
-              <ArrowRight className="ml-1 h-4 w-4" />
+              <ArrowRight className="ml-1 h-3 w-3 sm:h-4 sm:w-4" />
             </Link>
           </div>
-          <div className="p-4">
+          <div className="p-3 sm:p-4">
             {upcomingEvents.length > 0 ? (
-              <div className="space-y-4">
+              <div className="space-y-3 sm:space-y-4">
                 {upcomingEvents.map((event) => (
-                  <div key={event.id} className="border-l-4 border-violet-500 pl-4 py-2">
-                    <div className="font-medium text-lg">{event.title}</div>
-                    <div className="text-sm text-gray-600 mb-1">
+                  <div key={event.id} className="border-l-4 border-violet-500 pl-3 sm:pl-4 py-2">
+                    <div className="font-medium text-base sm:text-lg">{event.title}</div>
+                    <div className="text-xs sm:text-sm text-gray-600 mb-1">
                       {new Date(event.date).toLocaleDateString('tr-TR')}
                     </div>
-                    <div className="text-sm text-gray-500">{event.description}</div>
+                    <div className="text-xs sm:text-sm text-gray-500">{event.description}</div>
                   </div>
                 ))}
               </div>
             ) : (
-              <div className="text-gray-500 text-center py-8">
+              <div className="text-gray-500 text-center py-6 sm:py-8 text-sm">
                 Yaklaşan etkinlik bulunmuyor
               </div>
             )}
@@ -380,44 +380,49 @@ export default function StudentDashboard() {
         
         {/* Recent Points Section */}
         <Card className="border-0 shadow-md">
-          <div className="flex items-center justify-between p-4 border-b">
+          <div className="flex items-center justify-between p-3 sm:p-4 border-b">
             <div className="flex items-center">
-              <Clock className="h-5 w-5 text-violet-500 mr-2" />
-              <h2 className="text-lg font-medium">Son Puan Hareketleri</h2>
+              <Clock className="h-4 w-4 sm:h-5 sm:w-5 text-violet-500 mr-2" />
+              <h2 className="text-base sm:text-lg font-medium">Son Puan Hareketleri</h2>
             </div>
             <Link
               href="/student/points"
-              className="text-sm text-violet-600 hover:text-violet-800 font-medium inline-flex items-center"
+              className="text-xs sm:text-sm text-violet-600 hover:text-violet-800 font-medium inline-flex items-center"
             >
               Tümünü Gör
-              <ArrowRight className="ml-1 h-4 w-4" />
+              <ArrowRight className="ml-1 h-3 w-3 sm:h-4 sm:w-4" />
             </Link>
           </div>
-          <div className="p-4">
+          <div className="p-3 sm:p-4">
             {recentPoints.length > 0 ? (
-              <div className="space-y-3">
+              <div className="space-y-2 sm:space-y-3">
                 {recentPoints.map((transaction) => (
-                  <div 
-                    key={transaction.id} 
-                    className={`border-l-4 p-3 text-sm ${
-                      transaction.type === 'award' 
-                        ? 'border-green-500 bg-green-50' 
-                        : 'border-red-500 bg-red-50'
-                    }`}
-                  >
-                    <div className="font-medium">
-                      {transaction.type === 'award' ? 'Kazanıldı: ' : 'Harcandı: '}
-                      <span className="font-bold">{transaction.points} puan</span>
+                  <div key={transaction.id} className="flex items-center justify-between p-2 sm:p-3 bg-gray-50 rounded-lg">
+                    <div className="flex items-center space-x-3">
+                      <div className={`h-8 w-8 sm:h-10 sm:w-10 rounded-full flex items-center justify-center ${
+                        transaction.type === 'earned' ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'
+                      }`}>
+                        {transaction.type === 'earned' ? '+' : '-'}
+                      </div>
+                      <div>
+                        <div className="text-sm sm:text-base font-medium text-gray-900">
+                          {transaction.reason}
+                        </div>
+                        <div className="text-xs sm:text-sm text-gray-500">
+                          {new Date(transaction.createdAt).toLocaleDateString('tr-TR')}
+                        </div>
+                      </div>
                     </div>
-                    <div className="text-gray-600">{transaction.reason}</div>
-                    <div className="text-xs text-gray-400 mt-1">
-                      {new Date(transaction.createdAt).toLocaleString('tr-TR')}
+                    <div className={`text-sm sm:text-base font-semibold ${
+                      transaction.type === 'earned' ? 'text-green-600' : 'text-red-600'
+                    }`}>
+                      {transaction.type === 'earned' ? '+' : '-'}{transaction.points}
                     </div>
                   </div>
                 ))}
               </div>
             ) : (
-              <div className="text-gray-500 text-center py-8">
+              <div className="text-gray-500 text-center py-6 sm:py-8 text-sm">
                 Henüz puan hareketi bulunmuyor
               </div>
             )}
