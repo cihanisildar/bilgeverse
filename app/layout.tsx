@@ -11,8 +11,11 @@ const quicksand = Quicksand({
 });
 
 export const metadata: Metadata = {
-  title: "Öğretmen Takip Sistemi",
+  title: "BilgeVerse",
   description: "Öğrenci takip ve puan yönetim sistemi",
+  icons: {
+    icon: '/favicon.ico',
+  },
 };
 
 export default function RootLayout({

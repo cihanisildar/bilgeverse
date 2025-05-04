@@ -88,5 +88,5 @@ export const authOptions: AuthOptions = {
   pages: {
     signIn: "/login",
   },
-  secret: process.env.NEXTAUTH_SECRET || process.env.JWT_SECRET,
+  secret: process.env.NEXT_AUTH_SECRET
 }; 
