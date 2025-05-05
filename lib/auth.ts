@@ -2,56 +2,6 @@ import { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import prisma from "./prisma";
 import { compare } from "bcrypt";
-import { User, UserRole } from '@prisma/client';
-import { DefaultSession } from 'next-auth';
-import { JWT } from 'next-auth/jwt';
-
-declare module 'next-auth' {
-  interface Session extends DefaultSession {
-    user: AuthUser & DefaultSession['user'];
-  }
-
-  interface User extends AuthUser {}
-}
-
-declare module 'next-auth/jwt' {
-  interface JWT extends AuthUser {}
-}
-
-export function isAuthenticated(user: User | null): user is User {
-  return user !== null;
-}
-
-export function isAdmin(user: User | null): boolean {
-  return user?.role === UserRole.ADMIN;
-}
-
-export function isTutor(user: User | null): boolean {
-  return user?.role === UserRole.TUTOR;
-}
-
-export function isStudent(user: User | null): boolean {
-  return user?.role === UserRole.STUDENT;
-}
-
-export type AuthUser = {
-  id: string;
-  username: string;
-  email: string;
-  role: UserRole;
-  firstName?: string;
-  lastName?: string;
-  points?: number;
-  avatarUrl?: string;
-  tutor?: {
-    id: string;
-    username: string;
-    firstName?: string;
-    lastName?: string;
-  };
-  createdAt?: string;
-  tutorId?: string;
-};
 
 export const authOptions: NextAuthOptions = {
   session: {
@@ -129,7 +79,7 @@ export const authOptions: NextAuthOptions = {
       if (user) {
         token.username = user.username;
         token.role = user.role;
-        token.tutorId = user.tutorId ?? undefined;
+        token.tutorId = user.tutorId;
         token.tutor = user.tutor;
       }
       return token;
@@ -138,4 +88,6 @@ export const authOptions: NextAuthOptions = {
   pages: {
     signIn: '/login',
   },
+  secret: process.env.NEXT_AUTH_SECRET,
+  debug: true
 }; 
