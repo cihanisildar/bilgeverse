@@ -5,6 +5,8 @@ import { UserRole } from '@prisma/client';
 import bcrypt from 'bcryptjs';
 import { authOptions } from '@/app/api/auth/[...nextauth]/auth.config';
 
+export const dynamic = 'force-dynamic';
+
 export async function PUT(
   request: NextRequest,
   { params }: { params: { id: string } }

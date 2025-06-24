@@ -1,9 +1,7 @@
 import { PrismaClient } from '@prisma/client';
-import { createClassroomForTutor } from './prisma-middleware';
 
 const prismaClientSingleton = () => {
   const prisma = new PrismaClient();
-  prisma.$use(createClassroomForTutor);
   return prisma;
 };
 

@@ -54,6 +54,7 @@ export async function POST(request: NextRequest) {
         type: data.type as EventType,
         capacity: parseInt(String(data.capacity)) || 20,
         points: parseInt(String(data.points)) || 0,
+        experience: parseInt(String(data.experience)) || 0,
         tags: data.tags || [],
         createdById: session.user.id,
         status: EventStatus.YAKINDA,
@@ -106,14 +107,21 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Get all events created by this tutor
+    // Get all events created by this tutor AND global events created by admins
     console.log('Fetching events for tutor:', session.user.id);
     const events = await prisma.event.findMany({
       where: {
-        createdById: session.user.id
+        OR: [
+          // Events created by this tutor
+          { createdById: session.user.id },
+          // Global events (created by admins, visible to all tutors)
+          { eventScope: EventScope.GLOBAL },
+          // Group events specifically created for this tutor
+          { createdForTutorId: session.user.id }
+        ]
       },
       orderBy: {
-        startDateTime: 'desc'
+        createdAt: 'desc'
       },
       include: {
         participants: {

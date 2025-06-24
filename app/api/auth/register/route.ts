@@ -5,6 +5,8 @@ import { getServerSession } from 'next-auth';
 import bcrypt from 'bcryptjs';
 import { authOptions } from '../[...nextauth]/auth.config';
 
+export const dynamic = 'force-dynamic';
+
 export async function POST(request: NextRequest) {
   try {
     // Only admin can create users
@@ -17,7 +19,10 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { username, email, password, role, tutorId, firstName, lastName } = body;
+    const { username, password, role, tutorId, firstName, lastName } = body;
+
+    // Generate a placeholder email from username
+    const email = `${username.toLowerCase()}@ogrtakip.com`;
 
     // Log the received data for debugging (excluding password)
     console.log('Registration attempt:', {
@@ -29,9 +34,9 @@ export async function POST(request: NextRequest) {
       lastName
     });
 
-    if (!username || !email || !password || !role) {
+    if (!username || !password || !role) {
       return NextResponse.json(
-        { error: 'Username, email, password, and role are required' },
+        { error: 'Username, password, and role are required' },
         { status: 400 }
       );
     }
@@ -52,19 +57,16 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Check if username or email already exists
+    // Check if username already exists (removed email check)
     const existingUser = await prisma.user.findFirst({
       where: {
-        OR: [
-          { username: username.toLowerCase() },
-          { email: email.toLowerCase() }
-        ],
+        username: username.toLowerCase(),
       },
     });
 
     if (existingUser) {
       return NextResponse.json(
-        { error: 'Username or email already exists' },
+        { error: 'Username already exists' },
         { status: 409 }
       );
     }
@@ -73,30 +75,94 @@ export async function POST(request: NextRequest) {
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
 
-    // Create user
-    const newUser = await prisma.user.create({
-      data: {
-        username: username.toLowerCase(),
-        email: email.toLowerCase(),
-        password: hashedPassword,
-        role: role as UserRole,
-        tutorId,
-        firstName,
-        lastName,
-      },
-      select: {
-        id: true,
-        username: true,
-        email: true,
-        role: true,
-        firstName: true,
-        lastName: true,
-        tutorId: true,
+    // Create user in a transaction
+    const result = await prisma.$transaction(async (tx) => {
+      let classroomId = undefined;
+      
+      // If student, find or create tutor's classroom
+      if (role === UserRole.STUDENT && tutorId) {
+        const tutorClassroom = await tx.classroom.findUnique({
+          where: { tutorId: tutorId }
+        });
+        
+        if (tutorClassroom) {
+          classroomId = tutorClassroom.id;
+        } else {
+          // Create classroom for tutor if it doesn't exist
+          const tutor = await tx.user.findUnique({
+            where: { id: tutorId },
+            select: { firstName: true, lastName: true, username: true }
+          });
+          
+          if (tutor) {
+            const classroomName = tutor.firstName && tutor.lastName 
+              ? `${tutor.firstName} ${tutor.lastName} Sınıfı`
+              : `${tutor.username} Sınıfı`;
+              
+            const classroomDescription = tutor.firstName && tutor.lastName
+              ? `${tutor.firstName} ${tutor.lastName} öğretmeninin sınıfı`
+              : `${tutor.username} öğretmeninin sınıfı`;
+
+            const newClassroom = await tx.classroom.create({
+              data: {
+                name: classroomName,
+                description: classroomDescription,
+                tutorId: tutorId,
+              }
+            });
+            
+            classroomId = newClassroom.id;
+          }
+        }
       }
+
+      // Create the user
+      const newUser = await tx.user.create({
+        data: {
+          username: username.toLowerCase(),
+          email: email,
+          password: hashedPassword,
+          role: role as UserRole,
+          tutorId,
+          studentClassroomId: classroomId, // Assign to classroom if student
+          firstName,
+          lastName,
+        },
+        select: {
+          id: true,
+          username: true,
+          email: true,
+          role: true,
+          firstName: true,
+          lastName: true,
+          tutorId: true,
+        }
+      });
+
+      // If the user is a tutor, create a classroom for them within the same transaction
+      if (role === UserRole.TUTOR) {
+        const classroomName = firstName && lastName 
+          ? `${firstName} ${lastName} Sınıfı`
+          : `${username} Sınıfı`;
+          
+        const classroomDescription = firstName && lastName
+          ? `${firstName} ${lastName} öğretmeninin sınıfı`
+          : `${username} öğretmeninin sınıfı`;
+
+        await tx.classroom.create({
+          data: {
+            name: classroomName,
+            description: classroomDescription,
+            tutorId: newUser.id,
+          }
+        });
+      }
+
+      return newUser;
     });
 
     return NextResponse.json(
-      { user: newUser },
+      { user: result },
       { status: 201 }
     );
   } catch (error) {

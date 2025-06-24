@@ -89,7 +89,15 @@ export async function middleware(request: NextRequest) {
       }
     }
     
-    if (pathname.startsWith('/student') || pathname.startsWith('/api/student')) {
+    if (pathname.startsWith('/api/student/reports')) {
+      // Allow ADMIN, TUTOR, and STUDENT for /api/student/reports endpoints
+      if (![UserRole.ADMIN, UserRole.TUTOR, UserRole.STUDENT].includes(token.role as UserRole)) {
+        console.log('Unauthorized user attempting to access student reports API');
+        return isApiRoute
+          ? NextResponse.json({ error: 'Forbidden: Admin, Tutor, or Student access required' }, { status: 403 })
+          : NextResponse.redirect(new URL('/', request.url));
+      }
+    } else if (pathname.startsWith('/student') || pathname.startsWith('/api/student')) {
       if (token.role !== UserRole.STUDENT) {
         console.log('Non-student user attempting to access student route');
         return isApiRoute

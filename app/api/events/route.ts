@@ -4,6 +4,8 @@ import { EventStatus, EventScope, EventType, UserRole } from '@prisma/client';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '../auth/[...nextauth]/auth.config';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
@@ -18,7 +20,7 @@ export async function GET(request: NextRequest) {
     // Students can see both global and group events
     const events = await prisma.event.findMany({
       orderBy: {
-        startDateTime: 'asc'
+        createdAt: 'desc'
       },
       include: {
         createdBy: {
@@ -73,7 +75,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     console.log('Request body:', body);
     
-    const { title, description, startDateTime, location, type, capacity, points, tags, eventScope, createdForTutorId } = body;
+    const { title, description, startDateTime, location, type, capacity, points, experience, tags, eventScope, createdForTutorId } = body;
 
     if (!title || !description || !startDateTime) {
       console.log('Missing required fields:', { title, description, startDateTime });
@@ -144,6 +146,7 @@ export async function POST(request: NextRequest) {
         type: (type?.toUpperCase() as EventType) || EventType.YUZ_YUZE,
         capacity: capacity || 20,
         points: points || 0,
+        experience: experience || 0,
         tags: tags || [],
         createdById: session.user.id,
         status: EventStatus.YAKINDA,

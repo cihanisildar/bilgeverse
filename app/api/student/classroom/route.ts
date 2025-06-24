@@ -8,46 +8,34 @@ export const dynamic = 'force-dynamic';
 
 export async function GET(request: NextRequest) {
   try {
-    console.log('Starting classroom info fetch...');
     const session = await getServerSession(authOptions);
-    console.log('Current user:', { id: session?.user?.id, role: session?.user?.role });
     
     if (!session?.user) {
-      console.log('User not authenticated');
       return NextResponse.json(
         { error: 'Oturum açmanız gerekmektedir' },
         { status: 401 }
       );
     }
 
-    // Check if user is a student
     if (session.user.role !== UserRole.STUDENT) {
-      console.log('User is not a student:', session.user.role);
       return NextResponse.json(
         { error: 'Bu sayfaya erişim yetkiniz bulunmamaktadır' },
         { status: 403 }
       );
     }
 
-    console.log('Fetching student and tutor info for ID:', session.user.id);
-    
-    // Get the student with their tutor and classmates
+    console.log('Current user ID:', session.user.id);
+
+    // Get student's classroom
     const student = await prisma.user.findUnique({
       where: { id: session.user.id },
-      include: {
-        tutor: {
-          select: {
-            id: true,
-            username: true,
-            firstName: true,
-            lastName: true,
-            role: true,
-            avatarUrl: true,
-            students: {
-              where: {
-                id: { not: session.user.id }, // Exclude current student
-                role: UserRole.STUDENT
-              },
+      select: {
+        id: true,
+        username: true,
+        studentClassroomId: true,
+        classroomStudents: {
+          include: {
+            tutor: {
               select: {
                 id: true,
                 username: true,
@@ -55,16 +43,35 @@ export async function GET(request: NextRequest) {
                 lastName: true,
                 role: true,
                 avatarUrl: true,
-                points: true // Include points
+              }
+            },
+            students: {
+              select: {
+                id: true,
+                username: true,
+                firstName: true,
+                lastName: true,
+                role: true,
+                avatarUrl: true,
+                points: true
               },
               orderBy: [
-                { points: 'desc' }, // Order by points first
-                { firstName: 'asc' } // Then by name
+                { points: 'desc' },
+                { firstName: 'asc' }
               ]
             }
           }
         }
       }
+    });
+
+    console.log('Student query result:', {
+      found: !!student,
+      username: student?.username,
+      studentClassroomId: student?.studentClassroomId,
+      hasClassroom: !!student?.classroomStudents,
+      totalStudentsInClassroom: student?.classroomStudents?.students?.length || 0,
+      studentsIds: student?.classroomStudents?.students?.map(s => ({ id: s.id, username: s.username })) || []
     });
 
     if (!student) {
@@ -74,54 +81,31 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    if (!student.tutor) {
+    if (!student.classroomStudents) {
       return NextResponse.json(
-        { error: 'Henüz bir danışman öğretmene atanmamışsınız' },
+        { error: 'Henüz bir sınıfa atanmamışsınız' },
         { status: 404 }
       );
     }
 
-    const response = {
-      tutor: {
-        id: student.tutor.id,
-        username: student.tutor.username,
-        firstName: student.tutor.firstName,
-        lastName: student.tutor.lastName,
-        role: student.tutor.role,
-        avatarUrl: student.tutor.avatarUrl
-      },
-      students: student.tutor.students
-    };
+    // Return all students except current user
+    const otherStudents = student.classroomStudents.students.filter(s => s.id !== session.user.id);
 
-    console.log('Returning classroom info:', {
-      tutorId: response.tutor.id,
-      studentCount: response.students.length
+    console.log('Filtering result:', {
+      currentUserId: session.user.id,
+      totalStudents: student.classroomStudents.students.length,
+      otherStudents: otherStudents.length,
+      otherStudentIds: otherStudents.map(s => ({ id: s.id, username: s.username }))
     });
+
+    const response = {
+      tutor: student.classroomStudents.tutor,
+      students: otherStudents
+    };
 
     return NextResponse.json(response);
   } catch (error: any) {
-    console.error('Error fetching classroom info:', {
-      name: error.name,
-      message: error.message,
-      code: error.code,
-      stack: error.stack
-    });
-
-    // Check for specific Prisma errors
-    if (error.code === 'P2023') {
-      return NextResponse.json(
-        { error: 'Geçersiz kullanıcı kimliği' },
-        { status: 400 }
-      );
-    }
-
-    if (error.code === 'P2025') {
-      return NextResponse.json(
-        { error: 'Öğrenci kaydı bulunamadı' },
-        { status: 404 }
-      );
-    }
-
+    console.error('Error fetching classroom info:', error);
     return NextResponse.json(
       { error: 'Sınıf bilgileri alınırken bir hata oluştu: ' + error.message },
       { status: 500 }

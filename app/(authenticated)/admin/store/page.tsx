@@ -1,10 +1,10 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
-import { useAuth } from '@/app/contexts/AuthContext';
-import Link from 'next/link';
-import Image from 'next/image';
 import { HeaderSkeleton, SearchFilterSkeleton, StoreItemCardSkeleton } from '@/app/components/ui/skeleton-shimmer';
+import { useAuth } from '@/app/contexts/AuthContext';
+import Image from 'next/image';
+import Link from 'next/link';
+import { useCallback, useEffect, useState, useRef } from 'react';
 import toast from 'react-hot-toast';
 
 type StoreItem = {
@@ -12,14 +12,19 @@ type StoreItem = {
   name: string;
   description: string;
   pointsRequired: number;
-  availableQuantity: number;
   imageUrl?: string;
-  tutor: {
+  itemRequests?: {
     id: string;
-    username: string;
-    firstName?: string;
-    lastName?: string;
-  };
+    status: string;
+    pointsSpent: number;
+    createdAt: string;
+    student: {
+      id: string;
+      username: string;
+      firstName?: string;
+      lastName?: string;
+    };
+  }[];
 };
 
 export default function AdminStore() {
@@ -27,40 +32,40 @@ export default function AdminStore() {
   const [items, setItems] = useState<StoreItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [showAddModal, setShowAddModal] = useState(false);
-  const [selectedTutorId, setSelectedTutorId] = useState<string>('');
-  const [tutors, setTutors] = useState<{ id: string; username: string; firstName?: string; lastName?: string; }[]>([]);
   const [newItem, setNewItem] = useState({
     name: '',
     description: '',
     pointsRequired: 0,
-    availableQuantity: 0,
-    imageUrl: '',
-    tutorId: ''
+    imageUrl: ''
   });
   const [addingItem, setAddingItem] = useState(false);
   const [imageError, setImageError] = useState(false);
   const [isImageLoading, setIsImageLoading] = useState(false);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [uploadingImage, setUploadingImage] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [itemToDelete, setItemToDelete] = useState<string | null>(null);
+  const [showImageEditor, setShowImageEditor] = useState(false);
+  const [originalImage, setOriginalImage] = useState<string>('');
+  const [cropData, setCropData] = useState({
+    x: 0,
+    y: 0,
+    width: 100,
+    height: 100,
+    scale: 1
+  });
+  
+  // Edit dialog states
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editItem, setEditItem] = useState<StoreItem | null>(null);
+  const [editingItem, setEditingItem] = useState(false);
+  const [editSelectedFile, setEditSelectedFile] = useState<File | null>(null);
+  const [editUploadingImage, setEditUploadingImage] = useState(false);
+  const [editImageError, setEditImageError] = useState(false);
+  const [editIsImageLoading, setEditIsImageLoading] = useState(false);
 
-  // Fetch tutors
-  useEffect(() => {
-    const fetchTutors = async () => {
-      try {
-        const res = await fetch('/api/admin/tutors');
-        if (!res.ok) throw new Error('Failed to fetch tutors');
-        const data = await res.json();
-        setTutors(data.tutors);
-      } catch (err) {
-        console.error('Error fetching tutors:', err);
-        toast.error('Öğretmenler yüklenirken bir hata oluştu');
-      }
-    };
 
-    if (isAdmin) {
-      fetchTutors();
-    }
-  }, [isAdmin]);
+  // Remove tutors fetching since we don't need it anymore
 
   // Fetch store items
   useEffect(() => {
@@ -68,11 +73,7 @@ export default function AdminStore() {
       try {
         setLoading(true);
         
-        const url = selectedTutorId 
-          ? `/api/admin/store?tutorId=${selectedTutorId}`
-          : '/api/admin/store';
-        
-        const res = await fetch(url, {
+        const res = await fetch('/api/admin/store', {
           method: 'GET',
           credentials: 'include',
           headers: {
@@ -103,26 +104,30 @@ export default function AdminStore() {
     if (isAdmin) {
       fetchStoreItems();
     }
-  }, [isAdmin, selectedTutorId]);
+  }, [isAdmin]);
 
   const openAddModal = () => {
-    if (!selectedTutorId) {
-      toast.error('Lütfen önce bir öğretmen seçin');
-      return;
-    }
     setNewItem({
       name: '',
       description: '',
       pointsRequired: 0,
-      availableQuantity: 0,
-      imageUrl: '',
-      tutorId: selectedTutorId
+      imageUrl: ''
     });
+    setSelectedFile(null);
+    setImageError(false);
+    setIsImageLoading(false);
     setShowAddModal(true);
   };
 
   const closeModal = () => {
     setShowAddModal(false);
+    setSelectedFile(null);
+    setImageError(false);
+    setIsImageLoading(false);
+    // Clean up preview URL if it exists
+    if (newItem.imageUrl && newItem.imageUrl.startsWith('blob:')) {
+      URL.revokeObjectURL(newItem.imageUrl);
+    }
   };
 
   const isAllowedImageDomain = (url: string): boolean => {
@@ -186,7 +191,7 @@ export default function AdminStore() {
     }
     
     // Convert numeric fields
-    if (name === 'pointsRequired' || name === 'availableQuantity') {
+    if (name === 'pointsRequired') {
       setNewItem({
         ...newItem,
         [name]: value === '' ? 0 : parseInt(value, 10),
@@ -208,6 +213,86 @@ export default function AdminStore() {
     setImageError(false);
     setIsImageLoading(false);
   }, []);
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      // Validate file type
+      const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/gif'];
+      if (!allowedTypes.includes(file.type)) {
+        toast.error('Geçersiz dosya türü. Sadece JPEG, PNG, WebP ve GIF dosyaları kabul edilir.');
+        return;
+      }
+
+      // Validate file size (5MB limit)
+      const maxSize = 5 * 1024 * 1024; // 5MB
+      if (file.size > maxSize) {
+        toast.error('Dosya çok büyük. Maksimum boyut 5MB\'dir.');
+        return;
+      }
+
+      setSelectedFile(file);
+      setImageError(false);
+      
+      // Create preview URL and open image editor
+      const previewUrl = URL.createObjectURL(file);
+      setOriginalImage(previewUrl);
+      setShowImageEditor(true);
+    }
+  };
+
+  const handleImageEditorSave = (editedImageBlob: Blob) => {
+    // Convert blob to file
+    const editedFile = new File([editedImageBlob], selectedFile?.name || 'edited-image.png', {
+      type: editedImageBlob.type
+    });
+    
+    setSelectedFile(editedFile);
+    
+    // Create new preview URL
+    const previewUrl = URL.createObjectURL(editedImageBlob);
+    setNewItem(prev => ({ ...prev, imageUrl: previewUrl }));
+    
+    setShowImageEditor(false);
+  };
+
+  const handleImageEditorCancel = () => {
+    setShowImageEditor(false);
+    setSelectedFile(null);
+    if (originalImage) {
+      URL.revokeObjectURL(originalImage);
+      setOriginalImage('');
+    }
+  };
+
+  const uploadImage = async (): Promise<string | null> => {
+    if (!selectedFile) return null;
+
+    try {
+      setUploadingImage(true);
+      const formData = new FormData();
+      formData.append('image', selectedFile);
+
+      const response = await fetch('/api/upload/image', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Görsel yüklenemedi');
+      }
+
+      const data = await response.json();
+      return data.url;
+    } catch (error: any) {
+      console.error('Image upload error:', error);
+      toast.error(error.message || 'Görsel yüklenirken bir hata oluştu');
+      return null;
+    } finally {
+      setUploadingImage(false);
+    }
+  };
 
   const isValidImageUrl = (url: string): boolean => {
     if (!url || !url.trim()) return false;
@@ -233,30 +318,29 @@ export default function AdminStore() {
         throw new Error('Gerekli puan sıfırdan büyük olmalıdır');
       }
       
-      if (newItem.availableQuantity < 0) {
-        throw new Error('Mevcut miktar negatif olamaz');
+
+      // Upload image if a file is selected
+      let finalImageUrl = '';
+      if (selectedFile) {
+        finalImageUrl = await uploadImage() || '';
+        if (selectedFile && !finalImageUrl) {
+          // Upload failed, don't continue
+          setAddingItem(false);
+          return;
+        }
       }
 
-      // Validate image URL if provided
-      if (newItem.imageUrl && !newItem.imageUrl.trim()) {
-        toast.error('Görsel URL\'si geçerli değil. Lütfen geçerli bir URL girin veya boş bırakın');
-        setAddingItem(false);
-        return;
-      }
 
-      // Check if domain is allowed before submitting
-      if (newItem.imageUrl && !isAllowedImageDomain(newItem.imageUrl)) {
-        toast.error('Bu görsel kaynağı desteklenmiyor. Lütfen desteklenen bir görsel kaynağı kullanın.');
-        setAddingItem(false);
-        return;
-      }
       
       const res = await fetch('/api/admin/store', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(newItem),
+        body: JSON.stringify({
+          ...newItem,
+          imageUrl: finalImageUrl || undefined
+        }),
       });
       
       if (!res.ok) {
@@ -324,223 +408,393 @@ export default function AdminStore() {
     setItemToDelete(null);
   };
 
+  // Edit dialog functions
+  const handleEditClick = async (itemId: string) => {
+    try {
+      const res = await fetch(`/api/admin/store/${itemId}`);
+      
+      if (!res.ok) {
+        if (res.status === 403) {
+          toast.error('Yetkiniz yok');
+          return;
+        }
+        const errorData = await res.json();
+        throw new Error(errorData.error || 'Ürün yüklenemedi');
+      }
+      
+      const data = await res.json();
+      setEditItem(data.item);
+      setEditSelectedFile(null);
+      setEditImageError(false);
+      setEditIsImageLoading(false);
+      setShowEditModal(true);
+    } catch (err) {
+      console.error('Ürün getirme hatası:', err);
+      toast.error('Ürün yüklenemedi. Lütfen tekrar deneyin.');
+    }
+  };
+
+  const closeEditModal = () => {
+    setShowEditModal(false);
+    setEditItem(null);
+    setEditSelectedFile(null);
+    setEditImageError(false);
+    setEditIsImageLoading(false);
+    // Clean up preview URL if it exists
+    if (editItem?.imageUrl && editItem.imageUrl.startsWith('blob:')) {
+      URL.revokeObjectURL(editItem.imageUrl);
+    }
+  };
+
+  const handleEditInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    if (!editItem) return;
+    
+    const { name, value } = e.target;
+    
+    if (name === 'imageUrl') {
+      setEditImageError(false);
+      setEditIsImageLoading(true);
+    }
+    
+    setEditItem({
+      ...editItem,
+      [name]: name === 'pointsRequired'
+        ? parseInt(value) || 0
+        : value
+    });
+  };
+
+  const handleEditFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      // Validate file type
+      const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/gif'];
+      if (!allowedTypes.includes(file.type)) {
+        toast.error('Geçersiz dosya türü. Sadece JPEG, PNG, WebP ve GIF dosyaları kabul edilir.');
+        return;
+      }
+
+      // Validate file size (5MB limit)
+      const maxSize = 5 * 1024 * 1024; // 5MB
+      if (file.size > maxSize) {
+        toast.error('Dosya çok büyük. Maksimum boyut 5MB\'dir.');
+        return;
+      }
+
+      setEditSelectedFile(file);
+      setEditImageError(false);
+      
+      // Create preview URL
+      const previewUrl = URL.createObjectURL(file);
+      
+      if (editItem) {
+        setEditItem({ ...editItem, imageUrl: previewUrl });
+      }
+    }
+  };
+
+  const editUploadImage = async (): Promise<string | null> => {
+    if (!editSelectedFile) return null;
+
+    try {
+      setEditUploadingImage(true);
+      const formData = new FormData();
+      formData.append('image', editSelectedFile);
+
+      const response = await fetch('/api/upload/image', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Görsel yüklenemedi');
+      }
+
+      const data = await response.json();
+      return data.url;
+    } catch (error: any) {
+      console.error('Image upload error:', error);
+      toast.error(error.message || 'Görsel yüklenirken bir hata oluştu');
+      return null;
+    } finally {
+      setEditUploadingImage(false);
+    }
+  };
+
+  const handleEditSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editItem) return;
+    
+    const toastId = toast.loading('Değişiklikler kaydediliyor...');
+    
+    try {
+      setEditingItem(true);
+      
+      // Validate inputs
+      if (!editItem.name.trim()) {
+        throw new Error('Ürün adı zorunludur');
+      }
+      
+      if (!editItem.description.trim()) {
+        throw new Error('Ürün açıklaması zorunludur');
+      }
+      
+      if (editItem.pointsRequired <= 0) {
+        throw new Error('Gerekli puan sıfırdan büyük olmalıdır');
+      }
+
+      // Upload new image if a file is selected
+      let finalImageUrl = editItem.imageUrl;
+      if (editSelectedFile) {
+        const uploadedUrl = await editUploadImage();
+        if (uploadedUrl) {
+          finalImageUrl = uploadedUrl;
+        } else {
+          // Upload failed, don't continue
+          setEditingItem(false);
+          return;
+        }
+      }
+      
+      const res = await fetch(`/api/admin/store/${editItem.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          name: editItem.name,
+          description: editItem.description,
+          pointsRequired: editItem.pointsRequired,
+          imageUrl: finalImageUrl
+        }),
+      });
+      
+      if (!res.ok) {
+        const errorData = await res.json();
+        if (res.status === 409) {
+          throw new Error('Bu isimde bir ürün zaten var');
+        }
+        throw new Error(errorData.error || 'Ürün güncellenemedi');
+      }
+      
+      const data = await res.json();
+      
+      // Update the items list
+      setItems(prevItems => 
+        prevItems.map(item => 
+          item.id === editItem.id 
+            ? { ...data.item, imageUrl: finalImageUrl }
+            : item
+        )
+      );
+      
+      toast.dismiss(toastId);
+      toast.success('Ürün başarıyla güncellendi!');
+      closeEditModal();
+      
+    } catch (error: any) {
+      toast.dismiss(toastId);
+      toast.error(error.message || 'Bir hata oluştu');
+    } finally {
+      setEditingItem(false);
+    }
+  };
+
+  const handleEditImageError = useCallback(() => {
+    setEditImageError(true);
+    setEditIsImageLoading(false);
+  }, []);
+
+  const handleEditImageLoad = useCallback(() => {
+    setEditImageError(false);
+    setEditIsImageLoading(false);
+  }, []);
+
   if (loading) {
     return (
-      <div className="space-y-6 max-w-7xl mx-auto py-8">
-        <HeaderSkeleton />
-        <SearchFilterSkeleton />
-        
-        {/* Store Items Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {[1, 2, 3, 4, 5, 6].map((i) => (
-            <StoreItemCardSkeleton key={i} />
-          ))}
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
+        <div className="px-4 sm:px-6 lg:px-8 py-8">
+          <HeaderSkeleton />
+          <SearchFilterSkeleton />
+          
+          {/* Store Items Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 mt-8">
+            {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
+              <StoreItemCardSkeleton key={i} />
+            ))}
+          </div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="max-w-full px-2 sm:px-4 lg:px-6 py-2 sm:py-4">
-        <div className="bg-gradient-to-r from-indigo-700 to-purple-800 rounded-lg p-3 sm:p-4 shadow-lg">
-          <div className="flex flex-col space-y-2">
-            <div>
-              <h1 className="text-lg sm:text-xl font-bold text-white">Mağaza Yönetimi</h1>
-              <p className="text-xs sm:text-sm text-indigo-100 mt-0.5">Öğretmenlerin mağaza ürünlerini yönetin</p>
-            </div>
-            <div className="flex flex-col space-y-2">
-              {!selectedTutorId && (
-                <div className="text-xs text-yellow-200 bg-yellow-500/20 border border-yellow-300/20 rounded px-2 py-1 flex items-center">
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 mr-1 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                  </svg>
-                  <span className="flex-1 text-xs">Lütfen önce bir öğretmen seçin</span>
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
+      <div className="px-4 sm:px-6 lg:px-8">
+        {/* Header Section */}
+        <div className="pt-8 pb-6">
+          <div className="relative overflow-hidden bg-gradient-to-r from-blue-600 via-purple-600 to-indigo-700 rounded-3xl shadow-2xl">
+            <div className="absolute inset-0 bg-black/10"></div>
+            <div className="absolute inset-0 bg-gradient-to-r from-white/5 to-transparent"></div>
+            <div className="relative px-8 py-10">
+              <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between">
+                <div className="flex-1">
+                  <div className="flex items-center space-x-3 mb-4">
+                    <div className="p-3 bg-white/20 backdrop-blur-sm rounded-2xl">
+                      <svg className="w-8 h-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+                      </svg>
+                    </div>
+                    <div>
+                      <h1 className="text-3xl font-bold text-white">Mağaza Yönetimi</h1>
+                      <p className="text-blue-100 mt-1">Öğretmenlerin mağaza ürünlerini yönetin ve düzenleyin</p>
+                    </div>
+                  </div>
+                  
+                  {/* Controls */}
+                  <div className="flex justify-end mt-6">
+                    <button
+                      onClick={openAddModal}
+                      className="bg-white text-indigo-600 hover:bg-blue-50 px-6 py-3 rounded-xl font-semibold flex items-center space-x-2 transition-all shadow-lg transform hover:scale-105"
+                    >
+                      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                      </svg>
+                      <span>Yeni Ürün Ekle</span>
+                    </button>
+                  </div>
                 </div>
-              )}
-              <div className="flex flex-col sm:flex-row gap-2">
-                <select
-                  value={selectedTutorId}
-                  onChange={(e) => setSelectedTutorId(e.target.value)}
-                  className="bg-white text-gray-900 rounded px-2 py-1.5 text-xs sm:text-sm w-full sm:w-auto focus:outline-none focus:ring-2 focus:ring-white"
-                >
-                  <option value="">Tüm Öğretmenler</option>
-                  {tutors.map(tutor => (
-                    <option key={tutor.id} value={tutor.id}>
-                      {tutor.firstName && tutor.lastName 
-                        ? `${tutor.firstName} ${tutor.lastName}`
-                        : tutor.username}
-                    </option>
-                  ))}
-                </select>
-                <button
-                  onClick={openAddModal}
-                  className={`bg-white text-indigo-700 hover:bg-indigo-50 py-1.5 px-3 rounded flex items-center justify-center text-xs sm:text-sm font-medium transition-colors shadow-sm ${!selectedTutorId ? 'opacity-50 cursor-not-allowed' : ''}`}
-                  disabled={!selectedTutorId}
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1.5" viewBox="0 0 20 20" fill="currentColor">
-                    <path fillRule="evenodd" d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z" clipRule="evenodd" />
-                  </svg>
-                  <span className="whitespace-nowrap">Yeni Ürün Ekle</span>
-                </button>
               </div>
             </div>
           </div>
         </div>
         
-        {items.length === 0 ? (
-          <div className="bg-white shadow-sm rounded-lg p-4 sm:p-6 mt-3 text-center text-gray-500 border border-gray-100 flex flex-col items-center">
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-10 sm:h-12 w-10 sm:w-12 text-gray-300 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
-            </svg>
-            <p className="text-sm sm:text-base font-medium">Mağazada henüz ürün bulunmamaktadır.</p>
-            <button
-              onClick={openAddModal}
-              className="mt-3 bg-indigo-600 hover:bg-indigo-700 text-white py-1.5 px-3 rounded flex items-center text-xs sm:text-sm font-medium transition-colors"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" viewBox="0 0 20 20" fill="currentColor">
-                <path fillRule="evenodd" d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z" clipRule="evenodd" />
-              </svg>
-              İlk Ürünü Ekle
-            </button>
-          </div>
-        ) : (
-          <div className="bg-white shadow-sm rounded-lg mt-3 overflow-hidden border border-gray-100">
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th scope="col" className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Ürün
-                    </th>
-                    <th scope="col" className="hidden sm:table-cell px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Öğretmen
-                    </th>
-                    <th scope="col" className="hidden sm:table-cell px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Açıklama
-                    </th>
-                    <th scope="col" className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Puan
-                    </th>
-                    <th scope="col" className="hidden sm:table-cell px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Stok
-                    </th>
-                    <th scope="col" className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      İşlemler
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {items.map((item) => (
-                    <tr key={item.id} className="hover:bg-gray-50 transition-colors">
-                      <td className="px-3 py-2">
-                        <div className="flex items-center">
-                          {item.imageUrl ? (
-                            <div className="flex-shrink-0 h-7 w-7 sm:h-8 sm:w-8 mr-2">
-                              <Image
-                                src={item.imageUrl}
-                                alt={item.name}
-                                width={32}
-                                height={32}
-                                className="rounded-full object-cover"
-                              />
-                            </div>
-                          ) : (
-                            <div className="flex-shrink-0 h-7 w-7 sm:h-8 sm:w-8 bg-indigo-100 rounded-full flex items-center justify-center mr-2">
-                              <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 sm:h-4 sm:w-4 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
-                              </svg>
-                            </div>
-                          )}
-                          <div className="text-xs font-medium text-gray-900 truncate max-w-[120px] sm:max-w-[160px]">
-                            {item.name}
-                          </div>
-                        </div>
-                      </td>
-                      <td className="hidden sm:table-cell px-3 py-2">
-                        <div className="text-xs text-gray-900 truncate max-w-[120px]">
-                          {item.tutor.firstName && item.tutor.lastName 
-                            ? `${item.tutor.firstName} ${item.tutor.lastName}`
-                            : item.tutor.username}
-                        </div>
-                      </td>
-                      <td className="hidden sm:table-cell px-3 py-2">
-                        <div className="text-xs text-gray-500 truncate max-w-[200px]">
-                          {item.description}
-                        </div>
-                      </td>
-                      <td className="px-3 py-2 whitespace-nowrap">
-                        <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800">
-                          {item.pointsRequired}
-                        </span>
-                      </td>
-                      <td className="hidden sm:table-cell px-3 py-2 whitespace-nowrap">
-                        <span className={`inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium ${
-                          item.availableQuantity > 0 ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                        }`}>
-                          {item.availableQuantity > 0 
-                            ? item.availableQuantity
-                            : '0'}
-                        </span>
-                      </td>
-                      <td className="px-3 py-2 whitespace-nowrap text-right text-xs font-medium">
-                        <div className="flex justify-end gap-1">
-                          <Link
-                            href={`/admin/store/${item.id}`}
-                            className="inline-flex items-center justify-center px-2 py-1 border border-indigo-500 text-indigo-600 bg-white hover:bg-indigo-50 rounded transition-colors"
-                          >
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                            </svg>
-                          </Link>
-                          <button
-                            className="inline-flex items-center justify-center px-2 py-1 border border-red-500 text-red-600 bg-white hover:bg-red-50 rounded transition-colors"
-                            onClick={() => handleDeleteClick(item.id)}
-                          >
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                            </svg>
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+        {/* Content */}
+        <div className="pb-8">
+          {items.length === 0 ? (
+            <div className="bg-white rounded-3xl shadow-lg border border-slate-200/60 p-12 text-center">
+              <div className="max-w-md mx-auto">
+                <div className="w-24 h-24 bg-gradient-to-br from-blue-100 to-indigo-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                  <svg className="w-12 h-12 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+                  </svg>
+                </div>
+                <h3 className="text-2xl font-bold text-gray-900 mb-3">Henüz Ürün Bulunmuyor</h3>
+                <p className="text-gray-600 mb-8">Mağazanızda henüz hiç ürün bulunmamaktadır. İlk ürününüzü ekleyerek başlayın.</p>
+                <button
+                  onClick={openAddModal}
+                  className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white px-8 py-4 rounded-2xl font-semibold flex items-center space-x-2 mx-auto transition-all shadow-lg transform hover:scale-105"
+                >
+                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                  </svg>
+                  <span>İlk Ürünü Ekle</span>
+                </button>
+              </div>
             </div>
-          </div>
-        )}
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+              {items.map((item) => (
+                <div key={item.id} className="group bg-white rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 border border-slate-200/60 overflow-hidden transform hover:-translate-y-1">
+                  {/* Image Section */}
+                  <div className="relative h-48 bg-gradient-to-br from-slate-100 to-slate-200">
+                    {item.imageUrl ? (
+                      <Image
+                        src={item.imageUrl}
+                        alt={item.name}
+                        fill
+                        className="object-cover transition-transform duration-300 group-hover:scale-105"
+                        onError={(e) => {
+                          // Hide the broken image and show fallback
+                          e.currentTarget.style.display = 'none';
+                          const fallback = e.currentTarget.nextElementSibling as HTMLElement;
+                          if (fallback) fallback.style.display = 'flex';
+                        }}
+                      />
+                    ) : null}
+                    {/* Fallback content - shown when no image or when image fails */}
+                    <div className={`absolute inset-0 flex items-center justify-center ${item.imageUrl ? 'hidden' : 'flex'}`}>
+                      <div className="text-center">
+                        <div className="w-16 h-16 bg-gradient-to-br from-indigo-100 to-purple-100 rounded-2xl flex items-center justify-center mx-auto mb-3">
+                          <svg className="w-8 h-8 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+                          </svg>
+                        </div>
+                        {item.imageUrl && (
+                          <p className="text-xs text-gray-500 px-2">Görsel yüklenemedi</p>
+                        )}
+                      </div>
+                    </div>
+                    
+                    {/* Action Buttons */}
+                    <div className="absolute top-3 right-3 flex space-x-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                      <button
+                        onClick={() => handleEditClick(item.id)}
+                        className="p-2 bg-white/90 backdrop-blur-sm rounded-xl shadow-lg hover:bg-white transition-all transform hover:scale-110"
+                      >
+                        <svg className="w-4 h-4 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                        </svg>
+                      </button>
+                      <button
+                        onClick={() => handleDeleteClick(item.id)}
+                        className="p-2 bg-white/90 backdrop-blur-sm rounded-xl shadow-lg hover:bg-red-50 transition-all transform hover:scale-110"
+                      >
+                        <svg className="w-4 h-4 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                      </button>
+                    </div>
+                  </div>
+                  
+                  {/* Content */}
+                  <div className="p-6">
+                    <div className="flex items-start justify-between mb-3">
+                      <h3 className="font-bold text-gray-900 text-lg leading-tight line-clamp-2 flex-1">
+                        {item.name}
+                      </h3>
+                      <div className="ml-3 flex-shrink-0">
+                        <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold bg-gradient-to-r from-indigo-100 to-purple-100 text-indigo-700">
+                          {item.pointsRequired} puan
+                        </span>
+                      </div>
+                    </div>
+                    
+                    <p className="text-gray-600 text-sm line-clamp-2 mb-4">
+                      {item.description}
+                    </p>
+                    
+
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
         
         {/* Delete Confirmation Dialog */}
         {showDeleteDialog && (
-          <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-lg w-[90%] max-w-[280px] shadow-xl">
-              <div className="p-4">
-                <div className="flex items-center justify-center mb-3">
-                  <div className="bg-red-100 rounded-full p-2">
-                    <svg className="h-5 w-5 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                    </svg>
-                  </div>
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-3xl w-full max-w-md shadow-2xl transform transition-all">
+              <div className="p-8 text-center">
+                <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                  <svg className="w-8 h-8 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                  </svg>
                 </div>
-                <h3 className="text-sm font-medium text-gray-900 text-center mb-2">
-                  Ürünü Sil
-                </h3>
-                <p className="text-xs text-gray-500 text-center mb-4">
-                  Bu ürünü silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.
-                </p>
-                <div className="flex justify-center gap-2">
+                <h3 className="text-2xl font-bold text-gray-900 mb-3">Ürünü Sil</h3>
+                <p className="text-gray-600 mb-8">Bu ürünü silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.</p>
+                <div className="flex space-x-4">
                   <button
-                    type="button"
-                    className="px-3 py-1.5 text-xs font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
                     onClick={handleDeleteCancel}
+                    className="flex-1 px-6 py-3 border border-gray-300 rounded-xl font-semibold text-gray-700 bg-white hover:bg-gray-50 transition-colors"
                   >
                     İptal
                   </button>
                   <button
-                    type="button"
-                    className="px-3 py-1.5 text-xs font-medium text-white bg-red-600 border border-transparent rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
                     onClick={handleDeleteConfirm}
+                    className="flex-1 px-6 py-3 bg-red-600 hover:bg-red-700 text-white rounded-xl font-semibold transition-colors"
                   >
                     Evet, Sil
                   </button>
@@ -552,31 +806,33 @@ export default function AdminStore() {
         
         {/* Add Item Modal */}
         {showAddModal && (
-          <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-2xl max-w-md w-full shadow-xl transform transition-all max-h-[90vh] flex flex-col">
-              <div className="flex justify-between items-center p-6 border-b">
-                <h3 className="text-xl font-semibold text-gray-800">Yeni Mağaza Ürünü Ekle</h3>
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-40 p-4">
+            <div className="bg-white rounded-3xl max-w-2xl w-full shadow-2xl transform transition-all max-h-[90vh] flex flex-col">
+              <div className="flex justify-between items-center p-8 border-b border-slate-200">
+                <div>
+                  <h3 className="text-2xl font-bold text-gray-900">Yeni Mağaza Ürünü Ekle</h3>
+                  <p className="text-gray-600 mt-1">Mağazanıza yeni bir ürün ekleyin</p>
+                </div>
                 <button
-                  type="button"
                   onClick={closeModal}
-                  className="text-gray-400 hover:text-gray-500 transition-colors focus:outline-none"
+                  className="p-2 text-gray-400 hover:text-gray-500 hover:bg-gray-100 rounded-xl transition-colors"
                 >
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                   </svg>
                 </button>
               </div>
               
-              <div className="overflow-y-auto flex-1 p-6">
-                <form id="addItemForm" onSubmit={handleAddItem} className="space-y-5">
-                  <input type="hidden" name="tutorId" value={newItem.tutorId} />
+              <div className="overflow-y-auto flex-1 p-8">
+                <form id="addItemForm" onSubmit={handleAddItem} className="space-y-6">
+                  
                   <div>
-                    <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">
+                    <label htmlFor="name" className="block text-sm font-semibold text-gray-900 mb-3">
                       Ürün Adı *
                     </label>
                     <div className="relative">
-                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                        <svg className="w-5 h-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
                         </svg>
                       </div>
@@ -586,7 +842,7 @@ export default function AdminStore() {
                         name="name"
                         value={newItem.name}
                         onChange={handleInputChange}
-                        className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm transition-colors"
+                        className="w-full pl-12 pr-4 py-4 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors"
                         placeholder="Ürün adını girin"
                         required
                       />
@@ -594,158 +850,184 @@ export default function AdminStore() {
                   </div>
                   
                   <div>
-                    <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-1">
+                    <label htmlFor="description" className="block text-sm font-semibold text-gray-900 mb-3">
                       Açıklama *
                     </label>
+                    <textarea
+                      id="description"
+                      name="description"
+                      rows={4}
+                      value={newItem.description}
+                      onChange={handleInputChange}
+                      className="w-full px-4 py-4 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors resize-none"
+                      placeholder="Ürün açıklamasını girin"
+                      required
+                    />
+                  </div>
+                  
+                  <div>
+                    <label htmlFor="pointsRequired" className="block text-sm font-semibold text-gray-900 mb-3">
+                      Gerekli Puan *
+                    </label>
                     <div className="relative">
-                      <div className="absolute top-3 left-3 pointer-events-none">
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h7" />
+                      <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                        <svg className="w-5 h-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                         </svg>
                       </div>
-                      <textarea
-                        id="description"
-                        name="description"
-                        rows={3}
-                        value={newItem.description}
+                      <input
+                        type="number"
+                        id="pointsRequired"
+                        name="pointsRequired"
+                        min="1"
+                        value={newItem.pointsRequired || ''}
                         onChange={handleInputChange}
-                        className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm transition-colors"
-                        placeholder="Ürün açıklamasını girin"
+                        className="w-full pl-12 pr-4 py-4 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors"
+                        placeholder="Puan girin"
                         required
                       />
                     </div>
                   </div>
                   
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div>
-                      <label htmlFor="pointsRequired" className="block text-sm font-medium text-gray-700 mb-1">
-                        Gerekli Puan *
-                      </label>
-                      <div className="relative">
-                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                          </svg>
-                        </div>
-                        <input
-                          type="number"
-                          id="pointsRequired"
-                          name="pointsRequired"
-                          min="1"
-                          value={newItem.pointsRequired || ''}
-                          onChange={handleInputChange}
-                          className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm transition-colors"
-                          placeholder="Puan girin"
-                          required
-                        />
-                      </div>
-                    </div>
-                    
-                    <div>
-                      <label htmlFor="availableQuantity" className="block text-sm font-medium text-gray-700 mb-1">
-                        Mevcut Miktar *
-                      </label>
-                      <div className="relative">
-                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
-                          </svg>
-                        </div>
-                        <input
-                          type="number"
-                          id="availableQuantity"
-                          name="availableQuantity"
-                          min="0"
-                          value={newItem.availableQuantity || ''}
-                          onChange={handleInputChange}
-                          className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm transition-colors"
-                          placeholder="Miktar girin"
-                          required
-                        />
-                      </div>
-                    </div>
-                  </div>
-                  
                   <div>
-                    <label htmlFor="imageUrl" className="block text-sm font-medium text-gray-700 mb-1">
-                      Görsel URL (İsteğe Bağlı)
+                    <label htmlFor="imageFile" className="block text-sm font-semibold text-gray-900 mb-3">
+                      Ürün Görseli (İsteğe Bağlı)
                     </label>
                     <div className="space-y-4">
                       <div className="relative">
-                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                          </svg>
-                        </div>
                         <input
-                          type="url"
-                          id="imageUrl"
-                          name="imageUrl"
-                          value={newItem.imageUrl}
-                          onChange={handleInputChange}
-                          className={`block w-full pl-10 pr-3 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm transition-colors ${
-                            imageError ? 'border-red-300 bg-red-50' : 'border-gray-300'
-                          }`}
-                          placeholder="https://ornek.com/gorsel.jpg"
+                          type="file"
+                          id="imageFile"
+                          accept="image/jpeg,image/jpg,image/png,image/webp,image/gif"
+                          onChange={handleFileSelect}
+                          className="hidden"
                         />
+                        <label
+                          htmlFor="imageFile"
+                          className="w-full flex flex-col items-center justify-center px-6 py-8 border-2 border-dashed border-gray-300 rounded-xl cursor-pointer hover:border-indigo-400 hover:bg-indigo-50 transition-colors"
+                        >
+                          <div className="text-center">
+                            <svg className="w-12 h-12 text-gray-400 mx-auto mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                            </svg>
+                            <p className="text-lg font-medium text-gray-700 mb-1">Görsel Yükle</p>
+                            <p className="text-sm text-gray-500 mb-2">
+                              {selectedFile ? selectedFile.name : 'Dosya seçmek için tıklayın veya sürükleyip bırakın'}
+                            </p>
+                            <p className="text-xs text-gray-400">
+                              JPEG, PNG, WebP, GIF • Maksimum 5MB
+                            </p>
+                          </div>
+                        </label>
                       </div>
                       
                       {/* Image Preview */}
-                      {newItem.imageUrl && isValidImageUrl(newItem.imageUrl) ? (
-                        <div className="relative rounded-lg overflow-hidden border border-gray-200">
-                          {isImageLoading && (
-                            <div className="absolute inset-0 flex items-center justify-center bg-gray-100">
-                              <div className="animate-spin rounded-full h-8 w-8 border-2 border-indigo-500 border-t-transparent"></div>
-                            </div>
-                          )}
-                          <Image
-                            src={newItem.imageUrl}
-                            alt="Ürün önizleme"
-                            width={300}
-                            height={200}
-                            className="w-full h-48 object-cover"
-                            onError={handleImageError}
-                            onLoad={handleImageLoad}
-                          />
-                          {imageError && (
-                            <div className="absolute inset-0 flex items-center justify-center bg-red-50 bg-opacity-90">
-                              <div className="text-center text-red-500">
-                                <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 mx-auto mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                </svg>
-                                <p className="text-sm">Görsel yüklenemedi. Lütfen URL'yi kontrol edin.</p>
+                      {selectedFile && (
+                        <div className="relative rounded-xl overflow-hidden border-2 border-gray-200 bg-white">
+                          <div className="relative flex items-center justify-center p-4 min-h-[200px] bg-gray-50">
+                            <Image
+                              src={newItem.imageUrl}
+                              alt="Ürün önizleme"
+                              width={400}
+                              height={300}
+                              className="max-w-full max-h-80 object-contain rounded-lg shadow-sm"
+                              unoptimized={true} // For blob URLs
+                            />
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setSelectedFile(null);
+                                if (newItem.imageUrl.startsWith('blob:')) {
+                                  URL.revokeObjectURL(newItem.imageUrl);
+                                }
+                                setNewItem(prev => ({ ...prev, imageUrl: '' }));
+                              }}
+                              className="absolute top-2 right-2 p-2 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors shadow-lg"
+                            >
+                              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                              </svg>
+                            </button>
+                          </div>
+                          <div className="p-4 bg-white border-t border-gray-200">
+                            <div className="flex items-center justify-between">
+                              <div>
+                                <p className="text-sm font-medium text-gray-900">
+                                  {selectedFile.name}
+                                </p>
+                                <p className="text-xs text-gray-500">
+                                  Boyut: {(selectedFile.size / 1024 / 1024).toFixed(2)} MB
+                                </p>
                               </div>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const previewUrl = URL.createObjectURL(selectedFile);
+                                  setOriginalImage(previewUrl);
+                                  setShowImageEditor(true);
+                                }}
+                                className="px-3 py-2 text-xs bg-indigo-100 hover:bg-indigo-200 text-indigo-700 rounded-lg transition-colors font-medium"
+                              >
+                                Düzenle
+                              </button>
                             </div>
-                          )}
+                          </div>
                         </div>
-                      ) : null}
+                      )}
+                      
+                      {/* Helpful tips */}
+                      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-sm">
+                        <div className="flex items-start space-x-2">
+                          <svg className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          </svg>
+                          <div>
+                            <p className="font-medium text-blue-900 mb-1">Görsel İpuçları:</p>
+                            <ul className="text-blue-800 space-y-1 text-xs">
+                              <li>• Görsel yüklemek isteğe bağlıdır (varsayılan ikon gösterilir)</li>
+                              <li>• En iyi deneyim için 16:9 oranında (800x450px gibi) görseller kullanın</li>
+                              <li>• Desteklenen formatlar: JPEG, PNG, WebP, GIF</li>
+                              <li>• Maksimum dosya boyutu: 5MB</li>
+                              <li>• Görseliniz güvenli bir şekilde sunucuda saklanır</li>
+                            </ul>
+                          </div>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </form>
               </div>
               
-              <div className="border-t p-6 bg-gray-50 rounded-b-2xl">
-                <div className="flex justify-end space-x-3">
+              <div className="border-t border-slate-200 p-8 bg-slate-50 rounded-b-3xl">
+                <div className="flex justify-end space-x-4">
                   <button
                     type="button"
-                    className="px-4 py-2.5 border border-gray-300 rounded-lg shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors"
                     onClick={closeModal}
+                    className="px-6 py-3 border border-gray-300 rounded-xl font-semibold text-gray-700 bg-white hover:bg-gray-50 transition-colors"
                   >
                     İptal
                   </button>
                   <button
                     type="submit"
                     form="addItemForm"
-                    className={`px-5 py-2.5 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors ${addingItem ? 'opacity-70 cursor-not-allowed' : ''}`}
-                    disabled={addingItem}
+                    disabled={addingItem || uploadingImage}
+                    className={`px-8 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white rounded-xl font-semibold transition-all shadow-lg transform hover:scale-105 ${addingItem || uploadingImage ? 'opacity-70 cursor-not-allowed hover:scale-100' : ''}`}
                   >
-                    {addingItem ? (
-                      <span className="flex items-center">
-                        <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    {uploadingImage ? (
+                      <span className="flex items-center space-x-2">
+                        <svg className="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
                           <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                           <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                         </svg>
-                        Ekleniyor...
+                        <span>Görsel Yükleniyor...</span>
+                      </span>
+                    ) : addingItem ? (
+                      <span className="flex items-center space-x-2">
+                        <svg className="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        <span>Ekleniyor...</span>
                       </span>
                     ) : 'Ürün Ekle'}
                   </button>
@@ -754,7 +1036,481 @@ export default function AdminStore() {
             </div>
           </div>
         )}
+        
+        {/* Edit Item Modal */}
+        {showEditModal && editItem && (
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-40 p-4">
+            <div className="bg-white rounded-3xl max-w-2xl w-full shadow-2xl transform transition-all max-h-[90vh] flex flex-col">
+              <div className="flex justify-between items-center p-8 border-b border-slate-200">
+                <div>
+                  <h3 className="text-2xl font-bold text-gray-900">Ürün Düzenle</h3>
+                  <p className="text-gray-600 mt-1">Global mağaza ürünü - tüm öğrenciler tarafından satın alınabilir</p>
+                </div>
+                <button
+                  onClick={closeEditModal}
+                  className="p-2 text-gray-400 hover:text-gray-500 hover:bg-gray-100 rounded-xl transition-colors"
+                >
+                  <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+              
+              <div className="overflow-y-auto flex-1 p-8">
+                <form id="editItemForm" onSubmit={handleEditSubmit} className="space-y-6">
+                  
+                  <div>
+                    <label htmlFor="edit-name" className="block text-sm font-semibold text-gray-900 mb-3">
+                      Ürün Adı *
+                    </label>
+                    <div className="relative">
+                      <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                        <svg className="w-5 h-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+                        </svg>
+                      </div>
+                      <input
+                        type="text"
+                        id="edit-name"
+                        name="name"
+                        value={editItem.name}
+                        onChange={handleEditInputChange}
+                        className="w-full pl-12 pr-4 py-4 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors"
+                        placeholder="Ürün adını girin"
+                        required
+                      />
+                    </div>
+                  </div>
+                  
+                  <div>
+                    <label htmlFor="edit-description" className="block text-sm font-semibold text-gray-900 mb-3">
+                      Açıklama *
+                    </label>
+                    <textarea
+                      id="edit-description"
+                      name="description"
+                      rows={4}
+                      value={editItem.description}
+                      onChange={handleEditInputChange}
+                      className="w-full px-4 py-4 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors resize-none"
+                      placeholder="Ürün açıklamasını girin"
+                      required
+                    />
+                  </div>
+                  
+                  <div>
+                    <label htmlFor="edit-pointsRequired" className="block text-sm font-semibold text-gray-900 mb-3">
+                      Gerekli Puan *
+                    </label>
+                    <div className="relative">
+                      <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                        <svg className="w-5 h-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                      </div>
+                      <input
+                        type="number"
+                        id="edit-pointsRequired"
+                        name="pointsRequired"
+                        min="1"
+                        value={editItem.pointsRequired || ''}
+                        onChange={handleEditInputChange}
+                        className="w-full pl-12 pr-4 py-4 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors"
+                        placeholder="Puan girin"
+                        required
+                      />
+                    </div>
+                  </div>
+                  
+                  <div>
+                    <label htmlFor="edit-imageFile" className="block text-sm font-semibold text-gray-900 mb-3">
+                      Ürün Görseli (İsteğe Bağlı)
+                    </label>
+                    <div className="space-y-4">
+                      <div className="relative">
+                        <input
+                          type="file"
+                          id="edit-imageFile"
+                          accept="image/jpeg,image/jpg,image/png,image/webp,image/gif"
+                          onChange={handleEditFileSelect}
+                          className="hidden"
+                        />
+                        <label
+                          htmlFor="edit-imageFile"
+                          className="w-full flex flex-col items-center justify-center px-6 py-8 border-2 border-dashed border-gray-300 rounded-xl cursor-pointer hover:border-indigo-400 hover:bg-indigo-50 transition-colors"
+                        >
+                          <div className="text-center">
+                            <svg className="w-12 h-12 text-gray-400 mx-auto mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                            </svg>
+                            <p className="text-lg font-medium text-gray-700 mb-1">
+                              {editSelectedFile ? 'Yeni görsel seç' : 'Görsel değiştir'}
+                            </p>
+                            <p className="text-sm text-gray-500 mb-2">
+                              {editSelectedFile ? editSelectedFile.name : 'Dosya seçmek için tıklayın'}
+                            </p>
+                            <p className="text-xs text-gray-400">
+                              JPEG, PNG, WebP, GIF • Maksimum 5MB
+                            </p>
+                          </div>
+                        </label>
+                      </div>
+                      
+                      {/* Current Image Preview */}
+                      {(editItem.imageUrl || editSelectedFile) && (
+                        <div className="relative rounded-xl overflow-hidden border-2 border-gray-200 bg-white">
+                          <div className="relative flex items-center justify-center p-4 min-h-[200px] bg-gray-50">
+                            <Image
+                              src={editSelectedFile ? editItem.imageUrl! : editItem.imageUrl!}
+                              alt="Ürün önizleme"
+                              width={400}
+                              height={300}
+                              className="max-w-full max-h-80 object-contain rounded-lg shadow-sm"
+                              unoptimized={editSelectedFile ? true : false}
+                              onError={handleEditImageError}
+                              onLoad={handleEditImageLoad}
+                            />
+                            
+                            {editSelectedFile && (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setEditSelectedFile(null);
+                                  if (editItem.imageUrl && editItem.imageUrl.startsWith('blob:')) {
+                                    URL.revokeObjectURL(editItem.imageUrl);
+                                  }
+                                  // Reset to original image if it exists
+                                  const originalItem = items.find(item => item.id === editItem.id);
+                                  setEditItem(prev => prev ? { ...prev, imageUrl: originalItem?.imageUrl || '' } : null);
+                                }}
+                                className="absolute top-2 right-2 p-2 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors shadow-lg"
+                              >
+                                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                              </button>
+                            )}
+                          </div>
+                          
+                          {editSelectedFile && (
+                            <div className="p-4 bg-white border-t border-gray-200">
+                              <div className="flex items-center justify-between">
+                                <div>
+                                  <p className="text-sm font-medium text-gray-900">
+                                    <strong>Yeni dosya:</strong> {editSelectedFile.name}
+                                  </p>
+                                  <p className="text-xs text-gray-500">
+                                    Boyut: {(editSelectedFile.size / 1024 / 1024).toFixed(2)} MB
+                                  </p>
+                                </div>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </form>
+              </div>
+              
+              <div className="border-t border-slate-200 p-8 bg-slate-50 rounded-b-3xl">
+                <div className="flex justify-end space-x-4">
+                  <button
+                    type="button"
+                    onClick={closeEditModal}
+                    className="px-6 py-3 border border-gray-300 rounded-xl font-semibold text-gray-700 bg-white hover:bg-gray-50 transition-colors"
+                  >
+                    İptal
+                  </button>
+                  <button
+                    type="submit"
+                    form="editItemForm"
+                    disabled={editingItem || editUploadingImage}
+                    className={`px-8 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white rounded-xl font-semibold transition-all shadow-lg transform hover:scale-105 ${editingItem || editUploadingImage ? 'opacity-70 cursor-not-allowed hover:scale-100' : ''}`}
+                  >
+                    {editUploadingImage ? (
+                      <span className="flex items-center space-x-2">
+                        <svg className="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        <span>Görsel Yükleniyor...</span>
+                      </span>
+                    ) : editingItem ? (
+                      <span className="flex items-center space-x-2">
+                        <svg className="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        <span>Kaydediliyor...</span>
+                      </span>
+                    ) : (
+                      'Değişiklikleri Kaydet'
+                    )}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+        
+        {/* Image Editor Modal */}
+        {showImageEditor && originalImage && (
+          <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-3xl max-w-4xl w-full shadow-2xl transform transition-all max-h-[90vh] flex flex-col">
+              <div className="flex justify-between items-center p-6 border-b border-slate-200">
+                <div>
+                  <h3 className="text-2xl font-bold text-gray-900">Görsel Düzenle</h3>
+                  <p className="text-gray-600 mt-1">Görseli kırpın, boyutlandırın ve düzenleyin</p>
+                </div>
+                <button
+                  onClick={handleImageEditorCancel}
+                  className="p-2 text-gray-400 hover:text-gray-500 hover:bg-gray-100 rounded-xl transition-colors"
+                >
+                  <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+              
+              <div className="flex-1 overflow-hidden">
+                <ImageEditor
+                  imageSrc={originalImage}
+                  onSave={handleImageEditorSave}
+                  onCancel={handleImageEditorCancel}
+                />
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
-} 
+}
+
+// Image Editor Component
+const ImageEditor = ({ imageSrc, onSave, onCancel }: {
+  imageSrc: string;
+  onSave: (blob: Blob) => void;
+  onCancel: () => void;
+}) => {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [scale, setScale] = useState(1);
+  const [rotation, setRotation] = useState(0);
+  const [brightness, setBrightness] = useState(100);
+  const [contrast, setContrast] = useState(100);
+
+  const [imageLoaded, setImageLoaded] = useState(false);
+  const imageRef = useRef<HTMLImageElement>(null);
+
+  const drawCanvas = useCallback(() => {
+    const canvas = canvasRef.current;
+    const img = imageRef.current;
+    if (!canvas || !img) return;
+
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    // Set canvas size to a reasonable display size while maintaining aspect ratio
+    const maxWidth = 500;
+    const maxHeight = 400;
+    const aspectRatio = img.width / img.height;
+    
+    let canvasWidth = maxWidth;
+    let canvasHeight = maxWidth / aspectRatio;
+    
+    if (canvasHeight > maxHeight) {
+      canvasHeight = maxHeight;
+      canvasWidth = maxHeight * aspectRatio;
+    }
+
+    canvas.width = canvasWidth;
+    canvas.height = canvasHeight;
+
+    // Clear canvas
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    // Save context
+    ctx.save();
+
+    // Apply filters
+    ctx.filter = `brightness(${brightness}%) contrast(${contrast}%)`;
+
+    // Apply transformations
+    ctx.translate(canvas.width / 2, canvas.height / 2);
+    ctx.scale(scale, scale);
+    ctx.rotate((rotation * Math.PI) / 180);
+
+    // Draw the entire image (no cropping)
+    ctx.drawImage(
+      img,
+      -canvasWidth / 2, -canvasHeight / 2, canvasWidth, canvasHeight
+    );
+
+    // Restore context
+    ctx.restore();
+  }, [scale, rotation, brightness, contrast]);
+
+  useEffect(() => {
+    const img = new (window as any).Image() as HTMLImageElement;
+    img.onload = () => {
+      imageRef.current = img;
+      setImageLoaded(true);
+      drawCanvas();
+    };
+    img.src = imageSrc;
+  }, [imageSrc, drawCanvas]);
+
+  useEffect(() => {
+    if (imageLoaded) {
+      drawCanvas();
+    }
+  }, [drawCanvas, imageLoaded]);
+
+  // Remove drag functionality since we're not cropping anymore
+
+  const handleSave = () => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    canvas.toBlob((blob) => {
+      if (blob) {
+        onSave(blob);
+      }
+    }, 'image/png', 0.9);
+  };
+
+  const resetFilters = () => {
+    setScale(1);
+    setRotation(0);
+    setBrightness(100);
+    setContrast(100);
+  };
+
+  return (
+    <div className="flex h-full">
+      {/* Preview Area */}
+      <div className="flex-1 flex flex-col items-center justify-center p-6 bg-gray-50">
+        <div className="relative bg-white rounded-lg shadow-lg p-4 mb-4">
+          <canvas
+            ref={canvasRef}
+            className="max-w-full max-h-96 border border-gray-200 rounded"
+          />
+        </div>
+        
+        {/* Action Buttons */}
+        <div className="flex space-x-4">
+          <button
+            onClick={onCancel}
+            className="px-6 py-3 border border-gray-300 rounded-xl font-semibold text-gray-700 bg-white hover:bg-gray-50 transition-colors"
+          >
+            İptal
+          </button>
+          <button
+            onClick={resetFilters}
+            className="px-6 py-3 border border-blue-300 rounded-xl font-semibold text-blue-700 bg-blue-50 hover:bg-blue-100 transition-colors"
+          >
+            Sıfırla
+          </button>
+          <button
+            onClick={handleSave}
+            className="px-8 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white rounded-xl font-semibold transition-all shadow-lg transform hover:scale-105"
+          >
+            Kaydet ve Kullan
+          </button>
+        </div>
+      </div>
+
+      {/* Controls Panel */}
+      <div className="w-80 bg-white border-l border-gray-200 p-6 overflow-y-auto">
+        <div className="space-y-6">
+          {/* Scale Control */}
+          <div>
+            <label className="block text-sm font-semibold text-gray-900 mb-3">
+              Boyut: {Math.round(scale * 100)}%
+            </label>
+            <input
+              type="range"
+              min="0.5"
+              max="3"
+              step="0.1"
+              value={scale}
+              onChange={(e) => setScale(parseFloat(e.target.value))}
+              className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer slider"
+            />
+          </div>
+
+          {/* Rotation Control */}
+          <div>
+            <label className="block text-sm font-semibold text-gray-900 mb-3">
+              Döndürme: {rotation}°
+            </label>
+            <input
+              type="range"
+              min="-180"
+              max="180"
+              step="15"
+              value={rotation}
+              onChange={(e) => setRotation(parseInt(e.target.value))}
+              className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer slider"
+            />
+          </div>
+
+          {/* Brightness Control */}
+          <div>
+            <label className="block text-sm font-semibold text-gray-900 mb-3">
+              Parlaklık: {brightness}%
+            </label>
+            <input
+              type="range"
+              min="50"
+              max="200"
+              step="5"
+              value={brightness}
+              onChange={(e) => setBrightness(parseInt(e.target.value))}
+              className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer slider"
+            />
+          </div>
+
+          {/* Contrast Control */}
+          <div>
+            <label className="block text-sm font-semibold text-gray-900 mb-3">
+              Kontrast: {contrast}%
+            </label>
+            <input
+              type="range"
+              min="50"
+              max="200"
+              step="5"
+              value={contrast}
+              onChange={(e) => setContrast(parseInt(e.target.value))}
+              className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer slider"
+            />
+          </div>
+
+
+
+
+
+          {/* Tips */}
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-sm">
+            <div className="flex items-start space-x-2">
+              <svg className="w-4 h-4 text-blue-600 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <div>
+                <p className="font-medium text-blue-900 mb-1">İpuçları:</p>
+                <ul className="text-blue-800 space-y-1 text-xs">
+                  <li>• Tüm görsel korunur, kırpma yapılmaz</li>
+                  <li>• Boyut ayarı ile görseli büyütüp küçültebilirsiniz</li>
+                  <li>• Parlaklık ve kontrast ayarları görsel kalitesini artırır</li>
+                  <li>• Döndürme ile görseli istediğiniz açıya çevirebilirsiniz</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}; 

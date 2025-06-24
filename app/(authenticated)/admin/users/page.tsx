@@ -19,12 +19,17 @@ import { UserRole } from '@prisma/client';
 type User = {
   id: string;
   username: string;
-  email: string;
   role: string;
   firstName?: string;
   lastName?: string;
   points: number;
   createdAt: string;
+  tutor?: {
+    id: string;
+    username: string;
+    firstName?: string | null;
+    lastName?: string | null;
+  } | null;
 };
 
 export default function AdminUsersPage() {
@@ -52,7 +57,7 @@ export default function AdminUsersPage() {
         const matchesSearch =
           !lowercaseQuery ||
           user.username.toLowerCase().includes(lowercaseQuery) ||
-          user.email.toLowerCase().includes(lowercaseQuery) ||
+    
           (user.firstName?.toLowerCase() || '').includes(lowercaseQuery) ||
           (user.lastName?.toLowerCase() || '').includes(lowercaseQuery);
 
@@ -176,11 +181,11 @@ export default function AdminUsersPage() {
   };
 
   const getRoleTranslation = (role: string) => {
-    switch (role) {
+    switch (role.toLowerCase()) {
       case 'admin':
         return 'Yönetici';
       case 'tutor':
-        return 'Öğretmen';
+        return 'Rehber';
       case 'student':
         return 'Öğrenci';
       default:
@@ -190,7 +195,7 @@ export default function AdminUsersPage() {
 
   if (loading) {
     return (
-      <div className="space-y-6 max-w-7xl mx-auto py-8">
+      <div className="space-y-6 p-8">
         <HeaderSkeleton />
         <SearchFilterSkeleton />
         <div className="bg-white shadow-md rounded-xl overflow-hidden border border-gray-100">
@@ -246,7 +251,7 @@ export default function AdminUsersPage() {
   }
 
   return (
-    <div className="space-y-4 sm:space-y-6 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8">
+    <div className="space-y-4 sm:space-y-6 px-4 sm:px-6 lg:px-8 py-4 sm:py-8">
       {/* Gradient Header */}
       <div className="bg-gradient-to-r from-indigo-700 to-blue-800 rounded-xl p-4 sm:p-6 shadow-lg">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center space-y-4 sm:space-y-0">
@@ -339,7 +344,7 @@ export default function AdminUsersPage() {
                     Rol
                   </th>
                   <th className="px-4 sm:px-6 py-3 sm:py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden md:table-cell">
-                    E-posta
+                    Danışman Rehberi
                   </th>
                   <th className="px-4 sm:px-6 py-3 sm:py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden lg:table-cell">
                     Puan
@@ -380,7 +385,11 @@ export default function AdminUsersPage() {
                       </span>
                     </td>
                     <td className="px-4 sm:px-6 py-4 sm:py-5 whitespace-nowrap text-xs sm:text-sm text-gray-500 hidden md:table-cell">
-                      {user.email}
+                      {user.role && user.role.toLowerCase() === 'student' && user.tutor ? (
+                        user.tutor.firstName && user.tutor.lastName
+                          ? `${user.tutor.firstName} ${user.tutor.lastName}`
+                          : user.tutor.username
+                      ) : '-'}
                     </td>
                     <td className="px-4 sm:px-6 py-4 sm:py-5 whitespace-nowrap hidden lg:table-cell">
                       <span className="inline-flex items-center px-2 sm:px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
@@ -453,27 +462,73 @@ export default function AdminUsersPage() {
 
       {/* Final Confirmation Dialog with Detailed Information */}
       <Dialog open={finalConfirmationOpen} onOpenChange={setFinalConfirmationOpen}>
-        <DialogContent>
+        <DialogContent className="max-w-2xl">
           <DialogHeader>
             <DialogTitle className="text-red-600">⚠️ Önemli Uyarı</DialogTitle>
             <DialogDescription className="space-y-4 pt-4">
               <p className="font-medium text-gray-900">
                 {userToDelete?.username} kullanıcısını sildiğinizde aşağıdaki veriler de kalıcı olarak silinecektir:
               </p>
+              
+              {/* General deletion consequences */}
               <ul className="list-disc pl-5 space-y-2 text-sm text-gray-600">
                 <li>Kullanıcının tüm puan işlemleri</li>
                 <li>Kullanıcının tüm deneyim puanları ve işlemleri</li>
                 <li>Kullanıcının tüm mağaza ürün talepleri</li>
-                {userToDelete?.id && users.find(u => u.id === userToDelete.id)?.role === 'tutor' && (
-                  <li className="text-red-600">Öğretmenin mağazadaki tüm ürünleri</li>
-                )}
                 <li>Kullanıcının tüm etkinlik katılımları</li>
                 <li>Kullanıcının oluşturduğu tüm etkinlikler</li>
-                <li>Öğretmen ise, öğrencilerinin öğretmen bağlantısı kaldırılacak</li>
+                <li>Kullanıcının yazdığı/hakkında yazılan tüm notlar ve raporlar</li>
               </ul>
-              <p className="text-red-600 font-medium pt-2">
-                Bu işlem geri alınamaz. Devam etmek istediğinizden emin misiniz?
-              </p>
+
+              {/* Tutor-specific consequences */}
+              {userToDelete?.id && users.find(u => u.id === userToDelete.id)?.role === 'tutor' && (
+                <div className="bg-red-50 border-l-4 border-red-400 p-4 rounded-r-lg">
+                  <h4 className="font-semibold text-red-800 mb-2">🎓 Öğretmen Silme - Özel Durumlar:</h4>
+                  <ul className="list-disc pl-5 space-y-2 text-sm text-red-700">
+                    <li><strong>Öğrenciler yetim kalacak:</strong> Bu öğretmenin tüm öğrencileri öğretmensiz kalacak ve manuel olarak yeni bir öğretmene atanmaları gerekecek</li>
+                    <li><strong>Sınıf tamamen silinecek:</strong> Bu öğretmenin sınıfı sistemden kalıcı olarak kaldırılacak</li>
+                    <li><strong>Mağaza ürünleri silinecek:</strong> Bu öğretmenin oluşturduğu tüm mağaza ürünleri silinecek</li>
+                    <li><strong>Öğrenci geçmişi kaybolacak:</strong> Öğrencilerin bu öğretmenle olan tüm puan/deneyim geçmişi silinecek</li>
+                    <li><strong>Öğrenci notları kaybolacak:</strong> Bu öğretmenin öğrenciler hakkında yazdığı tüm notlar ve raporlar silinecek</li>
+                  </ul>
+                  <p className="mt-3 text-sm text-red-800 font-medium">
+                    💡 <strong>Öneri:</strong> Silmeden önce öğrencileri başka bir öğretmene atamayı düşünün.
+                  </p>
+                </div>
+              )}
+
+              {/* Student-specific consequences */}
+              {userToDelete?.id && users.find(u => u.id === userToDelete.id)?.role === 'student' && (
+                <div className="bg-orange-50 border-l-4 border-orange-400 p-4 rounded-r-lg">
+                  <h4 className="font-semibold text-orange-800 mb-2">📚 Öğrenci Silme - Özel Durumlar:</h4>
+                  <ul className="list-disc pl-5 space-y-2 text-sm text-orange-700">
+                    <li>Öğrencinin tüm akademik geçmişi ve progress kayıtları silinecek</li>
+                    <li>Öğrencinin dilek listesindeki tüm istekler silinecek</li>
+                    <li>Öğrencinin katıldığı etkinlik kayıtları silinecek</li>
+                  </ul>
+                </div>
+              )}
+
+              {/* Admin-specific consequences */}
+              {userToDelete?.id && users.find(u => u.id === userToDelete.id)?.role === 'admin' && (
+                <div className="bg-purple-50 border-l-4 border-purple-400 p-4 rounded-r-lg">
+                  <h4 className="font-semibold text-purple-800 mb-2">👑 Yönetici Silme - Özel Durumlar:</h4>
+                  <ul className="list-disc pl-5 space-y-2 text-sm text-purple-700">
+                    <li>Bu yöneticinin oluşturduğu puan kartları silinecek</li>
+                    <li>Bu yöneticinin işlediği kayıt istekleri kayıtları temizlenecek</li>
+                    <li>Sistem yönetim geçmişi etkilenebilir</li>
+                  </ul>
+                </div>
+              )}
+
+              <div className="bg-gray-100 p-4 rounded-lg">
+                <p className="text-red-600 font-bold text-center">
+                  ⚠️ BU İŞLEM GERİ ALINAMAZ! ⚠️
+                </p>
+                <p className="text-gray-700 text-sm text-center mt-2">
+                  Silinen veriler hiçbir şekilde geri getirilemez. Devam etmek istediğinizden kesinlikle emin misiniz?
+                </p>
+              </div>
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
@@ -483,7 +538,7 @@ export default function AdminUsersPage() {
                 onClick={cancelDelete}
                 disabled={deleteLoading}
               >
-                İptal
+                İptal Et
               </Button>
               <Button
                 onClick={confirmDelete}
@@ -500,7 +555,7 @@ export default function AdminUsersPage() {
                     Siliniyor...
                   </>
                 ) : (
-                  'Evet, Sil'
+                  'Evet, Kesin Sil'
                 )}
               </Button>
             </div>

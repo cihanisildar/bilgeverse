@@ -40,7 +40,6 @@ function SettingsContent() {
   const [profileForm, setProfileForm] = useState({
     firstName: "",
     lastName: "",
-    email: "",
     phone: "",
     specialization: "",
     bio: "",
@@ -89,7 +88,6 @@ function SettingsContent() {
         setProfileForm({
           firstName: tutor.firstName || "",
           lastName: tutor.lastName || "",
-          email: tutor.email || "",
           phone: tutor.phone || "",
           specialization: tutor.specialization || "",
           bio: tutor.bio || "",
@@ -348,19 +346,7 @@ function SettingsContent() {
                   </div>
                 </div>
                 
-                <div>
-                  <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
-                    E-posta Adresi
-                  </label>
-                  <input
-                    type="email"
-                    id="email"
-                    name="email"
-                    value={profileForm.email}
-                    onChange={handleProfileChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
-                  />
-                </div>
+
                 
                 <div>
                   <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-1">

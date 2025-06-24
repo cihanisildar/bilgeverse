@@ -15,7 +15,6 @@ import { Award, BookOpen, CheckCircle, Edit2, Layers, Mail, Phone, User } from '
 type TutorProfile = {
   id: string;
   username: string;
-  email: string;
   firstName?: string;
   lastName?: string;
   phone?: string;
@@ -206,7 +205,7 @@ function ProfileContent() {
         setProfile({
           id: user?.id || "",
           username: user?.username || "",
-          email: user?.email || "",
+  
           firstName: user?.firstName || "",
           lastName: user?.lastName || "",
           joinDate: user?.createdAt || new Date().toISOString(),
@@ -298,10 +297,6 @@ function ProfileContent() {
               İletişim Bilgileri
             </h2>
             <ul className="space-y-3">
-              <li className="flex items-center text-gray-600">
-                <Mail className="h-5 w-5 text-gray-400 mr-3" />
-                <span>{profile.email}</span>
-              </li>
               {profile.phone && (
                 <li className="flex items-center text-gray-600">
                   <Phone className="h-5 w-5 text-gray-400 mr-3" />

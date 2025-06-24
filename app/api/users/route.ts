@@ -9,7 +9,6 @@ export const dynamic = 'force-dynamic';
 type UserWithTutor = {
   id: string;
   username: string;
-  email: string;
   role: UserRole;
   firstName: string | null;
   lastName: string | null;
@@ -43,7 +42,6 @@ export async function GET(request: NextRequest) {
         select: {
           id: true,
           username: true,
-          email: true,
           role: true,
           firstName: true,
           lastName: true,
@@ -74,13 +72,20 @@ export async function GET(request: NextRequest) {
         select: {
           id: true,
           username: true,
-          email: true,
           role: true,
           firstName: true,
           lastName: true,
           points: true,
           tutorId: true,
-          createdAt: true
+          createdAt: true,
+          tutor: {
+            select: {
+              id: true,
+              username: true,
+              firstName: true,
+              lastName: true
+            }
+          }
         },
         orderBy: {
           createdAt: 'desc'

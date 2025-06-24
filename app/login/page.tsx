@@ -108,12 +108,18 @@ export default function LoginPage() {
         </form>
 
         <div className="mt-6 text-center">
-          <p className="text-sm text-gray-600">
-            Hesabınız yok mu?{' '}
-            <Link href="/register" className="font-medium text-blue-600 hover:text-blue-500 transition-colors duration-200">
-              Hemen kaydolun
-            </Link>
-          </p>
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+            <p className="text-sm text-blue-800 font-medium mb-2">
+              Hesabınız yok mu?
+            </p>
+            <p className="text-xs text-blue-700 leading-relaxed">
+              BilgeVerse'e katılmak için lütfen dernek yönetimi ile iletişime geçin. 
+              Kayıt işlemleri sadece dernek üzerinden gerçekleştirilmektedir.
+            </p>
+            <p className="text-xs text-blue-600 mt-2 font-medium">
+              İletişim: bilgeverse@example.com
+            </p>
+          </div>
           <p className="mt-4 text-xs text-gray-500">
             © {new Date().getFullYear()} BilgeVerse
           </p>

@@ -33,6 +33,7 @@ export default function CreateEventPage() {
     type: "YUZ_YUZE",
     capacity: 20,
     points: 0,
+    experience: 0,
     tags: [] as string[],
     eventScope: "GROUP" as "GROUP" | "GLOBAL",
   });
@@ -41,7 +42,22 @@ export default function CreateEventPage() {
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
   ) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+    
+    // If points are being changed, update experience to match
+    if (name === 'points') {
+      const numericValue = Number(value) || 0;
+      setFormData((prev) => ({
+        ...prev,
+        points: numericValue,
+        experience: numericValue // Auto-sync XP with points
+      }));
+    } else if (name === 'experience' || name === 'capacity') {
+      // Handle numeric fields
+      const numericValue = Number(value) || 0;
+      setFormData((prev) => ({ ...prev, [name]: numericValue }));
+    } else {
+      setFormData((prev) => ({ ...prev, [name]: value }));
+    }
   };
 
   const handleSelectChange = (name: string, value: string) => {
@@ -101,6 +117,7 @@ export default function CreateEventPage() {
         type: formData.type.replace("-", "_"),
         capacity: parseInt(String(formData.capacity)),
         points: parseInt(String(formData.points)),
+        experience: parseInt(String(formData.experience)),
         tags: formData.tags,
         eventScope: formData.eventScope,
       };
@@ -364,7 +381,7 @@ export default function CreateEventPage() {
                       required
                     />
                   </div>
-                  <div className="col-span-2">
+                  <div>
                     <label
                       htmlFor="points"
                       className="block text-sm font-medium text-gray-700 mb-1"
@@ -377,6 +394,23 @@ export default function CreateEventPage() {
                       type="number"
                       min="0"
                       value={formData.points}
+                      onChange={handleInputChange}
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label
+                      htmlFor="experience"
+                      className="block text-sm font-medium text-gray-700 mb-1"
+                    >
+                      Deneyim (XP) *
+                    </label>
+                    <Input
+                      id="experience"
+                      name="experience"
+                      type="number"
+                      min="0"
+                      value={formData.experience}
                       onChange={handleInputChange}
                       required
                     />

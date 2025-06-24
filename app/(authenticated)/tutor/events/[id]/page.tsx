@@ -18,6 +18,7 @@ import {
   DialogTitle
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/app/contexts/AuthContext";
 import {
   AlertCircle,
   Award,
@@ -28,7 +29,9 @@ import {
   Clock,
   Edit,
   Globe,
+  Loader2,
   MapPin,
+  Play,
   Share2,
   Trash2,
   User,
@@ -52,6 +55,7 @@ type Event = {
   capacity: number;
   enrolledStudents: number;
   points: number;
+  experience: number;
   tags: string[];
   createdBy: {
     id: string;
@@ -78,8 +82,10 @@ export default function EventDetails() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [deletingEvent, setDeletingEvent] = useState(false);
 
   const { toast } = useToast();
+  const { user } = useAuth();
 
   useEffect(() => {
     const fetchEventDetails = async () => {
@@ -107,11 +113,12 @@ export default function EventDetails() {
           startDate: eventData.startDateTime || eventData.startDate,
           endDate: eventData.endDateTime || eventData.endDate,
           location: eventData.location,
-          type: eventData.type,
-          status: eventData.status,
+          type: eventData.type.toLowerCase(),
+          status: eventData.status.toLowerCase(),
           capacity: eventData.capacity,
           enrolledStudents: eventData.enrolledStudents || 0,
           points: eventData.points,
+          experience: eventData.experience || 0,
           tags: eventData.tags || [],
           createdBy: {
             id: eventData.createdBy._id || eventData.createdBy.id,
@@ -228,6 +235,8 @@ export default function EventDetails() {
 
   const handleDeleteEvent = async () => {
     try {
+      setDeletingEvent(true);
+      
       const response = await fetch(`/api/events/${eventId}`, {
         method: 'DELETE',
         credentials: 'include',
@@ -248,10 +257,13 @@ export default function EventDetails() {
       toast({
         title: "Başarılı",
         description: "Etkinlik başarıyla silindi.",
+        duration: 3000,
       });
 
-      // Navigate back to events list
-      router.push('/tutor/events');
+      // Navigate back to events list after a short delay to show the toast
+      setTimeout(() => {
+        router.push('/tutor/events');
+      }, 1000);
     } catch (error: any) {
       console.error('Error deleting event:', error);
       
@@ -260,8 +272,70 @@ export default function EventDetails() {
         title: "Hata",
         description: error.message || "Etkinlik silinirken bir hata oluştu.",
         variant: "destructive",
+        duration: 4000,
+      });
+    } finally {
+      setDeletingEvent(false);
+    }
+  };
+
+  const handleStatusChange = async (newStatus: string, successMessage: string) => {
+    try {
+      const response = await fetch(`/api/events/${eventId}`, {
+        method: 'PUT',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+          'Cache-Control': 'no-cache'
+        },
+        body: JSON.stringify({
+          title: event?.title,
+          description: event?.description,
+          startDateTime: event?.startDate,
+          location: event?.location,
+          type: event?.type.toUpperCase(),
+          capacity: event?.capacity,
+          points: event?.points,
+          tags: event?.tags,
+          status: newStatus
+        })
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to update event status');
+      }
+
+      // Update local event state
+      setEvent(prev => prev ? { ...prev, status: newStatus.toLowerCase() as "yakinda" | "devam_ediyor" | "tamamlandi" | "iptal_edildi" } : null);
+      
+      // Show success toast
+      toast({
+        title: "Başarılı",
+        description: successMessage,
+      });
+    } catch (error: any) {
+      console.error('Error updating event status:', error);
+      
+      // Show error toast
+      toast({
+        title: "Hata",
+        description: error.message || "Etkinlik durumu güncellenirken bir hata oluştu.",
+        variant: "destructive",
       });
     }
+  };
+
+  const handleStartEvent = () => {
+    handleStatusChange('DEVAM_EDIYOR', 'Etkinlik başlatıldı.');
+  };
+
+  const handleCompleteEvent = () => {
+    handleStatusChange('TAMAMLANDI', 'Etkinlik tamamlandı olarak işaretlendi.');
+  };
+
+  const handleCancelEvent = () => {
+    handleStatusChange('IPTAL_EDILDI', 'Etkinlik iptal edildi.');
   };
 
   const getDurationText = (start: string, end: string) => {
@@ -274,6 +348,77 @@ export default function EventDetails() {
     } else {
       return `${Math.ceil(durationMs / 3600000)} saat`;
     }
+  };
+
+  const getQuickActionButtons = () => {
+    if (!event || !user) return null;
+
+    // Only show quick actions if the current user is the creator of the event
+    // This prevents tutors from managing admin-created general events
+    if (event.createdBy.id !== user.id) {
+      return null;
+    }
+
+    const buttons = [];
+    
+    // Start Event button (only for upcoming events)
+    if (event.status === 'yakinda') {
+      buttons.push(
+        <Button
+          key="start"
+          onClick={handleStartEvent}
+          className="bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white shadow-lg hover:shadow-xl transition-all duration-300 font-semibold px-6 py-3"
+        >
+          <Play className="mr-2 h-5 w-5" />
+          🚀 Etkinliği Başlat
+        </Button>
+      );
+    }
+    
+    // Complete Event button (only for ongoing events)
+    if (event.status === 'devam_ediyor') {
+      buttons.push(
+        <Button
+          key="complete"
+          onClick={handleCompleteEvent}
+          className="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white shadow-lg hover:shadow-xl transition-all duration-300 font-semibold px-6 py-3"
+        >
+          <CheckCircle2 className="mr-2 h-5 w-5" />
+          ✅ Etkinliği Tamamla
+        </Button>
+      );
+    }
+    
+    // Cancel Event button (for upcoming and ongoing events)
+    if (event.status === 'yakinda' || event.status === 'devam_ediyor') {
+      buttons.push(
+        <Button
+          key="cancel"
+          onClick={handleCancelEvent}
+          variant="outline"
+          className="border-2 border-red-300 text-red-600 hover:bg-red-50 hover:border-red-400 hover:text-red-700 shadow-md hover:shadow-lg transition-all duration-300 font-semibold px-6 py-3"
+        >
+          <XCircle className="mr-2 h-5 w-5" />
+          ❌ Etkinliği İptal Et
+        </Button>
+      );
+    }
+
+    return buttons.length > 0 ? (
+      <Card className="border-0 shadow-lg bg-white/90 backdrop-blur-sm">
+        <CardContent className="p-6">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="p-2 bg-gradient-to-br from-emerald-100 to-green-100 rounded-xl">
+              <Play className="h-6 w-6 text-emerald-600" />
+            </div>
+            <h3 className="text-xl font-bold text-gray-900">Hızlı İşlemler</h3>
+          </div>
+          <div className="flex flex-wrap gap-3">
+            {buttons}
+          </div>
+        </CardContent>
+      </Card>
+    ) : null;
   };
 
   if (loading) {
@@ -310,64 +455,114 @@ export default function EventDetails() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
       {/* Hero Section */}
-      <div className="bg-gradient-to-br from-blue-600 to-indigo-700 text-white py-12">
-        <div className="max-w-7xl mx-auto px-4">
-          <div className="flex items-center justify-end w-full mb-6">
-            {/* <Button
-              variant="ghost"
-              size="sm"
-              className="text-white bg-white/10 hover:text-blue-600"
-              asChild
+      <div className="relative bg-gradient-to-br from-emerald-600 via-blue-600 to-indigo-700 text-white py-16 overflow-hidden">
+        {/* Background decorative elements */}
+        <div className="absolute inset-0 opacity-10">
+          <div className="absolute top-10 left-10 w-32 h-32 bg-white rounded-full blur-3xl"></div>
+          <div className="absolute bottom-10 right-10 w-40 h-40 bg-white rounded-full blur-3xl"></div>
+          <div className="absolute top-1/2 left-1/3 w-24 h-24 bg-white rounded-full blur-2xl"></div>
+        </div>
+
+        <div className="relative max-w-7xl mx-auto px-4">
+          {/* Status indicator dot */}
+          <div className="flex items-center mb-6">
+            <div className={`w-4 h-4 rounded-full mr-3 shadow-lg ${
+              event.status === 'yakinda' ? 'bg-blue-400 shadow-blue-400/50 animate-pulse' :
+              event.status === 'devam_ediyor' ? 'bg-green-400 shadow-green-400/50 animate-pulse' :
+              event.status === 'tamamlandi' ? 'bg-purple-400 shadow-purple-400/50' :
+              'bg-gray-400 shadow-gray-400/50'
+            }`}></div>
+            <Badge
+              className={`font-semibold px-4 py-2 rounded-full text-sm border-0 ${
+                event.status === 'yakinda' ? 'bg-blue-500/90 text-white' :
+                event.status === 'devam_ediyor' ? 'bg-green-500/90 text-white' :
+                event.status === 'tamamlandi' ? 'bg-purple-500/90 text-white' :
+                'bg-gray-500/90 text-white'
+              }`}
             >
-              <Link href="/tutor/events">
-                <ChevronLeft className="h-4 w-4 mr-1" />
-                Geri
-              </Link>
-            </Button> */}
+              {getStatusText(event.status.toLowerCase())}
+            </Badge>
           </div>
 
-          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
-            <div>
-              <h1 className="text-3xl md:text-4xl font-bold mb-4">
+          <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-8">
+            <div className="flex-1">
+              <h1 className="text-4xl xl:text-5xl font-bold mb-6 bg-gradient-to-r from-white to-blue-100 bg-clip-text text-transparent leading-tight">
                 {event.title}
               </h1>
-              <div className="flex flex-wrap gap-2 items-center">
-                <Badge className="bg-white/20 text-white hover:bg-white/30">
-                  {getTypeText(event.type.toLowerCase())}
-                </Badge>
-                <Badge
-                  className={`${getStatusColor(event.status)} border-none`}
-                >
-                  {getStatusText(event.status.toLowerCase())}
-                </Badge>
+              
+              {/* Enhanced badges section */}
+              <div className="flex flex-wrap gap-3 items-center mb-6">
+                <div className="flex items-center gap-2 bg-white/10 backdrop-blur-sm rounded-full px-4 py-2 border border-white/20">
+                  {getTypeIcon(event.type)}
+                  <span className="text-white font-medium">
+                    {getTypeText(event.type.toLowerCase())}
+                  </span>
+                </div>
+                
                 {event.tags.map((tag) => (
                   <Badge
                     key={tag}
-                    variant="secondary"
-                    className="bg-white/10 text-white hover:bg-white/20"
+                    className="bg-white/10 backdrop-blur-sm text-white hover:bg-white/20 border border-white/20 px-3 py-1 rounded-full font-medium"
                   >
-                    {tag}
+                    #{tag}
                   </Badge>
                 ))}
               </div>
+
+              {/* Key metrics */}
+              <div className="flex flex-wrap gap-6 text-white/90">
+                <div className="flex items-center gap-2">
+                  <Users className="h-5 w-5" />
+                  <span className="font-medium">{event.enrolledStudents}/{event.capacity} Katılımcı</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Award className="h-5 w-5" />
+                  <span className="font-medium">
+                    {event.points === (event.experience || 0) 
+                      ? `${event.points} Puan/XP` 
+                      : `${event.points}P • ${event.experience || 0}XP`}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Clock className="h-5 w-5" />
+                  <span className="font-medium">{getDurationText(event.startDate, event.endDate)}</span>
+                </div>
+              </div>
             </div>
 
-            <div className="flex flex-wrap gap-2">
+            {/* Action buttons */}
+            <div className="flex flex-col sm:flex-row gap-3">
+              {/* Only show edit/share buttons if user is the creator */}
+              {user && event.createdBy.id === user.id && (
+                <>
+                  <Button
+                    variant="secondary"
+                    className="bg-white/10 backdrop-blur-sm text-white hover:bg-white/20 hover:text-white border border-white/20 font-medium"
+                    asChild
+                  >
+                    <Link href={`/tutor/events/${event.id}/edit`}>
+                      <Edit className="mr-2 h-4 w-4" />
+                      Düzenle
+                    </Link>
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    className="bg-white/10 backdrop-blur-sm text-white hover:bg-white/20 hover:text-white border border-white/20 font-medium"
+                    asChild
+                  >
+                    <Link href={`/tutor/events/${event.id}/share`}>
+                      <Share2 className="mr-2 h-4 w-4" />
+                      Paylaş
+                    </Link>
+                  </Button>
+                </>
+              )}
+              {/* Always show participants button */}
               <Button
                 variant="secondary"
-                className="bg-white/10 text-white hover:bg-white/20 hover:text-white"
-                asChild
-              >
-                <Link href={`/tutor/events/${event.id}/edit`}>
-                  <Edit className="mr-2 h-4 w-4" />
-                  Düzenle
-                </Link>
-              </Button>
-              <Button
-                variant="secondary"
-                className="bg-white/10 text-white hover:bg-white/20 hover:text-white"
+                className="bg-white/10 backdrop-blur-sm text-white hover:bg-white/20 hover:text-white border border-white/20 font-medium"
                 asChild
               >
                 <Link href={`/tutor/events/${event.id}/participants`}>
@@ -376,24 +571,12 @@ export default function EventDetails() {
                 </Link>
               </Button>
               <Button
-                variant="secondary"
-                className="bg-white/10 text-white hover:bg-white/20 hover:text-white"
-                asChild
-              >
-                <Link href={`/tutor/events/${event.id}/share`}>
-                  <Share2 className="mr-2 h-4 w-4" />
-                  Paylaş
-                </Link>
-              </Button>
-              <Button
-                variant="ghost"
-                // size="sm"
-                className="bg-white text-blue-600 hover:text-blue-600"
+                className="bg-white text-blue-600 hover:bg-gray-100 hover:text-blue-700 font-medium shadow-lg"
                 asChild
               >
                 <Link href="/tutor/events">
                   <ChevronLeft className="h-4 w-4 mr-1" />
-                  Geri
+                  Etkinlikler
                 </Link>
               </Button>
             </div>
@@ -403,55 +586,116 @@ export default function EventDetails() {
 
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-4 py-8">
+        {/* Quick Action Buttons */}
+        <div className="mb-8">
+          {getQuickActionButtons()}
+        </div>
+        
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Left Column - Event Details */}
-          <div className="lg:col-span-2 space-y-6">
-            <Card className="border-none shadow-lg">
-              <CardHeader>
-                <CardTitle className="text-xl text-gray-900">
-                  Etkinlik Detayları
-                </CardTitle>
+          <div className="lg:col-span-2 space-y-8">
+            {/* Event Description Card */}
+            <Card className="border-0 shadow-xl bg-white/95 backdrop-blur-sm hover:shadow-2xl transition-all duration-300">
+              <CardHeader className="relative overflow-hidden">
+                <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-500 to-indigo-600"></div>
+                <div className="flex items-center gap-3 pt-2">
+                  <div className="p-2 bg-gradient-to-br from-blue-100 to-indigo-100 rounded-xl">
+                    <Calendar className="h-6 w-6 text-blue-600" />
+                  </div>
+                  <CardTitle className="text-2xl font-bold text-gray-900">
+                    Etkinlik Detayları
+                  </CardTitle>
+                </div>
               </CardHeader>
-              <CardContent>
+              <CardContent className="pt-6">
                 <div className="prose prose-blue max-w-none">
-                  <p className="text-gray-700 whitespace-pre-wrap">
+                  <p className="text-gray-700 leading-relaxed whitespace-pre-wrap text-base">
                     {event.description}
                   </p>
                 </div>
               </CardContent>
             </Card>
 
-            <Card className="border-none shadow-lg">
-              <CardHeader>
-                <CardTitle className="text-xl text-gray-900">
-                  Katılım Bilgileri
-                </CardTitle>
+            {/* Participants Card */}
+            <Card className="border-0 shadow-xl bg-white/95 backdrop-blur-sm hover:shadow-2xl transition-all duration-300">
+              <CardHeader className="relative overflow-hidden">
+                <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-500 to-indigo-600"></div>
+                <div className="flex items-center gap-3 pt-2">
+                  <div className="p-2 bg-gradient-to-br from-blue-100 to-indigo-100 rounded-xl">
+                    <Users className="h-6 w-6 text-blue-600" />
+                  </div>
+                  <CardTitle className="text-2xl font-bold text-gray-900">
+                    Katılımcı Bilgileri
+                  </CardTitle>
+                </div>
               </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-4">
-                    <div className="flex items-center gap-3 p-4 bg-blue-50 rounded-lg">
-                      <Users className="h-5 w-5 text-blue-600" />
-                      <div>
-                        <p className="text-sm font-medium text-gray-500">
-                          Katılımcı Sayısı
-                        </p>
-                        <p className="text-lg font-semibold text-blue-700">
-                          {event.enrolledStudents} / {event.capacity}
-                        </p>
+              <CardContent className="pt-6">
+                <div className="relative group">
+                  <div className="absolute inset-0 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-2xl transform group-hover:scale-105 transition-transform duration-200"></div>
+                  <div className="relative flex items-center gap-4 p-6 bg-gradient-to-br from-blue-50/80 to-indigo-50/80 rounded-2xl border border-blue-100 hover:border-blue-200 transition-colors">
+                    <div className="p-3 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl shadow-lg">
+                      <Users className="h-6 w-6 text-white" />
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-sm font-medium text-gray-600 mb-1">
+                        Katılımcı Sayısı
+                      </p>
+                      <p className="text-3xl font-bold text-blue-700 mb-2">
+                        {event.enrolledStudents} / {event.capacity}
+                      </p>
+                      <div className="bg-white/60 rounded-full h-3 overflow-hidden">
+                        <div 
+                          className="h-full bg-gradient-to-r from-blue-500 to-indigo-600 transition-all duration-500"
+                          style={{ width: `${Math.min((event.enrolledStudents / event.capacity) * 100, 100)}%` }}
+                        />
                       </div>
+                      <p className="text-xs font-medium text-blue-600 mt-1">
+                        {Math.round((event.enrolledStudents / event.capacity) * 100)}% Dolu
+                      </p>
                     </div>
                   </div>
-                  <div className="space-y-4">
-                    <div className="flex items-center gap-3 p-4 bg-indigo-50 rounded-lg">
-                      <Award className="h-5 w-5 text-indigo-600" />
-                      <div>
-                        <p className="text-sm font-medium text-gray-500">
-                          Kazanılacak Puan
-                        </p>
-                        <p className="text-lg font-semibold text-indigo-700">
-                          {event.points}
-                        </p>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Rewards Card */}
+            <Card className="border-0 shadow-xl bg-white/95 backdrop-blur-sm hover:shadow-2xl transition-all duration-300">
+              <CardHeader className="relative overflow-hidden">
+                <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-yellow-500 to-orange-600"></div>
+                <div className="flex items-center gap-3 pt-2">
+                  <div className="p-2 bg-gradient-to-br from-yellow-100 to-orange-100 rounded-xl">
+                    <Award className="h-6 w-6 text-yellow-600" />
+                  </div>
+                  <CardTitle className="text-2xl font-bold text-gray-900">
+                    Ödül Bilgileri
+                  </CardTitle>
+                </div>
+              </CardHeader>
+              <CardContent className="pt-6">
+                <div className="relative group">
+                  <div className="absolute inset-0 bg-gradient-to-br from-yellow-50 to-orange-50 rounded-2xl transform group-hover:scale-105 transition-transform duration-200"></div>
+                  <div className="relative flex items-center gap-4 p-6 bg-gradient-to-br from-yellow-50/80 to-orange-50/80 rounded-2xl border border-yellow-100 hover:border-yellow-200 transition-colors">
+                    <div className="p-3 bg-gradient-to-br from-yellow-500 to-orange-600 rounded-xl shadow-lg">
+                      <Award className="h-6 w-6 text-white" />
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-sm font-medium text-gray-600 mb-1">
+                        Kazanılacak Ödüller
+                      </p>
+                      <p className="text-3xl font-bold text-orange-700 mb-3">
+                        {event.points === event.experience 
+                          ? `${event.points} P/XP` 
+                          : `${event.points}P • ${event.experience}XP`}
+                      </p>
+                      <div className="flex gap-2">
+                        <div className="flex-1 bg-white/70 rounded-lg p-3 text-center">
+                          <p className="text-lg font-bold text-orange-700">{event.points}</p>
+                          <p className="text-xs font-medium text-orange-600">Puan</p>
+                        </div>
+                        <div className="flex-1 bg-white/70 rounded-lg p-3 text-center">
+                          <p className="text-lg font-bold text-orange-700">{event.experience || 0}</p>
+                          <p className="text-xs font-medium text-orange-600">XP</p>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -461,103 +705,152 @@ export default function EventDetails() {
           </div>
 
           {/* Right Column - Event Info */}
-          <div className="space-y-6">
-            <Card className="border-none shadow-lg">
-              <CardHeader>
-                <CardTitle className="text-xl text-gray-900">
-                  Zaman ve Konum
-                </CardTitle>
+          <div className="space-y-8">
+            {/* Tutor Card - Moved to top */}
+            <Card className="border-0 shadow-xl bg-white/95 backdrop-blur-sm hover:shadow-2xl transition-all duration-300">
+              <CardHeader className="relative overflow-hidden">
+                <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-indigo-500 to-blue-600"></div>
+                <div className="flex items-center gap-3 pt-2">
+                  <div className="p-2 bg-gradient-to-br from-indigo-100 to-blue-100 rounded-xl">
+                    <User className="h-6 w-6 text-indigo-600" />
+                  </div>
+                  <CardTitle className="text-2xl font-bold text-gray-900">Eğitmen Bilgileri</CardTitle>
+                </div>
               </CardHeader>
-              <CardContent className="space-y-6">
-                <div>
-                  <h3 className="text-sm font-medium text-gray-500 mb-2">
+              <CardContent className="pt-6">
+                <div className="relative group">
+                  <div className="absolute inset-0 bg-gradient-to-br from-indigo-50 to-blue-50 rounded-2xl transform group-hover:scale-105 transition-transform duration-200"></div>
+                  <div className="relative flex items-center gap-6 p-6 bg-gradient-to-r from-indigo-50/80 to-blue-50/80 rounded-2xl border border-indigo-100 hover:border-indigo-200 transition-colors">
+                    <Avatar className="h-16 w-16 ring-4 ring-indigo-200 shadow-lg">
+                      <AvatarFallback className="bg-gradient-to-br from-indigo-500 to-blue-600 text-white font-bold text-2xl">
+                        {event.createdBy.name.charAt(0).toUpperCase()}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1">
+                      <p className="font-bold text-gray-900 text-xl mb-1">
+                        {event.createdBy.name}
+                      </p>
+                      <p className="text-sm font-medium text-indigo-600 mb-2">Etkinlik Eğitmeni</p>
+                      <div className="flex items-center gap-2 text-xs text-gray-500">
+                        <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                        <span>Aktif Eğitmen</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Time and Location Card */}
+            <Card className="border-0 shadow-xl bg-white/95 backdrop-blur-sm hover:shadow-2xl transition-all duration-300">
+              <CardHeader className="relative overflow-hidden">
+                <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-purple-500 to-pink-600"></div>
+                <div className="flex items-center gap-3 pt-2">
+                  <div className="p-2 bg-gradient-to-br from-purple-100 to-pink-100 rounded-xl">
+                    <Clock className="h-6 w-6 text-purple-600" />
+                  </div>
+                  <CardTitle className="text-2xl font-bold text-gray-900">
+                    Zaman ve Konum
+                  </CardTitle>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-4 pt-6">
+                {/* Event Type */}
+                <div className="group">
+                  <h3 className="text-sm font-semibold text-gray-600 mb-3 uppercase tracking-wide">
                     Etkinlik Türü
                   </h3>
-                  <div className="flex items-center p-3 bg-gray-50 rounded-lg">
-                    {getTypeIcon(event.type)}
-                    <span className="text-gray-900 ml-2 font-medium">
+                  <div className="flex items-center p-4 bg-gradient-to-r from-gray-50 to-white rounded-xl border border-gray-100 hover:border-gray-200 transition-colors group-hover:shadow-md">
+                    <div className="p-2 bg-gradient-to-br from-gray-100 to-gray-200 rounded-lg mr-3">
+                      {getTypeIcon(event.type)}
+                    </div>
+                    <span className="text-gray-900 font-semibold">
                       {getTypeText(event.type.toLowerCase())}
                     </span>
                   </div>
                 </div>
 
-                <div>
-                  <h3 className="text-sm font-medium text-gray-500 mb-2">
+                {/* Start Time */}
+                <div className="group">
+                  <h3 className="text-sm font-semibold text-gray-600 mb-3 uppercase tracking-wide">
                     Başlangıç
                   </h3>
-                  <div className="flex items-center p-3 bg-gray-50 rounded-lg">
-                    <CalendarClock className="text-gray-600 h-4 w-4" />
-                    <span className="text-gray-900 ml-2">
+                  <div className="flex items-center p-4 bg-gradient-to-r from-emerald-50 to-green-50 rounded-xl border border-emerald-100 hover:border-emerald-200 transition-colors group-hover:shadow-md">
+                    <div className="p-2 bg-gradient-to-br from-emerald-500 to-green-600 rounded-lg mr-3">
+                      <CalendarClock className="text-white h-4 w-4" />
+                    </div>
+                    <span className="text-gray-900 font-semibold">
                       {formatDate(event.startDate)}
                     </span>
                   </div>
                 </div>
 
-                <div>
-                  <h3 className="text-sm font-medium text-gray-500 mb-2">
+                {/* End Time */}
+                <div className="group">
+                  <h3 className="text-sm font-semibold text-gray-600 mb-3 uppercase tracking-wide">
                     Bitiş
                   </h3>
-                  <div className="flex items-center p-3 bg-gray-50 rounded-lg">
-                    <Clock className="text-gray-600 h-4 w-4" />
-                    <span className="text-gray-900 ml-2">
+                  <div className="flex items-center p-4 bg-gradient-to-r from-red-50 to-pink-50 rounded-xl border border-red-100 hover:border-red-200 transition-colors group-hover:shadow-md">
+                    <div className="p-2 bg-gradient-to-br from-red-500 to-pink-600 rounded-lg mr-3">
+                      <Clock className="text-white h-4 w-4" />
+                    </div>
+                    <span className="text-gray-900 font-semibold">
                       {formatDate(event.endDate)}
                     </span>
                   </div>
                 </div>
 
-                <div>
-                  <h3 className="text-sm font-medium text-gray-500 mb-2">
+                {/* Duration */}
+                <div className="group">
+                  <h3 className="text-sm font-semibold text-gray-600 mb-3 uppercase tracking-wide">
                     Süre
                   </h3>
-                  <div className="flex items-center p-3 bg-gray-50 rounded-lg">
-                    <Calendar className="text-gray-600 h-4 w-4" />
-                    <span className="text-gray-900 ml-2">
+                  <div className="flex items-center p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl border border-blue-100 hover:border-blue-200 transition-colors group-hover:shadow-md">
+                    <div className="p-2 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-lg mr-3">
+                      <Calendar className="text-white h-4 w-4" />
+                    </div>
+                    <span className="text-gray-900 font-semibold">
                       {getDurationText(event.startDate, event.endDate)}
                     </span>
                   </div>
                 </div>
 
-                <div>
-                  <h3 className="text-sm font-medium text-gray-500 mb-2">
+                {/* Location */}
+                <div className="group">
+                  <h3 className="text-sm font-semibold text-gray-600 mb-3 uppercase tracking-wide">
                     Konum
                   </h3>
-                  <div className="flex items-center p-3 bg-gray-50 rounded-lg">
-                    <MapPin className="text-gray-600 h-4 w-4" />
-                    <span className="text-gray-900 ml-2">{event.location}</span>
+                  <div className="flex items-center p-4 bg-gradient-to-r from-amber-50 to-yellow-50 rounded-xl border border-amber-100 hover:border-amber-200 transition-colors group-hover:shadow-md">
+                    <div className="p-2 bg-gradient-to-br from-amber-500 to-yellow-600 rounded-lg mr-3">
+                      <MapPin className="text-white h-4 w-4" />
+                    </div>
+                    <span className="text-gray-900 font-semibold">{event.location}</span>
                   </div>
                 </div>
               </CardContent>
             </Card>
 
-            <Card className="border-none shadow-lg">
-              <CardHeader>
-                <CardTitle className="text-xl text-gray-900">Eğitmen</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="flex items-center gap-3 p-3">
-                  <Avatar className="h-10 w-10">
-                    <AvatarFallback className="bg-blue-100 text-blue-600">
-                      {event.createdBy.name.charAt(0).toUpperCase()}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div>
-                    <p className="font-medium text-gray-900">
-                      {event.createdBy.name}
-                    </p>
-                    <p className="text-sm text-gray-500">Eğitmen</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Button
-              variant="destructive"
-              className="w-full"
-              onClick={() => setDeleteDialogOpen(true)}
-            >
-              <Trash2 className="mr-2 h-4 w-4" />
-              Etkinliği Sil
-            </Button>
+            {/* Delete Button - Only show if user is the creator */}
+            {user && event.createdBy.id === user.id && (
+              <Button
+                variant="destructive"
+                className="w-full py-4 text-lg font-semibold shadow-lg hover:shadow-xl transition-all duration-300 bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700"
+                onClick={() => setDeleteDialogOpen(true)}
+                disabled={deletingEvent}
+              >
+                {deletingEvent ? (
+                  <>
+                    <Loader2 className="mr-3 h-5 w-5 animate-spin" />
+                    Siliniyor...
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="mr-3 h-5 w-5" />
+                    Etkinliği Sil
+                  </>
+                )}
+              </Button>
+            )}
           </div>
         </div>
       </div>
@@ -578,12 +871,26 @@ export default function EventDetails() {
             <Button
               variant="outline"
               onClick={() => setDeleteDialogOpen(false)}
+              disabled={deletingEvent}
             >
               İptal
             </Button>
-            <Button variant="destructive" onClick={handleDeleteEvent}>
-              <Trash2 className="mr-2 h-4 w-4" />
-              Etkinliği Sil
+            <Button 
+              variant="destructive" 
+              onClick={handleDeleteEvent}
+              disabled={deletingEvent}
+            >
+              {deletingEvent ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Siliniyor...
+                </>
+              ) : (
+                <>
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  Etkinliği Sil
+                </>
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -607,6 +914,7 @@ const mockEvents: Event[] = [
     capacity: 30,
     enrolledStudents: 18,
     points: 50,
+    experience: 50,
     tags: ["Matematik", "Olimpiyat", "Problem Çözme"],
     createdBy: {
       id: "101",
@@ -626,6 +934,7 @@ const mockEvents: Event[] = [
     capacity: 20,
     enrolledStudents: 20,
     points: 30,
+    experience: 30,
     tags: ["Fizik", "Laboratuvar", "Deney"],
     createdBy: {
       id: "102",
@@ -645,6 +954,7 @@ const mockEvents: Event[] = [
     capacity: 15,
     enrolledStudents: 12,
     points: 20,
+    experience: 20,
     tags: ["İngilizce", "Konuşma", "Dil Becerisi"],
     createdBy: {
       id: "103",

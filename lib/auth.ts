@@ -48,7 +48,7 @@ export const authOptions: NextAuthOptions = {
         return {
           id: user.id,
           username: user.username,
-          email: user.email,
+    
           role: user.role,
           tutorId: user.tutorId || undefined,
           tutor: user.tutor ? {

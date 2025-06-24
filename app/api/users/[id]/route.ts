@@ -4,6 +4,8 @@ import { UserRole } from '@prisma/client';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '../../auth/[...nextauth]/auth.config';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(
   request: NextRequest,
   { params }: { params: { id: string } }
@@ -109,21 +111,18 @@ export async function PUT(
       );
     }
 
-    // Check for duplicate username or email if changing
-    if ((username && username !== user.username) || (email && email !== user.email)) {
+    // Check for duplicate username if changing
+    if (username && username !== user.username) {
       const existingUser = await prisma.user.findFirst({
         where: {
           id: { not: userId },
-          OR: [
-            ...(username ? [{ username }] : []),
-            ...(email ? [{ email }] : []),
-          ],
+          username: username,
         },
       });
 
       if (existingUser) {
         return NextResponse.json(
-          { error: 'Username or email already exists' },
+          { error: 'Username already exists' },
           { status: 409 }
         );
       }
@@ -154,28 +153,68 @@ export async function PUT(
       }
     }
 
-    // Update user
-    const updatedUser = await prisma.user.update({
-      where: { id: userId },
-      data: {
-        ...(username && { username }),
-        ...(email && { email }),
-        ...(role && { role: role as UserRole }),
-        ...(firstName !== undefined && { firstName }),
-        ...(lastName !== undefined && { lastName }),
-        ...(points !== undefined && { points: parseInt(points) || 0 }),
-        ...(tutorId && { tutorId })
-      },
-      select: {
-        id: true,
-        username: true,
-        email: true,
-        role: true,
-        firstName: true,
-        lastName: true,
-        points: true,
-        tutorId: true
+    // Update user with transaction to handle classroom assignment
+    const updatedUser = await prisma.$transaction(async (tx) => {
+      let classroomId = undefined;
+      
+      // If assigning to a tutor, also assign to tutor's classroom
+      if (tutorId) {
+        const tutorClassroom = await tx.classroom.findUnique({
+          where: { tutorId: tutorId }
+        });
+        
+        if (tutorClassroom) {
+          classroomId = tutorClassroom.id;
+        } else {
+          // Create classroom for tutor if it doesn't exist
+          const tutor = await tx.user.findUnique({
+            where: { id: tutorId },
+            select: { firstName: true, lastName: true, username: true }
+          });
+          
+          if (tutor) {
+            const classroomName = tutor.firstName && tutor.lastName 
+              ? `${tutor.firstName} ${tutor.lastName} Sınıfı`
+              : `${tutor.username} Sınıfı`;
+              
+            const classroomDescription = tutor.firstName && tutor.lastName
+              ? `${tutor.firstName} ${tutor.lastName} öğretmeninin sınıfı`
+              : `${tutor.username} öğretmeninin sınıfı`;
+
+            const newClassroom = await tx.classroom.create({
+              data: {
+                name: classroomName,
+                description: classroomDescription,
+                tutorId: tutorId,
+              }
+            });
+            
+            classroomId = newClassroom.id;
+          }
+        }
       }
+      
+              return await tx.user.update({
+          where: { id: userId },
+          data: {
+            ...(username && { username }),
+            ...(role && { role: role as UserRole }),
+            ...(firstName !== undefined && { firstName }),
+            ...(lastName !== undefined && { lastName }),
+            ...(points !== undefined && { points: parseInt(points) || 0 }),
+            ...(tutorId && { tutorId, studentClassroomId: classroomId })
+          },
+        select: {
+          id: true,
+          username: true,
+          email: true,
+          role: true,
+          firstName: true,
+          lastName: true,
+          points: true,
+          tutorId: true
+        }
+      });
     });
 
     return NextResponse.json({
@@ -187,7 +226,7 @@ export async function PUT(
     
     if (error instanceof Error && (error as any).code === 'P2002') {
       return NextResponse.json(
-        { error: 'Username or email already exists' },
+        { error: 'Username already exists' },
         { status: 409 }
       );
     }
@@ -223,7 +262,20 @@ export async function DELETE(
       );
     }
 
-    // Delete all related records in a transaction
+    // Check if user exists before trying to delete
+    const userExists = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true }
+    });
+
+    if (!userExists) {
+      return NextResponse.json(
+        { error: 'User not found' },
+        { status: 404 }
+      );
+    }
+
+    // Delete all related records in a transaction with increased timeout
     await prisma.$transaction(async (tx) => {
       // Delete all points transactions where user is either student or tutor
       await tx.pointsTransaction.deleteMany({
@@ -255,10 +307,11 @@ export async function DELETE(
         }
       });
 
-      // Delete all store items if user is a tutor
-      await tx.storeItem.deleteMany({
-        where: { tutorId: userId }
-      });
+      // Store items are now global, so we don't delete them when deleting a tutor
+      // The following line was causing the error because tutorId field was removed from StoreItem
+      // await tx.storeItem.deleteMany({
+      //   where: { tutorId: userId }
+      // });
 
       // Delete all event participants records
       await tx.eventParticipant.deleteMany({
@@ -270,30 +323,99 @@ export async function DELETE(
         where: { createdById: userId }
       });
 
+      // Delete all events created for this tutor
+      await tx.event.deleteMany({
+        where: { createdForTutorId: userId }
+      });
+
       // Delete all registration requests processed by this user
       await tx.registrationRequest.updateMany({
         where: { processedById: userId },
         data: { processedById: null }
       });
 
-      // Remove tutor reference from any students
+      // Delete all student notes where user is either student or tutor
+      await tx.studentNote.deleteMany({
+        where: {
+          OR: [
+            { studentId: userId },
+            { tutorId: userId }
+          ]
+        }
+      });
+
+      // Delete all student reports where user is either student or tutor
+      await tx.studentReport.deleteMany({
+        where: {
+          OR: [
+            { studentId: userId },
+            { tutorId: userId }
+          ]
+        }
+      });
+
+      // Delete all wishes created by this student
+      await tx.wish.deleteMany({
+        where: { studentId: userId }
+      });
+
+      // Delete all point earning cards created by this admin
+      await tx.pointEarningCard.deleteMany({
+        where: { createdById: userId }
+      });
+
+      // Remove tutor reference from any students and clear their studentClassroomId
       await tx.user.updateMany({
         where: { tutorId: userId },
-        data: { tutorId: null }
+        data: { tutorId: null, studentClassroomId: null }
+      });
+
+      // Remove studentClassroomId from any students in this user's classroom
+      await tx.user.updateMany({
+        where: { 
+          classroomStudents: {
+            tutorId: userId
+          }
+        },
+        data: { studentClassroomId: null }
+      });
+
+      // Delete the classroom if user is a tutor
+      await tx.classroom.deleteMany({
+        where: { tutorId: userId }
       });
 
       // Finally delete the user
       await tx.user.delete({
         where: { id: userId }
       });
+    }, {
+      maxWait: 20000, // 20 seconds max wait time
+      timeout: 30000, // 30 seconds timeout
     });
 
     return NextResponse.json(
       { message: 'User deleted successfully' },
       { status: 200 }
     );
-  } catch (error) {
+  } catch (error: any) {
     console.error('Delete user error:', error);
+    
+    // Handle specific Prisma errors
+    if (error.code === 'P2025') {
+      return NextResponse.json(
+        { error: 'User not found' },
+        { status: 404 }
+      );
+    }
+    
+    if (error.code === 'P2028') {
+      return NextResponse.json(
+        { error: 'Database transaction failed. Please try again.' },
+        { status: 500 }
+      );
+    }
+    
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

@@ -5,6 +5,8 @@ import { getServerSession } from 'next-auth';
 import logger from '@/lib/logger';
 import { authOptions } from '../auth/[...nextauth]/auth.config';
 
+export const dynamic = 'force-dynamic';
+
 // Get notes for a student
 export async function GET(request: NextRequest) {
   try {

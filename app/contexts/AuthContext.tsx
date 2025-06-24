@@ -14,7 +14,6 @@ import { signIn, signOut, useSession } from "next-auth/react";
 type AuthUser = {
   id: string;
   username: string;
-  email: string;
   role: UserRole;
   firstName?: string;
   lastName?: string;
@@ -53,6 +52,7 @@ export const useAuth = () => {
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [loading, setLoading] = useState(true);
+  const [userUpdatedFromAPI, setUserUpdatedFromAPI] = useState(false);
   const router = useRouter();
   const { data: session, status } = useSession();
 
@@ -76,12 +76,23 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       if (res.ok) {
         const data = await res.json();
         setUser(data.user);
+        setUserUpdatedFromAPI(true); // Mark that user was updated from API
+        
+        // Reset the flag after a short delay to allow future session updates
+        setTimeout(() => {
+          setUserUpdatedFromAPI(false);
+        }, 1000);
+        
+        return data.user; // Return the fresh user data
       } else {
         setUser(null);
+        setUserUpdatedFromAPI(false);
+        return null;
       }
     } catch (error) {
       console.error("Auth check error:", error);
       setUser(null);
+      return null;
     } finally {
       setLoading(false);
     }
@@ -95,17 +106,19 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     if (!session) {
       setUser(null);
+      setUserUpdatedFromAPI(false);
       setLoading(false);
       return;
     }
 
-    // Update user state when session changes
-    if (session?.user) {
+    // Only update user state from session if it wasn't recently updated from API
+    // and if it's actually different to prevent unnecessary re-renders
+    if (session?.user && (!user || user.id !== session.user.id) && !userUpdatedFromAPI) {
       setUser(session.user as AuthUser);
     }
     
     setLoading(false);
-  }, [session, status]);
+  }, [session?.user?.id, status, user?.id, userUpdatedFromAPI]); // Only depend on user ID and status, not the entire session
 
   const login = async (username: string, password: string) => {
     try {

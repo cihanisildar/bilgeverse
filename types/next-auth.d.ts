@@ -12,7 +12,6 @@ declare module 'next-auth' {
   interface User {
     id: string;
     username: string;
-    email: string;
     role: UserRole;
     tutorId?: string | null;
     tutor?: TutorInfo;

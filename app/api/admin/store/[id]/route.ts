@@ -3,6 +3,8 @@ import prisma from '@/lib/prisma';
 import { getServerSession } from 'next-auth';
 import { UserRole } from '@prisma/client';
 import { authOptions } from '@/app/api/auth/[...nextauth]/auth.config';
+import { unlink } from 'fs/promises';
+import path from 'path';
 
 export async function GET(
   request: NextRequest,
@@ -23,12 +25,20 @@ export async function GET(
     const item = await prisma.storeItem.findUnique({
       where: { id: itemId },
       include: {
-        tutor: {
+        itemRequests: {
           select: {
             id: true,
-            username: true,
-            firstName: true,
-            lastName: true
+            status: true,
+            pointsSpent: true,
+            createdAt: true,
+            student: {
+              select: {
+                id: true,
+                username: true,
+                firstName: true,
+                lastName: true
+              }
+            }
           }
         }
       }
@@ -67,12 +77,12 @@ export async function PUT(
 
     const itemId = params.id;
     const body = await request.json();
-    const { name, description, pointsRequired, availableQuantity, imageUrl } = body;
+    const { name, description, pointsRequired, imageUrl } = body;
 
     // Validate required fields
-    if (!name || !description || !pointsRequired || availableQuantity === undefined) {
+    if (!name || !description || !pointsRequired) {
       return NextResponse.json(
-        { error: 'Name, description, pointsRequired, and availableQuantity are required' },
+        { error: 'Name, description, and pointsRequired are required' },
         { status: 400 }
       );
     }
@@ -81,13 +91,6 @@ export async function PUT(
     if (pointsRequired <= 0) {
       return NextResponse.json(
         { error: 'Points required must be greater than 0' },
-        { status: 400 }
-      );
-    }
-
-    if (availableQuantity < 0) {
-      return NextResponse.json(
-        { error: 'Available quantity cannot be negative' },
         { status: 400 }
       );
     }
@@ -111,16 +114,23 @@ export async function PUT(
         name,
         description,
         pointsRequired,
-        availableQuantity,
         ...(imageUrl && { imageUrl })
       },
       include: {
-        tutor: {
+        itemRequests: {
           select: {
             id: true,
-            username: true,
-            firstName: true,
-            lastName: true
+            status: true,
+            pointsSpent: true,
+            createdAt: true,
+            student: {
+              select: {
+                id: true,
+                username: true,
+                firstName: true,
+                lastName: true
+              }
+            }
           }
         }
       }
@@ -160,6 +170,19 @@ export async function DELETE(
 
     const itemId = params.id;
     
+    // Get the item first to check if it has an image
+    const existingItem = await prisma.storeItem.findUnique({
+      where: { id: itemId },
+      select: { imageUrl: true }
+    });
+
+    if (!existingItem) {
+      return NextResponse.json(
+        { error: 'Item not found' },
+        { status: 404 }
+      );
+    }
+
     // First delete all related item requests
     await prisma.itemRequest.deleteMany({
       where: {
@@ -167,10 +190,22 @@ export async function DELETE(
       }
     });
 
-    // Then delete the item
+    // Then delete the item from database
     await prisma.storeItem.delete({
       where: { id: itemId }
     });
+
+    // Clean up the image file if it exists and is a local upload
+    if (existingItem.imageUrl && existingItem.imageUrl.startsWith('/uploads/store/')) {
+      try {
+        const filePath = path.join(process.cwd(), 'public', existingItem.imageUrl);
+        await unlink(filePath);
+        console.log(`Deleted image file: ${filePath}`);
+      } catch (fileError) {
+        // Log but don't fail the request if file deletion fails
+        console.warn('Failed to delete image file:', fileError);
+      }
+    }
 
     return NextResponse.json({ message: 'Store item and related requests deleted successfully' });
   } catch (error: any) {

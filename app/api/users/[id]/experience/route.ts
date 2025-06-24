@@ -4,6 +4,8 @@ import { UserRole } from '@prisma/client';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/app/api/auth/[...nextauth]/auth.config';
 
+export const dynamic = 'force-dynamic';
+
 const ALLOWED_ROLES: UserRole[] = [UserRole.ADMIN, UserRole.TUTOR];
 
 export async function POST(

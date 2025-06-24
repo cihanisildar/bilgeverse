@@ -416,7 +416,7 @@ function LeaderboardTableSkeleton() {
 
 function LoadingLeaderboard() {
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 p-8">
       <HeaderSkeleton />
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {[...Array(4)].map((_, index) => (

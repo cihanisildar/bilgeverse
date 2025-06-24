@@ -4,6 +4,8 @@ import { RequestStatus, UserRole } from '@prisma/client';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '../auth/[...nextauth]/auth.config';
 
+export const dynamic = 'force-dynamic';
+
 // Get requests based on user role
 export async function GET(request: NextRequest) {
   try {
@@ -119,10 +121,8 @@ export async function POST(request: NextRequest) {
         throw new Error('Item not found');
       }
 
-      // Check if item is available
-      if (item.availableQuantity <= 0) {
-        throw new Error('Item is out of stock');
-      }
+      // Since availableQuantity field was removed, we'll skip stock checking
+      // Store items are now considered always available
 
       // Check if student has enough points
       if (student.points < item.pointsRequired) {
@@ -160,15 +160,7 @@ export async function POST(request: NextRequest) {
         }
       });
 
-      // Decrease item quantity
-      await tx.storeItem.update({
-        where: { id: itemId },
-        data: {
-          availableQuantity: {
-            decrement: 1
-          }
-        }
-      });
+      // Store item quantity tracking was removed, so no need to update quantity
 
       // Deduct points from student
       await tx.user.update({

@@ -1,8 +1,10 @@
 import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { authOptions } from "../../auth/[...nextauth]/auth.config";
 import { UserRole } from "@prisma/client";
+
+export const dynamic = 'force-dynamic';
 
 export async function GET() {
   try {
@@ -15,7 +17,7 @@ export async function GET() {
       );
     }
 
-    if (session.user.role !== 'ADMIN') {
+    if (session.user.role !== UserRole.ADMIN) {
       return new NextResponse(
         JSON.stringify({ error: "Forbidden" }),
         { status: 403 }
@@ -24,7 +26,7 @@ export async function GET() {
 
     const students = await prisma.user.findMany({
       where: {
-        role: 'STUDENT',
+        role: UserRole.STUDENT,
       },
       select: {
         id: true,

@@ -62,12 +62,16 @@ type Transaction = {
 // Static Header Component
 function PointsHeader() {
   return (
-    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center">
-      <h1 className="text-3xl font-bold text-gray-800 mb-4 sm:mb-0">
-        <span className="bg-gradient-to-r from-blue-600 to-teal-600 bg-clip-text text-transparent">
-          Puan Yönetimi
-        </span>
-      </h1>
+    <div className="relative">
+      <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/10 to-blue-500/10 rounded-2xl"></div>
+      <div className="relative p-8 text-center">
+        <h1 className="text-4xl font-bold mb-2">
+          <span className="bg-gradient-to-r from-emerald-600 via-blue-600 to-teal-600 bg-clip-text text-transparent">
+            Puan Yönetimi
+          </span>
+        </h1>
+        <p className="text-gray-600 text-lg">Öğrencilerinize puan verin ve ilerlemeyi takip edin</p>
+      </div>
     </div>
   );
 }
@@ -209,6 +213,7 @@ function PointsManagement() {
   );
   const [points, setPoints] = useState<number>(0);
   const [reason, setReason] = useState<string>("");
+  const [customReason, setCustomReason] = useState<string>("");
   const [searchTerm, setSearchTerm] = useState<string>("");
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
@@ -344,7 +349,7 @@ function PointsManagement() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (selectedStudentIds.size === 0) return;
+    if (selectedStudentIds.size === 0 || !reason.trim() || (reason === "Diğer Faaliyetler" && !customReason.trim())) return;
 
     setIsSubmitting(true);
     try {
@@ -357,6 +362,8 @@ function PointsManagement() {
         if (!selectedStudent) continue;
 
         // Handle points modification
+        const finalReason = reason === "Diğer Faaliyetler" ? customReason : reason;
+        
         const response = await fetch(`/api/points`, {
           method: "POST",
           headers: {
@@ -365,7 +372,7 @@ function PointsManagement() {
           body: JSON.stringify({
             studentId: studentId,
             points: isDecreasing ? -points : points,
-            reason,
+            reason: finalReason,
           }),
         });
 
@@ -416,6 +423,7 @@ function PointsManagement() {
       // Reset form
       setPoints(0);
       setReason("");
+      setCustomReason("");
       setSelectedStudentIds(new Set());
       setIsDecreasing(false);
     } catch (error) {
@@ -476,74 +484,69 @@ function PointsManagement() {
 
   return (
     <div>
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Left Column - Student List */}
-        <div className="lg:col-span-1 space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center text-blue-700">
-                <Search className="mr-2" />
+        <div className="lg:col-span-1 space-y-6">
+          <Card className="border-0 shadow-xl bg-gradient-to-br from-white to-emerald-50/50 backdrop-blur-sm">
+            <CardHeader className="pb-4">
+              <CardTitle className="flex items-center text-emerald-700 text-xl">
+                <div className="p-2 bg-emerald-100 rounded-lg mr-3">
+                  <Search className="h-5 w-5 text-emerald-600" />
+                </div>
                 Öğrenci Ara
               </CardTitle>
-              <CardDescription>
-                {isDecreasing ? "Puan düşmek" : "Puan vermek"} için öğrenci
-                seçin
+              <CardDescription className="text-gray-600">
+                {isDecreasing ? "Puan düşmek" : "Puan vermek"} için öğrenci seçin
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="space-y-4">
-                <div className="relative">
+              <div className="space-y-6">
+                <div className="relative group">
                   <Input
                     type="text"
                     placeholder="İsim veya kullanıcı adı ile ara..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="w-full pl-10"
+                    className="w-full pl-12 pr-4 py-3 border-2 border-gray-200 rounded-xl focus:border-emerald-400 focus:ring-4 focus:ring-emerald-100 transition-all duration-200 bg-white/80"
                   />
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+                  <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 group-focus-within:text-emerald-500 transition-colors" />
                 </div>
 
-                <div className="space-y-2">
+                <div className="space-y-3 max-h-96 overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
                   {filteredStudents.map((student) => (
                     <button
                       key={student.id}
                       onClick={() => handleSelectStudent(student)}
-                      className={`w-full text-left px-3 py-2 rounded-md transition-all ${
+                      className={`w-full text-left p-4 rounded-xl transition-all duration-200 transform hover:scale-[1.02] hover:shadow-md ${
                         selectedStudentIds.has(student.id)
-                          ? `${getThemeColors().secondary}`
-                          : "hover:bg-gray-100"
-                      }`}
+                          ? "bg-gradient-to-r from-emerald-50 to-green-50 border-2 border-emerald-300 shadow-md"
+                          : "hover:bg-gray-50 border-2 border-gray-100 hover:border-gray-200"
+                      } border-2`}
                     >
                       <div className="flex justify-between items-center">
-                        <div>
-                          <span className="font-medium">
+                        <div className="flex-1">
+                          <p className="font-semibold text-gray-900 mb-1">
                             {student.firstName && student.lastName
                               ? `${student.firstName} ${student.lastName}`
                               : student.username}
-                          </span>
+                          </p>
                           {(student.firstName || student.lastName) && (
-                            <p className="text-xs text-gray-500">
+                            <p className="text-sm text-gray-500">
                               @{student.username}
                             </p>
                           )}
                         </div>
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-3">
                           <Badge
                             variant="outline"
-                            className={`${getThemeColors().highlight} ${
-                              getThemeColors().border
-                            }`}
+                            className="bg-gradient-to-r from-emerald-50 to-green-50 text-emerald-700 border-emerald-200 px-3 py-1 font-medium"
                           >
                             {student.points} puan
                           </Badge>
                           {selectedStudentIds.has(student.id) && (
-                            <div
-                              className={`w-4 h-4 rounded-full ${
-                                getThemeColors().primary
-                              } flex items-center justify-center`}
-                            >
+                            <div className="w-6 h-6 rounded-full bg-gradient-to-r from-emerald-500 to-green-500 flex items-center justify-center shadow-lg">
                               <svg
-                                className="w-3 h-3 text-white"
+                                className="w-4 h-4 text-white"
                                 fill="none"
                                 viewBox="0 0 24 24"
                                 stroke="currentColor"
@@ -569,57 +572,95 @@ function PointsManagement() {
 
         {/* Right Column - Points Management Form */}
         <div className="lg:col-span-2">
-          <Card>
-            <CardHeader>
-              <CardTitle>Puan Yönetimi</CardTitle>
-              <CardDescription>
-                Öğrencilere puan ekleyin veya çıkarın
+          <Card className={`border-0 shadow-xl backdrop-blur-sm transition-all duration-300 ${
+            isDecreasing 
+              ? "bg-gradient-to-br from-red-50 to-pink-50/50" 
+              : "bg-gradient-to-br from-white to-emerald-50/30"
+          }`}>
+            <CardHeader className="pb-6">
+              <CardTitle className="text-2xl font-bold text-gray-800">
+                {isDecreasing ? "Puan Azaltma" : "Puan Verme"}
+              </CardTitle>
+              <CardDescription className="text-gray-600 text-base">
+                {selectedStudentIds.size > 0 
+                  ? `${selectedStudentIds.size} öğrenci seçildi` 
+                  : "Öğrencilere puan ekleyin veya çıkarın"
+                }
               </CardDescription>
             </CardHeader>
 
             <CardContent>
-              <form onSubmit={handleSubmit} className="space-y-4">
+              <form onSubmit={handleSubmit} className="space-y-6">
                 {/* Value Input */}
-                <div className="space-y-2">
-                  <Label>Puan Miktarı</Label>
-                  <div className="flex items-center space-x-4">
-                    <Input
-                      type="number"
-                      min="0"
-                      value={points}
-                      onChange={(e) => {
-                        const value = parseInt(e.target.value) || 0;
-                        setPoints(value);
-                      }}
-                      className="w-32"
-                    />
-                    <div className="flex items-center space-x-2">
+                <div className="space-y-3">
+                  <Label className="text-base font-semibold text-gray-700">Puan Miktarı</Label>
+                  <div className="flex items-center space-x-6">
+                    <div className="relative">
+                      <Input
+                        type="number"
+                        min="0"
+                        value={points}
+                        onChange={(e) => {
+                          const value = parseInt(e.target.value) || 0;
+                          setPoints(value);
+                        }}
+                        className="w-32 text-lg font-bold text-center border-2 border-gray-200 rounded-xl focus:border-emerald-400 focus:ring-4 focus:ring-emerald-100 transition-all duration-200"
+                      />
+                    </div>
+                    <div className="flex items-center space-x-3 bg-white/80 p-3 rounded-xl border border-gray-200">
                       <Switch
                         checked={isDecreasing}
                         onCheckedChange={setIsDecreasing}
+                        className="data-[state=checked]:bg-red-500"
                       />
-                      <Label>{isDecreasing ? "Azalt" : "Ekle"}</Label>
+                      <Label className={`font-medium ${isDecreasing ? 'text-red-600' : 'text-emerald-600'}`}>
+                        {isDecreasing ? "Puan Azalt" : "Puan Ekle"}
+                      </Label>
                     </div>
                   </div>
                 </div>
 
                 {/* Reason Input */}
-                <div className="space-y-2">
-                  <Label>Sebep</Label>
+                <div className="space-y-4">
+                  <Label className="text-base font-semibold text-gray-700">Sebep Seçin</Label>
                   <RadioGroup
                     value={reason}
                     onValueChange={setReason}
-                    className="flex flex-col space-y-2"
+                    className="grid grid-cols-1 gap-3"
                   >
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="Karakter Eğitimi" id="karakter" />
-                      <Label htmlFor="karakter">Karakter Eğitimi</Label>
+                    <div className="flex items-center space-x-3 p-4 border-2 border-gray-200 rounded-xl hover:border-emerald-300 hover:bg-emerald-50/50 transition-all duration-200 cursor-pointer">
+                      <RadioGroupItem value="Karakter Eğitimi" id="karakter" className="text-emerald-600" />
+                      <Label htmlFor="karakter" className="font-medium text-gray-700 cursor-pointer flex-1">
+                        Karakter Eğitimi
+                      </Label>
                     </div>
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="Atölye Faaliyeti" id="atolye" />
-                      <Label htmlFor="atolye">Atölye Faaliyeti</Label>
+                    <div className="flex items-center space-x-3 p-4 border-2 border-gray-200 rounded-xl hover:border-emerald-300 hover:bg-emerald-50/50 transition-all duration-200 cursor-pointer">
+                      <RadioGroupItem value="Atölye Faaliyeti" id="atolye" className="text-emerald-600" />
+                      <Label htmlFor="atolye" className="font-medium text-gray-700 cursor-pointer flex-1">
+                        Atölye Faaliyeti
+                      </Label>
+                    </div>
+                    <div className="flex items-center space-x-3 p-4 border-2 border-gray-200 rounded-xl hover:border-emerald-300 hover:bg-emerald-50/50 transition-all duration-200 cursor-pointer">
+                      <RadioGroupItem value="Diğer Faaliyetler" id="diger" className="text-emerald-600" />
+                      <Label htmlFor="diger" className="font-medium text-gray-700 cursor-pointer flex-1">
+                        Diğer Faaliyetler
+                      </Label>
                     </div>
                   </RadioGroup>
+                  
+                  {/* Custom Reason Input - Show when "Diğer Faaliyetler" is selected */}
+                  {reason === "Diğer Faaliyetler" && (
+                    <div className="mt-4 space-y-3">
+                      <Label className="text-base font-semibold text-gray-700">Faaliyet Açıklaması</Label>
+                      <Input
+                        type="text"
+                        placeholder="Hangi faaliyet için puan veriliyor?"
+                        value={customReason}
+                        onChange={(e) => setCustomReason(e.target.value)}
+                        className="w-full border-2 border-gray-200 rounded-xl focus:border-emerald-400 focus:ring-4 focus:ring-emerald-100 transition-all duration-200 bg-white/80"
+                      />
+                    </div>
+                  )}
                 </div>
 
                 <Button
@@ -628,15 +669,23 @@ function PointsManagement() {
                     selectedStudentIds.size === 0 ||
                     isSubmitting ||
                     points <= 0 ||
-                    !reason.trim()
+                    !reason.trim() ||
+                    (reason === "Diğer Faaliyetler" && !customReason.trim())
                   }
-                  className={`w-full ${getThemeColors().primary} text-white`}
+                  className={`w-full py-4 text-lg font-semibold rounded-xl transition-all duration-200 transform hover:scale-[1.02] hover:shadow-lg ${
+                    isDecreasing 
+                      ? "bg-gradient-to-r from-red-500 to-pink-500 hover:from-red-600 hover:to-pink-600 shadow-red-200" 
+                      : "bg-gradient-to-r from-emerald-500 to-green-500 hover:from-emerald-600 hover:to-green-600 shadow-emerald-200"
+                  } text-white shadow-lg disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none`}
                 >
-                  {isSubmitting
-                    ? "İşleniyor..."
-                    : `${selectedStudentIds.size} öğrenciye ${
-                        isDecreasing ? "Azalt" : "Ekle"
-                      }`}
+                  {isSubmitting ? (
+                    <div className="flex items-center justify-center space-x-2">
+                      <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                      <span>İşleniyor...</span>
+                    </div>
+                  ) : (
+                    `${selectedStudentIds.size} öğrenciye ${points} puan ${isDecreasing ? "azalt" : "ekle"}`
+                  )}
                 </Button>
               </form>
             </CardContent>
@@ -645,61 +694,70 @@ function PointsManagement() {
       </div>
 
       {/* Recent Transactions - Now full width */}
-      <div className="mt-6">
-        <Card>
-          <CardHeader>
-            <CardTitle
-              className={`flex items-center gap-2 ${getThemeColors().accent}`}
-            >
-              <Clock className="h-5 w-5" />
+      <div className="mt-8">
+        <Card className="border-0 shadow-xl bg-gradient-to-br from-white to-emerald-50/50 backdrop-blur-sm">
+          <CardHeader className="pb-6">
+            <CardTitle className="flex items-center gap-3 text-emerald-700 text-2xl">
+              <div className="p-3 bg-emerald-100 rounded-xl">
+                <Clock className="h-6 w-6 text-emerald-600" />
+              </div>
               Son İşlemler
             </CardTitle>
-            <CardDescription>
-              Öğrencilere verilen son puanların listesi
+            <CardDescription className="text-gray-600 text-base">
+              Öğrencilere verilen son puanların detaylı listesi
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500" />
+            <div className="space-y-6">
+              <div className="relative group">
+                <Search className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-500 group-focus-within:text-emerald-500 transition-colors" />
                 <Input
-                  className="pl-9"
+                  className="pl-12 pr-4 py-3 border-2 border-gray-200 rounded-xl focus:border-emerald-400 focus:ring-4 focus:ring-emerald-100 transition-all duration-200 bg-white/80"
                   placeholder="İşlemlerde ara..."
                   value={transactionSearchTerm}
                   onChange={(e) => setTransactionSearchTerm(e.target.value)}
                 />
               </div>
-              {currentTransactions.map((transaction) => (
-                <div
-                  key={transaction.id}
-                  className="flex items-center justify-between rounded-lg border border-gray-100 p-3 hover:bg-gray-50"
-                >
-                  <div>
-                    <p className="font-medium">
-                      {getDisplayName(transaction.student)}
-                    </p>
-                    <div className="flex items-center gap-2 text-sm text-gray-600">
-                      <Clock className="h-4 w-4" />
-                      {formatDate(transaction.createdAt)}
+              <div className="space-y-4">
+                {currentTransactions.map((transaction) => (
+                  <div
+                    key={transaction.id}
+                    className="flex items-center justify-between rounded-xl border-2 border-gray-100 p-5 hover:border-emerald-200 hover:bg-emerald-50/30 transition-all duration-200 transform hover:scale-[1.01] shadow-sm hover:shadow-md"
+                  >
+                    <div className="flex-1">
+                      <p className="font-semibold text-gray-900 text-lg mb-2">
+                        {getDisplayName(transaction.student)}
+                      </p>
+                      <div className="flex items-center gap-2 text-sm text-gray-600 mb-2">
+                        <div className="p-1 bg-gray-100 rounded-full">
+                          <Clock className="h-3 w-3" />
+                        </div>
+                        <span className="font-medium">{formatDate(transaction.createdAt)}</span>
+                      </div>
+                      <div className="inline-flex items-center gap-2 bg-gray-100 px-3 py-1 rounded-full">
+                        <div className="w-2 h-2 bg-emerald-500 rounded-full"></div>
+                        <p className="text-sm font-medium text-gray-700">
+                          {transaction.reason}
+                        </p>
+                      </div>
                     </div>
-                    <p className="mt-1 text-sm text-gray-600">
-                      {transaction.reason}
-                    </p>
+                    <div className="text-right ml-4">
+                      <Badge
+                        variant={transaction.type === "AWARD" ? "default" : "destructive"}
+                        className={`text-lg font-bold px-4 py-2 ${
+                          transaction.type === "AWARD" 
+                            ? "bg-gradient-to-r from-emerald-500 to-green-500 hover:from-emerald-600 hover:to-green-600" 
+                            : "bg-gradient-to-r from-red-500 to-pink-500 hover:from-red-600 hover:to-pink-600"
+                        } text-white shadow-lg`}
+                      >
+                        {transaction.type === "AWARD" ? "+" : "-"}{transaction.points} puan
+                      </Badge>
+                    </div>
                   </div>
-                  <div className="text-right">
-                    <Badge
-                      variant={
-                        transaction.points > 0 ? "default" : "destructive"
-                      }
-                    >
-                      {transaction.points > 0 ? "+" : ""}
-                      {transaction.points} puan
-                    </Badge>
-                  </div>
-                </div>
-              ))}
+                ))}
+              </div>
               {/* Pagination Controls */}
-              <div className="flex justify-center gap-2 mt-4">
+              <div className="flex justify-center items-center gap-4 mt-8 p-4 bg-gray-50/50 rounded-xl">
                 <Button
                   variant="outline"
                   size="sm"
@@ -707,12 +765,15 @@ function PointsManagement() {
                     setCurrentPage((prev) => Math.max(1, prev - 1))
                   }
                   disabled={currentPage === 1}
+                  className="px-4 py-2 rounded-lg border-2 border-gray-200 hover:border-emerald-300 hover:bg-emerald-50 transition-all duration-200 disabled:opacity-50"
                 >
-                  Önceki
+                  ← Önceki
                 </Button>
-                <span className="flex items-center px-3 py-1 rounded-md bg-gray-100">
-                  {currentPage} / {totalPages || 1}
-                </span>
+                <div className="flex items-center px-4 py-2 rounded-lg bg-white border-2 border-gray-200 font-semibold text-gray-700">
+                  <span className="text-emerald-600">{currentPage}</span>
+                  <span className="mx-2">/</span>
+                  <span>{totalPages || 1}</span>
+                </div>
                 <Button
                   variant="outline"
                   size="sm"
@@ -720,8 +781,9 @@ function PointsManagement() {
                     setCurrentPage((prev) => Math.min(totalPages, prev + 1))
                   }
                   disabled={currentPage === totalPages || totalPages === 0}
+                  className="px-4 py-2 rounded-lg border-2 border-gray-200 hover:border-emerald-300 hover:bg-emerald-50 transition-all duration-200 disabled:opacity-50"
                 >
-                  Sonraki
+                  Sonraki →
                 </Button>
               </div>
             </div>
@@ -742,15 +804,17 @@ export default function PointsPage() {
   }, []);
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      {loading ? (
-        <LoadingPoints />
-      ) : (
-        <div className="space-y-8">
-          <PointsHeader />
-          <PointsManagement />
-        </div>
-      )}
+    <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-blue-50">
+      <div className="p-8 space-y-8">
+        {loading ? (
+          <LoadingPoints />
+        ) : (
+          <div className="space-y-8">
+            <PointsHeader />
+            <PointsManagement />
+          </div>
+        )}
+      </div>
     </div>
   );
 }

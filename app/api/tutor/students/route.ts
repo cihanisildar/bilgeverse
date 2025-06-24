@@ -6,41 +6,61 @@ import bcrypt from 'bcrypt';
 import logger from '@/lib/logger';
 import { authOptions } from '../../auth/[...nextauth]/auth.config';
 
+export const dynamic = 'force-dynamic';
+
+// Get tutor's students from their classroom
 export async function GET(request: NextRequest) {
   try {
-    logger.info('GET /api/tutor/students - Start');
     const session = await getServerSession(authOptions);
-    logger.info('Current user:', { id: session?.user?.id, role: session?.user?.role });
     
     if (!session?.user || session.user.role !== UserRole.TUTOR) {
-      logger.warn('Unauthorized access attempt');
       return NextResponse.json(
         { error: 'Unauthorized: Only tutors can access this endpoint' },
         { status: 403 }
       );
     }
 
-    // Get all students assigned to this tutor
-    logger.info('Fetching students for tutor:', session.user.id);
-    const students = await prisma.user.findMany({ 
+    // Get tutor's classroom and students
+    const tutorClassroom = await prisma.classroom.findUnique({
       where: {
-        role: UserRole.STUDENT,
         tutorId: session.user.id
       },
-      select: {
-        id: true,
-        username: true,
-        firstName: true,
-        lastName: true,
-        points: true,
-        experience: true
+      include: {
+        students: {
+          select: {
+            id: true,
+            username: true,
+            firstName: true,
+            lastName: true,
+            points: true,
+            experience: true,
+            createdAt: true,
+          },
+          orderBy: {
+            firstName: 'asc'
+          }
+        }
       }
     });
-    logger.info('Found students:', students.length);
 
-    return NextResponse.json({ students }, { status: 200 });
+    if (!tutorClassroom) {
+      return NextResponse.json(
+        { error: 'Classroom not found for this tutor' },
+        { status: 404 }
+      );
+    }
+
+    return NextResponse.json({
+      classroom: {
+        id: tutorClassroom.id,
+        name: tutorClassroom.name,
+        description: tutorClassroom.description,
+      },
+      students: tutorClassroom.students,
+      totalStudents: tutorClassroom.students.length
+    });
   } catch (error: any) {
-    logger.error('Error fetching tutor students:', error);
+    console.error('Error fetching tutor students:', error);
     return NextResponse.json(
       { error: error.message || 'Internal server error' },
       { status: 500 }
@@ -48,6 +68,7 @@ export async function GET(request: NextRequest) {
   }
 }
 
+// Create new student and assign to tutor's classroom
 export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
@@ -60,29 +81,40 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { username, email, password, firstName, lastName } = body;
+    const { username, password, firstName, lastName } = body;
 
-    if (!username || !email || !password) {
+    if (!username || !password) {
       return NextResponse.json(
-        { error: 'Username, email, and password are required' },
+        { error: 'Username and password are required' },
         { status: 400 }
       );
     }
 
-    // Check if username or email already exists
+    // Check if username already exists
     const existingUser = await prisma.user.findFirst({
       where: {
-        OR: [
-          { username: username.toLowerCase() },
-          { email: email.toLowerCase() }
-        ],
+        username: username.toLowerCase(),
       },
     });
 
     if (existingUser) {
       return NextResponse.json(
-        { error: 'Username or email already exists' },
+        { error: 'Username already exists' },
         { status: 409 }
+      );
+    }
+
+    // Get tutor's classroom
+    const tutorClassroom = await prisma.classroom.findUnique({
+      where: {
+        tutorId: session.user.id
+      }
+    });
+
+    if (!tutorClassroom) {
+      return NextResponse.json(
+        { error: 'Classroom not found for this tutor' },
+        { status: 404 }
       );
     }
 
@@ -90,39 +122,50 @@ export async function POST(request: NextRequest) {
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
 
-    // Create new student
+    // Generate placeholder email from username
+    const email = `${username.toLowerCase()}@ogrtakip.com`;
+
+    // Create the student and assign to tutor's classroom
     const newStudent = await prisma.user.create({
       data: {
-        username: username.trim(),
-        email: email.toLowerCase().trim(),
+        username: username.toLowerCase(),
+        email: email,
         password: hashedPassword,
         role: UserRole.STUDENT,
+        firstName,
+        lastName,
         tutorId: session.user.id,
-        firstName: firstName?.trim(),
-        lastName: lastName?.trim(),
-        points: 0,
-        experience: 0
+        studentClassroomId: tutorClassroom.id,
       },
       select: {
         id: true,
         username: true,
-        email: true,
         firstName: true,
         lastName: true,
         points: true,
-        experience: true
+        experience: true,
+        createdAt: true,
       }
     });
 
-    return NextResponse.json(
-      {
-        message: 'Student created successfully',
-        student: newStudent
-      },
-      { status: 201 }
-    );
+    return NextResponse.json({
+      message: 'Student created and assigned to classroom successfully',
+      student: newStudent,
+      classroom: {
+        id: tutorClassroom.id,
+        name: tutorClassroom.name
+      }
+    });
   } catch (error: any) {
-    console.error('Create student error:', error);
+    console.error('Error creating student:', error);
+    
+    if (error.code === 'P2002') {
+      return NextResponse.json(
+        { error: 'Username already exists' },
+        { status: 409 }
+      );
+    }
+    
     return NextResponse.json(
       { error: error.message || 'Internal server error' },
       { status: 500 }

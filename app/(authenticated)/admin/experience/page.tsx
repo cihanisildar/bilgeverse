@@ -13,7 +13,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { Search, Clock } from "lucide-react";
+import { Search, Clock, Trophy } from "lucide-react";
 import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
 
@@ -42,12 +42,16 @@ type ExperienceTransaction = {
 // Static Header Component
 function ExperienceHeader() {
   return (
-    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center">
-      <h1 className="text-3xl font-bold text-gray-800 mb-4 sm:mb-0">
-        <span className="bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent">
-          Tecrübe Yönetimi
-        </span>
-      </h1>
+    <div className="relative">
+      <div className="absolute inset-0 bg-gradient-to-r from-green-500/10 to-emerald-500/10 rounded-2xl"></div>
+      <div className="relative p-8 text-center">
+        <h1 className="text-4xl font-bold mb-2">
+          <span className="bg-gradient-to-r from-green-600 via-emerald-600 to-teal-600 bg-clip-text text-transparent">
+            Tecrübe Yönetimi
+          </span>
+        </h1>
+        <p className="text-gray-600 text-lg">Öğrencilere tecrübe ekleyin ve tecrübe geçmişini yönetin</p>
+      </div>
     </div>
   );
 }
@@ -247,41 +251,72 @@ function ExperienceManagement() {
 
   if (isLoading) {
     return (
-      <div className="flex justify-center items-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-green-500"></div>
+      <div className="min-h-screen bg-gradient-to-br from-green-50 via-white to-emerald-50">
+        <div className="py-8 space-y-8">
+          <div className="relative">
+            <div className="absolute inset-0 bg-gradient-to-r from-green-500/10 to-emerald-500/10 rounded-2xl animate-pulse"></div>
+            <div className="relative p-8 text-center">
+              <div className="h-10 bg-gray-300 rounded-lg w-64 mx-auto mb-4 animate-pulse"></div>
+              <div className="h-6 bg-gray-200 rounded-lg w-96 mx-auto animate-pulse"></div>
+            </div>
+          </div>
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <div className="lg:col-span-1">
+              <div className="bg-white rounded-2xl shadow-xl p-6 animate-pulse">
+                <div className="h-6 bg-gray-300 rounded w-48 mb-4"></div>
+                <div className="h-12 bg-gray-200 rounded-xl mb-6"></div>
+                <div className="space-y-3">
+                  {[1, 2, 3, 4].map((i) => (
+                    <div key={i} className="h-16 bg-gray-100 rounded-xl"></div>
+                  ))}
+                </div>
+              </div>
+            </div>
+            <div className="lg:col-span-2">
+              <div className="bg-white rounded-2xl shadow-xl p-6 animate-pulse">
+                <div className="h-8 bg-gray-300 rounded w-64 mb-6"></div>
+                <div className="space-y-6">
+                  <div className="h-16 bg-gray-100 rounded-xl"></div>
+                  <div className="h-14 bg-green-200 rounded-xl"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     );
   }
 
   return (
     <div>
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Left Column - Student List */}
-        <div className="lg:col-span-1 space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center text-green-700">
-                <Search className="mr-2" />
+        <div className="lg:col-span-1 space-y-6">
+          <Card className="border-0 shadow-xl bg-gradient-to-br from-white to-gray-50/50 backdrop-blur-sm">
+            <CardHeader className="pb-4">
+              <CardTitle className="flex items-center text-green-700 text-xl">
+                <div className="p-2 bg-green-100 rounded-lg mr-3">
+                  <Search className="h-5 w-5 text-green-600" />
+                </div>
                 Öğrenci Ara
               </CardTitle>
-              <CardDescription>
-                {isDecreasing ? "Tecrübe düşmek" : "Tecrübe vermek"} için öğrenci
-                seçin
+              <CardDescription className="text-gray-600">
+                {isDecreasing ? "Tecrübe düşmek" : "Tecrübe vermek"} için öğrenci seçin
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="space-y-4">
-                <div className="relative">
+              <div className="space-y-6">
+                <div className="relative group">
                   <Input
                     type="text"
                     placeholder="İsim veya kullanıcı adı ile ara..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="w-full pl-10"
+                    className="w-full pl-12 pr-4 py-3 border-2 border-gray-200 rounded-xl focus:border-green-400 focus:ring-4 focus:ring-green-100 transition-all duration-200 bg-white/80"
                   />
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+                  <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 group-focus-within:text-green-500 transition-colors" />
                 </div>
-                <div className="space-y-2 max-h-96 overflow-y-auto">
+                <div className="space-y-3 max-h-96 overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
                   {filteredStudents.map((student) => (
                     <button
                       key={student.id}
@@ -294,19 +329,15 @@ function ExperienceManagement() {
                         }
                         setSelectedStudentIds(newSet);
                       }}
-                      className={`w-full text-left p-3 rounded-lg transition-colors ${
+                      className={`w-full text-left p-4 rounded-xl transition-all duration-200 transform hover:scale-[1.02] hover:shadow-md ${
                         selectedStudentIds.has(student.id)
-                          ? "bg-green-50 border-green-200"
-                          : "hover:bg-gray-50"
-                      } border ${
-                        selectedStudentIds.has(student.id)
-                          ? "border-green-200"
-                          : "border-gray-200"
-                      }`}
+                          ? "bg-gradient-to-r from-green-50 to-emerald-50 border-2 border-green-300 shadow-md"
+                          : "hover:bg-gray-50 border-2 border-gray-100 hover:border-gray-200"
+                      } border-2`}
                     >
                       <div className="flex justify-between items-center">
-                        <div>
-                          <p className="font-medium text-gray-900">
+                        <div className="flex-1">
+                          <p className="font-semibold text-gray-900 mb-1">
                             {student.firstName && student.lastName
                               ? `${student.firstName} ${student.lastName}`
                               : student.username}
@@ -315,14 +346,17 @@ function ExperienceManagement() {
                             @{student.username}
                           </p>
                         </div>
-                        <div className="flex items-center gap-2">
-                          <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+                        <div className="flex items-center gap-3">
+                          <Badge 
+                            variant="outline" 
+                            className="bg-gradient-to-r from-green-50 to-emerald-50 text-green-700 border-green-200 px-3 py-1 font-medium"
+                          >
                             {student.experience} XP
                           </Badge>
                           {selectedStudentIds.has(student.id) && (
-                            <div className="w-4 h-4 rounded-full bg-green-600 flex items-center justify-center">
+                            <div className="w-6 h-6 rounded-full bg-gradient-to-r from-green-500 to-emerald-500 flex items-center justify-center shadow-lg">
                               <svg
-                                className="w-3 h-3 text-white"
+                                className="w-4 h-4 text-white"
                                 fill="none"
                                 viewBox="0 0 24 24"
                                 stroke="currentColor"
@@ -348,38 +382,49 @@ function ExperienceManagement() {
 
         {/* Right Column - Experience Management Form */}
         <div className="lg:col-span-2">
-          <Card>
-            <CardHeader>
-              <CardTitle>Tecrübe Yönetimi</CardTitle>
-              <CardDescription>
-                Öğrencilere tecrübe ekleyin veya çıkarın
+          <Card className={`border-0 shadow-xl backdrop-blur-sm transition-all duration-300 ${
+            isDecreasing 
+              ? "bg-gradient-to-br from-red-50 to-pink-50/50" 
+              : "bg-gradient-to-br from-white to-green-50/30"
+          }`}>
+            <CardHeader className="pb-6">
+              <CardTitle className="text-2xl font-bold text-gray-800">
+                {isDecreasing ? "Tecrübe Azaltma" : "Tecrübe Verme"}
+              </CardTitle>
+              <CardDescription className="text-gray-600 text-base">
+                {selectedStudentIds.size > 0 
+                  ? `${selectedStudentIds.size} öğrenci seçildi` 
+                  : "Öğrencilere tecrübe ekleyin veya çıkarın"
+                }
               </CardDescription>
             </CardHeader>
             
             <CardContent>
-              <form onSubmit={handleSubmit} className="space-y-4">
+              <form onSubmit={handleSubmit} className="space-y-6">
                 {/* Value Input */}
-                <div className="space-y-2">
-                  <Label>Tecrübe Miktarı</Label>
-                  <div className={`flex items-center space-x-4 p-4 rounded-lg transition-colors ${isDecreasing ? 'bg-red-50' : 'bg-green-50'}`}>
-                    <Input
-                      type="number"
-                      id="experience"
-                      value={experience}
-                      onChange={(e) => {
-                        const value = parseInt(e.target.value) || 0;
-                        setExperience(value);
-                      }}
-                      className={`w-32 ${isDecreasing ? 'border-red-200 focus:ring-red-500' : 'border-green-200 focus:ring-green-500'}`}
-                    />
-                    <div className="flex items-center space-x-2">
+                <div className="space-y-3">
+                  <Label className="text-base font-semibold text-gray-700">Tecrübe Miktarı</Label>
+                  <div className="flex items-center space-x-6">
+                    <div className="relative">
+                      <Input
+                        type="number"
+                        min="0"
+                        value={experience}
+                        onChange={(e) => {
+                          const value = parseInt(e.target.value) || 0;
+                          setExperience(value);
+                        }}
+                        className="w-32 text-lg font-bold text-center border-2 border-gray-200 rounded-xl focus:border-green-400 focus:ring-4 focus:ring-green-100 transition-all duration-200"
+                      />
+                    </div>
+                    <div className="flex items-center space-x-3 bg-white/80 p-3 rounded-xl border border-gray-200">
                       <Switch
                         checked={isDecreasing}
                         onCheckedChange={setIsDecreasing}
-                        className={`${isDecreasing ? 'bg-red-600 hover:bg-red-700' : 'bg-green-600 hover:bg-green-700'}`}
+                        className="data-[state=checked]:bg-red-500"
                       />
-                      <Label className={`${isDecreasing ? 'text-red-700' : 'text-green-700'} font-medium`}>
-                        {isDecreasing ? 'Azalt' : 'Ekle'}
+                      <Label className={`font-medium ${isDecreasing ? 'text-red-600' : 'text-green-600'}`}>
+                        {isDecreasing ? "Tecrübe Azalt" : "Tecrübe Ekle"}
                       </Label>
                     </div>
                   </div>
@@ -392,16 +437,19 @@ function ExperienceManagement() {
                     isSubmitting ||
                     experience <= 0
                   }
-                  className={`w-full text-white ${
+                  className={`w-full py-4 text-lg font-semibold rounded-xl transition-all duration-200 transform hover:scale-[1.02] hover:shadow-lg ${
                     isDecreasing 
-                      ? 'bg-red-600 hover:bg-red-700' 
-                      : 'bg-green-600 hover:bg-green-700'
-                  }`}
+                      ? "bg-gradient-to-r from-red-500 to-pink-500 hover:from-red-600 hover:to-pink-600 shadow-red-200" 
+                      : "bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 shadow-green-200"
+                  } text-white shadow-lg disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none`}
                 >
                   {isSubmitting ? (
-                    "İşleniyor..."
+                    <div className="flex items-center justify-center space-x-2">
+                      <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                      <span>İşleniyor...</span>
+                    </div>
                   ) : (
-                    `${selectedStudentIds.size} öğrenciye ${isDecreasing ? 'Azalt' : 'Ekle'}`
+                    `${selectedStudentIds.size} öğrenciye ${experience} XP ${isDecreasing ? "azalt" : "ekle"}`
                   )}
                 </Button>
               </form>
@@ -410,90 +458,117 @@ function ExperienceManagement() {
         </div>
       </div>
 
-      {/* Recent Transactions */}
-      <Card className="mt-8">
-        <CardHeader>
-          <CardTitle>Son İşlemler</CardTitle>
-          <CardDescription>Öğrencilere verilen son tecrübe puanları</CardDescription>
-          <div className="mt-4">
-            <Input
-              type="text"
-              placeholder="İşlem ara..."
-              value={transactionSearchTerm}
-              onChange={(e) => setTransactionSearchTerm(e.target.value)}
-              className="w-full"
-            />
-          </div>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            {currentTransactions.map((transaction) => (
-              <div
-                key={transaction.id}
-                className="flex items-center justify-between p-4 border rounded-lg"
-              >
-                <div>
-                  <p className="font-medium">
-                    {getDisplayName(transaction.student)}
-                  </p>
-                  <p className="text-sm text-gray-500">
-                    {formatDate(transaction.createdAt)}
-                  </p>
-                </div>
-                <Badge
-                  variant={transaction.amount >= 0 ? "default" : "destructive"}
-                  className={`ml-auto ${
-                    transaction.amount >= 0 
-                      ? 'bg-green-100 text-green-800 hover:bg-green-200' 
-                      : 'bg-red-100 text-red-800 hover:bg-red-200'
-                  }`}
-                >
-                  {transaction.amount >= 0 ? '+' : ''}{transaction.amount} XP
-                </Badge>
+      {/* Recent Transactions - Now full width */}
+      <div className="mt-8">
+        <Card className="border-0 shadow-xl bg-gradient-to-br from-white to-gray-50/50 backdrop-blur-sm">
+          <CardHeader className="pb-6">
+            <CardTitle className="flex items-center gap-3 text-green-700 text-2xl">
+              <div className="p-3 bg-green-100 rounded-xl">
+                <Trophy className="h-6 w-6 text-green-600" />
               </div>
-            ))}
-            {currentTransactions.length === 0 && (
-              <p className="text-center text-gray-500">
-                {transactionSearchTerm ? 'Arama kriterlerine uygun işlem bulunamadı' : 'Henüz işlem yapılmamış'}
-              </p>
-            )}
+              Son İşlemler
+            </CardTitle>
+            <CardDescription className="text-gray-600 text-base">
+              Öğrencilere verilen son tecrübe puanlarının detaylı listesi
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-6">
+              <div className="relative group">
+                <Search className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-500 group-focus-within:text-green-500 transition-colors" />
+                <Input
+                  className="pl-12 pr-4 py-3 border-2 border-gray-200 rounded-xl focus:border-green-400 focus:ring-4 focus:ring-green-100 transition-all duration-200 bg-white/80"
+                  placeholder="İşlemlerde ara..."
+                  value={transactionSearchTerm}
+                  onChange={(e) => setTransactionSearchTerm(e.target.value)}
+                />
+              </div>
+              <div className="space-y-4">
+                {currentTransactions.map((transaction) => (
+                  <div
+                    key={transaction.id}
+                    className="flex items-center justify-between rounded-xl border-2 border-gray-100 p-5 hover:border-green-200 hover:bg-green-50/30 transition-all duration-200 transform hover:scale-[1.01] shadow-sm hover:shadow-md"
+                  >
+                    <div className="flex-1">
+                      <p className="font-semibold text-gray-900 text-lg mb-2">
+                        {getDisplayName(transaction.student)}
+                      </p>
+                      <div className="flex items-center gap-2 text-sm text-gray-600">
+                        <div className="p-1 bg-gray-100 rounded-full">
+                          <Clock className="h-3 w-3" />
+                        </div>
+                        <span className="font-medium">{formatDate(transaction.createdAt)}</span>
+                      </div>
+                    </div>
+                    <div className="text-right ml-4">
+                      <Badge
+                        variant={transaction.amount >= 0 ? "default" : "destructive"}
+                        className={`text-lg font-bold px-4 py-2 ${
+                          transaction.amount >= 0 
+                            ? "bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600" 
+                            : "bg-gradient-to-r from-red-500 to-pink-500 hover:from-red-600 hover:to-pink-600"
+                        } text-white shadow-lg`}
+                      >
+                        {transaction.amount >= 0 ? '+' : ''}{transaction.amount} XP
+                      </Badge>
+                    </div>
+                  </div>
+                ))}
+                {currentTransactions.length === 0 && (
+                  <div className="text-center py-12">
+                    <div className="p-4 bg-gray-100 rounded-full w-16 h-16 mx-auto mb-4 flex items-center justify-center">
+                      <Trophy className="h-8 w-8 text-gray-400" />
+                    </div>
+                    <p className="text-gray-500 text-lg font-medium">
+                      {transactionSearchTerm ? 'Arama kriterlerine uygun işlem bulunamadı' : 'Henüz işlem yapılmamış'}
+                    </p>
+                  </div>
+                )}
 
-            {/* Pagination Controls */}
-            <div className="flex justify-center gap-2 mt-4">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
-                disabled={currentPage === 1}
-              >
-                Önceki
-              </Button>
-              <span className="flex items-center px-3 py-1 rounded-md bg-gray-100">
-                {currentPage} / {totalPages || 1}
-              </span>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() =>
-                  setCurrentPage((prev) => Math.min(totalPages, prev + 1))
-                }
-                disabled={currentPage === totalPages || totalPages === 0}
-              >
-                Sonraki
-              </Button>
+                {/* Pagination Controls */}
+                <div className="flex justify-center items-center gap-4 mt-8 p-4 bg-gray-50/50 rounded-xl">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+                    disabled={currentPage === 1}
+                    className="px-4 py-2 rounded-lg border-2 border-gray-200 hover:border-green-300 hover:bg-green-50 transition-all duration-200 disabled:opacity-50"
+                  >
+                    ← Önceki
+                  </Button>
+                  <div className="flex items-center px-4 py-2 rounded-lg bg-white border-2 border-gray-200 font-semibold text-gray-700">
+                    <span className="text-green-600">{currentPage}</span>
+                    <span className="mx-2">/</span>
+                    <span>{totalPages || 1}</span>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() =>
+                      setCurrentPage((prev) => Math.min(totalPages, prev + 1))
+                    }
+                    disabled={currentPage === totalPages || totalPages === 0}
+                    className="px-4 py-2 rounded-lg border-2 border-gray-200 hover:border-green-300 hover:bg-green-50 transition-all duration-200 disabled:opacity-50"
+                  >
+                    Sonraki →
+                  </Button>
+                </div>
+              </div>
             </div>
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }
 
 export default function ExperiencePage() {
   return (
-    <div className="container mx-auto py-6 space-y-6">
-      <ExperienceHeader />
-      <ExperienceManagement />
+    <div className="min-h-screen bg-gradient-to-br from-green-50 via-white to-emerald-50">
+      <div className="p-8 space-y-8">
+        <ExperienceHeader />
+        <ExperienceManagement />
+      </div>
     </div>
   );
 } 

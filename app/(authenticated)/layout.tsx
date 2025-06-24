@@ -48,14 +48,16 @@ export default function AuthenticatedLayout({
   const adminLinks: NavLink[] = [
     { href: '/admin', label: 'Gösterge Paneli', icon: <LayoutDashboard className="h-5 w-5" /> },
     { href: '/admin/users', label: 'Kullanıcı Yönetimi', icon: <Users className="h-5 w-5" /> },
-    { href: '/admin/registration-requests', label: 'Kayıt İstekleri', icon: <FileText className="h-5 w-5" /> },
+    // { href: '/admin/registration-requests', label: 'Kayıt İstekleri', icon: <FileText className="h-5 w-5" /> },
     { href: '/admin/events', label: 'Etkinlikler', icon: <Calendar className="h-5 w-5" /> },
     { href: '/admin/points', label: 'Puan Yönetimi', icon: <Award className="h-5 w-5" /> },
+    { href: '/admin/point-reasons', label: 'Puan Sebepleri', icon: <FileText className="h-5 w-5" /> },
     { href: '/admin/experience', label: 'Tecrübe Yönetimi', icon: <TrendingUp className="h-5 w-5" /> },
     { href: '/admin/store', label: 'Mağaza Yönetimi', icon: <ShoppingBag className="h-5 w-5" /> },
     { href: '/admin/point-cards', label: 'Puan Kartları', icon: <Award className="h-5 w-5" /> },
     { href: '/admin/wishes', label: 'İstek ve Dilekler', icon: <ClipboardList className="h-5 w-5" /> },
     { href: '/admin/leaderboard', label: 'Liderlik Tablosu', icon: <Trophy className="h-5 w-5" /> },
+    { href: '/admin/reports', label: 'Raporlar', icon: <PieChart className="h-5 w-5" /> },
   ];
 
   const tutorLinks: NavLink[] = [
@@ -65,6 +67,7 @@ export default function AuthenticatedLayout({
     { href: '/tutor/points', label: 'Puan Yönetimi', icon: <Award className="h-5 w-5" /> },
     { href: '/tutor/experience', label: 'Tecrübe Yönetimi', icon: <TrendingUp className="h-5 w-5" /> },
     { href: '/tutor/leaderboard', label: 'Liderlik Tablosu', icon: <Trophy className="h-5 w-5" /> },
+    { href: '/tutor/reports', label: 'Raporlar', icon: <PieChart className="h-5 w-5" /> },
     { href: '/tutor/store', label: 'Mağaza', icon: <ShoppingCart className="h-5 w-5" /> },
     { href: '/tutor/requests', label: 'Ürün İstekleri', icon: <ClipboardList className="h-5 w-5" /> },
   ];

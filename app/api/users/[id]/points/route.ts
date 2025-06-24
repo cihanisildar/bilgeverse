@@ -4,6 +4,8 @@ import { UserRole, TransactionType } from '@prisma/client';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/app/api/auth/[...nextauth]/auth.config';
 
+export const dynamic = 'force-dynamic';
+
 const ALLOWED_ROLES: UserRole[] = [UserRole.ADMIN, UserRole.TUTOR];
 
 // Update user points
@@ -110,7 +112,7 @@ export async function POST(
           tutorId: session.user.id,
           points: pointsValue,
           type: transactionType,
-          reason: `Points ${action}ed by ${session.user.username}`
+          reason: `${action === 'award' ? 'Puan eklendi' : 'Puan azaltıldı'} - ${session.user.username}`
         }
       })
     ]);

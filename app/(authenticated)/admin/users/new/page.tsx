@@ -20,6 +20,7 @@ export default function NewUserPage() {
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState('');
   const [formData, setFormData] = useState({
+    username: '',
     firstName: '',
     lastName: '',
     password: '',
@@ -28,6 +29,7 @@ export default function NewUserPage() {
     tutorId: '',
   });
   const [formErrors, setFormErrors] = useState({
+    username: '',
     firstName: '',
     lastName: '',
     password: '',
@@ -75,6 +77,7 @@ export default function NewUserPage() {
 
   const validateForm = () => {
     const errors = {
+      username: '',
       firstName: '',
       lastName: '',
       password: '',
@@ -84,6 +87,14 @@ export default function NewUserPage() {
     };
     
     let isValid = true;
+    
+    if (!formData.username.trim()) {
+      errors.username = 'Kullanıcı adı gereklidir';
+      isValid = false;
+    } else if (formData.username.length < 3) {
+      errors.username = 'Kullanıcı adı en az 3 karakter olmalıdır';
+      isValid = false;
+    }
     
     if (!formData.firstName.trim()) {
       errors.firstName = 'Ad gereklidir';
@@ -133,10 +144,8 @@ export default function NewUserPage() {
       setCreating(true);
       setError('');
       
-      // Generate a username from first and last name
-      const username = `${formData.firstName.toLowerCase()}.${formData.lastName.toLowerCase()}`;
       // Generate an email from the username
-      const email = `${username}@ogrtakip.com`;
+      const email = `${formData.username}@ogrtakip.com`;
       
       const response = await fetch('/api/auth/register', {
         method: 'POST',
@@ -144,7 +153,7 @@ export default function NewUserPage() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          username,
+          username: formData.username,
           email,
           password: formData.password,
           role: formData.role,
@@ -172,7 +181,7 @@ export default function NewUserPage() {
   };
 
   return (
-    <div className="max-w-5xl mx-auto space-y-8 p-8">
+    <div className="space-y-8 p-8">
       <div className="flex justify-between items-center pb-4 border-b border-gray-200">
         <h1 className="text-3xl font-bold text-gray-800 flex items-center">
           <span className="bg-indigo-100 text-indigo-700 p-2 rounded-lg mr-3">
@@ -205,6 +214,35 @@ export default function NewUserPage() {
       <div className="bg-white shadow-md rounded-xl p-8 border border-gray-100">
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            {/* Username */}
+            <div className="space-y-2">
+              <label htmlFor="username" className="block text-sm font-medium text-gray-700 flex items-center">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                </svg>
+                Kullanıcı Adı<span className="text-indigo-600 ml-0.5">*</span>
+              </label>
+              <div className="relative">
+                <input
+                  type="text"
+                  id="username"
+                  name="username"
+                  value={formData.username}
+                  onChange={handleChange}
+                  className={`block w-full border ${formErrors.username ? 'border-red-300 bg-red-50' : 'border-gray-300'} rounded-lg shadow-sm py-3 px-4 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm transition duration-150`}
+                  placeholder="Kullanıcı adını girin"
+                />
+              </div>
+              {formErrors.username && (
+                <p className="mt-1 text-sm text-red-600 flex items-center">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                  </svg>
+                  {formErrors.username}
+                </p>
+              )}
+            </div>
+            
             {/* First Name */}
             <div className="space-y-2">
               <label htmlFor="firstName" className="block text-sm font-medium text-gray-700 flex items-center">

@@ -145,11 +145,6 @@ export async function PUT(
       }
 
       if (status === RequestStatus.APPROVED) {
-        // Check if item is still available
-        if (itemRequest.item.availableQuantity <= 0) {
-          throw new Error('Item is out of stock');
-        }
-
         // Check if student still has enough points
         if (itemRequest.student.points < itemRequest.pointsSpent) {
           throw new Error('Student no longer has enough points');
@@ -162,17 +157,7 @@ export async function PUT(
             tutorId: itemRequest.tutorId,
             points: itemRequest.pointsSpent,
             type: TransactionType.REDEEM,
-            reason: `Redeemed for item: ${itemRequest.item.name}`
-          }
-        });
-
-        // Update item quantity
-        await tx.storeItem.update({
-          where: { id: itemRequest.itemId },
-          data: {
-            availableQuantity: {
-              decrement: 1
-            }
+                            reason: `Ürün satın alındı: ${itemRequest.item.name}`
           }
         });
 
@@ -264,12 +249,7 @@ export async function PUT(
       );
     }
     
-    if (error.message === 'Item is out of stock') {
-      return NextResponse.json(
-        { error: error.message },
-        { status: 400 }
-      );
-    }
+
     
     if (error.message === 'Student no longer has enough points') {
       return NextResponse.json(

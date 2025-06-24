@@ -92,25 +92,30 @@ module.exports = {
   			xl: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1)',
   			'2xl': '0 25px 50px -12px rgba(0, 0, 0, 0.25)'
   		},
-  		borderRadius: {
-  			lg: '0.5rem',
-  			md: '0.375rem',
-  			sm: '0.25rem'
-  		},
-  		keyframes: {
-  			'accordion-down': {
-  				from: { height: 0 },
-  				to: { height: 'var(--radix-accordion-content-height)' },
-  			},
-  			'accordion-up': {
-  				from: { height: 'var(--radix-accordion-content-height)' },
-  				to: { height: 0 },
-  			},
-  		},
-  		animation: {
-  			'accordion-down': 'accordion-down 0.2s ease-out',
-  			'accordion-up': 'accordion-up 0.2s ease-out',
-  		},
+  				borderRadius: {
+			lg: '0.5rem',
+			md: '0.375rem',
+			sm: '0.25rem'
+		},
+		keyframes: {
+			'accordion-down': {
+				from: { height: 0 },
+				to: { height: 'var(--radix-accordion-content-height)' },
+			},
+			'accordion-up': {
+				from: { height: 'var(--radix-accordion-content-height)' },
+				to: { height: 0 },
+			},
+			shimmer: {
+				'0%': { transform: 'translateX(-100%)' },
+				'100%': { transform: 'translateX(100%)' },
+			},
+		},
+		animation: {
+			'accordion-down': 'accordion-down 0.2s ease-out',
+			'accordion-up': 'accordion-up 0.2s ease-out',
+			shimmer: 'shimmer 2s ease-in-out infinite',
+		},
   	}
   },
   plugins: [require("tailwindcss-animate")],

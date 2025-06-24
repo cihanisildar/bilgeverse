@@ -8,9 +8,14 @@ export function SkeletonShimmer({ className, ...props }: SkeletonShimmerProps) {
   return (
     <div
       className={cn(
-        "animate-pulse rounded-md bg-gradient-to-r from-gray-200 via-gray-300 to-gray-200 bg-[length:200%_100%] animate-shimmer",
+        "animate-pulse bg-gray-200 rounded-md relative overflow-hidden",
         className
       )}
+      style={{
+        background: 'linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%)',
+        backgroundSize: '200% 100%',
+        animation: 'shimmer 2s infinite linear'
+      }}
       {...props}
     />
   );

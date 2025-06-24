@@ -11,7 +11,6 @@ import toast from "react-hot-toast";
 type User = {
   id: string;
   username: string;
-  email: string;
   role: string;
   firstName?: string;
   lastName?: string;
@@ -39,7 +38,6 @@ export default function EditUserPage() {
   const [error, setError] = useState("");
   const [formData, setFormData] = useState({
     username: "",
-    email: "",
     role: "",
     firstName: "",
     lastName: "",
@@ -50,7 +48,6 @@ export default function EditUserPage() {
   });
   const [formErrors, setFormErrors] = useState({
     username: "",
-    email: "",
     role: "",
     tutorId: "",
     password: "",
@@ -71,7 +68,6 @@ export default function EditUserPage() {
         setUser(data.user);
         setFormData({
           username: data.user.username,
-          email: data.user.email,
           role: data.user.role,
           firstName: data.user.firstName || "",
           lastName: data.user.lastName || "",
@@ -132,7 +128,6 @@ export default function EditUserPage() {
   const validateForm = () => {
     const errors = {
       username: "",
-      email: "",
       role: "",
       tutorId: "",
       password: "",
@@ -146,13 +141,7 @@ export default function EditUserPage() {
       isValid = false;
     }
 
-    if (!formData.email.trim()) {
-      errors.email = "E-posta adresi gereklidir";
-      isValid = false;
-    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
-      errors.email = "Geçerli bir e-posta adresi giriniz";
-      isValid = false;
-    }
+
 
     if (!formData.role) {
       errors.role = "Kullanıcı rolü gereklidir";
@@ -202,7 +191,6 @@ export default function EditUserPage() {
         },
         body: JSON.stringify({
           username: formData.username,
-          email: formData.email,
           role: formData.role,
           firstName: formData.firstName || undefined,
           lastName: formData.lastName || undefined,
@@ -296,7 +284,7 @@ export default function EditUserPage() {
   }
 
   return (
-    <div className="max-w-5xl mx-auto space-y-8 py-8 px-4 sm:px-6">
+    <div className="space-y-8 py-8 px-4 sm:px-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <h1 className="text-3xl font-bold text-gray-900 tracking-tight">
           Kullanıcı Düzenle
@@ -349,30 +337,7 @@ export default function EditUserPage() {
               )}
             </div>
 
-            {/* Email */}
-            <div className="space-y-2">
-              <label
-                htmlFor="email"
-                className="block text-sm font-medium text-gray-700"
-              >
-                E-posta
-              </label>
-              <input
-                type="email"
-                id="email"
-                name="email"
-                value={formData.email}
-                onChange={handleChange}
-                className={`mt-1 block w-full border ${
-                  formErrors.email
-                    ? "border-red-300 ring-1 ring-red-300"
-                    : "border-gray-300"
-                } rounded-lg shadow-sm py-2 px-3 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm transition-all`}
-              />
-              {formErrors.email && (
-                <p className="text-sm text-red-600">{formErrors.email}</p>
-              )}
-            </div>
+
 
             {/* First Name */}
             <div className="space-y-2">

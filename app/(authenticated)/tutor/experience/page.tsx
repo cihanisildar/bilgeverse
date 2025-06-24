@@ -1,18 +1,34 @@
 "use client";
 
+import { PointsPageSkeleton } from "@/app/components/ui/PointsPageSkeleton";
+import { HeaderSkeleton } from "@/app/components/ui/skeleton-shimmer";
 import { useAuth } from "@/app/contexts/AuthContext";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
-  Card, CardContent, CardDescription, CardHeader, CardTitle
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Switch } from '@/components/ui/switch';
+import { Skeleton } from "@/components/ui/skeleton";
+import { Switch } from "@/components/ui/switch";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
-import { Search } from 'lucide-react';
+import {
+  Search,
+  Clock,
+  Award,
+  User,
+  UserCheck,
+  MinusCircle,
+  PlusCircle,
+} from "lucide-react";
 
 // Types
 type Student = {
@@ -39,12 +55,139 @@ interface ExperienceTransaction {
 // Static Header Component
 function ExperienceHeader() {
   return (
-    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center">
-      <h1 className="text-3xl font-bold text-gray-800 mb-4 sm:mb-0">
-        <span className="bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent">
-          Tecrübe Yönetimi
-        </span>
-      </h1>
+    <div className="relative">
+      <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/10 to-blue-500/10 rounded-2xl"></div>
+      <div className="relative p-8 text-center">
+        <h1 className="text-4xl font-bold mb-2">
+          <span className="bg-gradient-to-r from-emerald-600 via-blue-600 to-teal-600 bg-clip-text text-transparent">
+            Tecrübe Yönetimi
+          </span>
+        </h1>
+        <p className="text-gray-600 text-lg">Öğrencilerinize tecrübe verin ve ilerlemeyi takip edin</p>
+      </div>
+    </div>
+  );
+}
+
+// Loading state components
+function StudentListSkeleton() {
+  return (
+    <Card className="border-0 shadow-md">
+      <CardHeader>
+        <CardTitle>
+          <Skeleton className="h-6 w-40" />
+        </CardTitle>
+        <CardDescription>
+          <Skeleton className="h-4 w-full" />
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        <div className="space-y-2">
+          <div className="relative">
+            <Search className="absolute top-3 left-3 h-4 w-4 text-gray-400" />
+            <Skeleton className="h-10 w-full" />
+          </div>
+          <div className="space-y-4 mt-4">
+            {[...Array(5)].map((_, index) => (
+              <div
+                key={`student-skeleton-${index}`}
+                className="flex items-center justify-between p-3 rounded-lg border border-gray-100"
+              >
+                <div className="flex items-center gap-3">
+                  <Skeleton className="h-10 w-10 rounded-full" />
+                  <div className="space-y-2">
+                    <Skeleton className="h-4 w-32" />
+                    <Skeleton className="h-3 w-24" />
+                  </div>
+                </div>
+                <Skeleton className="h-6 w-16" />
+              </div>
+            ))}
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function ExperienceFormSkeleton() {
+  return (
+    <Card className="border-0 shadow-md">
+      <CardHeader>
+        <CardTitle>
+          <Skeleton className="h-6 w-48" />
+        </CardTitle>
+        <CardDescription>
+          <Skeleton className="h-4 w-full" />
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        <div className="space-y-6">
+          <div className="space-y-2">
+            <Skeleton className="h-4 w-24" />
+            <Skeleton className="h-10 w-full" />
+          </div>
+          <div className="space-y-2">
+            <Skeleton className="h-4 w-32" />
+            <Skeleton className="h-24 w-full" />
+          </div>
+          <Skeleton className="h-10 w-full" />
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function TransactionsListSkeleton() {
+  return (
+    <Card className="border-0 shadow-md">
+      <CardHeader>
+        <CardTitle>
+          <Skeleton className="h-6 w-40" />
+        </CardTitle>
+        <CardDescription>
+          <Skeleton className="h-4 w-full" />
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        <div className="space-y-4">
+          {[...Array(5)].map((_, index) => (
+            <div
+              key={`transaction-skeleton-${index}`}
+              className="flex items-center justify-between p-3 rounded-lg border border-gray-100"
+            >
+              <div className="space-y-2">
+                <Skeleton className="h-4 w-48" />
+                <div className="flex items-center gap-2">
+                  <Skeleton className="h-4 w-4" />
+                  <Skeleton className="h-4 w-32" />
+                </div>
+              </div>
+              <div className="text-right">
+                <Skeleton className="h-6 w-20" />
+                <Skeleton className="h-3 w-24 mt-1" />
+              </div>
+            </div>
+          ))}
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function LoadingExperience() {
+  return (
+    <div className="space-y-8">
+      <HeaderSkeleton />
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <StudentListSkeleton />
+        <div className="lg:col-span-2">
+          <div className="space-y-6">
+            <ExperienceFormSkeleton />
+            <TransactionsListSkeleton />
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
@@ -58,6 +201,8 @@ function ExperienceManagement() {
   const [recentTransactions, setRecentTransactions] = useState<ExperienceTransaction[]>([]);
   const [selectedStudentIds, setSelectedStudentIds] = useState<Set<string>>(new Set());
   const [experience, setExperience] = useState<number>(0);
+  const [reason, setReason] = useState<string>("");
+  const [customReason, setCustomReason] = useState<string>("");
   const [searchTerm, setSearchTerm] = useState<string>("");
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
@@ -65,17 +210,6 @@ function ExperienceManagement() {
   const [transactionSearchTerm, setTransactionSearchTerm] = useState<string>("");
   const [currentPage, setCurrentPage] = useState<number>(1);
   const transactionsPerPage = 5;
-
-  // Format date
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleString("tr-TR", {
-      day: "numeric",
-      month: "long",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  };
 
   // Add fetchData function outside useEffect so we can reuse it
   const fetchData = async () => {
@@ -157,7 +291,7 @@ function ExperienceManagement() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedStudentIds.size || !experience) return;
+    if (selectedStudentIds.size === 0 || !reason.trim() || (reason === "Diğer Faaliyetler" && !customReason.trim())) return;
 
     setIsSubmitting(true);
 
@@ -181,9 +315,19 @@ function ExperienceManagement() {
       // Refresh both transactions and students data
       await fetchData();
 
-      toast.success('Tecrübe başarıyla güncellendi!');
+      const count = selectedStudentIds.size;
+      toast.success(
+        `${isDecreasing ? "Azaltıldı" : "Eklendi"} ${count} öğrenci${
+          count > 1 ? "ye" : "ye"
+        } ${experience} tecrübe ${isDecreasing ? "dan" : ""}`
+      );
+
+      // Reset form
       setExperience(0);
+      setReason("");
+      setCustomReason("");
       setSelectedStudentIds(new Set());
+      setIsDecreasing(false);
     } catch (error) {
       console.error('Error updating experience:', error);
       toast.error('Tecrübe güncellenirken bir hata oluştu.');
@@ -192,93 +336,128 @@ function ExperienceManagement() {
     }
   };
 
+  // Helper function to get display name
+  const getDisplayName = (
+    student:
+      | {
+          firstName?: string | null;
+          lastName?: string | null;
+          username: string;
+        }
+      | undefined
+  ) => {
+    if (!student) return "Unknown";
+    if (student.firstName && student.lastName) {
+      return `${student.firstName} ${student.lastName}`;
+    }
+    return student.username;
+  };
+
+  // Format date
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleString("tr-TR", {
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  };
+
   // Filter transactions based on search term
-  const filteredTransactions = recentTransactions.filter(transaction => {
-    const searchStr = transactionSearchTerm.toLowerCase();
-    const studentName = transaction.student && (
-      transaction.student.firstName && transaction.student.lastName
-        ? `${transaction.student.firstName} ${transaction.student.lastName}`
-        : transaction.student.username
-    );
-    return (
-      studentName?.toLowerCase().includes(searchStr) ||
-      formatDate(transaction.createdAt).toLowerCase().includes(searchStr)
-    );
+  const filteredTransactions = recentTransactions.filter((transaction) => {
+    const searchLower = transactionSearchTerm.toLowerCase();
+    const studentName = getDisplayName(transaction.student).toLowerCase();
+    return studentName.includes(searchLower) || formatDate(transaction.createdAt).toLowerCase().includes(searchLower);
   });
 
   // Calculate pagination
-  const totalPages = Math.ceil(filteredTransactions.length / transactionsPerPage);
-  const paginatedTransactions = filteredTransactions.slice(
-    (currentPage - 1) * transactionsPerPage,
-    currentPage * transactionsPerPage
+  const totalPages = Math.ceil(
+    filteredTransactions.length / transactionsPerPage
   );
+  const startIndex = (currentPage - 1) * transactionsPerPage;
+  const endIndex = startIndex + transactionsPerPage;
+  const currentTransactions = filteredTransactions.slice(startIndex, endIndex);
 
   if (isLoading) {
-    return (
-      <div className="flex justify-center items-center min-h-[60vh]">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-green-500"></div>
-      </div>
-    );
+    return <PointsPageSkeleton />;
   }
 
   return (
-    <div className="space-y-6">
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <div>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Left Column - Student List */}
-        <div className="lg:col-span-1 space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center text-green-700">
-                <Search className="mr-2" />
+        <div className="lg:col-span-1 space-y-6">
+          <Card className="border-0 shadow-xl bg-gradient-to-br from-white to-emerald-50/50 backdrop-blur-sm">
+            <CardHeader className="pb-4">
+              <CardTitle className="flex items-center text-emerald-700 text-xl">
+                <div className="p-2 bg-emerald-100 rounded-lg mr-3">
+                  <Search className="h-5 w-5 text-emerald-600" />
+                </div>
                 Öğrenci Ara
               </CardTitle>
-              <CardDescription>
-                {isDecreasing ? 'Tecrübe düşmek' : 'Tecrübe vermek'} için öğrenci seçin
+              <CardDescription className="text-gray-600">
+                {isDecreasing ? "Tecrübe düşmek" : "Tecrübe vermek"} için öğrenci seçin
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="space-y-4">
-                <div className="relative">
+              <div className="space-y-6">
+                <div className="relative group">
                   <Input
                     type="text"
                     placeholder="İsim veya kullanıcı adı ile ara..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="w-full pl-10"
+                    className="w-full pl-12 pr-4 py-3 border-2 border-gray-200 rounded-xl focus:border-emerald-400 focus:ring-4 focus:ring-emerald-100 transition-all duration-200 bg-white/80"
                   />
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+                  <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 group-focus-within:text-emerald-500 transition-colors" />
                 </div>
-                
-                <div className="space-y-2">
+
+                <div className="space-y-3 max-h-96 overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
                   {filteredStudents.map((student) => (
                     <button
                       key={student.id}
                       onClick={() => handleSelectStudent(student)}
-                      className={`w-full text-left px-3 py-2 rounded-md transition-all ${
+                      className={`w-full text-left p-4 rounded-xl transition-all duration-200 transform hover:scale-[1.02] hover:shadow-md ${
                         selectedStudentIds.has(student.id)
-                          ? "bg-green-100 text-green-800"
-                          : "hover:bg-gray-100"
-                      }`}
+                          ? "bg-gradient-to-r from-emerald-50 to-green-50 border-2 border-emerald-300 shadow-md"
+                          : "hover:bg-gray-50 border-2 border-gray-100 hover:border-gray-200"
+                      } border-2`}
                     >
                       <div className="flex justify-between items-center">
-                        <div>
-                          <span className="font-medium">
+                        <div className="flex-1">
+                          <p className="font-semibold text-gray-900 mb-1">
                             {student.firstName && student.lastName
                               ? `${student.firstName} ${student.lastName}`
                               : student.username}
-                          </span>
+                          </p>
                           {(student.firstName || student.lastName) && (
-                            <p className="text-xs text-gray-500">@{student.username}</p>
+                            <p className="text-sm text-gray-500">
+                              @{student.username}
+                            </p>
                           )}
                         </div>
-                        <div className="flex items-center gap-2">
-                          <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
-                            {student.experience} tecrübe
+                        <div className="flex items-center gap-3">
+                          <Badge
+                            variant="outline"
+                            className="bg-gradient-to-r from-emerald-50 to-green-50 text-emerald-700 border-emerald-200 px-3 py-1 font-medium"
+                          >
+                            {student.experience} XP
                           </Badge>
                           {selectedStudentIds.has(student.id) && (
-                            <div className="w-4 h-4 rounded-full bg-green-500 flex items-center justify-center">
-                              <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                            <div className="w-6 h-6 rounded-full bg-gradient-to-r from-emerald-500 to-green-500 flex items-center justify-center shadow-lg">
+                              <svg
+                                className="w-4 h-4 text-white"
+                                fill="none"
+                                viewBox="0 0 24 24"
+                                stroke="currentColor"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M5 13l4 4L19 7"
+                                />
                               </svg>
                             </div>
                           )}
@@ -294,41 +473,95 @@ function ExperienceManagement() {
 
         {/* Right Column - Experience Management Form */}
         <div className="lg:col-span-2">
-          <Card>
-            <CardHeader>
-              <CardTitle>Tecrübe Yönetimi</CardTitle>
-              <CardDescription>
-                Öğrencilere tecrübe ekleyin veya çıkarın
+          <Card className={`border-0 shadow-xl backdrop-blur-sm transition-all duration-300 ${
+            isDecreasing 
+              ? "bg-gradient-to-br from-red-50 to-pink-50/50" 
+              : "bg-gradient-to-br from-white to-emerald-50/30"
+          }`}>
+            <CardHeader className="pb-6">
+              <CardTitle className="text-2xl font-bold text-gray-800">
+                {isDecreasing ? "Tecrübe Azaltma" : "Tecrübe Verme"}
+              </CardTitle>
+              <CardDescription className="text-gray-600 text-base">
+                {selectedStudentIds.size > 0 
+                  ? `${selectedStudentIds.size} öğrenci seçildi` 
+                  : "Öğrencilere tecrübe ekleyin veya çıkarın"
+                }
               </CardDescription>
             </CardHeader>
-            
+
             <CardContent>
-              <form onSubmit={handleSubmit} className="space-y-4">
+              <form onSubmit={handleSubmit} className="space-y-6">
                 {/* Value Input */}
-                <div className="space-y-2">
-                  <Label>Tecrübe Miktarı</Label>
-                  <div className={`flex items-center space-x-4 p-4 rounded-lg transition-colors ${isDecreasing ? 'bg-red-50' : 'bg-green-50'}`}>
-                    <Input
-                      type="number"
-                      id="experience"
-                      value={experience}
-                      onChange={(e) => {
-                        const value = parseInt(e.target.value) || 0;
-                        setExperience(value);
-                      }}
-                      className={`w-32 ${isDecreasing ? 'border-red-200 focus:ring-red-500' : 'border-green-200 focus:ring-green-500'}`}
-                    />
-                    <div className="flex items-center space-x-2">
+                <div className="space-y-3">
+                  <Label className="text-base font-semibold text-gray-700">Tecrübe Miktarı</Label>
+                  <div className="flex items-center space-x-6">
+                    <div className="relative">
+                      <Input
+                        type="number"
+                        min="0"
+                        value={experience}
+                        onChange={(e) => {
+                          const value = parseInt(e.target.value) || 0;
+                          setExperience(value);
+                        }}
+                        className="w-32 text-lg font-bold text-center border-2 border-gray-200 rounded-xl focus:border-emerald-400 focus:ring-4 focus:ring-emerald-100 transition-all duration-200"
+                      />
+                    </div>
+                    <div className="flex items-center space-x-3 bg-white/80 p-3 rounded-xl border border-gray-200">
                       <Switch
                         checked={isDecreasing}
                         onCheckedChange={setIsDecreasing}
-                        className={`${isDecreasing ? 'bg-red-600 hover:bg-red-700' : 'bg-green-600 hover:bg-green-700'}`}
+                        className="data-[state=checked]:bg-red-500"
                       />
-                      <Label className={`${isDecreasing ? 'text-red-700' : 'text-green-700'} font-medium`}>
-                        {isDecreasing ? 'Azalt' : 'Ekle'}
+                      <Label className={`font-medium ${isDecreasing ? 'text-red-600' : 'text-emerald-600'}`}>
+                        {isDecreasing ? "Tecrübe Azalt" : "Tecrübe Ekle"}
                       </Label>
                     </div>
                   </div>
+                </div>
+
+                {/* Reason Input */}
+                <div className="space-y-4">
+                  <Label className="text-base font-semibold text-gray-700">Sebep Seçin</Label>
+                  <RadioGroup
+                    value={reason}
+                    onValueChange={setReason}
+                    className="grid grid-cols-1 gap-3"
+                  >
+                    <div className="flex items-center space-x-3 p-4 border-2 border-gray-200 rounded-xl hover:border-emerald-300 hover:bg-emerald-50/50 transition-all duration-200 cursor-pointer">
+                      <RadioGroupItem value="Karakter Eğitimi" id="karakter" className="text-emerald-600" />
+                      <Label htmlFor="karakter" className="font-medium text-gray-700 cursor-pointer flex-1">
+                        Karakter Eğitimi
+                      </Label>
+                    </div>
+                    <div className="flex items-center space-x-3 p-4 border-2 border-gray-200 rounded-xl hover:border-emerald-300 hover:bg-emerald-50/50 transition-all duration-200 cursor-pointer">
+                      <RadioGroupItem value="Atölye Faaliyeti" id="atolye" className="text-emerald-600" />
+                      <Label htmlFor="atolye" className="font-medium text-gray-700 cursor-pointer flex-1">
+                        Atölye Faaliyeti
+                      </Label>
+                    </div>
+                    <div className="flex items-center space-x-3 p-4 border-2 border-gray-200 rounded-xl hover:border-emerald-300 hover:bg-emerald-50/50 transition-all duration-200 cursor-pointer">
+                      <RadioGroupItem value="Diğer Faaliyetler" id="diger" className="text-emerald-600" />
+                      <Label htmlFor="diger" className="font-medium text-gray-700 cursor-pointer flex-1">
+                        Diğer Faaliyetler
+                      </Label>
+                    </div>
+                  </RadioGroup>
+                  
+                  {/* Custom Reason Input - Show when "Diğer Faaliyetler" is selected */}
+                  {reason === "Diğer Faaliyetler" && (
+                    <div className="mt-4 space-y-3">
+                      <Label className="text-base font-semibold text-gray-700">Faaliyet Açıklaması</Label>
+                      <Input
+                        type="text"
+                        placeholder="Hangi faaliyet için tecrübe veriliyor?"
+                        value={customReason}
+                        onChange={(e) => setCustomReason(e.target.value)}
+                        className="w-full border-2 border-gray-200 rounded-xl focus:border-emerald-400 focus:ring-4 focus:ring-emerald-100 transition-all duration-200 bg-white/80"
+                      />
+                    </div>
+                  )}
                 </div>
 
                 <Button
@@ -336,18 +569,23 @@ function ExperienceManagement() {
                   disabled={
                     selectedStudentIds.size === 0 ||
                     isSubmitting ||
-                    experience <= 0
+                    experience <= 0 ||
+                    !reason.trim() ||
+                    (reason === "Diğer Faaliyetler" && !customReason.trim())
                   }
-                  className={`w-full text-white ${
+                  className={`w-full py-4 text-lg font-semibold rounded-xl transition-all duration-200 transform hover:scale-[1.02] hover:shadow-lg ${
                     isDecreasing 
-                      ? 'bg-red-600 hover:bg-red-700' 
-                      : 'bg-green-600 hover:bg-green-700'
-                  }`}
+                      ? "bg-gradient-to-r from-red-500 to-pink-500 hover:from-red-600 hover:to-pink-600 shadow-red-200" 
+                      : "bg-gradient-to-r from-emerald-500 to-green-500 hover:from-emerald-600 hover:to-green-600 shadow-emerald-200"
+                  } text-white shadow-lg disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none`}
                 >
                   {isSubmitting ? (
-                    "İşleniyor..."
+                    <div className="flex items-center justify-center space-x-2">
+                      <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                      <span>İşleniyor...</span>
+                    </div>
                   ) : (
-                    `${selectedStudentIds.size} öğrenciye ${isDecreasing ? 'Azalt' : 'Ekle'}`
+                    `${selectedStudentIds.size} öğrenciye ${experience} XP ${isDecreasing ? "azalt" : "ekle"}`
                   )}
                 </Button>
               </form>
@@ -356,89 +594,121 @@ function ExperienceManagement() {
         </div>
       </div>
 
-      {/* Recent Transactions */}
-      <Card className="mt-8">
-        <CardHeader>
-          <CardTitle>Son İşlemler</CardTitle>
-          <CardDescription>Öğrencilere verilen son tecrübe puanları</CardDescription>
-          <div className="mt-4">
-            <Input
-              type="text"
-              placeholder="İşlem ara..."
-              value={transactionSearchTerm}
-              onChange={(e) => setTransactionSearchTerm(e.target.value)}
-              className="w-full"
-            />
-          </div>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            {paginatedTransactions.map((transaction) => (
-              <div
-                key={transaction.id}
-                className="flex items-center justify-between p-4 border rounded-lg"
-              >
-                <div>
-                  <p className="font-medium">
-                    {transaction.student.firstName} {transaction.student.lastName}
-                  </p>
-                  <p className="text-sm text-gray-500">
-                    {new Date(transaction.createdAt).toLocaleString('tr-TR')}
-                  </p>
-                </div>
-                <Badge
-                  variant={transaction.amount >= 0 ? "default" : "destructive"}
-                  className="ml-auto"
-                >
-                  {transaction.amount >= 0 ? '+' : ''}{transaction.amount} XP
-                </Badge>
+      {/* Recent Transactions - Now full width */}
+      <div className="mt-8">
+        <Card className="border-0 shadow-xl bg-gradient-to-br from-white to-emerald-50/50 backdrop-blur-sm">
+          <CardHeader className="pb-6">
+            <CardTitle className="flex items-center gap-3 text-emerald-700 text-2xl">
+              <div className="p-3 bg-emerald-100 rounded-xl">
+                <Clock className="h-6 w-6 text-emerald-600" />
               </div>
-            ))}
-            {paginatedTransactions.length === 0 && (
-              <p className="text-center text-gray-500">
-                {transactionSearchTerm ? 'Arama kriterlerine uygun işlem bulunamadı' : 'Henüz işlem yapılmamış'}
-              </p>
-            )}
-          </div>
-
-          {/* Pagination Controls */}
-          {filteredTransactions.length > 0 && (
-            <div className="flex justify-between items-center mt-6">
-              <p className="text-sm text-gray-500">
-                Toplam {filteredTransactions.length} işlem
-              </p>
-              <div className="flex gap-2">
+              Son İşlemler
+            </CardTitle>
+            <CardDescription className="text-gray-600 text-base">
+              Öğrencilere verilen son tecrübelerin detaylı listesi
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-6">
+              <div className="relative group">
+                <Search className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-500 group-focus-within:text-emerald-500 transition-colors" />
+                <Input
+                  className="pl-12 pr-4 py-3 border-2 border-gray-200 rounded-xl focus:border-emerald-400 focus:ring-4 focus:ring-emerald-100 transition-all duration-200 bg-white/80"
+                  placeholder="İşlemlerde ara..."
+                  value={transactionSearchTerm}
+                  onChange={(e) => setTransactionSearchTerm(e.target.value)}
+                />
+              </div>
+              <div className="space-y-4">
+                {currentTransactions.map((transaction) => (
+                  <div
+                    key={transaction.id}
+                    className="flex items-center justify-between rounded-xl border-2 border-gray-100 p-5 hover:border-emerald-200 hover:bg-emerald-50/30 transition-all duration-200 transform hover:scale-[1.01] shadow-sm hover:shadow-md"
+                  >
+                    <div className="flex-1">
+                      <p className="font-semibold text-gray-900 text-lg mb-2">
+                        {getDisplayName(transaction.student)}
+                      </p>
+                      <div className="flex items-center gap-2 text-sm text-gray-600 mb-2">
+                        <div className="p-1 bg-gray-100 rounded-full">
+                          <Clock className="h-3 w-3" />
+                        </div>
+                        <span className="font-medium">{formatDate(transaction.createdAt)}</span>
+                      </div>
+                    </div>
+                    <div className="text-right ml-4">
+                      <Badge
+                        variant={transaction.amount >= 0 ? "default" : "destructive"}
+                        className={`text-lg font-bold px-4 py-2 ${
+                          transaction.amount >= 0
+                            ? "bg-gradient-to-r from-emerald-500 to-green-500 hover:from-emerald-600 hover:to-green-600" 
+                            : "bg-gradient-to-r from-red-500 to-pink-500 hover:from-red-600 hover:to-pink-600"
+                        } text-white shadow-lg`}
+                      >
+                        {transaction.amount >= 0 ? "+" : ""}{transaction.amount} XP
+                      </Badge>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              {/* Pagination Controls */}
+              <div className="flex justify-center items-center gap-4 mt-8 p-4 bg-gray-50/50 rounded-xl">
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                  onClick={() =>
+                    setCurrentPage((prev) => Math.max(1, prev - 1))
+                  }
                   disabled={currentPage === 1}
+                  className="px-4 py-2 rounded-lg border-2 border-gray-200 hover:border-emerald-300 hover:bg-emerald-50 transition-all duration-200 disabled:opacity-50"
                 >
-                  Önceki
+                  ← Önceki
                 </Button>
+                <div className="flex items-center px-4 py-2 rounded-lg bg-white border-2 border-gray-200 font-semibold text-gray-700">
+                  <span className="text-emerald-600">{currentPage}</span>
+                  <span className="mx-2">/</span>
+                  <span>{totalPages || 1}</span>
+                </div>
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
-                  disabled={currentPage === totalPages}
+                  onClick={() =>
+                    setCurrentPage((prev) => Math.min(totalPages, prev + 1))
+                  }
+                  disabled={currentPage === totalPages || totalPages === 0}
+                  className="px-4 py-2 rounded-lg border-2 border-gray-200 hover:border-emerald-300 hover:bg-emerald-50 transition-all duration-200 disabled:opacity-50"
                 >
-                  Sonraki
+                  Sonraki →
                 </Button>
               </div>
             </div>
-          )}
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }
 
 export default function ExperiencePage() {
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    // Simulate initial load
+    const timer = setTimeout(() => setLoading(false), 500);
+    return () => clearTimeout(timer);
+  }, []);
+
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="space-y-8">
-        <ExperienceHeader />
-        <ExperienceManagement />
+    <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-blue-50">
+      <div className="p-8 space-y-8">
+        {loading ? (
+          <LoadingExperience />
+        ) : (
+          <div className="space-y-8">
+            <ExperienceHeader />
+            <ExperienceManagement />
+          </div>
+        )}
       </div>
     </div>
   );

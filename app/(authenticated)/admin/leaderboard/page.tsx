@@ -148,28 +148,57 @@ export default function AdminLeaderboardPage() {
     return entry.username;
   };
 
-  // Function to export leaderboard as CSV
+  // Function to export leaderboard as Excel-compatible CSV
   const exportToCSV = () => {
-    const csvContent = [
-      ['Rank', 'Username', 'Name', 'Experience', 'Tutor'],
+    // Helper function to properly escape CSV values for Excel
+    const escapeCSV = (value: string | number) => {
+      const stringValue = String(value);
+      // Always wrap values in quotes to ensure proper separation
+      return `"${stringValue.replace(/"/g, '""')}"`;
+    };
+
+    // Create CSV content with Turkish headers - using semicolon as delimiter for better Excel compatibility
+    const csvData = [
+      ['Sıra', 'Kullanıcı Adı', 'Ad Soyad', 'Deneyim Puanı', 'Öğretmen'],
       ...filteredLeaderboard.map(entry => [
-        entry.rank,
+        entry.rank.toString(),
         entry.username,
-        `${entry.firstName || ''} ${entry.lastName || ''}`.trim(),
-        entry.experience,
-        entry.tutor ? getDisplayName(entry.tutor) : ''
+        `${entry.firstName || ''} ${entry.lastName || ''}`.trim() || entry.username,
+        entry.experience.toString(),
+        entry.tutor ? getDisplayName(entry.tutor) : 'Atanmamış'
       ])
-    ].map(row => row.join(',')).join('\n');
+    ];
+
+    // Use semicolon separator for Turkish Excel compatibility and wrap all values in quotes
+    const csvContent = csvData
+      .map(row => row.map(cell => escapeCSV(cell)).join(';'))
+      .join('\r\n');
     
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    // Add BOM for proper UTF-8 encoding in Excel
+    const BOM = '\uFEFF';
+    const csvWithBOM = BOM + csvContent;
+    
+    // Create blob with proper MIME type for Excel
+    const blob = new Blob([csvWithBOM], { 
+      type: 'text/csv;charset=utf-8;' 
+    });
+    
+    // Create download link
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.setAttribute('href', url);
-    link.setAttribute('download', 'leaderboard.csv');
+    
+    // Generate Turkish filename with current date
+    const currentDate = new Date().toLocaleDateString('tr-TR').replace(/\./g, '-');
+    link.setAttribute('download', `liderlik-tablosu-${currentDate}.csv`);
+    
     link.style.visibility = 'hidden';
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+    
+    // Clean up
+    URL.revokeObjectURL(url);
   };
 
   // Calculate statistics
@@ -238,7 +267,7 @@ export default function AdminLeaderboardPage() {
 
   if (loading) {
     return (
-      <div className="space-y-6 max-w-7xl mx-auto p-4 sm:p-6 lg:p-8">
+      <div className="space-y-6 p-4 sm:p-6 lg:p-8">
         <HeaderSkeleton />
         
         {/* Stats Cards */}
@@ -307,7 +336,7 @@ export default function AdminLeaderboardPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50 p-4 sm:p-6 lg:p-8">
-      <div className="max-w-7xl mx-auto space-y-4 sm:space-y-6">
+      <div className="space-y-4 sm:space-y-6">
         {/* Header with Gradient Title */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div>

@@ -277,9 +277,9 @@ export async function PATCH(
       },
     });
 
-    // If status is changed to ATTENDED, award points to the student
+    // If status is changed to ATTENDED, award points and experience to the student
     if (status === 'ATTENDED') {
-      // Award points to the student
+      // Award points and experience to the student
       await prisma.user.update({
         where: { id: userId },
         data: {
@@ -287,7 +287,7 @@ export async function PATCH(
             increment: event.points
           },
           experience: {
-            increment: event.points
+            increment: event.experience || event.points
           }
         }
       });
@@ -297,11 +297,22 @@ export async function PATCH(
         data: {
           points: event.points,
           type: 'AWARD',
-          reason: `Points awarded for attending event: ${event.title}`,
+          reason: `Etkinlik katılımı: ${event.title}`,
           studentId: userId,
           tutorId: session.user.id,
         }
       });
+
+      // Create an experience transaction record if experience is different from points
+      if (event.experience && event.experience !== event.points) {
+        await prisma.experienceTransaction.create({
+          data: {
+            amount: event.experience,
+            studentId: userId,
+            tutorId: session.user.id,
+          }
+        });
+      }
     }
 
     return NextResponse.json({

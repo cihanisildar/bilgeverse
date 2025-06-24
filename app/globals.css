@@ -42,14 +42,15 @@
   @apply bg-gray-300 rounded hover:bg-gray-400;
 }
 
-/* Animations */
+/* Performance optimized animations */
 @keyframes fadeIn {
   from { opacity: 0; }
   to { opacity: 1; }
 }
 
 .animate-fadeIn {
-  animation: fadeIn 0.5s ease-in-out;
+  animation: fadeIn 0.3s ease-out;
+  will-change: opacity;
 }
 
 @keyframes scaleIn {
@@ -58,7 +59,31 @@
 }
 
 .animate-scaleIn {
-  animation: scaleIn 0.25s ease-out;
+  animation: scaleIn 0.2s ease-out;
+  will-change: transform, opacity;
+}
+
+/* Prevent layout shift with aspect ratios */
+.aspect-square {
+  aspect-ratio: 1 / 1;
+}
+
+.aspect-video {
+  aspect-ratio: 16 / 9;
+}
+
+.aspect-4-3 {
+  aspect-ratio: 4 / 3;
+}
+
+/* Optimize repaints and reflows */
+.gpu-accelerated {
+  transform: translateZ(0);
+  will-change: transform;
+}
+
+.smooth-scroll {
+  scroll-behavior: smooth;
 }
 
 /* Loader */
@@ -70,6 +95,11 @@
 
 @keyframes loading {
   to { background-position: 150% }
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
 }
 
 @layer utilities {

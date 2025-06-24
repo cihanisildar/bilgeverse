@@ -4,13 +4,10 @@ import { getServerSession } from 'next-auth';
 import { UserRole } from '@prisma/client';
 import { authOptions } from '../../auth/[...nextauth]/auth.config';
 
-// Helper to check if user owns the store item
-async function checkItemOwnership(itemId: string, userId: string) {
-  const item = await prisma.storeItem.findFirst({
-    where: { 
-      id: itemId,
-      tutorId: userId
-    }
+// Helper to check if store item exists
+async function checkItemExists(itemId: string) {
+  const item = await prisma.storeItem.findUnique({
+    where: { id: itemId }
   });
   
   return !!item;
@@ -57,11 +54,11 @@ export async function PUT(
       );
     }
 
-    // Check if user owns the item
-    if (!await checkItemOwnership(itemId, session.user.id)) {
+    // Check if item exists
+    if (!await checkItemExists(itemId)) {
       return NextResponse.json(
-        { error: 'You can only edit your own store items' },
-        { status: 403 }
+        { error: 'Store item not found' },
+        { status: 404 }
       );
     }
 
@@ -111,11 +108,11 @@ export async function DELETE(
 
     const itemId = params.id;
 
-    // Check if user owns the item
-    if (!await checkItemOwnership(itemId, session.user.id)) {
+    // Check if item exists
+    if (!await checkItemExists(itemId)) {
       return NextResponse.json(
-        { error: 'You can only delete your own store items' },
-        { status: 403 }
+        { error: 'Store item not found' },
+        { status: 404 }
       );
     }
 

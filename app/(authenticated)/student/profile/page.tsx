@@ -1,7 +1,7 @@
 "use client";
 
 import { ProfileSkeleton } from "@/app/components/ui/ProfileSkeleton";
-import { HeaderSkeleton } from "@/app/components/ui/skeleton-shimmer";
+import { HeaderSkeleton, SkeletonShimmer } from "@/app/components/ui/skeleton-shimmer";
 import { useAuth } from "@/app/contexts/AuthContext";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -15,7 +15,6 @@ import { Award, BookOpen, CheckCircle, Edit2, Layers, Mail, Phone, User, Star, T
 type StudentProfile = {
   id: string;
   username: string;
-  email: string;
   firstName?: string;
   lastName?: string;
   points: number;
@@ -78,7 +77,6 @@ function ProfileContent() {
         setProfile({
           id: user?.id || "",
           username: user?.username || "",
-          email: user?.email || "",
           firstName: user?.firstName || "",
           lastName: user?.lastName || "",
           points: user?.points || 0,
@@ -102,7 +100,124 @@ function ProfileContent() {
   }, [user]);
 
   if (loading) {
-    return <ProfileSkeleton />;
+    return (
+      <div className="flex flex-col lg:flex-row gap-4 sm:gap-6 lg:gap-8">
+        {/* Left Column - Profile Card Loading */}
+        <div className="w-full lg:w-1/3">
+          <div className="bg-white rounded-xl shadow-md border border-gray-100 overflow-hidden">
+            {/* Profile Header Loading */}
+            <div className="relative">
+              <SkeletonShimmer className="h-24 sm:h-32" />
+              <div className="absolute -bottom-12 sm:-bottom-16 left-0 w-full flex justify-center">
+                <SkeletonShimmer className="ring-4 ring-white rounded-full h-24 w-24 sm:h-32 sm:w-32" />
+              </div>
+            </div>
+            
+            {/* Profile Info Loading */}
+            <div className="pt-16 sm:pt-20 pb-6 sm:pb-8 px-4 sm:px-6 text-center space-y-3">
+              <SkeletonShimmer className="h-6 sm:h-8 rounded w-32 sm:w-40 mx-auto" />
+              <SkeletonShimmer className="h-4 sm:h-5 rounded w-20 mx-auto" />
+              <SkeletonShimmer className="h-3 sm:h-4 rounded w-28 mx-auto" />
+              <SkeletonShimmer className="h-8 sm:h-10 rounded w-full sm:w-32 mx-auto mt-4 sm:mt-6" />
+            </div>
+            
+            {/* Contact Info Loading */}
+            <div className="border-t border-gray-100 px-4 sm:px-6 py-3 sm:py-4">
+              <SkeletonShimmer className="h-4 rounded w-24 mb-2 sm:mb-3" />
+              <div className="flex items-center space-x-2 sm:space-x-3">
+                <SkeletonShimmer className="h-4 w-4 sm:h-5 sm:w-5 rounded" />
+                <SkeletonShimmer className="h-4 rounded w-32" />
+              </div>
+            </div>
+            
+            {/* Stats Loading */}
+            <div className="border-t border-gray-100 px-4 sm:px-6 py-3 sm:py-4">
+              <SkeletonShimmer className="h-4 rounded w-20 mb-2 sm:mb-3" />
+              <div className="grid grid-cols-2 gap-2 sm:gap-4">
+                <div className="bg-gray-50 rounded-lg p-2 sm:p-3 text-center space-y-1">
+                  <SkeletonShimmer className="h-6 sm:h-8 rounded" />
+                  <SkeletonShimmer className="h-3 rounded" />
+                </div>
+                <div className="bg-gray-50 rounded-lg p-2 sm:p-3 text-center space-y-1">
+                  <SkeletonShimmer className="h-6 sm:h-8 rounded" />
+                  <SkeletonShimmer className="h-3 rounded" />
+                </div>
+                <div className="bg-gray-50 rounded-lg p-2 sm:p-3 text-center space-y-1">
+                  <SkeletonShimmer className="h-6 sm:h-8 rounded" />
+                  <SkeletonShimmer className="h-3 rounded" />
+                </div>
+                <div className="bg-gray-50 rounded-lg p-2 sm:p-3 text-center space-y-1">
+                  <SkeletonShimmer className="h-6 sm:h-8 rounded" />
+                  <SkeletonShimmer className="h-3 rounded" />
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        {/* Right Column - Content Loading */}
+        <div className="w-full lg:w-2/3">
+          <div className="bg-white rounded-xl shadow-md border border-gray-100 overflow-hidden">
+            {/* Tutor Info Loading */}
+            <div className="p-4 sm:p-6 border-b border-gray-100">
+              <SkeletonShimmer className="h-5 sm:h-6 rounded w-32 mb-3 sm:mb-4" />
+              <div className="flex flex-col sm:flex-row items-center sm:items-start gap-3 sm:gap-4">
+                <SkeletonShimmer className="h-16 w-16 sm:h-20 sm:w-20 rounded-full flex-shrink-0" />
+                <div className="text-center sm:text-left space-y-2">
+                  <SkeletonShimmer className="h-5 sm:h-6 rounded w-32" />
+                  <SkeletonShimmer className="h-4 rounded w-24" />
+                </div>
+              </div>
+            </div>
+
+            {/* Achievement Stats Loading */}
+            <div className="p-4 sm:p-6">
+              <SkeletonShimmer className="h-5 sm:h-6 rounded w-20 mb-3 sm:mb-4" />
+              <div className="space-y-3 sm:space-y-4">
+                <div className="bg-gradient-to-r from-yellow-50 to-amber-50 p-3 sm:p-4 rounded-lg border border-amber-100">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-0">
+                    <div className="flex items-center space-x-2 sm:space-x-3">
+                      <SkeletonShimmer className="h-5 w-5 sm:h-6 sm:w-6 rounded flex-shrink-0" />
+                      <div className="space-y-1">
+                        <SkeletonShimmer className="h-4 rounded w-16" />
+                        <SkeletonShimmer className="h-3 rounded w-32" />
+                      </div>
+                    </div>
+                    <SkeletonShimmer className="h-6 sm:h-8 rounded w-12" />
+                  </div>
+                </div>
+
+                <div className="bg-gradient-to-r from-indigo-50 to-purple-50 p-3 sm:p-4 rounded-lg border border-indigo-100">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-0">
+                    <div className="flex items-center space-x-2 sm:space-x-3">
+                      <SkeletonShimmer className="h-5 w-5 sm:h-6 sm:w-6 rounded flex-shrink-0" />
+                      <div className="space-y-1">
+                        <SkeletonShimmer className="h-4 rounded w-20" />
+                        <SkeletonShimmer className="h-3 rounded w-40" />
+                      </div>
+                    </div>
+                    <SkeletonShimmer className="h-6 sm:h-8 rounded w-16" />
+                  </div>
+                </div>
+
+                <div className="bg-gradient-to-r from-green-50 to-emerald-50 p-3 sm:p-4 rounded-lg border border-green-100">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-0">
+                    <div className="flex items-center space-x-2 sm:space-x-3">
+                      <SkeletonShimmer className="h-5 w-5 sm:h-6 sm:w-6 rounded flex-shrink-0" />
+                      <div className="space-y-1">
+                        <SkeletonShimmer className="h-4 rounded w-32" />
+                        <SkeletonShimmer className="h-3 rounded w-44" />
+                      </div>
+                    </div>
+                    <SkeletonShimmer className="h-6 sm:h-8 rounded w-8" />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   if (error) {
@@ -136,7 +251,8 @@ function ProfileContent() {
             <div className="absolute -bottom-12 sm:-bottom-16 left-0 w-full flex justify-center">
               <div className="ring-4 ring-white rounded-full overflow-hidden h-24 w-24 sm:h-32 sm:w-32 bg-white">
                 <div className="h-full w-full flex items-center justify-center text-2xl sm:text-4xl font-bold text-indigo-600">
-                  {profile.firstName?.[0]}{profile.lastName?.[0]}
+                  {profile.firstName?.[0]?.toUpperCase() || profile.username?.[0]?.toUpperCase() || 'Ö'}
+                  {profile.lastName?.[0]?.toUpperCase() || (profile.firstName?.[1]?.toUpperCase() && profile.username?.[1]?.toUpperCase()) || ''}
                 </div>
               </div>
             </div>
@@ -167,10 +283,6 @@ function ProfileContent() {
               İletişim Bilgileri
             </h2>
             <ul className="space-y-2 sm:space-y-3">
-              <li className="flex items-center text-gray-600 text-sm sm:text-base">
-                <Mail className="h-4 w-4 sm:h-5 sm:w-5 text-gray-400 mr-2 sm:mr-3 flex-shrink-0" />
-                <span className="truncate">{profile.email}</span>
-              </li>
               <li className="flex items-center text-gray-600 text-sm sm:text-base">
                 <User className="h-4 w-4 sm:h-5 sm:w-5 text-gray-400 mr-2 sm:mr-3 flex-shrink-0" />
                 <span className="truncate">{profile.username}</span>
@@ -214,7 +326,8 @@ function ProfileContent() {
             {profile.tutor ? (
               <div className="flex flex-col sm:flex-row items-center sm:items-start gap-3 sm:gap-4">
                 <div className="h-16 w-16 sm:h-20 sm:w-20 rounded-full bg-indigo-100 flex items-center justify-center text-xl sm:text-2xl font-bold text-indigo-600 flex-shrink-0">
-                  {profile.tutor.firstName?.[0]}{profile.tutor.lastName?.[0]}
+                  {profile.tutor.firstName?.[0]?.toUpperCase() || profile.tutor.username?.[0]?.toUpperCase() || 'Ö'}
+                  {profile.tutor.lastName?.[0]?.toUpperCase() || (profile.tutor.firstName?.[1]?.toUpperCase() && profile.tutor.username?.[1]?.toUpperCase()) || ''}
                 </div>
                 <div className="text-center sm:text-left">
                   <h3 className="text-base sm:text-lg font-semibold text-gray-800">
@@ -286,25 +399,129 @@ function ProfileContent() {
 // Loading state component
 function LoadingProfile() {
   return (
-    <div className="space-y-8">
-      <HeaderSkeleton />
-      <div className="flex flex-col lg:flex-row gap-8">
-        <div className="lg:w-1/3">
-          <ProfileSkeleton />
+    <div className="container mx-auto px-4 py-8">
+      <div className="space-y-6 sm:space-y-8">
+        {/* Header Loading */}
+        <div className="mb-4 sm:mb-6">
+          <SkeletonShimmer className="h-8 sm:h-10 md:h-12 rounded-lg w-32 sm:w-40 mb-2" />
+          <SkeletonShimmer className="h-4 sm:h-5 rounded w-64 sm:w-80" />
         </div>
-        <div className="lg:w-2/3">
-          <Card className="border-0 shadow-md">
-            <CardHeader>
-              <Skeleton className="h-6 w-40" />
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <Skeleton className="h-4 w-full" />
-                <Skeleton className="h-4 w-3/4" />
-                <Skeleton className="h-4 w-1/2" />
+
+        <div className="flex flex-col lg:flex-row gap-4 sm:gap-6 lg:gap-8">
+          {/* Left Column - Profile Card Loading */}
+          <div className="w-full lg:w-1/3">
+            <div className="bg-white rounded-xl shadow-md border border-gray-100 overflow-hidden">
+              {/* Profile Header Loading */}
+              <div className="relative">
+                <SkeletonShimmer className="h-24 sm:h-32" />
+                <div className="absolute -bottom-12 sm:-bottom-16 left-0 w-full flex justify-center">
+                  <SkeletonShimmer className="ring-4 ring-white rounded-full h-24 w-24 sm:h-32 sm:w-32" />
+                </div>
               </div>
-            </CardContent>
-          </Card>
+              
+              {/* Profile Info Loading */}
+              <div className="pt-16 sm:pt-20 pb-6 sm:pb-8 px-4 sm:px-6 text-center space-y-3">
+                <SkeletonShimmer className="h-6 sm:h-8 rounded w-32 sm:w-40 mx-auto" />
+                <SkeletonShimmer className="h-4 sm:h-5 rounded w-20 mx-auto" />
+                <SkeletonShimmer className="h-3 sm:h-4 rounded w-28 mx-auto" />
+                <SkeletonShimmer className="h-8 sm:h-10 rounded w-full sm:w-32 mx-auto mt-4 sm:mt-6" />
+              </div>
+              
+              {/* Contact Info Loading */}
+              <div className="border-t border-gray-100 px-4 sm:px-6 py-3 sm:py-4">
+                <SkeletonShimmer className="h-4 rounded w-24 mb-2 sm:mb-3" />
+                <div className="flex items-center space-x-2 sm:space-x-3">
+                  <SkeletonShimmer className="h-4 w-4 sm:h-5 sm:w-5 rounded" />
+                  <SkeletonShimmer className="h-4 rounded w-32" />
+                </div>
+              </div>
+              
+              {/* Stats Loading */}
+              <div className="border-t border-gray-100 px-4 sm:px-6 py-3 sm:py-4">
+                <SkeletonShimmer className="h-4 rounded w-20 mb-2 sm:mb-3" />
+                <div className="grid grid-cols-2 gap-2 sm:gap-4">
+                  <div className="bg-gray-50 rounded-lg p-2 sm:p-3 text-center space-y-1">
+                    <SkeletonShimmer className="h-6 sm:h-8 rounded" />
+                    <SkeletonShimmer className="h-3 rounded" />
+                  </div>
+                  <div className="bg-gray-50 rounded-lg p-2 sm:p-3 text-center space-y-1">
+                    <SkeletonShimmer className="h-6 sm:h-8 rounded" />
+                    <SkeletonShimmer className="h-3 rounded" />
+                  </div>
+                  <div className="bg-gray-50 rounded-lg p-2 sm:p-3 text-center space-y-1">
+                    <SkeletonShimmer className="h-6 sm:h-8 rounded" />
+                    <SkeletonShimmer className="h-3 rounded" />
+                  </div>
+                  <div className="bg-gray-50 rounded-lg p-2 sm:p-3 text-center space-y-1">
+                    <SkeletonShimmer className="h-6 sm:h-8 rounded" />
+                    <SkeletonShimmer className="h-3 rounded" />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          {/* Right Column - Content Loading */}
+          <div className="w-full lg:w-2/3">
+            <div className="bg-white rounded-xl shadow-md border border-gray-100 overflow-hidden">
+              {/* Tutor Info Loading */}
+              <div className="p-4 sm:p-6 border-b border-gray-100">
+                <SkeletonShimmer className="h-5 sm:h-6 rounded w-32 mb-3 sm:mb-4" />
+                <div className="flex flex-col sm:flex-row items-center sm:items-start gap-3 sm:gap-4">
+                  <SkeletonShimmer className="h-16 w-16 sm:h-20 sm:w-20 rounded-full flex-shrink-0" />
+                  <div className="text-center sm:text-left space-y-2">
+                    <SkeletonShimmer className="h-5 sm:h-6 rounded w-32" />
+                    <SkeletonShimmer className="h-4 rounded w-24" />
+                  </div>
+                </div>
+              </div>
+
+              {/* Achievement Stats Loading */}
+              <div className="p-4 sm:p-6">
+                <SkeletonShimmer className="h-5 sm:h-6 rounded w-20 mb-3 sm:mb-4" />
+                <div className="space-y-3 sm:space-y-4">
+                  <div className="bg-gradient-to-r from-yellow-50 to-amber-50 p-3 sm:p-4 rounded-lg border border-amber-100">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-0">
+                      <div className="flex items-center space-x-2 sm:space-x-3">
+                        <SkeletonShimmer className="h-5 w-5 sm:h-6 sm:w-6 rounded flex-shrink-0" />
+                        <div className="space-y-1">
+                          <SkeletonShimmer className="h-4 rounded w-16" />
+                          <SkeletonShimmer className="h-3 rounded w-32" />
+                        </div>
+                      </div>
+                      <SkeletonShimmer className="h-6 sm:h-8 rounded w-12" />
+                    </div>
+                  </div>
+
+                  <div className="bg-gradient-to-r from-indigo-50 to-purple-50 p-3 sm:p-4 rounded-lg border border-indigo-100">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-0">
+                      <div className="flex items-center space-x-2 sm:space-x-3">
+                        <SkeletonShimmer className="h-5 w-5 sm:h-6 sm:w-6 rounded flex-shrink-0" />
+                        <div className="space-y-1">
+                          <SkeletonShimmer className="h-4 rounded w-20" />
+                          <SkeletonShimmer className="h-3 rounded w-40" />
+                        </div>
+                      </div>
+                      <SkeletonShimmer className="h-6 sm:h-8 rounded w-16" />
+                    </div>
+                  </div>
+
+                  <div className="bg-gradient-to-r from-green-50 to-emerald-50 p-3 sm:p-4 rounded-lg border border-green-100">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-0">
+                      <div className="flex items-center space-x-2 sm:space-x-3">
+                        <SkeletonShimmer className="h-5 w-5 sm:h-6 sm:w-6 rounded flex-shrink-0" />
+                        <div className="space-y-1">
+                          <SkeletonShimmer className="h-4 rounded w-32" />
+                          <SkeletonShimmer className="h-3 rounded w-44" />
+                        </div>
+                      </div>
+                      <SkeletonShimmer className="h-6 sm:h-8 rounded w-8" />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -312,24 +529,18 @@ function LoadingProfile() {
 }
 
 export default function StudentProfilePage() {
-  const [loading, setLoading] = useState(true);
+  const { user, loading } = useAuth();
 
-  useEffect(() => {
-    // Simulate initial load
-    const timer = setTimeout(() => setLoading(false), 500);
-    return () => clearTimeout(timer);
-  }, []);
+  if (loading) {
+    return <LoadingProfile />;
+  }
 
   return (
     <div className="container mx-auto px-4 py-8">
-      {loading ? (
-        <LoadingProfile />
-      ) : (
-        <div className="space-y-8">
-          <ProfileHeader />
-          <ProfileContent />
-        </div>
-      )}
+      <div className="space-y-8">
+        <ProfileHeader />
+        <ProfileContent />
+      </div>
     </div>
   );
 } 

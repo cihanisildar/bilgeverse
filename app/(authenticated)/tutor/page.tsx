@@ -599,7 +599,7 @@ export default function TutorDashboard() {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-indigo-50/50 to-white">
-      <div className="container mx-auto px-4 py-8">
+      <div className="px-4 py-8">
         {isLoading ? (
           <>
             <HeaderSkeleton />

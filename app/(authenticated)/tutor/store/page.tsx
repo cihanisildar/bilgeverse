@@ -17,7 +17,6 @@ type StoreItem = {
   name: string;
   description: string;
   pointsRequired: number;
-  availableQuantity: number;
   imageUrl?: string;
 };
 
@@ -28,22 +27,19 @@ const MOCK_ITEMS: StoreItem[] = [
     name: 'Örnek Ürün 1',
     description: 'Bu, sunucu kullanılamadığında gösterilen bir yer tutucu öğedir.',
     pointsRequired: 100,
-    availableQuantity: 5,
     imageUrl: 'https://via.placeholder.com/300'
   },
   {
     id: 'mock-2',
     name: 'Örnek Ürün 2',
     description: 'Sunucu bağlantı sorunları oluştu. Bunlar sadece örnek ürünlerdir.',
-    pointsRequired: 200,
-    availableQuantity: 3
+    pointsRequired: 200
   },
   {
     id: 'mock-3',
     name: 'Örnek Ürün 3',
     description: 'Veritabanı bağlantısı yeniden sağlandığında lütfen tekrar deneyin.',
-    pointsRequired: 500,
-    availableQuantity: 1
+    pointsRequired: 500
   }
 ];
 
@@ -127,12 +123,12 @@ export default function TutorStore() {
       setErrorDetails(null);
       setDebugInfo(null);
       
-      const response = await fetch('/api/store/items', {
-        credentials: 'include',
-        headers: {
-          'Cache-Control': 'no-cache'
-        }
-      });
+              const response = await fetch('/api/store', {
+          credentials: 'include',
+          headers: {
+            'Cache-Control': 'no-cache'
+          }
+        });
       
       if (!response.ok) {
         throw new Error('Failed to fetch store items');
@@ -228,7 +224,7 @@ export default function TutorStore() {
 
   if (loading) {
     return (
-      <div className="space-y-6 max-w-7xl mx-auto py-8">
+      <div className="space-y-6 p-8">
         <HeaderSkeleton />
         
         {/* Stats Cards */}
@@ -250,13 +246,12 @@ export default function TutorStore() {
 
   const stats = {
     totalItems: items.length,
-    averagePoints: Math.round(items.reduce((acc, item) => acc + item.pointsRequired, 0) / items.length) || 0,
-    totalAvailable: items.reduce((acc, item) => acc + item.availableQuantity, 0)
+    averagePoints: Math.round(items.reduce((acc, item) => acc + item.pointsRequired, 0) / items.length) || 0
   };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50 p-6 lg:p-8">
-      <div className="max-w-7xl mx-auto space-y-6">
+      <div className="space-y-6">
         {/* Header with Gradient Title */}
         <div className="mb-6">
           <h1 className="text-3xl font-bold">
@@ -268,7 +263,7 @@ export default function TutorStore() {
         </div>
 
         {/* Stats Overview */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <Card className="border-0 shadow-lg rounded-xl overflow-hidden transition-all duration-200 hover:shadow-xl hover:-translate-y-1">
             <div className="h-1 bg-gradient-to-r from-indigo-500 to-blue-500"></div>
             <CardContent className="p-6">
@@ -294,21 +289,6 @@ export default function TutorStore() {
                 </div>
                 <div className="w-12 h-12 flex items-center justify-center rounded-full bg-purple-100 text-purple-600">
                   <Coins className="h-6 w-6" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="border-0 shadow-lg rounded-xl overflow-hidden transition-all duration-200 hover:shadow-xl hover:-translate-y-1">
-            <div className="h-1 bg-gradient-to-r from-green-500 to-emerald-500"></div>
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-500">Stok Miktarı</p>
-                  <h3 className="text-2xl font-bold text-gray-900 mt-1">{stats.totalAvailable}</h3>
-                </div>
-                <div className="w-12 h-12 flex items-center justify-center rounded-full bg-green-100 text-green-600">
-                  <Tag className="h-6 w-6" />
                 </div>
               </div>
             </CardContent>
@@ -377,17 +357,10 @@ export default function TutorStore() {
                   <CardDescription>{item.description}</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <div className="flex items-center justify-between">
+                  <div className="flex items-center justify-center">
                     <Badge variant="secondary" className="bg-indigo-100 text-indigo-700 hover:bg-indigo-200">
                       {item.pointsRequired} Puan
                     </Badge>
-                    <span className={cn(
-                      "text-sm font-medium",
-                      item.availableQuantity > 10 ? "text-green-600" :
-                      item.availableQuantity > 0 ? "text-yellow-600" : "text-red-600"
-                    )}>
-                      {item.availableQuantity} adet kaldı
-                    </span>
                   </div>
                 </CardContent>
               </Card>
@@ -480,21 +453,13 @@ function StoreItemCard({ item, isMock = false }: { item: StoreItem, isMock?: boo
           {item.description}
         </p>
         
-        <div className="flex items-center">
+        <div className="flex items-center justify-center">
           <div className={`text-sm font-medium rounded-full px-3 py-1 ${
             isMock 
               ? 'bg-yellow-50 text-yellow-700' 
-              : item.availableQuantity > 5 
-                ? 'bg-green-50 text-green-700'
-                : item.availableQuantity > 0
-                  ? 'bg-yellow-50 text-yellow-700' 
-                  : 'bg-red-50 text-red-700'
+              : 'bg-indigo-50 text-indigo-700'
           }`}>
-            {item.availableQuantity > 5 
-              ? `${item.availableQuantity} adet mevcut` 
-              : item.availableQuantity > 0
-                ? `Sadece ${item.availableQuantity} adet kaldı` 
-                : 'Stokta yok'}
+            {item.pointsRequired} Puan Gerekli
           </div>
         </div>
       </div>

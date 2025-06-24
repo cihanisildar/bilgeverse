@@ -153,46 +153,51 @@ export default function StudentDashboard() {
   const [error, setError] = useState('');
 
   useEffect(() => {
-    const fetchDashboardData = async () => {
-      try {
-        setLoading(true);
-        
-        // Get leaderboard to determine rank
-        const leaderboardRes = await fetch('/api/leaderboard');
-        const leaderboardData = await leaderboardRes.json();
-        
-        // Find user's rank
-        const userRank = leaderboardData.leaderboard.findIndex(
-          (student: any) => student.id === user?.id
-        ) + 1;
-        
-        // Get upcoming events
-        const eventsRes = await fetch('/api/events');
-        const eventsData = await eventsRes.json();
-        
-        // Get points history
-        const pointsRes = await fetch('/api/points');
-        const pointsData = await pointsRes.json();
-        
-        // Get requests
-        const requestsRes = await fetch('/api/requests');
-        const requestsData = await requestsRes.json();
-        
-        const pendingRequests = requestsData.requests.filter(
-          (req: any) => req.status === 'pending'
-        ).length;
-        
-        const approvedRequests = requestsData.requests.filter(
-          (req: any) => req.status === 'approved'
-        ).length;
-        
-        setStats({
-          points: user?.points || 0,
-          rank: userRank,
-          totalStudents: leaderboardData.leaderboard.length,
-          pendingRequests,
-          approvedRequests,
-        });
+      const fetchDashboardData = async () => {
+    try {
+      setLoading(true);
+      
+      // Get fresh user data to ensure points are up to date
+      const userRes = await fetch('/api/auth/me');
+      const userData = await userRes.json();
+      const currentUser = userData.user;
+      
+      // Get leaderboard to determine rank
+      const leaderboardRes = await fetch('/api/leaderboard');
+      const leaderboardData = await leaderboardRes.json();
+      
+      // Find user's rank
+      const userRank = leaderboardData.leaderboard.findIndex(
+        (student: any) => student.id === currentUser?.id
+      ) + 1;
+      
+      // Get upcoming events
+      const eventsRes = await fetch('/api/events');
+      const eventsData = await eventsRes.json();
+      
+      // Get points history
+      const pointsRes = await fetch('/api/points');
+      const pointsData = await pointsRes.json();
+      
+      // Get requests
+      const requestsRes = await fetch('/api/requests');
+      const requestsData = await requestsRes.json();
+      
+      const pendingRequests = requestsData.requests.filter(
+        (req: any) => req.status === 'pending'
+      ).length;
+      
+      const approvedRequests = requestsData.requests.filter(
+        (req: any) => req.status === 'approved'
+      ).length;
+      
+      setStats({
+        points: currentUser?.points || 0,
+        rank: userRank,
+        totalStudents: leaderboardData.leaderboard.length,
+        pendingRequests,
+        approvedRequests,
+      });
         
         // Filter for upcoming events (today and future)
         const today = new Date();
@@ -400,9 +405,9 @@ export default function StudentDashboard() {
                   <div key={transaction.id} className="flex items-center justify-between p-2 sm:p-3 bg-gray-50 rounded-lg">
                     <div className="flex items-center space-x-3">
                       <div className={`h-8 w-8 sm:h-10 sm:w-10 rounded-full flex items-center justify-center ${
-                        transaction.type === 'earned' ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'
+                        transaction.type === 'AWARD' ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'
                       }`}>
-                        {transaction.type === 'earned' ? '+' : '-'}
+                        {transaction.type === 'AWARD' ? '+' : '-'}
                       </div>
                       <div>
                         <div className="text-sm sm:text-base font-medium text-gray-900">
@@ -414,9 +419,9 @@ export default function StudentDashboard() {
                       </div>
                     </div>
                     <div className={`text-sm sm:text-base font-semibold ${
-                      transaction.type === 'earned' ? 'text-green-600' : 'text-red-600'
+                      transaction.type === 'AWARD' ? 'text-green-600' : 'text-red-600'
                     }`}>
-                      {transaction.type === 'earned' ? '+' : '-'}{transaction.points}
+                      {transaction.type === 'AWARD' ? '+' : '-'}{transaction.points}
                     </div>
                   </div>
                 ))}

@@ -15,7 +15,6 @@ export default function NewStudentPage() {
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     username: '',
-    email: '',
     password: '',
     firstName: '',
     lastName: '',
@@ -46,7 +45,7 @@ export default function NewStudentPage() {
         throw new Error(data.error || 'Öğrenci oluşturulamadı');
       }
       
-      toast.success('Öğrenci başarıyla oluşturuldu');
+      toast.success('Öğrenci başarıyla oluşturuldu ve sınıfınıza eklendi!');
       router.push('/tutor/students');
     } catch (error: any) {
       toast.error(error.message);
@@ -102,19 +101,6 @@ export default function NewStudentPage() {
               </div>
               
               <div className="space-y-2">
-                <Label htmlFor="email">E-posta*</Label>
-                <Input
-                  id="email"
-                  name="email"
-                  type="email"
-                  value={formData.email}
-                  onChange={handleChange}
-                  placeholder="E-posta adresi girin"
-                  required
-                />
-              </div>
-              
-              <div className="space-y-2">
                 <Label htmlFor="password">Şifre*</Label>
                 <Input
                   id="password"
@@ -160,7 +146,7 @@ export default function NewStudentPage() {
                 <Button 
                   type="submit" 
                   disabled={loading}
-                  className="bg-gradient-to-r from-blue-600 to-indigo-600"
+                  className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white"
                 >
                   {loading ? 'Oluşturuluyor...' : 'Öğrenci Oluştur'}
                 </Button>
