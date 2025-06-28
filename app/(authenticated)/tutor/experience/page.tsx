@@ -14,21 +14,16 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import {
+  Clock,
+  Search
+} from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
-import {
-  Search,
-  Clock,
-  Award,
-  User,
-  UserCheck,
-  MinusCircle,
-  PlusCircle,
-} from "lucide-react";
 
 // Types
 type Student = {
@@ -51,6 +46,12 @@ interface ExperienceTransaction {
     username: string;
   };
 }
+
+type PointReason = {
+  id: string;
+  name: string;
+  description?: string;
+};
 
 // Static Header Component
 function ExperienceHeader() {
@@ -201,8 +202,6 @@ function ExperienceManagement() {
   const [recentTransactions, setRecentTransactions] = useState<ExperienceTransaction[]>([]);
   const [selectedStudentIds, setSelectedStudentIds] = useState<Set<string>>(new Set());
   const [experience, setExperience] = useState<number>(0);
-  const [reason, setReason] = useState<string>("");
-  const [customReason, setCustomReason] = useState<string>("");
   const [searchTerm, setSearchTerm] = useState<string>("");
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
@@ -210,6 +209,8 @@ function ExperienceManagement() {
   const [transactionSearchTerm, setTransactionSearchTerm] = useState<string>("");
   const [currentPage, setCurrentPage] = useState<number>(1);
   const transactionsPerPage = 5;
+  const [pointReasons, setPointReasons] = useState<PointReason[]>([]);
+  const [selectedReasonId, setSelectedReasonId] = useState<string>("");
 
   // Add fetchData function outside useEffect so we can reuse it
   const fetchData = async () => {
@@ -256,6 +257,22 @@ function ExperienceManagement() {
         toast.error(`API Error: ${transactionsData.error}`);
       }
 
+      // Fetch point reasons
+      const reasonsRes = await fetch("/api/tutor/point-reasons", {
+        credentials: "include",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+      const reasonsData = await reasonsRes.json();
+
+      if (reasonsData.reasons) {
+        setPointReasons(reasonsData.reasons);
+      } else if (reasonsData.error) {
+        console.error("Error fetching point reasons:", reasonsData.error);
+        // Don't show error toast for point reasons, just log it
+      }
+
     } catch (error) {
       console.error("Error fetching data:", error);
       toast.error("Veriler yüklenirken bir hata oluştu.");
@@ -291,7 +308,7 @@ function ExperienceManagement() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (selectedStudentIds.size === 0 || !reason.trim() || (reason === "Diğer Faaliyetler" && !customReason.trim())) return;
+    if (selectedStudentIds.size === 0 || !selectedReasonId) return;
 
     setIsSubmitting(true);
 
@@ -324,8 +341,7 @@ function ExperienceManagement() {
 
       // Reset form
       setExperience(0);
-      setReason("");
-      setCustomReason("");
+      setSelectedReasonId("");
       setSelectedStudentIds(new Set());
       setIsDecreasing(false);
     } catch (error) {
@@ -524,42 +540,28 @@ function ExperienceManagement() {
                 {/* Reason Input */}
                 <div className="space-y-4">
                   <Label className="text-base font-semibold text-gray-700">Sebep Seçin</Label>
-                  <RadioGroup
-                    value={reason}
-                    onValueChange={setReason}
-                    className="grid grid-cols-1 gap-3"
-                  >
-                    <div className="flex items-center space-x-3 p-4 border-2 border-gray-200 rounded-xl hover:border-emerald-300 hover:bg-emerald-50/50 transition-all duration-200 cursor-pointer">
-                      <RadioGroupItem value="Karakter Eğitimi" id="karakter" className="text-emerald-600" />
-                      <Label htmlFor="karakter" className="font-medium text-gray-700 cursor-pointer flex-1">
-                        Karakter Eğitimi
-                      </Label>
-                    </div>
-                    <div className="flex items-center space-x-3 p-4 border-2 border-gray-200 rounded-xl hover:border-emerald-300 hover:bg-emerald-50/50 transition-all duration-200 cursor-pointer">
-                      <RadioGroupItem value="Atölye Faaliyeti" id="atolye" className="text-emerald-600" />
-                      <Label htmlFor="atolye" className="font-medium text-gray-700 cursor-pointer flex-1">
-                        Atölye Faaliyeti
-                      </Label>
-                    </div>
-                    <div className="flex items-center space-x-3 p-4 border-2 border-gray-200 rounded-xl hover:border-emerald-300 hover:bg-emerald-50/50 transition-all duration-200 cursor-pointer">
-                      <RadioGroupItem value="Diğer Faaliyetler" id="diger" className="text-emerald-600" />
-                      <Label htmlFor="diger" className="font-medium text-gray-700 cursor-pointer flex-1">
-                        Diğer Faaliyetler
-                      </Label>
-                    </div>
-                  </RadioGroup>
-                  
-                  {/* Custom Reason Input - Show when "Diğer Faaliyetler" is selected */}
-                  {reason === "Diğer Faaliyetler" && (
-                    <div className="mt-4 space-y-3">
-                      <Label className="text-base font-semibold text-gray-700">Faaliyet Açıklaması</Label>
-                      <Input
-                        type="text"
-                        placeholder="Hangi faaliyet için tecrübe veriliyor?"
-                        value={customReason}
-                        onChange={(e) => setCustomReason(e.target.value)}
-                        className="w-full border-2 border-gray-200 rounded-xl focus:border-emerald-400 focus:ring-4 focus:ring-emerald-100 transition-all duration-200 bg-white/80"
-                      />
+                  {pointReasons.length > 0 ? (
+                    <RadioGroup
+                      value={selectedReasonId}
+                      onValueChange={setSelectedReasonId}
+                      className="grid grid-cols-1 gap-3"
+                    >
+                      {pointReasons.map((pointReason) => (
+                        <div key={pointReason.id} className="flex items-center space-x-3 p-4 border-2 border-gray-200 rounded-xl hover:border-emerald-300 hover:bg-emerald-50/50 transition-all duration-200 cursor-pointer">
+                          <RadioGroupItem value={pointReason.id} id={pointReason.id} className="text-emerald-600" />
+                          <Label htmlFor={pointReason.id} className="font-medium text-gray-700 cursor-pointer flex-1">
+                            {pointReason.name}
+                            {pointReason.description && (
+                              <p className="text-sm text-gray-500 mt-1">{pointReason.description}</p>
+                            )}
+                          </Label>
+                        </div>
+                      ))}
+                    </RadioGroup>
+                  ) : (
+                    <div className="p-6 text-center bg-gray-50 rounded-xl border-2 border-gray-200">
+                      <p className="text-gray-600 mb-2">Henüz tecrübe sebebi tanımlanmamış</p>
+                      <p className="text-sm text-gray-500">Lütfen yöneticinizle iletişime geçin</p>
                     </div>
                   )}
                 </div>
@@ -570,8 +572,8 @@ function ExperienceManagement() {
                     selectedStudentIds.size === 0 ||
                     isSubmitting ||
                     experience <= 0 ||
-                    !reason.trim() ||
-                    (reason === "Diğer Faaliyetler" && !customReason.trim())
+                    !selectedReasonId ||
+                    pointReasons.length === 0
                   }
                   className={`w-full py-4 text-lg font-semibold rounded-xl transition-all duration-200 transform hover:scale-[1.02] hover:shadow-lg ${
                     isDecreasing 

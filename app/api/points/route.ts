@@ -18,7 +18,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { studentId, points, reason } = body;
+    const { studentId, points, reason, pointReasonId } = body;
 
     if (!studentId || points === undefined || points === null) {
       return NextResponse.json(
@@ -65,7 +65,8 @@ export async function POST(request: NextRequest) {
           tutorId: session.user.id,
           points: Math.abs(points),
           type: points >= 0 ? TransactionType.AWARD : TransactionType.REDEEM,
-          reason: reason || (points >= 0 ? 'Puan eklendi' : 'Puan azaltıldı')
+          reason: reason || (points >= 0 ? 'Puan eklendi' : 'Puan azaltıldı'),
+          pointReasonId: pointReasonId || null
         }
       });
 
