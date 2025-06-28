@@ -31,7 +31,7 @@ interface PointCard {
   isActive: boolean;
 }
 
-export default function TipsPage() {
+export default function TutorPointCardsPage() {
   const [selectedCard, setSelectedCard] = useState<PointCard | null>(null);
   const [hoveredCard, setHoveredCard] = useState<string | null>(null);
   const [cards, setCards] = useState<PointCard[]>([]);
@@ -41,14 +41,14 @@ export default function TipsPage() {
   useEffect(() => {
     const fetchCards = async () => {
       try {
-        const response = await fetch('/api/tips');
+        const response = await fetch('/api/tutor/point-cards');
         if (!response.ok) {
           throw new Error('Failed to fetch cards');
         }
         const data = await response.json();
         setCards(data);
       } catch (err) {
-        setError('Failed to load tips. Please try again later.');
+        setError('Failed to load point cards. Please try again later.');
       } finally {
         setLoading(false);
       }
@@ -83,7 +83,6 @@ export default function TipsPage() {
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex items-center justify-center relative overflow-hidden">
-        {/* Animated background elements */}
         <div className="absolute inset-0">
           <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-purple-500/20 rounded-full blur-3xl animate-pulse"></div>
           <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-blue-500/20 rounded-full blur-3xl animate-pulse delay-1000"></div>
@@ -133,7 +132,6 @@ export default function TipsPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 relative overflow-hidden">
-      {/* Animated background elements */}
       <div className="absolute inset-0">
         <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-purple-900/20 via-slate-900/20 to-transparent"></div>
         <motion.div 
@@ -173,37 +171,22 @@ export default function TipsPage() {
           >
             <div className="inline-flex items-center gap-3 px-6 py-3 bg-white/10 backdrop-blur-sm border border-white/20 rounded-full text-white/90 text-sm font-medium">
               <Star className="h-4 w-4 text-yellow-400" />
-              <span>Başarı Rehberi</span>
+              <span>Puan Kartları</span>
               <Star className="h-4 w-4 text-yellow-400" />
             </div>
             
             <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-white leading-tight">
               <span className="bg-clip-text text-transparent bg-gradient-to-r from-purple-400 via-pink-400 to-blue-400">
-                Potansiyelinizi
+                Öğrenci Başarısını
               </span>
               <br />
-              <span className="text-white">Keşfedin</span>
+              <span className="text-white">Ödüllendirin</span>
             </h1>
             
             <p className="text-lg sm:text-xl text-gray-300 max-w-3xl mx-auto leading-relaxed">
-              Akademik yolculuğunuzda başarıya ulaşmanız için özel olarak hazırlanmış 
-              stratejiler ve ipuçları ile potansiyelinizi keşfedin.
+              Öğrencilerinizin başarılarını ve gelişimlerini takdir etmek için hazırlanmış 
+              puan kartları ile motivasyonlarını artırın.
             </p>
-            
-            <motion.div 
-              className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-500/20 to-blue-500/20 backdrop-blur-sm border border-purple-500/30 rounded-full text-purple-300 text-sm"
-              animate={{ 
-                boxShadow: [
-                  "0 0 20px rgba(147, 51, 234, 0.3)",
-                  "0 0 30px rgba(147, 51, 234, 0.5)",
-                  "0 0 20px rgba(147, 51, 234, 0.3)"
-                ]
-              }}
-              transition={{ duration: 2, repeat: Infinity }}
-            >
-              <Zap className="h-4 w-4" />
-              <span>Kartların üzerine gelerek puan değerlerini görebilirsiniz</span>
-            </motion.div>
           </motion.div>
 
           {/* Point Cards Grid */}
@@ -213,7 +196,7 @@ export default function TipsPage() {
             initial="hidden"
             animate="visible"
           >
-            {cards.map((card, index) => (
+            {cards.map((card) => (
               <motion.div
                 key={card.id}
                 variants={cardVariants}
@@ -240,19 +223,6 @@ export default function TipsPage() {
                   {/* Gradient overlay */}
                   <div className="absolute inset-0 bg-gradient-to-br from-purple-500/20 via-transparent to-blue-500/20 rounded-2xl"></div>
                   
-                  {/* Hover glow effect */}
-                  <motion.div
-                    className="absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"
-                    animate={hoveredCard === card.id ? {
-                      boxShadow: [
-                        "0 0 30px rgba(147, 51, 234, 0.3)",
-                        "0 0 50px rgba(147, 51, 234, 0.5)",
-                        "0 0 30px rgba(147, 51, 234, 0.3)"
-                      ]
-                    } : {}}
-                    transition={{ duration: 1.5, repeat: Infinity }}
-                  />
-
                   {/* Card Content */}
                   <div className="relative z-10 p-6 h-full flex flex-col">
                     <div className="flex-1 flex flex-col items-center justify-center text-center space-y-4">
@@ -299,60 +269,10 @@ export default function TipsPage() {
               </motion.div>
             ))}
           </motion.div>
-
-          {/* Bottom Motivation Section */}
-          <motion.div
-            initial={{ opacity: 0, y: 50 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, delay: 0.5 }}
-            className="relative"
-          >
-            <div className="absolute inset-0 bg-gradient-to-r from-purple-600/20 to-blue-600/20 backdrop-blur-xl border border-purple-500/30 rounded-3xl"></div>
-            <div className="relative z-10 p-8 sm:p-12">
-              <div className="flex flex-col lg:flex-row items-center justify-between gap-8">
-                <div className="flex items-center gap-6">
-                  <motion.div
-                    animate={{ 
-                      rotate: [0, 5, -5, 0],
-                      scale: [1, 1.1, 1]
-                    }}
-                    transition={{ 
-                      duration: 3,
-                      repeat: Infinity,
-                      ease: "easeInOut"
-                    }}
-                  >
-                    <GraduationCap className="h-16 w-16 text-purple-400" />
-                  </motion.div>
-                  <div className="text-center lg:text-left">
-                    <h3 className="text-2xl sm:text-3xl font-bold text-white mb-2">
-                      Başarıya Giden Yol
-                    </h3>
-                    <p className="text-lg text-gray-300">
-                      Her gün küçük adımlarla büyük hedeflere ulaşın
-                    </p>
-                  </div>
-                </div>
-                
-                <motion.div 
-                  className="flex items-center gap-4 px-6 py-3 bg-gradient-to-r from-purple-500 to-blue-500 rounded-full text-white font-semibold shadow-lg"
-                  whileHover={{ 
-                    scale: 1.05,
-                    boxShadow: "0 10px 30px rgba(147, 51, 234, 0.5)"
-                  }}
-                  whileTap={{ scale: 0.95 }}
-                >
-                  <Award className="h-6 w-6" />
-                  <span>Hedeflerinize ulaşın!</span>
-                  <Sparkles className="h-5 w-5" />
-                </motion.div>
-              </div>
-            </div>
-          </motion.div>
         </div>
       </div>
 
-      {/* Enhanced Modal View */}
+      {/* Selected Card Modal */}
       <AnimatePresence>
         {selectedCard && (
           <motion.div
@@ -360,45 +280,24 @@ export default function TipsPage() {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={() => setSelectedCard(null)}
-            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
           >
             <motion.div
               layoutId={`card-${selectedCard.id}`}
-              className="w-full max-w-2xl relative"
+              className="relative w-full max-w-2xl bg-gradient-to-br from-slate-900 to-purple-900 rounded-2xl overflow-hidden"
               onClick={(e) => e.stopPropagation()}
-              initial={{ scale: 0.8, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.8, opacity: 0 }}
-              transition={{ duration: 0.3 }}
             >
-              {/* Modal glassmorphism background */}
-              <div className="absolute inset-0 bg-gradient-to-br from-white/20 to-white/10 backdrop-blur-2xl border border-white/30 rounded-3xl shadow-2xl"></div>
-              
-              {/* Gradient overlay */}
-              <div className="absolute inset-0 bg-gradient-to-br from-purple-500/20 via-transparent to-blue-500/20 rounded-3xl"></div>
-
               {/* Close button */}
-              <motion.button
+              <button
                 onClick={() => setSelectedCard(null)}
-                className="absolute top-4 right-4 z-20 p-3 bg-white/20 hover:bg-white/30 backdrop-blur-sm border border-white/30 rounded-full transition-colors"
-                whileHover={{ scale: 1.1 }}
-                whileTap={{ scale: 0.9 }}
+                className="absolute top-4 right-4 text-white/70 hover:text-white transition-colors"
               >
-                <X className="h-5 w-5 text-white" />
-              </motion.button>
+                <X className="h-6 w-6" />
+              </button>
 
               {/* Modal content */}
               <div className="relative z-10 p-8 sm:p-12">
                 <div className="text-center space-y-6">
-                  <motion.div
-                    initial={{ scale: 0 }}
-                    animate={{ scale: 1 }}
-                    transition={{ delay: 0.2, duration: 0.5 }}
-                    className="text-6xl mb-6"
-                  >
-                    {selectedCard.icon}
-                  </motion.div>
-                  
                   <motion.h2
                     initial={{ y: 20, opacity: 0 }}
                     animate={{ y: 0, opacity: 1 }}

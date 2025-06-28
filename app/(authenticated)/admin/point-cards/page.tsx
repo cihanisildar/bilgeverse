@@ -16,12 +16,16 @@ import {
 } from "@/components/ui/dialog";
 import { toast } from "react-hot-toast";
 import { motion, AnimatePresence } from "framer-motion";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 
 interface PointCard {
   id: string;
   title: string;
   description: string;
   points: number;
+  minPoints?: number;
+  maxPoints?: number;
   isActive: boolean;
 }
 
@@ -55,6 +59,9 @@ export default function PointCardsAdmin() {
     title: "",
     description: "",
     points: 0,
+    minPoints: 0,
+    maxPoints: 0,
+    usePointRange: false,
   });
 
   const fetchCards = async () => {
@@ -90,9 +97,17 @@ export default function PointCardsAdmin() {
         ? "/api/admin/point-cards"
         : "/api/admin/point-cards";
       const method = editingCard ? "PUT" : "POST";
-      const body = editingCard
-        ? { ...formData, id: editingCard.id }
-        : formData;
+      
+      // Prepare the body based on whether we're using point range
+      const body = {
+        ...formData,
+        id: editingCard?.id,
+        // Only include minPoints and maxPoints if using point range
+        minPoints: formData.usePointRange ? formData.minPoints : null,
+        maxPoints: formData.usePointRange ? formData.maxPoints : null,
+        // Set points to minPoints if using range, otherwise use points
+        points: formData.usePointRange ? formData.minPoints : formData.points
+      };
 
       const response = await fetch(url, {
         method,
@@ -105,7 +120,14 @@ export default function PointCardsAdmin() {
       toast.success(editingCard ? "Kart güncellendi" : "Kart oluşturuldu");
       setIsOpen(false);
       setEditingCard(null);
-      setFormData({ title: "", description: "", points: 0 });
+      setFormData({
+        title: "",
+        description: "",
+        points: 0,
+        minPoints: 0,
+        maxPoints: 0,
+        usePointRange: false
+      });
       fetchCards();
     } catch (error) {
       toast.error("Kart kaydedilemedi");
@@ -142,6 +164,9 @@ export default function PointCardsAdmin() {
       title: card.title,
       description: card.description,
       points: card.points,
+      minPoints: card.minPoints ?? 0,
+      maxPoints: card.maxPoints ?? 0,
+      usePointRange: !!card.minPoints && !!card.maxPoints,
     });
     setIsOpen(true);
   };
@@ -207,17 +232,71 @@ export default function PointCardsAdmin() {
                 </div>
                 <div>
                   <label className="text-sm font-medium">Puan</label>
-                  <Input
-                    type="number"
-                    value={formData.points}
-                    onChange={(e) =>
-                      setFormData({ ...formData, points: Number(e.target.value) })
-                    }
-                    required
-                    min={0}
-                    placeholder="Kazanılacak puan"
-                    className="mt-1"
-                  />
+                  <div className="space-y-4">
+                    <div className="flex items-center space-x-2">
+                      <Switch
+                        id="point-range"
+                        checked={formData.usePointRange}
+                        onCheckedChange={(checked) =>
+                          setFormData({ ...formData, usePointRange: checked })
+                        }
+                      />
+                      <Label htmlFor="point-range">Puan aralığı kullan</Label>
+                    </div>
+
+                    {formData.usePointRange ? (
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <Label>Minimum Puan</Label>
+                          <Input
+                            type="number"
+                            value={formData.minPoints}
+                            onChange={(e) =>
+                              setFormData({
+                                ...formData,
+                                minPoints: Number(e.target.value),
+                                points: Number(e.target.value), // Set points to minPoints for consistency
+                              })
+                            }
+                            required
+                            min={0}
+                            max={formData.maxPoints}
+                            placeholder="Min puan"
+                            className="mt-1"
+                          />
+                        </div>
+                        <div>
+                          <Label>Maximum Puan</Label>
+                          <Input
+                            type="number"
+                            value={formData.maxPoints}
+                            onChange={(e) =>
+                              setFormData({
+                                ...formData,
+                                maxPoints: Number(e.target.value),
+                              })
+                            }
+                            required
+                            min={formData.minPoints}
+                            placeholder="Max puan"
+                            className="mt-1"
+                          />
+                        </div>
+                      </div>
+                    ) : (
+                      <Input
+                        type="number"
+                        value={formData.points}
+                        onChange={(e) =>
+                          setFormData({ ...formData, points: Number(e.target.value) })
+                        }
+                        required
+                        min={0}
+                        placeholder="Kazanılacak puan"
+                        className="mt-1"
+                      />
+                    )}
+                  </div>
                 </div>
                 <Button type="submit" className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 text-white hover:from-indigo-700 hover:to-purple-700">
                   {editingCard ? "Kartı Güncelle" : "Kart Oluştur"}
@@ -274,7 +353,13 @@ export default function PointCardsAdmin() {
                   >
                     <div className="h-1 bg-gradient-to-r from-purple-500 to-indigo-500"></div>
                     <CardHeader className="p-4 sm:p-6 flex-1 flex flex-col items-center justify-center text-center">
-                      <div className="text-4xl font-bold text-purple-600 mb-4">+{card.points}</div>
+                      <div className="text-4xl font-bold text-purple-600 mb-4">
+                        {(card.minPoints !== null && card.maxPoints !== null) ? (
+                          <>{card.minPoints} - {card.maxPoints}</>
+                        ) : (
+                          <>+{card.points}</>
+                        )}
+                      </div>
                       <div className="text-xl text-purple-700 mb-2">puan</div>
                       <div className="flex items-center text-sm text-indigo-600 mt-4">
                         <span>Detaylar için tıklayın</span>
@@ -394,7 +479,11 @@ export default function PointCardsAdmin() {
                     <CardTitle className="flex items-center justify-center gap-3 mb-6 text-xl sm:text-2xl">
                       <span>{selectedCard.title}</span>
                       <div className="text-lg font-semibold text-purple-600">
-                        +{selectedCard.points} puan
+                        {(selectedCard.minPoints !== null && selectedCard.maxPoints !== null) ? (
+                          <>{selectedCard.minPoints} - {selectedCard.maxPoints} puan</>
+                        ) : (
+                          <>+{selectedCard.points} puan</>
+                        )}
                       </div>
                     </CardTitle>
                     <CardDescription className="text-base sm:text-lg leading-relaxed">

@@ -85,6 +85,9 @@ function PointsManagement() {
   const [transactionSearchTerm, setTransactionSearchTerm] = useState<string>("");
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [pointReasons, setPointReasons] = useState<PointReason[]>([]);
+  const [reasonSearchTerm, setReasonSearchTerm] = useState<string>("");
+  const [reasonCurrentPage, setReasonCurrentPage] = useState<number>(1);
+  const reasonsPerPage = 4;
   const transactionsPerPage = 5;
 
   // Fetch students, recent transactions, and point reasons
@@ -195,6 +198,7 @@ function PointsManagement() {
             studentId: studentId,
             points: isDecreasing ? -points : points,
             reason: finalReason,
+            pointReasonId: selectedReasonId
           }),
         });
 
@@ -493,45 +497,110 @@ function PointsManagement() {
                       </Button>
                     </div>
                     
+                    {/* Search Bar for Point Reasons */}
+                    <div className="relative group">
+                      <Search className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-500 group-focus-within:text-blue-500 transition-colors" />
+                      <Input
+                        className="pl-12 pr-4 py-3 border-2 border-gray-200 rounded-xl focus:border-blue-400 focus:ring-4 focus:ring-blue-100 transition-all duration-200 bg-white/80"
+                        placeholder="Sebeplerde ara..."
+                        value={reasonSearchTerm}
+                        onChange={(e) => {
+                          setReasonSearchTerm(e.target.value);
+                          setReasonCurrentPage(1); // Reset to first page when searching
+                        }}
+                      />
+                    </div>
+
                     {/* Predefined Reasons */}
                     {pointReasons.length > 0 && (
                       <div className="space-y-3">
                         <Label className="text-sm font-medium text-gray-600">Hazır Sebepler</Label>
                         <div className="grid grid-cols-1 gap-2">
-                          {pointReasons.map((reason) => (
-                            <button
-                              key={reason.id}
-                              type="button"
-                              onClick={() => {
-                                setSelectedReasonId(reason.id);
-                              }}
-                              className={`w-full text-left p-4 rounded-xl transition-all duration-200 border-2 ${
-                                selectedReasonId === reason.id
-                                  ? "bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-300 shadow-md"
-                                  : "hover:bg-gray-50 border-gray-200 hover:border-gray-300"
-                              }`}
-                            >
-                              <div className="flex items-center justify-between">
-                                <div className="flex-1">
-                                  <p className="font-semibold text-gray-900 mb-1">{reason.name}</p>
-                                  {reason.description && (
-                                    <p className="text-sm text-gray-600">{reason.description}</p>
+                          {pointReasons
+                            .filter(reason => 
+                              reason.name.toLowerCase().includes(reasonSearchTerm.toLowerCase()) ||
+                              (reason.description && reason.description.toLowerCase().includes(reasonSearchTerm.toLowerCase()))
+                            )
+                            .slice(
+                              (reasonCurrentPage - 1) * reasonsPerPage,
+                              reasonCurrentPage * reasonsPerPage
+                            )
+                            .map((reason) => (
+                              <button
+                                key={reason.id}
+                                type="button"
+                                onClick={() => {
+                                  setSelectedReasonId(reason.id);
+                                }}
+                                className={`w-full text-left p-4 rounded-xl transition-all duration-200 border-2 ${
+                                  selectedReasonId === reason.id
+                                    ? "bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-300 shadow-md"
+                                    : "hover:bg-gray-50 border-gray-200 hover:border-gray-300"
+                                }`}
+                              >
+                                <div className="flex items-center justify-between">
+                                  <div className="flex-1">
+                                    <p className="font-semibold text-gray-900 mb-1">{reason.name}</p>
+                                    {reason.description && (
+                                      <p className="text-sm text-gray-600">{reason.description}</p>
+                                    )}
+                                  </div>
+                                  {selectedReasonId === reason.id && (
+                                    <div className="w-6 h-6 rounded-full bg-gradient-to-r from-blue-500 to-indigo-500 flex items-center justify-center shadow-lg">
+                                      <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                      </svg>
+                                    </div>
                                   )}
                                 </div>
-                                {selectedReasonId === reason.id && (
-                                  <div className="w-6 h-6 rounded-full bg-gradient-to-r from-blue-500 to-indigo-500 flex items-center justify-center shadow-lg">
-                                    <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                                    </svg>
-                                  </div>
-                                )}
-                              </div>
-                            </button>
-                          ))}
+                              </button>
+                            ))}
                         </div>
+
+                        {/* Pagination Controls for Point Reasons */}
+                        {pointReasons.filter(reason => 
+                          reason.name.toLowerCase().includes(reasonSearchTerm.toLowerCase()) ||
+                          (reason.description && reason.description.toLowerCase().includes(reasonSearchTerm.toLowerCase()))
+                        ).length > reasonsPerPage && (
+                          <div className="flex justify-center items-center gap-4 mt-4 p-3 bg-gray-50/50 rounded-xl">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => setReasonCurrentPage(prev => Math.max(1, prev - 1))}
+                              disabled={reasonCurrentPage === 1}
+                              className="px-3 py-1 rounded-lg border-2 border-gray-200 hover:border-blue-300 hover:bg-blue-50 transition-all duration-200 disabled:opacity-50"
+                            >
+                              ← Önceki
+                            </Button>
+                            <div className="flex items-center px-3 py-1 rounded-lg bg-white border-2 border-gray-200 font-semibold text-gray-700">
+                              <span className="text-blue-600">{reasonCurrentPage}</span>
+                              <span className="mx-2">/</span>
+                              <span>{Math.ceil(pointReasons.filter(reason => 
+                                reason.name.toLowerCase().includes(reasonSearchTerm.toLowerCase()) ||
+                                (reason.description && reason.description.toLowerCase().includes(reasonSearchTerm.toLowerCase()))
+                              ).length / reasonsPerPage)}</span>
+                            </div>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => setReasonCurrentPage(prev => 
+                                Math.min(Math.ceil(pointReasons.filter(reason => 
+                                  reason.name.toLowerCase().includes(reasonSearchTerm.toLowerCase()) ||
+                                  (reason.description && reason.description.toLowerCase().includes(reasonSearchTerm.toLowerCase()))
+                                ).length / reasonsPerPage), prev + 1)
+                              )}
+                              disabled={reasonCurrentPage === Math.ceil(pointReasons.filter(reason => 
+                                reason.name.toLowerCase().includes(reasonSearchTerm.toLowerCase()) ||
+                                (reason.description && reason.description.toLowerCase().includes(reasonSearchTerm.toLowerCase()))
+                              ).length / reasonsPerPage)}
+                              className="px-3 py-1 rounded-lg border-2 border-gray-200 hover:border-blue-300 hover:bg-blue-50 transition-all duration-200 disabled:opacity-50"
+                            >
+                              Sonraki →
+                            </Button>
+                          </div>
+                        )}
                       </div>
                     )}
-
                   </div>
                 )}
 

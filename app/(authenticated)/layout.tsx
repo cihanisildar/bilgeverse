@@ -6,7 +6,7 @@ import { useAuth } from '../contexts/AuthContext';
 import Link from 'next/link';
 import { Button } from "../../components/ui/button";
 import { Avatar, AvatarFallback } from "../../components/ui/avatar";
-import { LogOut, LayoutDashboard, Users, FileText, Calendar, ShoppingBag, PieChart, GraduationCap, Trophy, ShoppingCart, ClipboardList, School, Award, TrendingUp, Menu } from "lucide-react";
+import { LogOut, LayoutDashboard, Users, FileText, Calendar, ShoppingBag, PieChart, GraduationCap, Trophy, ShoppingCart, ClipboardList, School, Award, TrendingUp, Menu, CreditCard, Bell } from "lucide-react";
 import { UserRole } from '@prisma/client';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "../../components/ui/sheet";
 
@@ -47,6 +47,7 @@ export default function AuthenticatedLayout({
   // Define navigation links based on role with Lucide icons
   const adminLinks: NavLink[] = [
     { href: '/admin', label: 'Gösterge Paneli', icon: <LayoutDashboard className="h-5 w-5" /> },
+    { href: '/admin/announcements', label: 'Duyuru Panosu', icon: <Bell className="h-5 w-5" /> },
     { href: '/admin/users', label: 'Kullanıcı Yönetimi', icon: <Users className="h-5 w-5" /> },
     // { href: '/admin/registration-requests', label: 'Kayıt İstekleri', icon: <FileText className="h-5 w-5" /> },
     { href: '/admin/events', label: 'Etkinlikler', icon: <Calendar className="h-5 w-5" /> },
@@ -62,9 +63,11 @@ export default function AuthenticatedLayout({
 
   const tutorLinks: NavLink[] = [
     { href: '/tutor', label: 'Gösterge Paneli', icon: <LayoutDashboard className="h-5 w-5" /> },
+    { href: '/tutor/announcements', label: 'Duyuru Panosu', icon: <Bell className="h-5 w-5" /> },
     { href: '/tutor/students', label: 'Öğrencilerim', icon: <GraduationCap className="h-5 w-5" /> },
     { href: '/tutor/events', label: 'Etkinlikler', icon: <Calendar className="h-5 w-5" /> },
     { href: '/tutor/points', label: 'Puan Yönetimi', icon: <Award className="h-5 w-5" /> },
+    { href: '/tutor/point-cards', label: 'Puan Kartları', icon: <CreditCard className="h-5 w-5" /> },
     { href: '/tutor/experience', label: 'Tecrübe Yönetimi', icon: <TrendingUp className="h-5 w-5" /> },
     { href: '/tutor/leaderboard', label: 'Liderlik Tablosu', icon: <Trophy className="h-5 w-5" /> },
     { href: '/tutor/reports', label: 'Raporlar', icon: <PieChart className="h-5 w-5" /> },
@@ -74,6 +77,7 @@ export default function AuthenticatedLayout({
 
   const studentLinks: NavLink[] = [
     { href: '/student', label: 'Gösterge Paneli', icon: <LayoutDashboard className="h-5 w-5" /> },
+    { href: '/student/announcements', label: 'Duyuru Panosu', icon: <Bell className="h-5 w-5" /> },
     { href: '/student/classroom', label: 'Sınıfım', icon: <School className="h-5 w-5" /> },
     { href: '/student/events', label: 'Etkinlikler', icon: <Calendar className="h-5 w-5" /> },
     { href: '/student/leaderboard', label: 'Liderlik Tablosu', icon: <Trophy className="h-5 w-5" /> },

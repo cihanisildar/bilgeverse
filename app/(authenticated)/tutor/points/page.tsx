@@ -228,6 +228,9 @@ function PointsManagement() {
   const transactionsPerPage = 5;
   const [pointReasons, setPointReasons] = useState<PointReason[]>([]);
   const [selectedReasonId, setSelectedReasonId] = useState<string>("");
+  const [reasonSearchTerm, setReasonSearchTerm] = useState<string>("");
+  const [reasonCurrentPage, setReasonCurrentPage] = useState<number>(1);
+  const reasonsPerPage = 5;
 
   // Add color theme based on mode
   const getThemeColors = () => {
@@ -650,24 +653,82 @@ function PointsManagement() {
                 {/* Reason Input */}
                 <div className="space-y-4">
                   <Label className="text-base font-semibold text-gray-700">Sebep Seçin</Label>
+                  <div className="relative group mb-4">
+                    <Search className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-500 group-focus-within:text-emerald-500 transition-colors" />
+                    <Input
+                      className="pl-12 pr-4 py-3 border-2 border-gray-200 rounded-xl focus:border-emerald-400 focus:ring-4 focus:ring-emerald-100 transition-all duration-200 bg-white/80"
+                      placeholder="Sebeplerde ara..."
+                      value={reasonSearchTerm}
+                      onChange={(e) => {
+                        setReasonSearchTerm(e.target.value);
+                        setReasonCurrentPage(1); // Reset to first page when searching
+                      }}
+                    />
+                  </div>
                   {pointReasons.length > 0 ? (
-                    <RadioGroup
-                      value={selectedReasonId}
-                      onValueChange={setSelectedReasonId}
-                      className="grid grid-cols-1 gap-3"
-                    >
-                      {pointReasons.map((pointReason) => (
-                        <div key={pointReason.id} className="flex items-center space-x-3 p-4 border-2 border-gray-200 rounded-xl hover:border-emerald-300 hover:bg-emerald-50/50 transition-all duration-200 cursor-pointer">
-                          <RadioGroupItem value={pointReason.id} id={pointReason.id} className="text-emerald-600" />
-                          <Label htmlFor={pointReason.id} className="font-medium text-gray-700 cursor-pointer flex-1">
-                            {pointReason.name}
-                            {pointReason.description && (
-                              <p className="text-sm text-gray-500 mt-1">{pointReason.description}</p>
-                            )}
-                          </Label>
+                    <>
+                      <RadioGroup
+                        value={selectedReasonId}
+                        onValueChange={setSelectedReasonId}
+                        className="grid grid-cols-1 gap-3"
+                      >
+                        {pointReasons
+                          .filter(reason => 
+                            reason.name.toLowerCase().includes(reasonSearchTerm.toLowerCase()) ||
+                            (reason.description && reason.description.toLowerCase().includes(reasonSearchTerm.toLowerCase()))
+                          )
+                          .slice((reasonCurrentPage - 1) * reasonsPerPage, reasonCurrentPage * reasonsPerPage)
+                          .map((pointReason) => (
+                            <div key={pointReason.id} className="flex items-center space-x-3 p-4 border-2 border-gray-200 rounded-xl hover:border-emerald-300 hover:bg-emerald-50/50 transition-all duration-200 cursor-pointer">
+                              <RadioGroupItem value={pointReason.id} id={pointReason.id} className="text-emerald-600" />
+                              <Label htmlFor={pointReason.id} className="font-medium text-gray-700 cursor-pointer flex-1">
+                                {pointReason.name}
+                                {pointReason.description && (
+                                  <p className="text-sm text-gray-500 mt-1">{pointReason.description}</p>
+                                )}
+                              </Label>
+                            </div>
+                          ))}
+                      </RadioGroup>
+                      
+                      {/* Point Reasons Pagination Controls */}
+                      <div className="flex justify-center items-center gap-4 mt-6 p-4 bg-gray-50/50 rounded-xl">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setReasonCurrentPage(prev => Math.max(1, prev - 1))}
+                          disabled={reasonCurrentPage === 1}
+                          className="px-4 py-2 rounded-lg border-2 border-gray-200 hover:border-emerald-300 hover:bg-emerald-50 transition-all duration-200 disabled:opacity-50"
+                        >
+                          ← Önceki
+                        </Button>
+                        <div className="flex items-center px-4 py-2 rounded-lg bg-white border-2 border-gray-200 font-semibold text-gray-700">
+                          <span className="text-emerald-600">{reasonCurrentPage}</span>
+                          <span className="mx-2">/</span>
+                          <span>{Math.ceil(pointReasons.filter(reason => 
+                            reason.name.toLowerCase().includes(reasonSearchTerm.toLowerCase()) ||
+                            (reason.description && reason.description.toLowerCase().includes(reasonSearchTerm.toLowerCase()))
+                          ).length / reasonsPerPage) || 1}</span>
                         </div>
-                      ))}
-                    </RadioGroup>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setReasonCurrentPage(prev => 
+                            Math.min(Math.ceil(pointReasons.filter(reason => 
+                              reason.name.toLowerCase().includes(reasonSearchTerm.toLowerCase()) ||
+                              (reason.description && reason.description.toLowerCase().includes(reasonSearchTerm.toLowerCase()))
+                            ).length / reasonsPerPage), prev + 1)
+                          )}
+                          disabled={reasonCurrentPage === Math.ceil(pointReasons.filter(reason => 
+                            reason.name.toLowerCase().includes(reasonSearchTerm.toLowerCase()) ||
+                            (reason.description && reason.description.toLowerCase().includes(reasonSearchTerm.toLowerCase()))
+                          ).length / reasonsPerPage)}
+                          className="px-4 py-2 rounded-lg border-2 border-gray-200 hover:border-emerald-300 hover:bg-emerald-50 transition-all duration-200 disabled:opacity-50"
+                        >
+                          Sonraki →
+                        </Button>
+                      </div>
+                    </>
                   ) : (
                     <div className="p-6 text-center bg-gray-50 rounded-xl border-2 border-gray-200">
                       <p className="text-gray-600 mb-2">Henüz puan sebebi tanımlanmamış</p>

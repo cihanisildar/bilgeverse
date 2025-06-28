@@ -20,6 +20,9 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { studentId, points, reason, pointReasonId } = body;
 
+    // Add logging
+    console.log('Points API request body:', { studentId, points, reason, pointReasonId });
+
     if (!studentId || points === undefined || points === null) {
       return NextResponse.json(
         { error: 'Öğrenci numarası ve puan gerekli' },
@@ -68,6 +71,17 @@ export async function POST(request: NextRequest) {
           reason: reason || (points >= 0 ? 'Puan eklendi' : 'Puan azaltıldı'),
           pointReasonId: pointReasonId || null
         }
+      });
+
+      // Add detailed logging
+      console.log('Created transaction with details:', {
+        id: transaction.id,
+        studentId: transaction.studentId,
+        tutorId: transaction.tutorId,
+        points: transaction.points,
+        type: transaction.type,
+        reason: transaction.reason,
+        pointReasonId: transaction.pointReasonId
       });
 
       // Update student's points

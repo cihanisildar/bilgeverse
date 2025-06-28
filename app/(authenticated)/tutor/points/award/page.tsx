@@ -24,6 +24,14 @@ type Student = {
   points: number;
 };
 
+// Add PointReason type
+type PointReason = {
+  id: string;
+  name: string;
+  description?: string;
+  isActive: boolean;
+};
+
 // Award reasons presets to help tutors
 const AWARD_REASON_PRESETS = [
   { label: 'Ders Katılımı', description: 'Derse aktif katılım ve yerinde katkılar için' },
@@ -90,13 +98,19 @@ export default function AwardPointsPage() {
   // Add retry count state
   const [retryCount, setRetryCount] = useState(0);
   
+  // Add point reasons state
+  const [pointReasons, setPointReasons] = useState<PointReason[]>([]);
+  const [selectedReasonId, setSelectedReasonId] = useState<string>('');
+  const [reasonSearchTerm, setReasonSearchTerm] = useState<string>('');
+  
   // Fetch students and handle studentId from URL
   useEffect(() => {
-    const fetchStudents = async () => {
+    const fetchData = async () => {
       setLoadingStates(prev => ({ ...prev, students: true }));
       setError(null);
       
       try {
+        // Fetch students
         const response = await fetch('/api/tutor/students', {
           credentials: 'include',
           headers: {
@@ -127,16 +141,34 @@ export default function AwardPointsPage() {
             }
           }
         }
+
+        // Fetch point reasons
+        const reasonsRes = await fetch('/api/tutor/point-reasons', {
+          credentials: 'include',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        });
+
+        if (!reasonsRes.ok) {
+          throw new Error('Puan sebepleri alınamadı');
+        }
+
+        const reasonsData = await reasonsRes.json();
+        if (reasonsData.reasons) {
+          setPointReasons(reasonsData.reasons.filter((r: PointReason) => r.isActive));
+        }
+
       } catch (error: any) {
-        console.error('Error fetching students:', error);
-        setError(error.message || 'Öğrenciler yüklenirken bir hata oluştu');
-        toast.error('Öğrenciler yüklenirken bir hata oluştu');
+        console.error('Error fetching data:', error);
+        setError(error.message || 'Veriler yüklenirken bir hata oluştu');
+        toast.error('Veriler yüklenirken bir hata oluştu');
       } finally {
         setLoadingStates(prev => ({ ...prev, students: false }));
       }
     };
     
-    fetchStudents();
+    fetchData();
   }, [studentIdFromUrl]);
   
   // Filter students based on search term
@@ -172,104 +204,58 @@ export default function AwardPointsPage() {
       return;
     }
     
-    if (!reason.trim()) {
-      setError('Lütfen bir sebep belirtin');
+    if (!selectedReasonId) {
+      setError('Lütfen bir puan sebebi seçin');
       return;
     }
 
     const finalPoints = isDecreasing ? -Math.abs(points) : Math.abs(points);
     
-    const attemptUpdate = async (attempt: number): Promise<ApiResponse> => {
-      try {
-        const response = await fetch('/api/points', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Cache-Control': 'no-cache',
-          },
-          credentials: 'include',
-          body: JSON.stringify({
-            studentId: selectedStudent.id,
-            points: finalPoints,
-            reason,
-            retryAttempt: attempt, // Pass retry attempt to backend
-          }),
-        });
-        
-        const data: ApiResponse = await response.json();
-        
-        if (!response.ok) {
-          // Check if it's a transaction timeout error
-          if (data.details?.includes('Transaction already closed') || 
-              data.details?.includes('transaction timeout')) {
-            throw new Error('TRANSACTION_TIMEOUT');
-          }
-          throw new Error(data.error || 'Puan işlemi başarısız oldu');
-        }
-        
-        return data;
-      } catch (error: any) {
-        if (error.message === 'TRANSACTION_TIMEOUT' && attempt < RETRY_CONFIG.maxRetries) {
-          // If it's a timeout and we haven't exceeded max retries, throw to trigger retry
-          throw error;
-        }
-        throw new Error(error.message || 'Puan işlemi sırasında bir hata oluştu');
-      }
-    };
-
     setLoadingStates(prev => ({ ...prev, submission: true }));
-    
     try {
-      let result: ApiResponse | null = null;
-      
-      for (let attempt = 0; attempt < RETRY_CONFIG.maxRetries; attempt++) {
-        try {
-          if (attempt > 0) {
-            // Wait with exponential backoff before retrying
-            const delay = RETRY_CONFIG.baseDelay * Math.pow(2, attempt - 1);
-            await wait(delay);
-            setRetryCount(attempt);
-          }
-          
-          result = await attemptUpdate(attempt);
-          break; // If successful, exit retry loop
-        } catch (error: any) {
-          if (error.message === 'TRANSACTION_TIMEOUT' && attempt < RETRY_CONFIG.maxRetries - 1) {
-            continue; // Try again if it's a timeout and we haven't exceeded max retries
-          }
-          throw error; // Otherwise, propagate the error
-        }
+      const response = await fetch('/api/points', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          studentId: selectedStudent.id,
+          points: finalPoints,
+          pointReasonId: selectedReasonId,
+          reason: pointReasons.find(r => r.id === selectedReasonId)?.name || ''
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to award points');
       }
 
-      if (!result) {
-        throw new Error('İşlem zaman aşımına uğradı. Lütfen tekrar deneyin.');
-      }
+      const data = await response.json();
       
-      // Update student points with loading state
-      setLoadingStates(prev => ({ ...prev, pointsUpdate: true }));
-      setStudents(prev => 
-        prev.map((s: Student) => 
-          s.id === selectedStudent.id 
-            ? { ...s, points: result?.newBalance || s.points } 
+      // Update the student's points in our local state
+      setStudents(prev =>
+        prev.map(s =>
+          s.id === selectedStudent.id
+            ? { ...s, points: data.newBalance }
             : s
         )
       );
-      setLoadingStates(prev => ({ ...prev, pointsUpdate: false }));
+      
+      setSelectedStudent(prev =>
+        prev ? { ...prev, points: data.newBalance } : null
+      );
       
       setSuccess(true);
-      toast.success(`${selectedStudent.username} kullanıcısının ${
-        isDecreasing ? 'puanından ' + points + ' düşürüldü' : 'puanına ' + points + ' eklendi'
-      }`);
+      toast.success(isDecreasing ? 'Puan başarıyla düşürüldü' : 'Puan başarıyla verildi');
       
-      // Reset form with delay
+      // Reset form after success
       setTimeout(() => {
-        setSelectedStudent(null);
         setPoints(10);
-        setReason('');
+        setSelectedReasonId('');
         setSuccess(false);
-        setIsDecreasing(false);
-        setRetryCount(0);
-      }, 3000);
+      }, 2000);
+      
     } catch (error: any) {
       console.error('Error processing points:', error);
       setError(
@@ -594,49 +580,56 @@ export default function AwardPointsPage() {
                     </div>
                   </div>
                   
+                  {/* Point Reasons Selection */}
                   <div className="space-y-4">
                     <div>
-                      <Label htmlFor="reason" className="text-gray-700 block mb-1">
-                        {isDecreasing ? 'Düşürme Sebebi' : 'Veriliş Sebebi'}
+                      <Label htmlFor="pointReason" className="text-gray-700 block mb-1">
+                        Puan Sebebi
                       </Label>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2 mb-3">
-                        {(isDecreasing ? DECREASE_REASON_PRESETS : AWARD_REASON_PRESETS).map((preset, index) => (
-                          <Button
-                            key={index}
-                            type="button"
-                            variant="outline"
-                            className={`justify-start h-auto py-2 px-3 text-left ${
-                              reason === preset.description 
-                                ? isDecreasing
-                                  ? 'bg-red-50 border-red-200 text-red-700'
-                                  : 'bg-green-50 border-green-200 text-green-700'
-                                : 'text-gray-700 hover:bg-gray-50'
-                            }`}
-                            onClick={() => selectReasonPreset(preset)}
-                            disabled={loadingStates.submission}
-                          >
-                            <div>
-                              <p className="font-medium">{preset.label}</p>
-                              <p className="text-xs text-gray-500 truncate">
-                                {preset.description.substring(0, 20)}...
-                              </p>
-                            </div>
-                          </Button>
-                        ))}
+                      <div className="relative">
+                        <Input
+                          type="text"
+                          placeholder="Sebeplerde ara..."
+                          value={reasonSearchTerm}
+                          onChange={(e) => setReasonSearchTerm(e.target.value)}
+                          className="mb-3"
+                        />
+                        <Search className="absolute right-3 top-3 h-4 w-4 text-gray-400" />
                       </div>
-                      <Textarea
-                        id="reason"
-                        placeholder={
-                          isDecreasing 
-                            ? "Puanın neden düşürüldüğünü açıklayın..." 
-                            : "Puanın neden verildiğini açıklayın..."
-                        }
-                        value={reason}
-                        onChange={(e) => setReason(e.target.value)}
-                        required
-                        className="w-full min-h-[120px]"
-                        disabled={loadingStates.submission}
-                      />
+                      <div className="space-y-2 max-h-[300px] overflow-y-auto">
+                        {pointReasons
+                          .filter(reason =>
+                            reason.name.toLowerCase().includes(reasonSearchTerm.toLowerCase()) ||
+                            (reason.description && reason.description.toLowerCase().includes(reasonSearchTerm.toLowerCase()))
+                          )
+                          .map((reason) => (
+                            <div
+                              key={reason.id}
+                              onClick={() => setSelectedReasonId(reason.id)}
+                              className={`p-4 rounded-lg border-2 cursor-pointer transition-all duration-200 ${
+                                selectedReasonId === reason.id
+                                  ? 'border-emerald-500 bg-emerald-50'
+                                  : 'border-gray-200 hover:border-emerald-200 hover:bg-emerald-50/50'
+                              }`}
+                            >
+                              <div className="flex items-start">
+                                <div className="flex-1">
+                                  <h4 className="font-medium text-gray-900">{reason.name}</h4>
+                                  {reason.description && (
+                                    <p className="text-sm text-gray-500 mt-1">{reason.description}</p>
+                                  )}
+                                </div>
+                                {selectedReasonId === reason.id && (
+                                  <div className="text-emerald-500">
+                                    <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                    </svg>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          ))}
+                      </div>
                     </div>
                   </div>
                   
@@ -673,7 +666,7 @@ export default function AwardPointsPage() {
                           loadingStates.submission || 
                           !selectedStudent || 
                           points <= 0 || 
-                          !reason.trim() ||
+                          !selectedReasonId ||
                           (isDecreasing && points > selectedStudent.points)
                         }
                       >

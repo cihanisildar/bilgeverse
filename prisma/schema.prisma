@@ -112,6 +112,9 @@ model User {
   createdCards PointEarningCard[] @relation("AdminCards")
   createdReasons PointReason[] @relation("AdminReasons")
 
+  // Announcement relations
+  createdAnnouncements Announcement[] @relation("AdminAnnouncements")
+
   @@index([tutorId])
 }
 
@@ -297,6 +300,8 @@ model PointEarningCard {
   title       String
   description String
   points      Int
+  minPoints   Int?      // Minimum points for range
+  maxPoints   Int?      // Maximum points for range
   icon        String?   // Store the icon name or URL (optional)
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
@@ -319,4 +324,16 @@ model PointReason {
   createdBy   User      @relation("AdminReasons", fields: [createdById], references: [id])
   createdById String
   transactions PointsTransaction[] @relation("ReasonTransactions")
+}
+
+model Announcement {
+  id          String    @id @default(uuid())
+  title       String
+  content     String    @db.Text
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  // Relations
+  createdBy   User      @relation("AdminAnnouncements", fields: [createdById], references: [id])
+  createdById String
 } 

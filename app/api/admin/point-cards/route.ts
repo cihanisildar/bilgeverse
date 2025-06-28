@@ -36,7 +36,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { title, description, points, icon } = await req.json();
+    const { title, description, points, icon, minPoints, maxPoints } = await req.json();
 
     const card = await prisma.pointEarningCard.create({
       data: {
@@ -44,6 +44,8 @@ export async function POST(req: Request) {
         description,
         points,
         icon,
+        minPoints,
+        maxPoints,
         createdById: session.user.id,
       },
     });
@@ -62,7 +64,7 @@ export async function PUT(req: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { id, title, description, points, icon, isActive } = await req.json();
+    const { id, title, description, points, icon, isActive, minPoints, maxPoints } = await req.json();
 
     const card = await prisma.pointEarningCard.update({
       where: { id },
@@ -72,6 +74,8 @@ export async function PUT(req: Request) {
         points,
         icon,
         isActive,
+        minPoints,
+        maxPoints,
       },
     });
 

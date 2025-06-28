@@ -69,6 +69,8 @@ function PointReasonsManagement() {
   const [reasons, setReasons] = useState<PointReason[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [searchTerm, setSearchTerm] = useState<string>("");
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const itemsPerPage = 10;
   
   // Dialog states
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState<boolean>(false);
@@ -119,6 +121,18 @@ function PointReasonsManagement() {
     reason.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     (reason.description && reason.description.toLowerCase().includes(searchTerm.toLowerCase()))
   );
+
+  // Calculate pagination
+  const totalPages = Math.ceil(filteredReasons.length / itemsPerPage);
+  const paginatedReasons = filteredReasons.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
+
+  // Reset to first page when search changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm]);
 
   // Reset form
   const resetForm = () => {
@@ -287,28 +301,30 @@ function PointReasonsManagement() {
   return (
     <div>
       {/* Controls */}
-      <div className="mb-8 flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
-        <div className="relative flex-1 max-w-md">
+      <div className="mb-8 flex flex-col gap-4">
+        <div className="relative w-full">
           <Search className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-500" />
           <Input
-            className="pl-12 pr-4 py-3 border-2 border-gray-200 rounded-xl focus:border-blue-400 focus:ring-4 focus:ring-blue-100 transition-all duration-200 bg-white/80"
+            className="pl-12 pr-4 py-3 border-2 border-gray-200 rounded-xl focus:border-blue-400 focus:ring-4 focus:ring-blue-100 transition-all duration-200 bg-white/80 w-full"
             placeholder="Sebeplerde ara..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
         </div>
-        <Button
-          onClick={() => setIsCreateDialogOpen(true)}
-          className="bg-gradient-to-r from-blue-500 to-indigo-500 hover:from-blue-600 hover:to-indigo-600 text-white shadow-lg px-6 py-3 rounded-xl transition-all duration-200 transform hover:scale-[1.02]"
-        >
-          <Plus className="h-5 w-5 mr-2" />
-          Yeni Sebep Ekle
-        </Button>
+        <div className="flex justify-end">
+          <Button
+            onClick={() => setIsCreateDialogOpen(true)}
+            className="bg-gradient-to-r from-blue-500 to-indigo-500 hover:from-blue-600 hover:to-indigo-600 text-white shadow-lg px-6 py-3 rounded-xl transition-all duration-200 transform hover:scale-[1.02]"
+          >
+            <Plus className="h-5 w-5 mr-2" />
+            Yeni Sebep Ekle
+          </Button>
+        </div>
       </div>
 
       {/* Reasons List */}
       <div className="space-y-6">
-        {filteredReasons.map((reason) => (
+        {paginatedReasons.map((reason) => (
           <Card
             key={reason.id}
             className={`border-0 shadow-xl transition-all duration-200 transform hover:scale-[1.01] hover:shadow-2xl ${
@@ -393,6 +409,80 @@ function PointReasonsManagement() {
           </Card>
         )}
       </div>
+
+      {/* Pagination Controls */}
+      {filteredReasons.length > 0 && (
+        <div className="mt-8 flex items-center justify-between border-t border-gray-200 bg-white px-4 py-3 sm:px-6 rounded-xl shadow-lg">
+          <div className="flex flex-1 justify-between sm:hidden">
+            <Button
+              onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+              disabled={currentPage === 1}
+              variant="outline"
+            >
+              Önceki
+            </Button>
+            <Button
+              onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+              disabled={currentPage === totalPages}
+              variant="outline"
+            >
+              Sonraki
+            </Button>
+          </div>
+          <div className="hidden sm:flex sm:flex-1 sm:items-center sm:justify-between">
+            <div>
+              <p className="text-sm text-gray-700">
+                Toplam <span className="font-medium">{filteredReasons.length}</span> sonuçtan{' '}
+                <span className="font-medium">{(currentPage - 1) * itemsPerPage + 1}</span>-
+                <span className="font-medium">
+                  {Math.min(currentPage * itemsPerPage, filteredReasons.length)}
+                </span>{' '}
+                arası gösteriliyor
+              </p>
+            </div>
+            <div>
+              <nav className="isolate inline-flex -space-x-px rounded-md shadow-sm" aria-label="Pagination">
+                <Button
+                  variant="outline"
+                  className="relative inline-flex items-center rounded-l-md px-2 py-2 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0"
+                  onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                  disabled={currentPage === 1}
+                >
+                  <span className="sr-only">Önceki</span>
+                  <svg className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                    <path fillRule="evenodd" d="M12.79 5.23a.75.75 0 01-.02 1.06L8.832 10l3.938 3.71a.75.75 0 11-1.04 1.08l-4.5-4.25a.75.75 0 010-1.08l4.5-4.25a.75.75 0 011.06.02z" clipRule="evenodd" />
+                  </svg>
+                </Button>
+                {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                  <Button
+                    key={page}
+                    variant={currentPage === page ? "default" : "outline"}
+                    className={`relative inline-flex items-center px-4 py-2 text-sm font-semibold ${
+                      currentPage === page
+                        ? 'bg-blue-600 text-white focus:z-20 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600'
+                        : 'text-gray-900 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0'
+                    }`}
+                    onClick={() => setCurrentPage(page)}
+                  >
+                    {page}
+                  </Button>
+                ))}
+                <Button
+                  variant="outline"
+                  className="relative inline-flex items-center rounded-r-md px-2 py-2 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0"
+                  onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                  disabled={currentPage === totalPages}
+                >
+                  <span className="sr-only">Sonraki</span>
+                  <svg className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                    <path fillRule="evenodd" d="M7.21 14.77a.75.75 0 01.02-1.06L11.168 10 7.23 6.29a.75.75 0 111.04-1.08l4.5 4.25a.75.75 0 010 1.08l-4.5 4.25a.75.75 0 01-1.06-.02z" clipRule="evenodd" />
+                  </svg>
+                </Button>
+              </nav>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Create Dialog */}
       <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>

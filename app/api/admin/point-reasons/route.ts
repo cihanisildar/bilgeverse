@@ -37,15 +37,33 @@ export async function GET(request: NextRequest) {
             transactions: true,
           },
         },
+        transactions: {
+          take: 1,
+          select: {
+            id: true,
+            pointReasonId: true,
+          },
+        },
       },
       orderBy: {
         createdAt: "desc",
       },
     });
 
+    // Add detailed logging
+    console.log('Point reasons query result with sample transactions:', reasons.map(r => ({
+      id: r.id,
+      name: r.name,
+      transactionCount: r._count?.transactions,
+      sampleTransaction: r.transactions[0] || null
+    })));
+
+    // Remove transactions from response to keep it clean
+    const cleanReasons = reasons.map(({ transactions, ...rest }) => rest);
+
     return NextResponse.json({
       success: true,
-      reasons,
+      reasons: cleanReasons,
     });
   } catch (error) {
     console.error("Error fetching point reasons:", error);
