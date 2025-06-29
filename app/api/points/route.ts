@@ -208,6 +208,9 @@ export async function GET(request: NextRequest) {
       where.studentId = session.user.id;
     }
 
+    // Only include non-rolled-back transactions
+    where.rolledBack = false;
+
     const transactions = await prisma.pointsTransaction.findMany({
       where,
       orderBy: {

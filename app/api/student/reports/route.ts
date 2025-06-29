@@ -70,9 +70,11 @@ export async function GET(request: NextRequest) {
     const pointsTransactions = await prisma.pointsTransaction.findMany({
       where: {
         studentId: studentId,
-        type: 'AWARD' // Only count awarded points
+        type: 'AWARD', // Only count awarded points
+        rolledBack: false
       },
       include: {
+        pointReason: true,
         tutor: {
           select: {
             id: true,
@@ -90,7 +92,8 @@ export async function GET(request: NextRequest) {
     // Get all experience transactions for this student
     const experienceTransactions = await prisma.experienceTransaction.findMany({
       where: {
-        studentId: studentId
+        studentId: studentId,
+        rolledBack: false
       },
       include: {
         tutor: {
@@ -129,7 +132,7 @@ export async function GET(request: NextRequest) {
       }
     });
 
-    // Categorize points by activity type based on reason
+    // Categorize points by point reason
     const pointsByActivity = categorizePointsByActivity(pointsTransactions);
     
     // Categorize experience by activity type
@@ -200,37 +203,18 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// Helper function to categorize points by activity type
+// Helper function to categorize points by point reason
 function categorizePointsByActivity(transactions: any[]) {
-  const categories: { [key: string]: { total: number; count: number; transactions: any[] } } = {
-    'Sohbet (Karakter Eğitimi)': { total: 0, count: 0, transactions: [] },
-    'Atölye Faaliyetleri': { total: 0, count: 0, transactions: [] },
-    'Kitap Okuma': { total: 0, count: 0, transactions: [] },
-    'Diğer Aktiviteler': { total: 0, count: 0, transactions: [] }
-  };
-
+  const categories: { [key: string]: { total: number; count: number; transactions: any[] } } = {};
   transactions.forEach(transaction => {
-    const reason = transaction.reason?.toLowerCase() || '';
-    
-    if (reason.includes('sohbet') || reason.includes('karakter') || reason.includes('eğitim')) {
-      categories['Sohbet (Karakter Eğitimi)'].total += transaction.points;
-      categories['Sohbet (Karakter Eğitimi)'].count += 1;
-      categories['Sohbet (Karakter Eğitimi)'].transactions.push(transaction);
-    } else if (reason.includes('atölye') || reason.includes('aktivite') || reason.includes('faaliyeti')) {
-      categories['Atölye Faaliyetleri'].total += transaction.points;
-      categories['Atölye Faaliyetleri'].count += 1;
-      categories['Atölye Faaliyetleri'].transactions.push(transaction);
-    } else if (reason.includes('kitap') || reason.includes('okuma')) {
-      categories['Kitap Okuma'].total += transaction.points;
-      categories['Kitap Okuma'].count += 1;  
-      categories['Kitap Okuma'].transactions.push(transaction);
-    } else {
-      categories['Diğer Aktiviteler'].total += transaction.points;
-      categories['Diğer Aktiviteler'].count += 1;
-      categories['Diğer Aktiviteler'].transactions.push(transaction);
+    const reasonName = transaction.pointReason?.name || 'Diğer Aktiviteler';
+    if (!categories[reasonName]) {
+      categories[reasonName] = { total: 0, count: 0, transactions: [] };
     }
+    categories[reasonName].total += transaction.points;
+    categories[reasonName].count += 1;
+    categories[reasonName].transactions.push(transaction);
   });
-
   return categories;
 }
 

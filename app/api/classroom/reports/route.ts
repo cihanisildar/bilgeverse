@@ -73,18 +73,18 @@ export async function GET(request: NextRequest) {
     const pointsTransactions = await prisma.pointsTransaction.findMany({
       where: {
         studentId: { in: studentIds },
-        type: 'AWARD'
+        type: 'AWARD',
+        rolledBack: false
       },
-      select: {
-        points: true,
-        reason: true,
-        createdAt: true
+      include: {
+        pointReason: true
       }
     });
     // Experience transactions
     const experienceTransactions = await prisma.experienceTransaction.findMany({
       where: {
-        studentId: { in: studentIds }
+        studentId: { in: studentIds },
+        rolledBack: false
       },
       select: {
         amount: true,
@@ -160,7 +160,7 @@ export async function GET(request: NextRequest) {
     // Get detailed points and experience lists
     const pointsList = pointsTransactions.map(transaction => ({
       points: transaction.points,
-      reason: transaction.reason,
+      reason: transaction.pointReason?.name || 'Diğer Aktiviteler',
       date: transaction.createdAt
     })).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
@@ -194,46 +194,24 @@ export async function GET(request: NextRequest) {
 }
 
 function categorizeAllPointsByActivity(pointsTransactions: any[], eventParticipations: any[]) {
-  const categories: { [key: string]: { total: number; count: number } } = {
-    'Sohbet (Karakter Eğitimi)': { total: 0, count: 0 },
-    'Atölye Faaliyetleri': { total: 0, count: 0 },
-    'Kitap Okuma': { total: 0, count: 0 },
-    'Etkinlik Katılımı': { total: 0, count: 0 },
-    'Diğer Aktiviteler': { total: 0, count: 0 }
-  };
+  const categories: { [key: string]: { total: number; count: number } } = {};
   pointsTransactions.forEach(transaction => {
-    const reason = transaction.reason?.toLowerCase() || '';
-    if (reason.includes('sohbet') || reason.includes('karakter') || reason.includes('eğitim')) {
-      categories['Sohbet (Karakter Eğitimi)'].total += transaction.points;
-      categories['Sohbet (Karakter Eğitimi)'].count += 1;
-    } else if (reason.includes('atölye') || reason.includes('aktivite')) {
-      categories['Atölye Faaliyetleri'].total += transaction.points;
-      categories['Atölye Faaliyetleri'].count += 1;
-    } else if (reason.includes('kitap') || reason.includes('okuma')) {
-      categories['Kitap Okuma'].total += transaction.points;
-      categories['Kitap Okuma'].count += 1;
-    } else {
-      categories['Diğer Aktiviteler'].total += transaction.points;
-      categories['Diğer Aktiviteler'].count += 1;
+    const reasonName = transaction.pointReason?.name || 'Diğer Aktiviteler';
+    if (!categories[reasonName]) {
+      categories[reasonName] = { total: 0, count: 0 };
     }
+    categories[reasonName].total += transaction.points;
+    categories[reasonName].count += 1;
   });
   eventParticipations.forEach(participation => {
     const eventTitle = participation.event.title?.toLowerCase() || '';
     const eventTags = participation.event.tags || [];
     const eventPoints = participation.event.points || 0;
-    if (eventTitle.includes('sohbet') || eventTitle.includes('karakter') || eventTags.some((tag: string) => tag.toLowerCase().includes('sohbet') || tag.toLowerCase().includes('karakter'))) {
-      categories['Sohbet (Karakter Eğitimi)'].total += eventPoints;
-      categories['Sohbet (Karakter Eğitimi)'].count += 1;
-    } else if (eventTitle.includes('atölye') || eventTitle.includes('workshop') || eventTags.some((tag: string) => tag.toLowerCase().includes('atölye') || tag.toLowerCase().includes('workshop'))) {
-      categories['Atölye Faaliyetleri'].total += eventPoints;
-      categories['Atölye Faaliyetleri'].count += 1;
-    } else if (eventTitle.includes('kitap') || eventTitle.includes('okuma') || eventTags.some((tag: string) => tag.toLowerCase().includes('kitap') || tag.toLowerCase().includes('okuma'))) {
-      categories['Kitap Okuma'].total += eventPoints;
-      categories['Kitap Okuma'].count += 1;
-    } else {
-      categories['Etkinlik Katılımı'].total += eventPoints;
-      categories['Etkinlik Katılımı'].count += 1;
+    if (!categories['Etkinlik Katılımı']) {
+      categories['Etkinlik Katılımı'] = { total: 0, count: 0 };
     }
+    categories['Etkinlik Katılımı'].total += eventPoints;
+    categories['Etkinlik Katılımı'].count += 1;
   });
   return categories;
 } 

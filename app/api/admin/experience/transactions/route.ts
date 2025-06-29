@@ -19,6 +19,7 @@ export async function GET(request: NextRequest) {
 
     // Get all experience transactions
     const transactions = await prisma.experienceTransaction.findMany({
+      where: { rolledBack: false },
       include: {
         student: {
           select: {

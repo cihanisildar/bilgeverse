@@ -34,10 +34,13 @@ export async function GET(request: NextRequest) {
         },
         _count: {
           select: {
-            transactions: true,
+            transactions: {
+              where: { rolledBack: false }
+            },
           },
         },
         transactions: {
+          where: { rolledBack: false },
           take: 1,
           select: {
             id: true,

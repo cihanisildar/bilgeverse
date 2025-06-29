@@ -115,6 +115,10 @@ model User {
   // Announcement relations
   createdAnnouncements Announcement[] @relation("AdminAnnouncements")
 
+  // Rollback relations
+  rollbacksAsStudent TransactionRollback[] @relation("RollbackStudent")
+  rollbacksAsAdmin   TransactionRollback[] @relation("RollbackAdmin")
+
   @@index([tutorId])
 }
 
@@ -227,6 +231,7 @@ model PointsTransaction {
   reason      String?
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
+  rolledBack  Boolean   @default(false)
 
   // Relations
   student     User      @relation("StudentPoints", fields: [studentId], references: [id])
@@ -242,6 +247,7 @@ model ExperienceTransaction {
   amount      Int
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
+  rolledBack  Boolean   @default(false)
 
   // Relations
   student     User      @relation("StudentExperience", fields: [studentId], references: [id])
@@ -336,4 +342,17 @@ model Announcement {
   // Relations
   createdBy   User      @relation("AdminAnnouncements", fields: [createdById], references: [id])
   createdById String
+}
+
+model TransactionRollback {
+  id              String   @id @default(uuid())
+  transactionId    String
+  transactionType  String // "POINTS" or "EXPERIENCE"
+  studentId        String
+  adminId          String
+  reason           String
+  createdAt        DateTime @default(now())
+
+  student          User     @relation("RollbackStudent", fields: [studentId], references: [id])
+  admin            User     @relation("RollbackAdmin", fields: [adminId], references: [id])
 } 

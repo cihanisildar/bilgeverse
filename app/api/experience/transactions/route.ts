@@ -20,7 +20,8 @@ export async function GET(request: NextRequest) {
     // Get all experience transactions for students assigned to this tutor
     const transactions = await prisma.experienceTransaction.findMany({
       where: {
-        tutorId: session.user.id
+        tutorId: session.user.id,
+        rolledBack: false
       },
       include: {
         student: {

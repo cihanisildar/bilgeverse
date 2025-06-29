@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend, BarChart, Bar, XAxis, YAxis, CartesianGrid } from 'recharts';
 import { 
@@ -16,7 +17,9 @@ import {
   Palette,
   Trophy,
   Star,
-  Target
+  Target,
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -57,12 +60,18 @@ type OverallStatsData = {
   };
 };
 
-const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8'];
+const COLORS = [
+  '#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8', 
+  '#82CA9D', '#FFC658', '#FF7C7C', '#8DD1E1', '#D084D0',
+  '#87CEEB', '#DDA0DD', '#F0E68C', '#FF6347', '#40E0D0'
+];
 
 export default function OverallStatsReport({ userRole }: OverallStatsReportProps) {
   const [statsData, setStatsData] = useState<OverallStatsData | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('overview');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage] = useState(6);
 
   useEffect(() => {
     fetchOverallStats();
@@ -114,6 +123,43 @@ export default function OverallStatsReport({ userRole }: OverallStatsReportProps
     }
   };
 
+  // Pagination logic for activities
+  const getPaginatedActivities = () => {
+    if (!statsData?.activityDistribution) return [];
+    
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    return statsData.activityDistribution.slice(startIndex, endIndex);
+  };
+
+  const getTotalPages = () => {
+    if (!statsData?.activityDistribution) return 0;
+    return Math.ceil(statsData.activityDistribution.length / itemsPerPage);
+  };
+
+  const goToNextPage = () => {
+    if (currentPage < getTotalPages()) {
+      setCurrentPage(currentPage + 1);
+    }
+  };
+
+  const goToPrevPage = () => {
+    if (currentPage > 1) {
+      setCurrentPage(currentPage - 1);
+    }
+  };
+
+  // Prepare data for horizontal bar chart
+  const getChartData = () => {
+    if (!statsData?.activityDistribution) return [];
+    
+    return statsData.activityDistribution.map((activity, index) => ({
+      ...activity,
+      shortName: activity.name.length > 25 ? activity.name.substring(0, 25) + '...' : activity.name,
+      color: COLORS[index % COLORS.length]
+    }));
+  };
+
   if (loading) {
     return (
       <div className="flex justify-center items-center min-h-[60vh]">
@@ -129,6 +175,10 @@ export default function OverallStatsReport({ userRole }: OverallStatsReportProps
       </div>
     );
   }
+
+  const chartData = getChartData();
+  const paginatedActivities = getPaginatedActivities();
+  const totalPages = getTotalPages();
 
   return (
     <div className="space-y-8">
@@ -163,7 +213,7 @@ export default function OverallStatsReport({ userRole }: OverallStatsReportProps
         {/* Overview Tab */}
         <TabsContent value="overview" className="space-y-6">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Activity Distribution Pie Chart */}
+            {/* Activity Distribution Horizontal Bar Chart */}
             <Card className="bg-white/80 backdrop-blur-sm border-white/20 shadow-xl">
               <CardHeader>
                 <div className="flex items-center gap-3">
@@ -179,39 +229,59 @@ export default function OverallStatsReport({ userRole }: OverallStatsReportProps
                 </div>
               </CardHeader>
               <CardContent>
-                {statsData.activityDistribution.length > 0 ? (
-                  <div className="h-80">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <PieChart>
-                        <Pie
-                          data={statsData.activityDistribution}
-                          cx="50%"
-                          cy="50%"
-                          labelLine={false}
-                          label={({ name, percentage }) => `${name}: ${percentage}%`}
-                          outerRadius={120}
-                          fill="#8884d8"
-                          dataKey="value"
-                        >
-                          {statsData.activityDistribution.map((entry, index) => (
-                            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                          ))}
-                        </Pie>
-                        <Tooltip 
-                          formatter={(value) => [`${value} puan`, 'Toplam']}
-                          contentStyle={{
-                            backgroundColor: 'rgba(255, 255, 255, 0.95)',
-                            border: '1px solid rgba(255, 255, 255, 0.2)',
-                            borderRadius: '12px',
-                            backdropFilter: 'blur(8px)'
-                          }}
-                        />
-                        <Legend />
-                      </PieChart>
-                    </ResponsiveContainer>
+                {chartData.length > 0 ? (
+                  <div className="space-y-4">
+                    {/* Shadcn-style Horizontal Bar Chart */}
+                    <div className="space-y-3">
+                      {chartData.map((activity, index) => {
+                        const maxPercentage = Math.max(...chartData.map(d => d.percentage));
+                        const barWidth = (activity.percentage / maxPercentage) * 100;
+                        
+                        return (
+                          <div key={activity.name} className="space-y-2">
+                            <div className="flex items-center justify-between text-sm">
+                              <span className="font-medium text-gray-700 truncate pr-4" title={activity.name}>
+                                {activity.name.length > 40 ? activity.name.substring(0, 40) + '...' : activity.name}
+                              </span>
+                              <div className="flex items-center gap-2 text-xs text-gray-500 flex-shrink-0">
+                                <span className="font-semibold">{activity.percentage}%</span>
+                                <span>({activity.value} puan)</span>
+                              </div>
+                            </div>
+                            <div className="w-full bg-gray-100 rounded-full h-3 overflow-hidden">
+                              <div 
+                                className="h-full rounded-full transition-all duration-1000 ease-out"
+                                style={{ 
+                                  width: `${barWidth}%`,
+                                  backgroundColor: activity.color 
+                                }}
+                              />
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                    
+                    {/* Summary Stats */}
+                    <div className="mt-6 pt-4 border-t border-gray-200">
+                      <div className="grid grid-cols-2 gap-4 text-sm">
+                        <div className="text-center p-3 bg-blue-50 rounded-lg">
+                          <div className="font-bold text-blue-700 text-lg">
+                            {chartData.reduce((sum, item) => sum + item.count, 0)}
+                          </div>
+                          <p className="text-blue-600">Toplam Katılım</p>
+                        </div>
+                        <div className="text-center p-3 bg-green-50 rounded-lg">
+                          <div className="font-bold text-green-700 text-lg">
+                            {chartData.reduce((sum, item) => sum + item.value, 0).toLocaleString()}
+                          </div>
+                          <p className="text-green-600">Toplam Puan</p>
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 ) : (
-                  <div className="h-80 flex flex-col items-center justify-center text-gray-500">
+                  <div className="h-96 flex flex-col items-center justify-center text-gray-500">
                     <Activity className="h-16 w-16 text-gray-300 mb-4" />
                     <p className="text-lg font-medium">Henüz aktivite verisi bulunmuyor</p>
                     <p className="text-sm text-gray-400">Öğrenciler aktivitelere katıldıkça burada görünecek</p>
@@ -267,26 +337,65 @@ export default function OverallStatsReport({ userRole }: OverallStatsReportProps
                   </Card>
                 </div>
 
-                {/* Activity Efficiency */}
+                {/* Activity Efficiency with Pagination */}
                 <div className="space-y-3">
-                  <h4 className="font-semibold text-gray-800">Aktivite Katılım Oranları</h4>
-                  {statsData.activityDistribution.map((activity, index) => (
-                    <div key={activity.name} className="flex items-center justify-between p-3 bg-gradient-to-r from-gray-50 to-gray-100 rounded-lg border border-gray-200">
-                      <div className="flex items-center gap-3">
-                        <div className={`p-2 rounded-lg ${getActivityColor(activity.name)}`}>
-                          {getActivityIcon(activity.name)}
-                        </div>
-                        <div>
-                          <p className="font-medium text-sm">{activity.name}</p>
-                          <p className="text-xs text-gray-500">{activity.count} katılım</p>
+                  <div className="flex items-center justify-between">
+                    <h4 className="font-semibold text-gray-800">Aktivite Katılım Oranları</h4>
+                    {totalPages > 1 && (
+                      <div className="flex items-center gap-2 text-sm text-gray-500">
+                        <span>{currentPage} / {totalPages}</span>
+                        <div className="flex gap-1">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={goToPrevPage}
+                            disabled={currentPage === 1}
+                            className="h-8 w-8 p-0"
+                          >
+                            <ChevronLeft className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={goToNextPage}
+                            disabled={currentPage === totalPages}
+                            className="h-8 w-8 p-0"
+                          >
+                            <ChevronRight className="h-4 w-4" />
+                          </Button>
                         </div>
                       </div>
-                      <div className="text-right">
-                        <div className="font-bold text-gray-800">{activity.percentage}%</div>
-                        <p className="text-xs text-gray-500">{activity.value} puan</p>
+                    )}
+                  </div>
+                  
+                  <div className="space-y-2">
+                    {paginatedActivities.map((activity, index) => (
+                      <div key={activity.name} className="flex items-center justify-between p-3 bg-gradient-to-r from-gray-50 to-gray-100 rounded-lg border border-gray-200 hover:shadow-md transition-all duration-200">
+                        <div className="flex items-center gap-3">
+                          <div className={`p-2 rounded-lg ${getActivityColor(activity.name)}`}>
+                            {getActivityIcon(activity.name)}
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <p className="font-medium text-sm truncate" title={activity.name}>
+                              {activity.name}
+                            </p>
+                            <p className="text-xs text-gray-500">{activity.count} katılım</p>
+                          </div>
+                        </div>
+                        <div className="text-right flex-shrink-0">
+                          <div className="font-bold text-gray-800">{activity.percentage}%</div>
+                          <p className="text-xs text-gray-500">{activity.value} puan</p>
+                        </div>
                       </div>
+                    ))}
+                  </div>
+                  
+                  {statsData.activityDistribution.length === 0 && (
+                    <div className="text-center py-8 text-gray-500">
+                      <Activity className="h-12 w-12 text-gray-300 mx-auto mb-2" />
+                      <p className="text-sm">Henüz aktivite verisi bulunmuyor</p>
                     </div>
-                  ))}
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -311,24 +420,28 @@ export default function OverallStatsReport({ userRole }: OverallStatsReportProps
             </CardHeader>
             <CardContent>
               {statsData.activityDistribution.length > 0 ? (
-                <div className="h-80">
+                <div className="h-96">
                   <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={statsData.activityDistribution}>
+                    <BarChart data={chartData} margin={{ bottom: 80 }}>
                       <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                       <XAxis 
-                        dataKey="name" 
-                        tick={{ fontSize: 12 }}
+                        dataKey="shortName" 
+                        tick={{ fontSize: 10 }}
                         angle={-45}
                         textAnchor="end"
                         height={80}
-                        label={{ value: 'Aktivite Türü', position: 'insideBottom', offset: -5 }}
+                        interval={0}
                       />
                       <YAxis 
                         tick={{ fontSize: 12 }}
-                        label={{ value: 'Puan', angle: -90, position: 'insideLeft' }}
+                        label={{ value: 'Yüzde (%)', angle: -90, position: 'insideLeft' }}
                       />
                       <Tooltip 
-                        formatter={(value) => [`${value} puan`, 'Toplam Puan']}
+                        formatter={(value, name, props) => [
+                          `${value}% (${props.payload.value} puan)`, 
+                          props.payload.name
+                        ]}
+                        labelFormatter={(label) => chartData.find(d => d.shortName === label)?.name || label}
                         contentStyle={{
                           backgroundColor: 'rgba(255, 255, 255, 0.95)',
                           border: '1px solid rgba(255, 255, 255, 0.2)',
@@ -337,21 +450,18 @@ export default function OverallStatsReport({ userRole }: OverallStatsReportProps
                         }}
                       />
                       <Bar 
-                        dataKey="value" 
-                        fill="url(#gradient)" 
+                        dataKey="percentage" 
                         radius={[4, 4, 0, 0]}
-                      />
-                      <defs>
-                        <linearGradient id="gradient" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="#10B981" stopOpacity={0.8}/>
-                          <stop offset="95%" stopColor="#059669" stopOpacity={0.6}/>
-                        </linearGradient>
-                      </defs>
+                      >
+                        {chartData.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={entry.color} />
+                        ))}
+                      </Bar>
                     </BarChart>
                   </ResponsiveContainer>
                 </div>
               ) : (
-                <div className="h-80 flex flex-col items-center justify-center text-gray-500">
+                <div className="h-96 flex flex-col items-center justify-center text-gray-500">
                   <Target className="h-16 w-16 text-gray-300 mb-4" />
                   <p className="text-lg font-medium">Henüz aktivite verisi bulunmuyor</p>
                   <p className="text-sm text-gray-400">Aktiviteler başladıkça burada görünecek</p>

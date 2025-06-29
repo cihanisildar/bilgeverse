@@ -56,6 +56,7 @@ export default function AuthenticatedLayout({
     { href: '/admin/experience', label: 'Tecrübe Yönetimi', icon: <TrendingUp className="h-5 w-5" /> },
     { href: '/admin/store', label: 'Mağaza Yönetimi', icon: <ShoppingBag className="h-5 w-5" /> },
     { href: '/admin/point-cards', label: 'Puan Kartları', icon: <Award className="h-5 w-5" /> },
+    { href: '/admin/transactions/rollback', label: 'İşlem Geri Alma', icon: <CreditCard className="h-5 w-5" /> },
     { href: '/admin/wishes', label: 'İstek ve Dilekler', icon: <ClipboardList className="h-5 w-5" /> },
     { href: '/admin/leaderboard', label: 'Liderlik Tablosu', icon: <Trophy className="h-5 w-5" /> },
     { href: '/admin/reports', label: 'Raporlar', icon: <PieChart className="h-5 w-5" /> },
