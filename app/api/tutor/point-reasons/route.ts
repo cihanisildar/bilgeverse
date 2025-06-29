@@ -52,9 +52,10 @@ export async function GET(request: NextRequest) {
         id: true,
         name: true,
         description: true,
+        createdAt: true,
       },
       orderBy: {
-        name: "asc",
+        createdAt: "desc",
       },
     });
     console.log('Point reasons API - Found reasons:', reasons.length);

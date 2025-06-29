@@ -19,7 +19,9 @@ import {
   TrendingUp,
   Users,
   Activity,
-  Home
+  Home,
+  Calendar,
+  Target
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
@@ -124,7 +126,6 @@ export default function TutorReportsPage() {
   const totalPoints = students.reduce((sum, student) => sum + student.points, 0);
   const totalExperience = students.reduce((sum, student) => sum + student.experience, 0);
   const averagePoints = students.length > 0 ? Math.round(totalPoints / students.length) : 0;
-  const averageExperience = students.length > 0 ? Math.round(totalExperience / students.length) : 0;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
@@ -163,7 +164,7 @@ export default function TutorReportsPage() {
         {/* Enhanced Tabs */}
         <Tabs defaultValue="overview" className="space-y-6 sm:space-y-8">
           <div className="flex justify-center">
-            <TabsList className="grid w-full max-w-xl grid-cols-2 h-12 bg-white/90 backdrop-blur-sm border border-gray-200 shadow-lg rounded-xl p-1">
+            <TabsList className="grid w-full max-w-2xl grid-cols-3 h-12 bg-white/90 backdrop-blur-sm border border-gray-200 shadow-lg rounded-xl p-1">
               <TabsTrigger 
                 value="overview" 
                 className="flex items-center justify-center gap-2 rounded-lg text-sm font-medium transition-all duration-200 data-[state=active]:bg-blue-500 data-[state=active]:text-white data-[state=active]:shadow-md hover:bg-gray-100 data-[state=active]:hover:bg-blue-600"
@@ -173,12 +174,20 @@ export default function TutorReportsPage() {
                 <span className="sm:hidden">Genel</span>
               </TabsTrigger>
               <TabsTrigger 
-                value="students"
+                value="individual"
                 className="flex items-center justify-center gap-2 rounded-lg text-sm font-medium transition-all duration-200 data-[state=active]:bg-green-500 data-[state=active]:text-white data-[state=active]:shadow-md hover:bg-gray-100 data-[state=active]:hover:bg-green-600"
               >
                 <GraduationCap className="h-4 w-4" />
-                <span className="hidden sm:inline">Öğrenci Detayları</span>
+                <span className="hidden sm:inline">Öğrenci Raporları</span>
                 <span className="sm:hidden">Öğrenci</span>
+              </TabsTrigger>
+              <TabsTrigger 
+                value="class"
+                className="flex items-center justify-center gap-2 rounded-lg text-sm font-medium transition-all duration-200 data-[state=active]:bg-purple-500 data-[state=active]:text-white data-[state=active]:shadow-md hover:bg-gray-100 data-[state=active]:hover:bg-purple-600"
+              >
+                <BookOpen className="h-4 w-4" />
+                <span className="hidden sm:inline">Sınıf Analizi</span>
+                <span className="sm:hidden">Sınıf</span>
               </TabsTrigger>
             </TabsList>
           </div>
@@ -186,93 +195,49 @@ export default function TutorReportsPage() {
           {/* Overview Tab */}
           <TabsContent value="overview" className="space-y-6 sm:space-y-8">
             {/* Quick Stats Cards */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
-              <Card className="bg-gradient-to-br from-green-50 to-emerald-100 border-green-200 shadow-lg hover:shadow-xl transition-all duration-300">
-                <CardContent className="p-4 sm:p-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-xs sm:text-sm font-medium text-green-600">Toplam Öğrenci</p>
-                      <p className="text-2xl sm:text-3xl font-bold text-green-700">{students.length}</p>
-                    </div>
-                    <div className="p-2 sm:p-3 bg-green-500 rounded-lg">
-                      <Users className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
               <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200 shadow-lg hover:shadow-xl transition-all duration-300">
                 <CardContent className="p-4 sm:p-6">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-xs sm:text-sm font-medium text-blue-600">Toplam Bilge Para</p>
-                      <p className="text-2xl sm:text-3xl font-bold text-blue-700">{totalPoints.toLocaleString()}</p>
+                      <p className="text-xs sm:text-sm font-medium text-blue-600">Toplam Bilge Parası</p>
+                      <p className="text-2xl sm:text-3xl font-bold text-blue-800">{totalPoints.toLocaleString()}</p>
                     </div>
-                    <div className="p-2 sm:p-3 bg-blue-500 rounded-lg">
-                      <Award className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
-                    </div>
+                    <Award className="h-8 w-8 sm:h-12 sm:w-12 text-blue-500" />
                   </div>
                 </CardContent>
               </Card>
-
-              <Card className="bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200 shadow-lg hover:shadow-xl transition-all duration-300">
+              
+              <Card className="bg-gradient-to-br from-green-50 to-green-100 border-green-200 shadow-lg hover:shadow-xl transition-all duration-300">
                 <CardContent className="p-4 sm:p-6">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-xs sm:text-sm font-medium text-purple-600">Ortalama Puan</p>
-                      <p className="text-2xl sm:text-3xl font-bold text-purple-700">{averagePoints}</p>
+                      <p className="text-xs sm:text-sm font-medium text-green-600">Toplam Deneyim</p>
+                      <p className="text-2xl sm:text-3xl font-bold text-green-800">{totalExperience.toLocaleString()}</p>
                     </div>
-                    <div className="p-2 sm:p-3 bg-purple-500 rounded-lg">
-                      <TrendingUp className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
-                    </div>
+                    <TrendingUp className="h-8 w-8 sm:h-12 sm:w-12 text-green-500" />
                   </div>
                 </CardContent>
               </Card>
-
-              <Card className="bg-gradient-to-br from-orange-50 to-orange-100 border-orange-200 shadow-lg hover:shadow-xl transition-all duration-300">
+              
+              <Card className="bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200 shadow-lg hover:shadow-xl transition-all duration-300 sm:col-span-2 lg:col-span-1">
                 <CardContent className="p-4 sm:p-6">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-xs sm:text-sm font-medium text-orange-600">Ortalama Deneyim</p>
-                      <p className="text-2xl sm:text-3xl font-bold text-orange-700">{averageExperience}</p>
+                      <p className="text-xs sm:text-sm font-medium text-purple-600">Aktif Öğrenci</p>
+                      <p className="text-2xl sm:text-3xl font-bold text-purple-800">{students.length}</p>
                     </div>
-                    <div className="p-2 sm:p-3 bg-orange-500 rounded-lg">
-                      <Star className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
-                    </div>
+                    <Users className="h-8 w-8 sm:h-12 sm:w-12 text-purple-500" />
                   </div>
                 </CardContent>
               </Card>
             </div>
-
-            {/* Analytics Section */}
-            <Card className="bg-white/80 backdrop-blur-sm border-white/20 shadow-xl">
-              <CardHeader className="pb-4 sm:pb-6">
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-0">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 bg-gradient-to-r from-indigo-500 to-purple-500 rounded-lg text-white">
-                      <Activity className="h-4 w-4 sm:h-5 sm:w-5" />
-                    </div>
-                    <div>
-                      <CardTitle className="text-lg sm:text-xl">Sınıf Analitikleri</CardTitle>
-                      <CardDescription className="text-sm">
-                        Sınıfınızın detaylı performans analizi ve istatistikleri
-                      </CardDescription>
-                    </div>
-                  </div>
-                  <Badge variant="outline" className="bg-white px-3 sm:px-4 py-1 sm:py-2 w-fit">
-                    <Sparkles className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-                    <span className="text-xs sm:text-sm">Canlı Veriler</span>
-                  </Badge>
-                </div>
-              </CardHeader>
-              <CardContent className="p-4 sm:p-6">
-                <OverallStatsReport userRole="TUTOR" />
-              </CardContent>
-            </Card>
+            
+            <OverallStatsReport userRole="TUTOR" />
           </TabsContent>
 
-          {/* Students Tab */}
-          <TabsContent value="students" className="space-y-6 sm:space-y-8">
+          {/* Individual Reports Tab */}
+          <TabsContent value="individual" className="space-y-6 sm:space-y-8">
             <Card className="bg-white/80 backdrop-blur-sm border-white/20 shadow-xl">
               <CardHeader className="pb-4 sm:pb-6">
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-0">
@@ -283,7 +248,7 @@ export default function TutorReportsPage() {
                     <div>
                       <CardTitle className="text-lg sm:text-2xl">Öğrenci Performans Raporları</CardTitle>
                       <CardDescription className="text-sm sm:text-base">
-                        Sınıfınızdaki öğrencilerin detaylı performans analizi
+                        Detaylı analiz ve bireysel gelişim takibi
                       </CardDescription>
                     </div>
                   </div>
@@ -345,7 +310,7 @@ export default function TutorReportsPage() {
                         <div className="mt-3 sm:mt-4 pt-2 sm:pt-3 border-t border-gray-100">
                           <div className="flex items-center justify-center text-xs sm:text-sm text-gray-500 group-hover:text-blue-500 transition-colors">
                             <FileText className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
-                            Öğrenci detaylarını görüntüle
+                            Detaylı raporu görüntüle
                           </div>
                         </div>
                       </CardContent>
@@ -363,7 +328,103 @@ export default function TutorReportsPage() {
             </Card>
           </TabsContent>
 
+          {/* Class Analysis Tab */}
+          <TabsContent value="class" className="space-y-8">
+            <Card className="bg-white/80 backdrop-blur-sm border-white/20 shadow-xl">
+              <CardHeader className="pb-6">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-gradient-to-r from-purple-500 to-violet-500 rounded-lg text-white">
+                      <BookOpen className="h-6 w-6" />
+                    </div>
+                    <div>
+                      <CardTitle className="text-2xl">Sınıf Performans Analizi</CardTitle>
+                      <CardDescription className="text-base">
+                        {classroom?.name || 'Sınıfınızın'} genel performans durumu ve istatistikleri
+                      </CardDescription>
+                    </div>
+                  </div>
+                  <Badge variant="secondary" className="bg-purple-100 text-purple-800 text-base px-4 py-2">
+                    {students.length} Öğrenci
+                  </Badge>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                {/* Class Overview Stats */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200">
+                    <CardContent className="p-6 text-center">
+                      <div className="text-3xl font-bold text-blue-700 mb-2">{averagePoints}</div>
+                      <p className="text-sm text-blue-600 font-medium">Ortalama Bilge Parası</p>
+                      <p className="text-xs text-blue-500 mt-1">Öğrenci başına</p>
+                    </CardContent>
+                  </Card>
+                  
+                  <Card className="bg-gradient-to-br from-green-50 to-green-100 border-green-200">
+                    <CardContent className="p-6 text-center">
+                      <div className="text-3xl font-bold text-green-700 mb-2">
+                        {Math.round(totalExperience / (students.length || 1))}
+                      </div>
+                      <p className="text-sm text-green-600 font-medium">Ortalama Deneyim</p>
+                      <p className="text-xs text-green-500 mt-1">Öğrenci başına</p>
+                    </CardContent>
+                  </Card>
+                  
+                  <Card className="bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200">
+                    <CardContent className="p-6 text-center">
+                      <div className="text-3xl font-bold text-purple-700 mb-2">
+                        {students.filter(s => s.points > 0).length}
+                      </div>
+                      <p className="text-sm text-purple-600 font-medium">Aktif Katılımcı</p>
+                      <p className="text-xs text-purple-500 mt-1">Puan sahibi öğrenci</p>
+                    </CardContent>
+                  </Card>
+                </div>
 
+                {/* Student Performance Distribution */}
+                <div className="space-y-4">
+                  <h4 className="font-semibold text-gray-800 text-lg">Öğrenci Performans Dağılımı</h4>
+                  <div className="space-y-3">
+                    {[
+                      { label: 'Yüksek Performans (500+ puan)', count: students.filter(s => s.points >= 500).length, color: 'bg-green-500', bgColor: 'bg-green-50', textColor: 'text-green-700' },
+                      { label: 'Orta Performans (200-499 puan)', count: students.filter(s => s.points >= 200 && s.points < 500).length, color: 'bg-blue-500', bgColor: 'bg-blue-50', textColor: 'text-blue-700' },
+                      { label: 'Gelişim Aşamasında (50-199 puan)', count: students.filter(s => s.points >= 50 && s.points < 200).length, color: 'bg-yellow-500', bgColor: 'bg-yellow-50', textColor: 'text-yellow-700' },
+                      { label: 'Başlangıç Seviyesi (0-49 puan)', count: students.filter(s => s.points < 50).length, color: 'bg-gray-400', bgColor: 'bg-gray-50', textColor: 'text-gray-700' }
+                    ].map((category, index) => {
+                      const percentage = students.length > 0 ? (category.count / students.length) * 100 : 0;
+                      return (
+                        <div key={index} className={`p-4 rounded-lg border ${category.bgColor}`}>
+                          <div className="flex items-center justify-between mb-2">
+                            <span className={`font-medium ${category.textColor}`}>{category.label}</span>
+                            <div className="flex items-center gap-2">
+                              <span className={`font-bold ${category.textColor}`}>{category.count}</span>
+                              <span className="text-sm text-gray-500">({percentage.toFixed(1)}%)</span>
+                            </div>
+                          </div>
+                          <div className="w-full bg-white rounded-full h-2">
+                            <div 
+                              className={`h-2 rounded-full ${category.color} transition-all duration-1000`}
+                              style={{ width: `${percentage}%` }}
+                            />
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {classroom && (
+                  <div className="mt-6 pt-4 border-t border-gray-200">
+                    <div className="flex items-center justify-center text-sm text-gray-500">
+                      <PieChart className="h-4 w-4 mr-2" />
+                      Sınıf: {classroom.name}
+                      {classroom.description && ` - ${classroom.description}`}
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
         </Tabs>
       </div>
     </div>

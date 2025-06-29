@@ -63,6 +63,7 @@ type PointReason = {
   id: string;
   name: string;
   description?: string;
+  createdAt?: string;
 };
 
 // Static Header Component
