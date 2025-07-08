@@ -3,8 +3,7 @@ import prisma from '@/lib/prisma';
 import { getServerSession } from 'next-auth';
 import { UserRole } from '@prisma/client';
 import { authOptions } from '../../auth/[...nextauth]/auth.config';
-import { unlink } from 'fs/promises';
-import path from 'path';
+import { deleteFromS3 } from '@/lib/s3';
 
 export async function GET(request: NextRequest) {
   try {
@@ -137,15 +136,18 @@ export async function DELETE(request: NextRequest) {
       where: { id: itemId }
     });
 
-    // Clean up the image file if it exists and is a local upload
-    if (existingItem.imageUrl && existingItem.imageUrl.startsWith('/uploads/store/')) {
+    // Clean up the image file if it exists
+    if (existingItem.imageUrl) {
       try {
-        const filePath = path.join(process.cwd(), 'public', existingItem.imageUrl);
-        await unlink(filePath);
-        console.log(`Deleted image file: ${filePath}`);
+        // Extract the S3 key from the URL
+        const url = new URL(existingItem.imageUrl);
+        const key = url.pathname.substring(1); // Remove leading slash
+        
+        await deleteFromS3(key);
+        console.log(`Deleted image from S3: ${key}`);
       } catch (fileError) {
         // Log but don't fail the request if file deletion fails
-        console.warn('Failed to delete image file:', fileError);
+        console.warn('Failed to delete image from S3:', fileError);
       }
     }
 

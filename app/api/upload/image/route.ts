@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/app/api/auth/[...nextauth]/auth.config';
-import { writeFile, mkdir } from 'fs/promises';
-import path from 'path';
+import { uploadToS3, deleteFromS3 } from '@/lib/s3';
 
 export const dynamic = 'force-dynamic';
 
@@ -45,34 +44,29 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Create upload directory if it doesn't exist
-    const uploadDir = path.join(process.cwd(), 'public', 'uploads', 'store');
-    try {
-      await mkdir(uploadDir, { recursive: true });
-    } catch (error) {
-      // Directory might already exist
-    }
-
     // Generate unique filename
-    const fileExtension = path.extname(file.name);
     const timestamp = Date.now();
     const randomString = Math.random().toString(36).substring(2, 8);
-    const filename = `${timestamp}_${randomString}${fileExtension}`;
-    const filePath = path.join(uploadDir, filename);
+    const fileExtension = file.name.split('.').pop();
+    const filename = `${timestamp}_${randomString}.${fileExtension}`;
 
-    // Convert file to buffer and save
+    // Convert file to buffer
     const bytes = await file.arrayBuffer();
     const buffer = Buffer.from(bytes);
     
-    await writeFile(filePath, buffer);
+    // Upload to S3
+    const uploadResult = await uploadToS3(
+      buffer,
+      filename,
+      file.type,
+      'store' // folder name
+    );
 
-    // Return the public URL
-    const publicUrl = `/uploads/store/${filename}`;
-    
     return NextResponse.json({
       message: 'Image uploaded successfully',
-      url: publicUrl,
-      filename: filename
+      url: uploadResult.url,
+      filename: uploadResult.filename,
+      key: uploadResult.key
     });
 
   } catch (error) {

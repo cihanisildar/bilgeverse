@@ -60,6 +60,7 @@ module.exports = {
       },
     ],
     domains: [
+      'bilgeverse-s3bucket.s3.us-east-1.amazonaws.com',
       'via.placeholder.com',
       'placehold.co',
       'placekitten.com',

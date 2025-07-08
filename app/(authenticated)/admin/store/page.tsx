@@ -272,6 +272,7 @@ export default function AdminStore() {
       setUploadingImage(true);
       const formData = new FormData();
       formData.append('image', selectedFile);
+      // No oldKey for new items
 
       const response = await fetch('/api/upload/image', {
         method: 'POST',
@@ -500,6 +501,7 @@ export default function AdminStore() {
       setEditUploadingImage(true);
       const formData = new FormData();
       formData.append('image', editSelectedFile);
+      // No need to send oldKey anymore - backend will handle deletion
 
       const response = await fetch('/api/upload/image', {
         method: 'POST',
