@@ -149,15 +149,41 @@ export default function OverallStatsReport({ userRole }: OverallStatsReportProps
     }
   };
 
-  // Prepare data for horizontal bar chart
+  // Prepare data for pie chart with better organization
   const getChartData = () => {
     if (!statsData?.activityDistribution) return [];
     
-    return statsData.activityDistribution.map((activity, index) => ({
+    // Sort by percentage descending
+    const sortedData = [...statsData.activityDistribution].sort((a, b) => b.percentage - a.percentage);
+    
+    // Group small activities (less than 3%) into "Diğer Aktiviteler"
+    const threshold = 3; // 3% threshold
+    const mainActivities = sortedData.filter(activity => activity.percentage >= threshold);
+    const smallActivities = sortedData.filter(activity => activity.percentage < threshold);
+    
+    let chartData = mainActivities.map((activity, index) => ({
       ...activity,
-      shortName: activity.name.length > 25 ? activity.name.substring(0, 25) + '...' : activity.name,
+      shortName: activity.name.length > 20 ? activity.name.substring(0, 20) + '...' : activity.name,
       color: COLORS[index % COLORS.length]
     }));
+    
+    // Add "Other Activities" if there are small activities
+    if (smallActivities.length > 0) {
+      const otherTotal = smallActivities.reduce((sum, activity) => sum + activity.percentage, 0);
+      const otherValue = smallActivities.reduce((sum, activity) => sum + activity.value, 0);
+      const otherCount = smallActivities.reduce((sum, activity) => sum + activity.count, 0);
+      
+      chartData.push({
+        name: 'Diğer Aktiviteler',
+        shortName: 'Diğer Aktiviteler',
+        value: otherValue,
+        percentage: otherTotal,
+        count: otherCount,
+        color: '#94A3B8' // Gray color for "Other"
+      });
+    }
+    
+    return chartData;
   };
 
   if (loading) {
@@ -420,46 +446,96 @@ export default function OverallStatsReport({ userRole }: OverallStatsReportProps
             </CardHeader>
             <CardContent>
               {statsData.activityDistribution.length > 0 ? (
-                <div className="h-96">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={chartData} margin={{ bottom: 80 }}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                      <XAxis 
-                        dataKey="shortName" 
-                        tick={{ fontSize: 10 }}
-                        angle={-45}
-                        textAnchor="end"
-                        height={80}
-                        interval={0}
-                      />
-                      <YAxis 
-                        tick={{ fontSize: 12 }}
-                        label={{ value: 'Yüzde (%)', angle: -90, position: 'insideLeft' }}
-                      />
-                      <Tooltip 
-                        formatter={(value, name, props) => [
-                          `${value}% (${props.payload.value} puan)`, 
-                          props.payload.name
-                        ]}
-                        labelFormatter={(label) => chartData.find(d => d.shortName === label)?.name || label}
-                        contentStyle={{
-                          backgroundColor: 'rgba(255, 255, 255, 0.95)',
-                          border: '1px solid rgba(255, 255, 255, 0.2)',
-                          borderRadius: '12px',
-                          backdropFilter: 'blur(8px)'
-                        }}
-                      />
-                      <Bar 
-                        dataKey="percentage" 
-                        radius={[4, 4, 0, 0]}
-                      >
-                        {chartData.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={entry.color} />
+                <>
+                  <div className="h-96">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <PieChart>
+                        <Pie
+                          data={chartData}
+                          cx="50%"
+                          cy="45%"
+                          labelLine={false}
+                          label={({ name, percentage }) => {
+                            // Only show labels for slices with percentage >= 5%
+                            if (percentage >= 5) {
+                              return `${percentage}%`;
+                            }
+                            return '';
+                          }}
+                          outerRadius={100}
+                          innerRadius={30}
+                          fill="#8884d8"
+                          dataKey="percentage"
+                          paddingAngle={2}
+                        >
+                          {chartData.map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={entry.color} />
+                          ))}
+                        </Pie>
+                        <Tooltip 
+                          formatter={(value, name, props) => [
+                            `${value}% (${props.payload.value} puan)`, 
+                            props.payload.name
+                          ]}
+                          contentStyle={{
+                            backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                            border: '1px solid rgba(255, 255, 255, 0.2)',
+                            borderRadius: '12px',
+                            backdropFilter: 'blur(8px)'
+                          }}
+                        />
+                        <Legend 
+                          verticalAlign="bottom" 
+                          height={80}
+                          layout="horizontal"
+                          wrapperStyle={{
+                            paddingTop: '20px',
+                            fontSize: '12px'
+                          }}
+                          formatter={(value, entry, index) => {
+                            const data = chartData[index];
+                            return (
+                              <span style={{ color: entry.color, fontSize: '11px' }}>
+                                {data.shortName}
+                              </span>
+                            );
+                          }}
+                        />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  </div>
+                  
+                  {/* Detailed Activity Breakdown */}
+                  <div className="mt-6 pt-4 border-t border-gray-200">
+                    <div className="flex items-center justify-between mb-4">
+                      <h4 className="font-semibold text-gray-800 text-sm">Detaylı Aktivite Listesi</h4>
+                      <Badge variant="outline" className="text-xs">
+                        {statsData.activityDistribution.length} aktivite
+                      </Badge>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-48 overflow-y-auto">
+                      {statsData.activityDistribution
+                        .sort((a, b) => b.percentage - a.percentage)
+                        .map((activity, index) => (
+                          <div key={activity.name} className="flex items-center justify-between p-2 bg-gray-50 rounded-lg text-xs">
+                            <div className="flex items-center gap-2 flex-1 min-w-0">
+                              <div 
+                                className="w-3 h-3 rounded-full flex-shrink-0"
+                                style={{ backgroundColor: COLORS[index % COLORS.length] }}
+                              />
+                              <span className="truncate" title={activity.name}>
+                                {activity.name}
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-2 flex-shrink-0">
+                              <span className="font-semibold text-gray-700">{activity.percentage}%</span>
+                              <span className="text-gray-500">({activity.value})</span>
+                            </div>
+                          </div>
                         ))}
-                      </Bar>
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
+                    </div>
+                  </div>
+                </>
               ) : (
                 <div className="h-96 flex flex-col items-center justify-center text-gray-500">
                   <Target className="h-16 w-16 text-gray-300 mb-4" />
