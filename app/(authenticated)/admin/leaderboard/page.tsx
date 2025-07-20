@@ -47,7 +47,7 @@ export default function AdminLeaderboardPage() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedTutor, setSelectedTutor] = useState<string>('all');
-  const [displayLimit, setDisplayLimit] = useState(20);
+  const [displayLimit, setDisplayLimit] = useState(1000);
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
 
   useEffect(() => {
@@ -409,7 +409,7 @@ export default function AdminLeaderboardPage() {
                   <option value={20}>20 Öğrenci</option>
                   <option value={50}>50 Öğrenci</option>
                   <option value={100}>100 Öğrenci</option>
-                  <option value={1000}>Tümünü Göster</option>
+                  <option value={1000} selected>Tümünü Göster</option>
                 </select>
               </div>
             </div>
