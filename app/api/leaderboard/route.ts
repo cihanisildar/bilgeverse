@@ -17,6 +17,21 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    // Parse limit from query params
+    const { searchParams } = new URL(request.url);
+    let limitParam = searchParams.get('limit');
+    let limit: number | 'all' = 25;
+    if (limitParam) {
+      if (limitParam === 'all') {
+        limit = 'all';
+      } else {
+        const parsed = parseInt(limitParam, 10);
+        if (!isNaN(parsed) && parsed > 0) {
+          limit = parsed;
+        }
+      }
+    }
+
     // Get all students with their experience and tutor information
     const students = await prisma.user.findMany({
       where: { 
@@ -58,8 +73,14 @@ export async function GET(request: NextRequest) {
       ? leaderboard.find(entry => entry.id === session.user.id)
       : null;
 
+    // Determine how many students to return
+    let leaderboardToReturn = leaderboard;
+    if (limit !== 'all') {
+      leaderboardToReturn = leaderboard.slice(0, limit);
+    }
+
     return NextResponse.json({
-      leaderboard: leaderboard.slice(0, 25), // Return top 25 students
+      leaderboard: leaderboardToReturn,
       userRank: userRank ? {
         rank: userRank.rank,
         experience: userRank.experience
