@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import { useAuth } from '@/app/contexts/AuthContext';
 import { PeriodStatus } from '@prisma/client';
-import { Clock, Plus, Play, Pause, Archive, Calendar, BarChart3, Users, Activity, Trash2, TrendingUp, AlertTriangle } from 'lucide-react';
+import { Clock, Plus, Play, Pause, Archive, Calendar, BarChart3, Users, Activity, Trash2, TrendingUp, AlertTriangle, Edit, Save, X } from 'lucide-react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -43,6 +43,13 @@ interface CreatePeriodData {
   endDate: string;
 }
 
+interface EditPeriodData {
+  name: string;
+  description: string;
+  startDate: string;
+  endDate: string;
+}
+
 export default function PeriodsPage() {
   const { data: session } = useSession();
   const { refreshUser } = useAuth();
@@ -66,6 +73,13 @@ export default function PeriodsPage() {
     message?: string;
     resetData?: boolean;
   }>({ type: null });
+  const [editingPeriod, setEditingPeriod] = useState<string | null>(null);
+  const [editData, setEditData] = useState<EditPeriodData>({
+    name: '',
+    description: '',
+    startDate: '',
+    endDate: ''
+  });
 
   const fetchPeriods = async () => {
     try {
@@ -230,6 +244,57 @@ export default function PeriodsPage() {
       setDialogState({ type: null });
     } finally {
       setOperationLoading(prev => ({ ...prev, [`delete-${dialogState.period!.id}`]: false }));
+    }
+  };
+
+  const handleEditPeriod = (period: Period) => {
+    setEditingPeriod(period.id);
+    setEditData({
+      name: period.name,
+      description: period.description || '',
+      startDate: period.startDate.split('T')[0], // Convert to YYYY-MM-DD format
+      endDate: period.endDate ? period.endDate.split('T')[0] : ''
+    });
+  };
+
+  const handleCancelEdit = () => {
+    setEditingPeriod(null);
+    setEditData({ name: '', description: '', startDate: '', endDate: '' });
+  };
+
+  const handleSaveEdit = async (periodId: string) => {
+    if (!editData.name || !editData.startDate) {
+      setError('Period name and start date are required');
+      return;
+    }
+
+    setOperationLoading(prev => ({ ...prev, [`edit-${periodId}`]: true }));
+    setError('');
+
+    try {
+      const response = await fetch(`/api/admin/periods/${periodId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: editData.name,
+          description: editData.description || null,
+          startDate: editData.startDate,
+          endDate: editData.endDate || null
+        })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to update period');
+      }
+
+      await fetchPeriods();
+      setEditingPeriod(null);
+      setEditData({ name: '', description: '', startDate: '', endDate: '' });
+    } catch (error: any) {
+      setError(error.message);
+    } finally {
+      setOperationLoading(prev => ({ ...prev, [`edit-${periodId}`]: false }));
     }
   };
 
@@ -426,31 +491,120 @@ export default function PeriodsPage() {
                   <div key={period.id} className="bg-white rounded-2xl shadow-lg hover:shadow-xl transition-shadow duration-300 overflow-hidden">
                     {/* Period Header */}
                     <div className="p-6 border-b border-gray-100">
-                      <div className="flex items-start justify-between mb-3">
-                        <div className="flex-1">
-                          <h3 className="text-lg font-semibold text-gray-900 mb-1">{period.name}</h3>
-                          {period.description && (
-                            <p className="text-gray-600 text-sm">{period.description}</p>
-                          )}
-                        </div>
-                        <span className={`inline-flex px-3 py-1 text-xs font-semibold rounded-full ${getStatusBadgeClass(period.status)}`}>
-                          {getStatusText(period.status)}
-                        </span>
-                      </div>
+                      {editingPeriod === period.id ? (
+                        /* Edit Mode */
+                        <div className="space-y-4">
+                          <div className="flex items-center justify-between mb-4">
+                            <h4 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                              <Edit className="h-5 w-5 text-indigo-600" />
+                              Düzenle
+                            </h4>
+                            <span className={`inline-flex px-3 py-1 text-xs font-semibold rounded-full ${getStatusBadgeClass(period.status)}`}>
+                              {getStatusText(period.status)}
+                            </span>
+                          </div>
 
-                      {/* Dates */}
-                      <div className="flex items-center gap-4 text-sm text-gray-600">
-                        <div className="flex items-center gap-1">
-                          <Calendar className="h-4 w-4" />
-                          {formatDate(period.startDate)}
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Dönem Adı</label>
+                            <input
+                              type="text"
+                              value={editData.name}
+                              onChange={(e) => setEditData({ ...editData, name: e.target.value })}
+                              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm"
+                              placeholder="Dönem adı"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Açıklama</label>
+                            <textarea
+                              value={editData.description}
+                              onChange={(e) => setEditData({ ...editData, description: e.target.value })}
+                              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm"
+                              placeholder="Açıklama"
+                              rows={2}
+                            />
+                          </div>
+
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 mb-1">Başlangıç Tarihi</label>
+                              <input
+                                type="date"
+                                value={editData.startDate}
+                                onChange={(e) => setEditData({ ...editData, startDate: e.target.value })}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 mb-1">Bitiş Tarihi</label>
+                              <input
+                                type="date"
+                                value={editData.endDate}
+                                onChange={(e) => setEditData({ ...editData, endDate: e.target.value })}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm"
+                              />
+                            </div>
+                          </div>
+
+                          <div className="flex gap-2 pt-2">
+                            <button
+                              onClick={() => handleSaveEdit(period.id)}
+                              disabled={operationLoading[`edit-${period.id}`]}
+                              className="flex items-center gap-1 px-3 py-2 bg-green-100 text-green-700 rounded-lg hover:bg-green-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm font-medium"
+                            >
+                              {operationLoading[`edit-${period.id}`] ? (
+                                <>
+                                  <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-green-700"></div>
+                                  Kaydediliyor...
+                                </>
+                              ) : (
+                                <>
+                                  <Save className="h-3 w-3" />
+                                  Kaydet
+                                </>
+                              )}
+                            </button>
+                            <button
+                              onClick={handleCancelEdit}
+                              disabled={operationLoading[`edit-${period.id}`]}
+                              className="flex items-center gap-1 px-3 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm font-medium"
+                            >
+                              <X className="h-3 w-3" />
+                              İptal
+                            </button>
+                          </div>
                         </div>
-                        {period.endDate && (
-                          <>
-                            <span>→</span>
-                            <div>{formatDate(period.endDate)}</div>
-                          </>
-                        )}
-                      </div>
+                      ) : (
+                        /* Display Mode */
+                        <>
+                          <div className="flex items-start justify-between mb-3">
+                            <div className="flex-1">
+                              <h3 className="text-lg font-semibold text-gray-900 mb-1">{period.name}</h3>
+                              {period.description && (
+                                <p className="text-gray-600 text-sm">{period.description}</p>
+                              )}
+                            </div>
+                            <span className={`inline-flex px-3 py-1 text-xs font-semibold rounded-full ${getStatusBadgeClass(period.status)}`}>
+                              {getStatusText(period.status)}
+                            </span>
+                          </div>
+
+                          {/* Dates */}
+                          <div className="flex items-center gap-4 text-sm text-gray-600">
+                            <div className="flex items-center gap-1">
+                              <Calendar className="h-4 w-4" />
+                              {formatDate(period.startDate)}
+                            </div>
+                            {period.endDate && (
+                              <>
+                                <span>→</span>
+                                <div>{formatDate(period.endDate)}</div>
+                              </>
+                            )}
+                          </div>
+                        </>
+                      )}
                     </div>
 
                     {/* Statistics */}
@@ -488,10 +642,20 @@ export default function PeriodsPage() {
 
                       {/* Actions */}
                       <div className="flex flex-wrap gap-2">
+                        {editingPeriod !== period.id && (
+                          <button
+                            onClick={() => handleEditPeriod(period)}
+                            disabled={Object.values(operationLoading).some(loading => loading)}
+                            className="flex items-center gap-1 px-3 py-2 bg-indigo-100 text-indigo-700 rounded-lg hover:bg-indigo-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-xs font-medium"
+                          >
+                            <Edit className="h-3 w-3" />
+                            Düzenle
+                          </button>
+                        )}
                         {period.status !== 'ACTIVE' && (
                           <button
                             onClick={() => handleActivatePeriod(period.id)}
-                            disabled={operationLoading[`activate-${period.id}`] || operationLoading[`update-${period.id}`] || operationLoading[`delete-${period.id}`]}
+                            disabled={operationLoading[`activate-${period.id}`] || operationLoading[`update-${period.id}`] || operationLoading[`delete-${period.id}`] || editingPeriod === period.id}
                             className="flex items-center gap-1 px-3 py-2 bg-green-100 text-green-700 rounded-lg hover:bg-green-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-xs font-medium"
                           >
                             {operationLoading[`activate-${period.id}`] ? (
@@ -507,10 +671,10 @@ export default function PeriodsPage() {
                             )}
                           </button>
                         )}
-                        {period.status === 'ACTIVE' && (
+                        {period.status === 'ACTIVE' && editingPeriod !== period.id && (
                           <button
                             onClick={() => handleUpdatePeriodStatus(period.id, 'INACTIVE')}
-                            disabled={operationLoading[`activate-${period.id}`] || operationLoading[`update-${period.id}`] || operationLoading[`delete-${period.id}`]}
+                            disabled={operationLoading[`activate-${period.id}`] || operationLoading[`update-${period.id}`] || operationLoading[`delete-${period.id}`] || editingPeriod === period.id}
                             className="flex items-center gap-1 px-3 py-2 bg-yellow-100 text-yellow-700 rounded-lg hover:bg-yellow-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-xs font-medium"
                           >
                             {operationLoading[`update-${period.id}`] ? (
@@ -526,10 +690,10 @@ export default function PeriodsPage() {
                             )}
                           </button>
                         )}
-                        {period.status !== 'ARCHIVED' && (
+                        {period.status !== 'ARCHIVED' && editingPeriod !== period.id && (
                           <button
                             onClick={() => handleUpdatePeriodStatus(period.id, 'ARCHIVED')}
-                            disabled={operationLoading[`activate-${period.id}`] || operationLoading[`update-${period.id}`] || operationLoading[`delete-${period.id}`]}
+                            disabled={operationLoading[`activate-${period.id}`] || operationLoading[`update-${period.id}`] || operationLoading[`delete-${period.id}`] || editingPeriod === period.id}
                             className="flex items-center gap-1 px-3 py-2 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-xs font-medium"
                           >
                             {operationLoading[`update-${period.id}`] ? (
@@ -545,23 +709,25 @@ export default function PeriodsPage() {
                             )}
                           </button>
                         )}
-                        <button
-                          onClick={() => handleDeletePeriod(period.id, period.name, period)}
-                          disabled={operationLoading[`activate-${period.id}`] || operationLoading[`update-${period.id}`] || operationLoading[`delete-${period.id}`]}
-                          className="flex items-center gap-1 px-3 py-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-xs font-medium"
-                        >
-                          {operationLoading[`delete-${period.id}`] ? (
-                            <>
-                              <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-red-700"></div>
-                              Yükleniyor...
-                            </>
-                          ) : (
-                            <>
-                              <Trash2 className="h-3 w-3" />
-                              Sil
-                            </>
-                          )}
-                        </button>
+                        {editingPeriod !== period.id && (
+                          <button
+                            onClick={() => handleDeletePeriod(period.id, period.name, period)}
+                            disabled={operationLoading[`activate-${period.id}`] || operationLoading[`update-${period.id}`] || operationLoading[`delete-${period.id}`] || editingPeriod === period.id}
+                            className="flex items-center gap-1 px-3 py-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-xs font-medium"
+                          >
+                            {operationLoading[`delete-${period.id}`] ? (
+                              <>
+                                <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-red-700"></div>
+                                Yükleniyor...
+                              </>
+                            ) : (
+                              <>
+                                <Trash2 className="h-3 w-3" />
+                                Sil
+                              </>
+                            )}
+                          </button>
+                        )}
                       </div>
                     </div>
                   </div>
