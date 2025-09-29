@@ -55,16 +55,21 @@ async function seedUsers() {
 
       const hashedPassword = await hashPassword(userData.password);
 
-      // Check if user already exists
-      const existingUser = await prisma.user.findUnique({
-        where: { email: userData.email },
+      // Check if user already exists by email or username
+      const existingUser = await prisma.user.findFirst({
+        where: {
+          OR: [
+            { email: userData.email },
+            { username: userData.username },
+          ],
+        },
       });
 
       if (existingUser) {
         console.log(`${userData.role} user found, updating...`);
         
         const updatedUser = await prisma.user.update({
-          where: { email: userData.email },
+          where: { id: existingUser.id },
           data: {
             username: userData.username,
             firstName: userData.firstName,
