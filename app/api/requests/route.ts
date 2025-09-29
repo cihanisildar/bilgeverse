@@ -3,6 +3,7 @@ import prisma from '@/lib/prisma';
 import { RequestStatus, UserRole } from '@prisma/client';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '../auth/[...nextauth]/auth.config';
+import { requireActivePeriod } from '@/lib/periods';
 
 export const dynamic = 'force-dynamic';
 
@@ -97,6 +98,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Get active period before starting transaction
+    const activePeriod = await requireActivePeriod();
+
     // Use Prisma transaction
     const result = await prisma.$transaction(async (tx) => {
       // Get the student with their tutor information
@@ -137,7 +141,8 @@ export async function POST(request: NextRequest) {
           itemId: item.id,
           status: RequestStatus.PENDING,
           pointsSpent: item.pointsRequired,
-          note: note || ''
+          note: note || '',
+          periodId: activePeriod.id,
         },
         include: {
           student: {

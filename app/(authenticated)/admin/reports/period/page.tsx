@@ -58,11 +58,14 @@ type PeriodReportData = {
     participantCount: number;
     transactionCount: number;
     totalPointsDistributed: number;
+    errorCount?: number;
+    insights?: string[];
     participants: Array<{
       id: string;
       name: string;
       transactionCount: number;
       totalPoints: number;
+      hasMultipleTransactions?: boolean;
     }>;
   }>;
   topStudentsByPoints: Array<{
@@ -524,7 +527,7 @@ export default function PeriodReportPage() {
                             <span className="text-purple-600 font-medium">İşlem Sayısı:</span>
                             <p className="font-bold text-purple-800">{activity.transactionCount} işlem</p>
                           </div>
-                          {activity.errorCount > 0 && (
+                          {(activity.errorCount ?? 0) > 0 && (
                             <div className="bg-red-50 p-3 rounded-lg">
                               <span className="text-red-600 font-medium">Hatalı Giriş:</span>
                               <p className="font-bold text-red-800">{activity.errorCount} adet</p>

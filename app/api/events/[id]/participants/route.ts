@@ -300,6 +300,7 @@ export async function PATCH(
           reason: `Etkinlik katılımı: ${event.title}`,
           studentId: userId,
           tutorId: session.user.id,
+          periodId: event.periodId,
         }
       });
 
@@ -310,6 +311,7 @@ export async function PATCH(
             amount: event.experience,
             studentId: userId,
             tutorId: session.user.id,
+            periodId: event.periodId,
           }
         });
       }

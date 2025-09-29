@@ -215,7 +215,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const isAdmin = user?.role === UserRole.ADMIN;
   const isTutor = user?.role === UserRole.TUTOR || user?.role === UserRole.ASISTAN;
   const isStudent = user?.role === UserRole.STUDENT;
-  const isAuthenticated = user && !loading;
+  const isAuthenticated = Boolean(user && !loading);
 
   return (
     <AuthContext.Provider

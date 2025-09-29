@@ -3,6 +3,7 @@ import prisma from '@/lib/prisma';
 import { getServerSession } from 'next-auth';
 import { UserRole } from '@prisma/client';
 import { authOptions } from '../auth/[...nextauth]/auth.config';
+import { requireActivePeriod } from '@/lib/periods';
 
 export const dynamic = 'force-dynamic';
 
@@ -48,11 +49,14 @@ export async function POST(request: Request) {
       );
     }
 
+    const activePeriod = await requireActivePeriod();
+
     const wish = await prisma.wish.create({
       data: {
         title,
         description,
         studentId: session.user.id,
+        periodId: activePeriod.id,
       },
     });
 

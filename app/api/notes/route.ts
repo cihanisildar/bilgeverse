@@ -4,6 +4,7 @@ import { UserRole } from '@prisma/client';
 import { getServerSession } from 'next-auth';
 import logger from '@/lib/logger';
 import { authOptions } from '../auth/[...nextauth]/auth.config';
+import { requireActivePeriod } from '@/lib/periods';
 
 export const dynamic = 'force-dynamic';
 
@@ -80,11 +81,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const activePeriod = await requireActivePeriod();
+
     const note = await prisma.studentNote.create({
       data: {
         content,
         studentId,
         tutorId: session.user.id,
+        periodId: activePeriod.id,
       },
       include: {
         tutor: {

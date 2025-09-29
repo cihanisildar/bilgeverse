@@ -3,6 +3,7 @@ import prisma from '@/lib/prisma';
 import { RequestStatus, TransactionType, UserRole } from '@prisma/client';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '../../auth/[...nextauth]/auth.config';
+import { requireActivePeriod } from '@/lib/periods';
 
 // Get a specific request by ID
 export async function GET(
@@ -110,6 +111,9 @@ export async function PUT(
       );
     }
 
+    // Get active period before starting transaction
+    const activePeriod = await requireActivePeriod();
+
     // Use transaction to ensure data consistency
     const result = await prisma.$transaction(async (tx) => {
       // Get the request with its related data
@@ -157,7 +161,8 @@ export async function PUT(
             tutorId: itemRequest.tutorId,
             points: itemRequest.pointsSpent,
             type: TransactionType.REDEEM,
-                            reason: `Ürün satın alındı: ${itemRequest.item.name}`
+            reason: `Ürün satın alındı: ${itemRequest.item.name}`,
+            periodId: activePeriod.id,
           }
         });
 
