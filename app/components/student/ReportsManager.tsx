@@ -1,6 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Edit2, FileText, Plus, Trash2 } from 'lucide-react';
@@ -33,6 +34,8 @@ export default function ReportsManager({ studentId }: ReportsManagerProps) {
   const [selectedReport, setSelectedReport] = useState<Report | null>(null);
   const [reportTitle, setReportTitle] = useState('');
   const [reportContent, setReportContent] = useState('');
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [reportToDelete, setReportToDelete] = useState<string | null>(null);
 
   useEffect(() => {
     fetchReports();
@@ -102,21 +105,29 @@ export default function ReportsManager({ studentId }: ReportsManagerProps) {
     }
   };
 
-  const handleDeleteReport = async (reportId: string) => {
-    if (!confirm('Are you sure you want to delete this report?')) return;
+  const handleDeleteReport = (reportId: string) => {
+    setReportToDelete(reportId);
+    setDeleteConfirmOpen(true);
+  };
+
+  const confirmDeleteReport = async () => {
+    if (!reportToDelete) return;
 
     try {
-      const response = await fetch(`/api/reports?id=${reportId}`, {
+      const response = await fetch(`/api/reports?id=${reportToDelete}`, {
         method: 'DELETE',
       });
 
       if (!response.ok) throw new Error('Failed to delete report');
       
-      setReports(reports.filter(report => report.id !== reportId));
+      setReports(reports.filter(report => report.id !== reportToDelete));
       
       toast.success('Report deleted successfully');
     } catch (error) {
       toast.error('Failed to delete report. Please try again.');
+    } finally {
+      setDeleteConfirmOpen(false);
+      setReportToDelete(null);
     }
   };
 
@@ -227,13 +238,31 @@ export default function ReportsManager({ studentId }: ReportsManagerProps) {
                     >
                       <Edit2 className="h-4 w-4" />
                     </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => handleDeleteReport(report.id)}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
+                    <AlertDialog open={deleteConfirmOpen && reportToDelete === report.id} onOpenChange={setDeleteConfirmOpen}>
+                      <AlertDialogTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleDeleteReport(report.id)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Raporu Sil</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            Bu raporu silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>İptal</AlertDialogCancel>
+                          <AlertDialogAction onClick={confirmDeleteReport} className="bg-red-600 hover:bg-red-700">
+                            Sil
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
                   </div>
                 </div>
               </CardHeader>

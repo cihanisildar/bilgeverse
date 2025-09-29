@@ -19,7 +19,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { username, password, role, tutorId, firstName, lastName } = body;
+    const { username, password, role, tutorId, assistedTutorId, firstName, lastName } = body;
 
     // Generate a placeholder email from username
     const email = `${username.toLowerCase()}@ogrtakip.com`;
@@ -30,6 +30,7 @@ export async function POST(request: NextRequest) {
       email,
       role,
       tutorId,
+      assistedTutorId,
       firstName,
       lastName
     });
@@ -50,11 +51,53 @@ export async function POST(request: NextRequest) {
     }
 
     // If student, validate tutorId
-    if (role === UserRole.STUDENT && !tutorId) {
-      return NextResponse.json(
-        { error: 'Tutor ID is required for students' },
-        { status: 400 }
-      );
+    if (role === UserRole.STUDENT) {
+      if (!tutorId) {
+        return NextResponse.json(
+          { error: 'Tutor ID is required for students' },
+          { status: 400 }
+        );
+      }
+
+      // Verify tutor exists and is actually a tutor (not asistan)
+      const tutor = await prisma.user.findFirst({
+        where: {
+          id: tutorId,
+          role: UserRole.TUTOR
+        }
+      });
+
+      if (!tutor) {
+        return NextResponse.json(
+          { error: 'Invalid tutor ID provided - only tutors can have students assigned' },
+          { status: 400 }
+        );
+      }
+    }
+
+    // If asistan, validate assistedTutorId
+    if (role === UserRole.ASISTAN) {
+      if (!assistedTutorId) {
+        return NextResponse.json(
+          { error: 'Assisted tutor ID is required for asistans' },
+          { status: 400 }
+        );
+      }
+
+      // Verify assisted tutor exists and is actually a tutor (not asistan)
+      const assistedTutor = await prisma.user.findFirst({
+        where: {
+          id: assistedTutorId,
+          role: UserRole.TUTOR
+        }
+      });
+
+      if (!assistedTutor) {
+        return NextResponse.json(
+          { error: 'Invalid assisted tutor ID provided - only tutors can have asistans assigned' },
+          { status: 400 }
+        );
+      }
     }
 
     // Check if username already exists (removed email check)
@@ -91,14 +134,14 @@ export async function POST(request: NextRequest) {
           // Create classroom for tutor if it doesn't exist
           const tutor = await tx.user.findUnique({
             where: { id: tutorId },
-            select: { firstName: true, lastName: true, username: true }
+            select: { firstName: true, lastName: true, username: true, role: true }
           });
-          
+
           if (tutor) {
-            const classroomName = tutor.firstName && tutor.lastName 
+            const classroomName = tutor.firstName && tutor.lastName
               ? `${tutor.firstName} ${tutor.lastName} Sınıfı`
               : `${tutor.username} Sınıfı`;
-              
+
             const classroomDescription = tutor.firstName && tutor.lastName
               ? `${tutor.firstName} ${tutor.lastName} öğretmeninin sınıfı`
               : `${tutor.username} öğretmeninin sınıfı`;
@@ -124,6 +167,7 @@ export async function POST(request: NextRequest) {
           password: hashedPassword,
           role: role as UserRole,
           tutorId,
+          assistedTutorId,
           studentClassroomId: classroomId, // Assign to classroom if student
           firstName,
           lastName,
@@ -139,15 +183,15 @@ export async function POST(request: NextRequest) {
         }
       });
 
-      // If the user is a tutor, create a classroom for them within the same transaction
-      if (role === UserRole.TUTOR) {
+      // If the user is a tutor or asistan, create a classroom for them within the same transaction
+      if (role === UserRole.TUTOR || role === UserRole.ASISTAN) {
         const classroomName = firstName && lastName 
           ? `${firstName} ${lastName} Sınıfı`
           : `${username} Sınıfı`;
           
         const classroomDescription = firstName && lastName
-          ? `${firstName} ${lastName} öğretmeninin sınıfı`
-          : `${username} öğretmeninin sınıfı`;
+          ? `${firstName} ${lastName} ${role === UserRole.TUTOR ? 'öğretmeninin' : 'asistanının'} sınıfı`
+          : `${username} ${role === UserRole.TUTOR ? 'öğretmeninin' : 'asistanının'} sınıfı`;
 
         await tx.classroom.create({
           data: {

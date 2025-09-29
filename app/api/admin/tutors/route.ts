@@ -3,6 +3,8 @@ import prisma from '@/lib/prisma';
 import { UserRole } from '@prisma/client';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '../../auth/[...nextauth]/auth.config';
+import { requireActivePeriod } from '@/lib/periods';
+import { calculateUserPoints } from '@/lib/points';
 
 export const dynamic = 'force-dynamic';
 
@@ -23,6 +25,9 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    // Get active period
+    const activePeriod = await requireActivePeriod();
+
     console.log('Admin tutors endpoint - Fetching tutors');
     // Fetch all tutors with their students and classroom
     const tutors = await prisma.user.findMany({
@@ -36,7 +41,6 @@ export async function GET(request: NextRequest) {
             username: true,
             firstName: true,
             lastName: true,
-            points: true,
           }
         },
         classroom: {
@@ -57,9 +61,31 @@ export async function GET(request: NextRequest) {
       studentCount: t.students.length 
     })));
 
+    // Calculate period-aware points for each student
+    const tutorsWithCalculatedStudentPoints = await Promise.all(
+      tutors.map(async (tutor) => {
+        const studentsWithCalculatedPoints = await Promise.all(
+          tutor.students.map(async (student) => {
+            // Calculate points for the active period only
+            const calculatedPoints = await calculateUserPoints(student.id, activePeriod.id);
+
+            return {
+              ...student,
+              points: calculatedPoints,
+            };
+          })
+        );
+
+        return {
+          ...tutor,
+          students: studentsWithCalculatedPoints,
+        };
+      })
+    );
+
     // Ensure clean response format
     const response = {
-      tutors: tutors.map(tutor => ({
+      tutors: tutorsWithCalculatedStudentPoints.map(tutor => ({
         id: tutor.id,
         username: tutor.username,
         firstName: tutor.firstName,

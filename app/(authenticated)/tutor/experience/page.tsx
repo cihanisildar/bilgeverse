@@ -266,11 +266,15 @@ function ExperienceManagement() {
       });
       const reasonsData = await reasonsRes.json();
 
-      if (reasonsData.reasons) {
+      if (reasonsData.reasons && Array.isArray(reasonsData.reasons)) {
         setPointReasons(reasonsData.reasons);
       } else if (reasonsData.error) {
         console.error("Error fetching point reasons:", reasonsData.error);
         // Don't show error toast for point reasons, just log it
+        setPointReasons([]); // Ensure it's always an array
+      } else {
+        // If no reasons or reasons is not an array, set empty array
+        setPointReasons([]);
       }
 
     } catch (error) {
@@ -540,13 +544,13 @@ function ExperienceManagement() {
                 {/* Reason Input */}
                 <div className="space-y-4">
                   <Label className="text-base font-semibold text-gray-700">Sebep Seçin</Label>
-                  {pointReasons.length > 0 ? (
+                  {pointReasons && Array.isArray(pointReasons) && pointReasons.length > 0 ? (
                     <RadioGroup
                       value={selectedReasonId}
                       onValueChange={setSelectedReasonId}
                       className="grid grid-cols-1 gap-3"
                     >
-                      {pointReasons.map((pointReason) => (
+                      {pointReasons && Array.isArray(pointReasons) && pointReasons.map((pointReason) => (
                         <div key={pointReason.id} className="flex items-center space-x-3 p-4 border-2 border-gray-200 rounded-xl hover:border-emerald-300 hover:bg-emerald-50/50 transition-all duration-200 cursor-pointer">
                           <RadioGroupItem value={pointReason.id} id={pointReason.id} className="text-emerald-600" />
                           <Label htmlFor={pointReason.id} className="font-medium text-gray-700 cursor-pointer flex-1">
@@ -573,7 +577,7 @@ function ExperienceManagement() {
                     isSubmitting ||
                     experience <= 0 ||
                     !selectedReasonId ||
-                    pointReasons.length === 0
+                    !pointReasons || !Array.isArray(pointReasons) || pointReasons.length === 0
                   }
                   className={`w-full py-4 text-lg font-semibold rounded-xl transition-all duration-200 transform hover:scale-[1.02] hover:shadow-lg ${
                     isDecreasing 

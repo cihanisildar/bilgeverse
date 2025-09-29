@@ -124,7 +124,7 @@ export default function Navigation() {
                   {user?.username}
                 </div>
                 <div className="text-gray-500 text-xs">
-                  {user?.role === UserRole.ADMIN ? 'Yönetici' : user?.role === UserRole.TUTOR ? 'Öğretmen' : 'Öğrenci'}
+                  {user?.role === UserRole.ADMIN ? 'Yönetici' : user?.role === UserRole.TUTOR ? 'Öğretmen' : user?.role === UserRole.ASISTAN ? 'Asistan' : 'Öğrenci'}
                 </div>
               </div>
             </div>

@@ -6,6 +6,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { ArrowRight, Calendar, Clock, Star, Trophy, Settings, User } from 'lucide-react';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
+import CurrentPeriod from '@/app/components/CurrentPeriod';
 
 type StudentStats = {
   points: number;
@@ -145,7 +146,7 @@ function LoadingDashboard() {
 }
 
 export default function StudentDashboard() {
-  const { user, isStudent } = useAuth();
+  const { user, isStudent, refreshUser } = useAuth();
   const [stats, setStats] = useState<StudentStats | null>(null);
   const [upcomingEvents, setUpcomingEvents] = useState<Event[]>([]);
   const [recentPoints, setRecentPoints] = useState<PointHistory[]>([]);
@@ -158,7 +159,12 @@ export default function StudentDashboard() {
       setLoading(true);
       
       // Get fresh user data to ensure points are up to date
-      const userRes = await fetch('/api/auth/me');
+      const userRes = await fetch('/api/auth/me', {
+        headers: {
+          'Cache-Control': 'no-cache',
+          'Pragma': 'no-cache'
+        }
+      });
       const userData = await userRes.json();
       const currentUser = userData.user;
       
@@ -262,7 +268,11 @@ export default function StudentDashboard() {
           </Link>
         </div>
       </div>
-      
+
+      <div className="px-4 sm:px-6 mb-6 sm:mb-8">
+        <CurrentPeriod />
+      </div>
+
       {stats && (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 px-4 sm:px-6 mb-6 sm:mb-8">
           {/* Points Card */}

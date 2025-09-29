@@ -9,6 +9,7 @@ import { Users, Calendar, ShoppingBag, AlertCircle, ChevronRight, Home, User, Us
 import { HeaderSkeleton, StatsCardSkeleton } from '@/app/components/ui/skeleton-shimmer';
 import { UserRole } from '@prisma/client';
 import dynamic from 'next/dynamic';
+import CurrentPeriod from '@/app/components/CurrentPeriod';
 
 // Lazy load heavy components to improve FID
 const QuickAccessGrid = lazy(() => import('./components/QuickAccessGrid'));
@@ -244,7 +245,7 @@ export default function AdminDashboard() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50 p-6 lg:p-8">
-      <div className="">
+      <div className="space-y-8">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
           <div>
             <h1 className="text-3xl font-bold text-gray-800">
@@ -259,59 +260,63 @@ export default function AdminDashboard() {
             Bugün: {todayFormatted}
           </div>
         </div>
-        
-        {stats && <StatsCards stats={stats} />}
-        
-        {stats && stats.pendingRequests > 0 && (
-          <Card className="mb-8 border-0 shadow-lg rounded-xl overflow-hidden bg-gradient-to-r from-amber-50 to-orange-50">
-            <div className="h-2 bg-gradient-to-r from-amber-400 to-orange-400"></div>
-            <CardContent className="pt-6">
-              <div className="flex items-start space-x-4">
-                <div className="w-10 h-10 flex items-center justify-center rounded-full bg-amber-100 text-amber-600 flex-shrink-0">
-                  <AlertCircle className="h-5 w-5" />
-                </div>
-                <div>
-                  <h3 className="text-lg font-bold text-amber-800">
-                    Dikkat Gerekiyor
-                  </h3>
-                  <div className="mt-2 text-amber-700">
-                    <p className="text-sm">{stats.pendingRequests} onay bekleyen kayıt isteği bulunuyor.</p>
+
+        <div className="space-y-8">
+          <CurrentPeriod />
+
+          {stats && <StatsCards stats={stats} />}
+          
+          {stats && stats.pendingRequests > 0 && (
+            <Card className="border-0 shadow-lg rounded-xl overflow-hidden bg-gradient-to-r from-amber-50 to-orange-50">
+              <div className="h-2 bg-gradient-to-r from-amber-400 to-orange-400"></div>
+              <CardContent className="pt-6">
+                <div className="flex items-start space-x-4">
+                  <div className="w-10 h-10 flex items-center justify-center rounded-full bg-amber-100 text-amber-600 flex-shrink-0">
+                    <AlertCircle className="h-5 w-5" />
                   </div>
-                  <div className="mt-4">
-                    <Link href="/admin/registration-requests">
-                      <button className="inline-flex items-center px-4 py-2 border border-amber-300 text-sm font-medium rounded-lg text-amber-800 bg-amber-50 hover:bg-amber-100 transition-colors duration-200 shadow-sm">
-                        İstekleri Görüntüle
-                        <ChevronRight className="ml-1 h-4 w-4" />
-                      </button>
-                    </Link>
+                  <div>
+                    <h3 className="text-lg font-bold text-amber-800">
+                      Dikkat Gerekiyor
+                    </h3>
+                    <div className="mt-2 text-amber-700">
+                      <p className="text-sm">{stats.pendingRequests} onay bekleyen kayıt isteği bulunuyor.</p>
+                    </div>
+                    <div className="mt-4">
+                      <Link href="/admin/registration-requests">
+                        <button className="inline-flex items-center px-4 py-2 border border-amber-300 text-sm font-medium rounded-lg text-amber-800 bg-amber-50 hover:bg-amber-100 transition-colors duration-200 shadow-sm">
+                          İstekleri Görüntüle
+                          <ChevronRight className="ml-1 h-4 w-4" />
+                        </button>
+                      </Link>
+                    </div>
                   </div>
                 </div>
+              </CardContent>
+            </Card>
+          )}
+          
+          <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-100">
+            <h2 className="text-xl font-bold text-gray-800 mb-4">
+              Hızlı Erişim
+            </h2>
+            <Separator className="mb-6 bg-gray-200" />
+            <Suspense fallback={
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
+                  <div key={i} className="border border-gray-200 rounded-xl p-5 bg-white">
+                    <div className="w-12 h-12 rounded-full bg-gray-100 mb-4 animate-pulse" />
+                    <div className="h-4 w-24 bg-gray-200 rounded mb-2 animate-pulse" />
+                    <div className="h-3 w-32 bg-gray-100 rounded animate-pulse" />
+                  </div>
+                ))}
               </div>
-            </CardContent>
-          </Card>
-        )}
-        
-        <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-100">
-          <h2 className="text-xl font-bold text-gray-800 mb-4">
-            Hızlı Erişim
-          </h2>
-          <Separator className="mb-6 bg-gray-200" />
-          <Suspense fallback={
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
-                <div key={i} className="border border-gray-200 rounded-xl p-5 bg-white">
-                  <div className="w-12 h-12 rounded-full bg-gray-100 mb-4 animate-pulse" />
-                  <div className="h-4 w-24 bg-gray-200 rounded mb-2 animate-pulse" />
-                  <div className="h-3 w-32 bg-gray-100 rounded animate-pulse" />
-                </div>
-              ))}
-            </div>
-          }>
-            <QuickAccessGrid />
-          </Suspense>
+            }>
+              <QuickAccessGrid />
+            </Suspense>
+          </div>
         </div>
         
-        <div className="text-center mt-8 text-xs text-gray-500">
+        <div className="text-center mt-12 text-xs text-gray-500">
           © {new Date().getFullYear()} Öğrenci Takip Sistemi. Tüm hakları saklıdır.
         </div>
       </div>

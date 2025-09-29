@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Edit2, Trash2, Plus } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -30,6 +31,8 @@ export default function NotesManager({ studentId }: NotesManagerProps) {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [selectedNote, setSelectedNote] = useState<Note | null>(null);
   const [noteContent, setNoteContent] = useState('');
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [noteToDelete, setNoteToDelete] = useState<string | null>(null);
 
   useEffect(() => {
     fetchNotes();
@@ -93,21 +96,29 @@ export default function NotesManager({ studentId }: NotesManagerProps) {
     }
   };
 
-  const handleDeleteNote = async (noteId: string) => {
-    if (!confirm('Are you sure you want to delete this note?')) return;
+  const handleDeleteNote = (noteId: string) => {
+    setNoteToDelete(noteId);
+    setDeleteConfirmOpen(true);
+  };
+
+  const confirmDeleteNote = async () => {
+    if (!noteToDelete) return;
 
     try {
-      const response = await fetch(`/api/notes?id=${noteId}`, {
+      const response = await fetch(`/api/notes?id=${noteToDelete}`, {
         method: 'DELETE',
       });
 
       if (!response.ok) throw new Error('Failed to delete note');
       
-      setNotes(notes.filter(note => note.id !== noteId));
+      setNotes(notes.filter(note => note.id !== noteToDelete));
       
       toast.success('Note deleted successfully');
     } catch (error) {
       toast.error('Failed to delete note. Please try again.');
+    } finally {
+      setDeleteConfirmOpen(false);
+      setNoteToDelete(null);
     }
   };
 
@@ -197,13 +208,31 @@ export default function NotesManager({ studentId }: NotesManagerProps) {
                     >
                       <Edit2 className="h-4 w-4" />
                     </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => handleDeleteNote(note.id)}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
+                    <AlertDialog open={deleteConfirmOpen && noteToDelete === note.id} onOpenChange={setDeleteConfirmOpen}>
+                      <AlertDialogTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleDeleteNote(note.id)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Notu Sil</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            Bu notu silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>İptal</AlertDialogCancel>
+                          <AlertDialogAction onClick={confirmDeleteNote} className="bg-red-600 hover:bg-red-700">
+                            Sil
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
                   </div>
                 </div>
               </CardHeader>

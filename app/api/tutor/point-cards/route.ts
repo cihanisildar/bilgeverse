@@ -6,8 +6,8 @@ import { authOptions } from "../../auth/[...nextauth]/auth.config";
 export async function GET() {
   try {
     const session = await getServerSession(authOptions);
-    if (!session || session.user.role !== "TUTOR") {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    if (!session || (session.user.role !== "TUTOR" && session.user.role !== "ASISTAN")) {
+      return NextResponse.json({ error: "Unauthorized - Tutor or Asistan access required" }, { status: 401 });
     }
 
     const cards = await prisma.pointEarningCard.findMany({

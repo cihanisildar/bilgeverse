@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { authOptions } from "../../auth/[...nextauth]/auth.config";
+import { requireActivePeriod } from "@/lib/periods";
 
 export async function POST(request: Request) {
   try {
@@ -18,11 +19,15 @@ export async function POST(request: Request) {
       );
     }
 
+    // Get the active period
+    const activePeriod = await requireActivePeriod();
+
     const announcement = await prisma.announcement.create({
       data: {
         title,
         content,
         createdById: session.user.id,
+        periodId: activePeriod.id,
       },
     });
 

@@ -155,8 +155,11 @@ export default function AwardPointsPage() {
         }
 
         const reasonsData = await reasonsRes.json();
-        if (reasonsData.reasons) {
+        if (reasonsData.reasons && Array.isArray(reasonsData.reasons)) {
           setPointReasons(reasonsData.reasons.filter((r: PointReason) => r.isActive));
+        } else {
+          // If no reasons or reasons is not an array, set empty array
+          setPointReasons([]);
         }
 
       } catch (error: any) {
@@ -222,7 +225,7 @@ export default function AwardPointsPage() {
           studentId: selectedStudent.id,
           points: finalPoints,
           pointReasonId: selectedReasonId,
-          reason: pointReasons.find(r => r.id === selectedReasonId)?.name || ''
+          reason: (pointReasons && Array.isArray(pointReasons) ? pointReasons.find(r => r.id === selectedReasonId)?.name : '') || ''
         }),
       });
 
@@ -597,7 +600,7 @@ export default function AwardPointsPage() {
                         <Search className="absolute right-3 top-3 h-4 w-4 text-gray-400" />
                       </div>
                       <div className="space-y-2 max-h-[300px] overflow-y-auto">
-                        {pointReasons
+                        {pointReasons && Array.isArray(pointReasons) && pointReasons
                           .filter(reason =>
                             reason.name.toLowerCase().includes(reasonSearchTerm.toLowerCase()) ||
                             (reason.description && reason.description.toLowerCase().includes(reasonSearchTerm.toLowerCase()))

@@ -81,20 +81,20 @@ export async function middleware(request: NextRequest) {
     }
     
     if (pathname.startsWith('/tutor') || pathname.startsWith('/api/tutor')) {
-      if (token.role !== UserRole.TUTOR) {
-        console.log('Non-tutor user attempting to access tutor route');
+      if (token.role !== UserRole.TUTOR && token.role !== UserRole.ASISTAN) {
+        console.log('Non-tutor/asistan user attempting to access tutor route');
         return isApiRoute
-          ? NextResponse.json({ error: 'Forbidden: Tutor access required' }, { status: 403 })
+          ? NextResponse.json({ error: 'Forbidden: Tutor or Asistan access required' }, { status: 403 })
           : NextResponse.redirect(new URL('/', request.url));
       }
     }
     
     if (pathname.startsWith('/api/student/reports')) {
       // Allow ADMIN, TUTOR, and STUDENT for /api/student/reports endpoints
-      if (![UserRole.ADMIN, UserRole.TUTOR, UserRole.STUDENT].includes(token.role as UserRole)) {
+      if (![UserRole.ADMIN, UserRole.TUTOR, UserRole.ASISTAN, UserRole.STUDENT].includes(token.role as UserRole)) {
         console.log('Unauthorized user attempting to access student reports API');
         return isApiRoute
-          ? NextResponse.json({ error: 'Forbidden: Admin, Tutor, or Student access required' }, { status: 403 })
+          ? NextResponse.json({ error: 'Forbidden: Admin, Tutor, Asistan, or Student access required' }, { status: 403 })
           : NextResponse.redirect(new URL('/', request.url));
       }
     } else if (pathname.startsWith('/student') || pathname.startsWith('/api/student')) {

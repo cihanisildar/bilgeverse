@@ -10,6 +10,7 @@ type Tutor = {
   username: string;
   firstName?: string;
   lastName?: string;
+  role?: string;
 };
 
 export default function NewUserPage() {
@@ -27,6 +28,7 @@ export default function NewUserPage() {
     confirmPassword: '',
     role: '',
     tutorId: '',
+    assistedTutorId: '',
   });
   const [formErrors, setFormErrors] = useState({
     username: '',
@@ -36,6 +38,7 @@ export default function NewUserPage() {
     confirmPassword: '',
     role: '',
     tutorId: '',
+    assistedTutorId: '',
   });
 
   useEffect(() => {
@@ -49,11 +52,12 @@ export default function NewUserPage() {
         }
         
         const data = await response.json();
-        setTutors(data.users.map((tutor: any) => ({
+        setTutors(data.users.filter((user: any) => user.role === 'TUTOR').map((tutor: any) => ({
           id: tutor.id,
           username: tutor.username,
           firstName: tutor.firstName,
           lastName: tutor.lastName,
+          role: tutor.role,
         })));
       } catch (err) {
         console.error('Error fetching tutors:', err);
@@ -84,6 +88,7 @@ export default function NewUserPage() {
       confirmPassword: '',
       role: '',
       tutorId: '',
+      assistedTutorId: '',
     };
     
     let isValid = true;
@@ -125,7 +130,12 @@ export default function NewUserPage() {
     }
     
     if (formData.role === UserRole.STUDENT && !formData.tutorId) {
-      errors.tutorId = 'Öğrenci için öğretmen atanması gereklidir';
+      errors.tutorId = 'Öğrenci için danışman atanması gereklidir';
+      isValid = false;
+    }
+
+    if (formData.role === UserRole.ASISTAN && !formData.assistedTutorId) {
+      errors.assistedTutorId = 'Asistan için yardım edeceği öğretmen atanması gereklidir';
       isValid = false;
     }
     
@@ -160,6 +170,7 @@ export default function NewUserPage() {
           firstName: formData.firstName || undefined,
           lastName: formData.lastName || undefined,
           tutorId: formData.role === UserRole.STUDENT ? formData.tutorId : undefined,
+          assistedTutorId: formData.role === UserRole.ASISTAN ? formData.assistedTutorId : undefined,
           adminCreated: true, // Flag to bypass email verification
         }),
       });
@@ -378,6 +389,7 @@ export default function NewUserPage() {
                   <option value="">Rol Seçin</option>
                   <option value={UserRole.ADMIN}>Yönetici</option>
                   <option value={UserRole.TUTOR}>Öğretmen</option>
+                  <option value={UserRole.ASISTAN}>Asistan</option>
                   <option value={UserRole.STUDENT}>Öğrenci</option>
                 </select>
                 <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700">
@@ -403,7 +415,7 @@ export default function NewUserPage() {
                   <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
                   </svg>
-                  Öğretmen<span className="text-indigo-600 ml-0.5">*</span>
+                  Danışman<span className="text-indigo-600 ml-0.5">*</span>
                 </label>
                 <div className="relative">
                   <select
@@ -413,12 +425,12 @@ export default function NewUserPage() {
                     onChange={handleChange}
                     className={`block w-full border ${formErrors.tutorId ? 'border-red-300 bg-red-50' : 'border-gray-300'} rounded-lg shadow-sm py-3 px-4 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm transition duration-150 appearance-none`}
                   >
-                    <option value="">Öğretmen Seçin</option>
+                    <option value="">Danışman Seçin</option>
                     {tutors.map(tutor => (
                       <option key={tutor.id} value={tutor.id}>
-                        {tutor.firstName && tutor.lastName 
-                          ? `${tutor.firstName} ${tutor.lastName}` 
-                          : tutor.username}
+                        {tutor.firstName && tutor.lastName
+                          ? `${tutor.firstName} ${tutor.lastName} (Öğretmen)`
+                          : `${tutor.username} (Öğretmen)`}
                       </option>
                     ))}
                   </select>
@@ -434,6 +446,58 @@ export default function NewUserPage() {
                       <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
                     </svg>
                     {formErrors.tutorId}
+                  </p>
+                )}
+                {loading && (
+                  <p className="text-sm text-gray-500 flex items-center">
+                    <svg className="animate-spin h-4 w-4 mr-1 text-indigo-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Danışmanlar yükleniyor...
+                  </p>
+                )}
+              </div>
+            )}
+
+            {/* Assisted Tutor (only for asistans) */}
+            {formData.role === UserRole.ASISTAN && (
+              <div className="space-y-2">
+                <label htmlFor="assistedTutorId" className="block text-sm font-medium text-gray-700 flex items-center">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+                  </svg>
+                  Yardım Edeceği Öğretmen<span className="text-indigo-600 ml-0.5">*</span>
+                </label>
+                <div className="relative">
+                  <select
+                    id="assistedTutorId"
+                    name="assistedTutorId"
+                    value={formData.assistedTutorId || ''}
+                    onChange={handleChange}
+                    className={`block w-full border ${formErrors.assistedTutorId ? 'border-red-300 bg-red-50' : 'border-gray-300'} rounded-lg shadow-sm py-3 px-4 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm transition duration-150 appearance-none`}
+                  >
+                    <option value="">Öğretmen Seçin</option>
+                    {tutors.map(tutor => (
+                      <option key={tutor.id} value={tutor.id}>
+                        {tutor.firstName && tutor.lastName
+                          ? `${tutor.firstName} ${tutor.lastName} (Öğretmen)`
+                          : `${tutor.username} (Öğretmen)`}
+                      </option>
+                    ))}
+                  </select>
+                  <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700">
+                    <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
+                      <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z" />
+                    </svg>
+                  </div>
+                </div>
+                {formErrors.assistedTutorId && (
+                  <p className="mt-1 text-sm text-red-600 flex items-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" viewBox="0 0 20 20" fill="currentColor">
+                      <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                    </svg>
+                    {formErrors.assistedTutorId}
                   </p>
                 )}
                 {loading && (

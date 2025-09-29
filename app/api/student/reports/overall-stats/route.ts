@@ -10,17 +10,17 @@ export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
     
-    if (!session?.user || (session.user.role !== UserRole.ADMIN && session.user.role !== UserRole.TUTOR)) {
+    if (!session?.user || (session.user.role !== UserRole.ADMIN && session.user.role !== UserRole.TUTOR && session.user.role !== UserRole.ASISTAN)) {
       return NextResponse.json(
-        { error: 'Unauthorized: Only admins and tutors can access overall statistics' },
+        { error: 'Unauthorized: Only admins, tutors, and asistans can access overall statistics' },
         { status: 403 }
       );
     }
 
-    // Get all students (filtered by tutor if tutor role)
-    const whereClause = session.user.role === UserRole.TUTOR 
-      ? { role: UserRole.STUDENT, tutorId: session.user.id }
-      : { role: UserRole.STUDENT };
+    // Get all active students (filtered by tutor/asistan if tutor or asistan role)
+    const whereClause = (session.user.role === UserRole.TUTOR || session.user.role === UserRole.ASISTAN)
+      ? { role: UserRole.STUDENT, tutorId: session.user.id, isActive: true }
+      : { role: UserRole.STUDENT, isActive: true };
 
     const students = await prisma.user.findMany({
       where: whereClause,
@@ -39,9 +39,18 @@ export async function GET(request: NextRequest) {
         totalStudents: 0,
         totalPoints: 0,
         totalExperience: 0,
+        totalPointsEarned: 0,
+        totalExperienceEarned: 0,
         activityDistribution: [],
         averagePointsPerStudent: 0,
-        averageExperiencePerStudent: 0
+        averageExperiencePerStudent: 0,
+        topStudentsByPoints: [],
+        topStudentsByExperience: [],
+        summary: {
+          eventsParticipated: 0,
+          totalTransactions: 0,
+          averageEventParticipation: 0
+        }
       }, { status: 200 });
     }
 
@@ -88,10 +97,7 @@ export async function GET(request: NextRequest) {
       }
     });
 
-    // Calculate total points and experience
-    const totalPoints = students.reduce((sum, student) => sum + student.points, 0);
-    const totalExperience = students.reduce((sum, student) => sum + student.experience, 0);
-    
+    // Calculate total points and experience from transactions (not user table)
     const totalPointsFromEvents = eventParticipations.reduce((sum, participation) => 
       sum + (participation.event.points || 0), 0
     );
@@ -103,6 +109,10 @@ export async function GET(request: NextRequest) {
     const totalExperienceFromTransactions = experienceTransactions.reduce((sum, transaction) => 
       sum + transaction.amount, 0
     );
+
+    // Use calculated values instead of user table values
+    const totalPoints = totalPointsFromEvents + totalPointsFromTransactions;
+    const totalExperience = totalExperienceFromTransactions;
 
     // Categorize all points by point reason
     const activityCategories = categorizeAllPointsByActivity(pointsTransactions, eventParticipations);
@@ -120,8 +130,51 @@ export async function GET(request: NextRequest) {
     const averagePointsPerStudent = Math.round(totalPoints / students.length);
     const averageExperiencePerStudent = Math.round(totalExperience / students.length);
 
-    // Get top performing students
-    const topStudentsByPoints = students
+    // Calculate actual points and experience for each student from transactions
+    const studentsWithCalculatedStats = await Promise.all(
+      students.map(async (student) => {
+        // Calculate points from non-rolled-back transactions
+        const studentPointsTransactions = await prisma.pointsTransaction.findMany({
+          where: {
+            studentId: student.id,
+            type: 'AWARD',
+            rolledBack: false,
+          },
+          select: {
+            points: true,
+          },
+        });
+
+        const studentExperienceTransactions = await prisma.experienceTransaction.findMany({
+          where: {
+            studentId: student.id,
+            rolledBack: false,
+          },
+          select: {
+            amount: true,
+          },
+        });
+
+        const calculatedPoints = studentPointsTransactions.reduce(
+          (sum, transaction) => sum + transaction.points,
+          0
+        );
+
+        const calculatedExperience = studentExperienceTransactions.reduce(
+          (sum, transaction) => sum + transaction.amount,
+          0
+        );
+
+        return {
+          ...student,
+          points: calculatedPoints,
+          experience: calculatedExperience,
+        };
+      })
+    );
+
+    // Get top performing students using calculated values
+    const topStudentsByPoints = studentsWithCalculatedStats
       .sort((a, b) => b.points - a.points)
       .slice(0, 5)
       .map((student, index) => ({
@@ -134,7 +187,7 @@ export async function GET(request: NextRequest) {
         experience: student.experience
       }));
 
-    const topStudentsByExperience = students
+    const topStudentsByExperience = studentsWithCalculatedStats
       .sort((a, b) => b.experience - a.experience)
       .slice(0, 5)
       .map((student, index) => ({

@@ -455,33 +455,231 @@ export default function StudentLeaderboardPage() {
             </div>
           )}
 
-          {/* Enhanced Top 3 Podium */}
+          {/* Enhanced Top 5 Podium - Complete Redesign */}
           {topThree.length > 0 && (
             <div className="relative">
-              <Card className="border-0 shadow-2xl rounded-3xl overflow-hidden bg-white/70 backdrop-blur-xl">
-                <div className="h-2 bg-gradient-to-r from-yellow-400 via-slate-400 to-orange-400"></div>
-                <CardHeader className="text-center py-8 bg-gradient-to-r from-yellow-50/30 via-slate-50/30 to-orange-50/30">
-                  <CardTitle className="text-3xl font-black text-gray-900 flex items-center justify-center gap-4 mb-4">
-                    <Crown className="h-8 w-8 text-yellow-500" />
-                    Şeref Listesi
-                    <Medal className="h-8 w-8 text-slate-500" />
-                  </CardTitle>
-                  <CardDescription className="text-lg text-gray-600">
-                    Liderlik tablosunun efsanevi zirve üçlüsü ✨
-                  </CardDescription>
+              <Card className="border-0 shadow-2xl rounded-3xl overflow-hidden bg-gradient-to-br from-yellow-50/50 via-orange-50/50 to-red-50/50 backdrop-blur-lg">
+                <div className="h-2 bg-gradient-to-r from-yellow-400 via-orange-500 to-red-500"></div>
+                <CardHeader className="pb-8 bg-gradient-to-r from-yellow-50/30 via-orange-50/30 to-red-50/30">
+                  <div className="text-center">
+                    <CardTitle className="text-4xl font-black flex items-center justify-center gap-4 mb-4">
+                      <div className="p-4 rounded-2xl bg-gradient-to-r from-yellow-400 to-orange-500 text-white shadow-xl animate-pulse">
+                        <Trophy className="h-10 w-10" />
+                      </div>
+                      <span className="bg-clip-text text-transparent bg-gradient-to-r from-yellow-600 via-orange-600 to-red-600">
+                        Şeref Listesi
+                      </span>
+                      <div className="p-4 rounded-2xl bg-gradient-to-r from-orange-500 to-red-500 text-white shadow-xl animate-pulse delay-1000">
+                        <Crown className="h-10 w-10" />
+                      </div>
+                    </CardTitle>
+                    <CardDescription className="text-xl text-orange-700 font-semibold">
+                      Liderlik tablosunun efsanevi zirve üçlüsü ✨
+                    </CardDescription>
+                  </div>
                 </CardHeader>
-                <CardContent className="px-8 py-12 bg-gradient-to-b from-transparent to-gray-50/30">
-                  <div className="flex justify-center items-end gap-12 max-w-4xl mx-auto">
-                    {podiumOrder.map((student, index) => (
-                      <div key={index} className="flex-1 max-w-[250px]">
-                        {student && (
-                          <PodiumCard 
-                            student={student} 
-                            isCurrentUser={student.id === user?.id}
-                          />
+
+                <CardContent className="p-0">
+                  {/* Top 5 Enhanced Podium */}
+                  <div className="relative px-4 sm:px-8 pb-12 pt-8">
+                    {/* Background decorative elements */}
+                    <div className="absolute inset-0 overflow-hidden pointer-events-none">
+                      <div className="absolute top-0 left-1/4 w-64 h-64 bg-gradient-to-r from-yellow-200/20 to-orange-200/20 rounded-full blur-3xl animate-pulse"></div>
+                      <div className="absolute bottom-0 right-1/4 w-80 h-80 bg-gradient-to-r from-orange-200/20 to-red-200/20 rounded-full blur-3xl animate-pulse delay-1000"></div>
+                    </div>
+
+                    {/* Main Podium - Top 3 */}
+                    <div className="relative mb-16">
+                      <h3 className="text-2xl font-bold text-center mb-8 text-gray-800">🏆 Podyum 🏆</h3>
+                      <div className="flex justify-center items-end gap-6 lg:gap-12 max-w-6xl mx-auto">
+
+                        {/* 2nd Place */}
+                        {podiumOrder[0] && (
+                          <div className="flex flex-col items-center relative">
+                            {/* Floating effects */}
+                            <div className="absolute -top-8 left-1/2 transform -translate-x-1/2 animate-bounce">
+                              <Medal className="h-8 w-8 text-gray-500" />
+                            </div>
+
+                            {/* Student Card */}
+                            <div className="relative mb-6 transform hover:scale-110 transition-all duration-500">
+                              <div className="w-36 bg-gradient-to-br from-gray-50 to-slate-100 border-4 border-gray-300 rounded-2xl p-4 shadow-2xl hover:shadow-gray-500/50">
+                                <div className="text-center">
+                                  <Avatar className="h-20 w-20 mx-auto mb-3 ring-4 ring-gray-300 shadow-xl">
+                                    <AvatarFallback className="bg-gradient-to-br from-gray-200 to-gray-400 text-gray-800 text-2xl font-black">
+                                      {getDisplayName(podiumOrder[0]).charAt(0)}
+                                    </AvatarFallback>
+                                  </Avatar>
+                                  <h3 className="font-black text-gray-900 text-lg mb-1 truncate">
+                                    {podiumOrder[0].id === user?.id ? "Siz 🌟" : getDisplayName(podiumOrder[0])}
+                                  </h3>
+                                  <p className="text-sm text-gray-600 mb-3 truncate">@{podiumOrder[0].username}</p>
+                                  <div className="bg-gradient-to-r from-green-500 to-emerald-600 text-white px-3 py-2 rounded-xl text-sm font-bold mb-2">
+                                    {podiumOrder[0].experience} XP
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Podium Base */}
+                            <div className="relative">
+                              <div className="w-32 h-24 bg-gradient-to-t from-gray-400 to-gray-300 rounded-t-2xl shadow-2xl flex items-center justify-center border-t-4 border-gray-200">
+                                <div className="text-center">
+                                  <div className="text-3xl font-black text-gray-800 drop-shadow-lg">2</div>
+                                  <div className="text-sm font-bold text-gray-700">İKİNCİ</div>
+                                </div>
+                              </div>
+                              {/* Shine effect */}
+                              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent rounded-t-2xl animate-pulse"></div>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* 1st Place */}
+                        {podiumOrder[1] && (
+                          <div className="flex flex-col items-center relative z-10">
+                            {/* Floating crown */}
+                            <div className="absolute -top-12 left-1/2 transform -translate-x-1/2 animate-bounce">
+                              <Crown className="h-12 w-12 text-yellow-500" />
+                            </div>
+
+                            {/* Sparkles around winner */}
+                            <div className="absolute -top-4 -left-4 animate-pulse">
+                              <Sparkles className="h-6 w-6 text-yellow-400" />
+                            </div>
+                            <div className="absolute -top-4 -right-4 animate-pulse delay-500">
+                              <Star className="h-6 w-6 text-orange-400" />
+                            </div>
+
+                            {/* Student Card */}
+                            <div className="relative mb-8 transform hover:scale-115 transition-all duration-500">
+                              <div className="w-44 bg-gradient-to-br from-yellow-50 to-orange-100 border-4 border-yellow-400 rounded-2xl p-6 shadow-2xl hover:shadow-yellow-500/50">
+                                <div className="text-center">
+                                  <div className="relative">
+                                    <Avatar className="h-24 w-24 mx-auto mb-4 ring-4 ring-yellow-400 shadow-2xl">
+                                      <AvatarFallback className="bg-gradient-to-br from-yellow-300 to-orange-400 text-yellow-900 text-3xl font-black">
+                                        {getDisplayName(podiumOrder[1]).charAt(0)}
+                                      </AvatarFallback>
+                                    </Avatar>
+                                    <div className="absolute -top-2 -right-2 w-8 h-8 bg-gradient-to-r from-yellow-400 to-orange-500 rounded-full flex items-center justify-center shadow-lg">
+                                      <Crown className="h-5 w-5 text-white" />
+                                    </div>
+                                  </div>
+                                  <h3 className="font-black text-gray-900 text-xl mb-2 truncate">
+                                    {podiumOrder[1].id === user?.id ? "Siz 🏆" : getDisplayName(podiumOrder[1])}
+                                  </h3>
+                                  <p className="text-base text-gray-700 mb-4 truncate">@{podiumOrder[1].username}</p>
+                                  <div className="bg-gradient-to-r from-green-500 to-emerald-600 text-white px-4 py-3 rounded-xl text-lg font-bold mb-3 shadow-lg">
+                                    {podiumOrder[1].experience} XP
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Winner Podium Base */}
+                            <div className="relative">
+                              <div className="w-40 h-32 bg-gradient-to-t from-yellow-500 to-yellow-300 rounded-t-2xl shadow-2xl flex items-center justify-center border-t-4 border-yellow-200">
+                                <div className="text-center">
+                                  <div className="text-4xl font-black text-yellow-900 drop-shadow-lg">1</div>
+                                  <div className="text-lg font-bold text-yellow-800">ŞAMPIYON</div>
+                                </div>
+                              </div>
+                              {/* Golden shine effect */}
+                              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-yellow-200/50 to-transparent rounded-t-2xl animate-pulse"></div>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* 3rd Place */}
+                        {podiumOrder[2] && (
+                          <div className="flex flex-col items-center relative">
+                            {/* Floating medal */}
+                            <div className="absolute -top-8 left-1/2 transform -translate-x-1/2 animate-bounce delay-500">
+                              <Medal className="h-8 w-8 text-amber-600" />
+                            </div>
+
+                            {/* Student Card */}
+                            <div className="relative mb-6 transform hover:scale-110 transition-all duration-500">
+                              <div className="w-36 bg-gradient-to-br from-amber-50 to-yellow-100 border-4 border-amber-400 rounded-2xl p-4 shadow-2xl hover:shadow-amber-500/50">
+                                <div className="text-center">
+                                  <Avatar className="h-20 w-20 mx-auto mb-3 ring-4 ring-amber-400 shadow-xl">
+                                    <AvatarFallback className="bg-gradient-to-br from-amber-200 to-amber-400 text-amber-900 text-2xl font-black">
+                                      {getDisplayName(podiumOrder[2]).charAt(0)}
+                                    </AvatarFallback>
+                                  </Avatar>
+                                  <h3 className="font-black text-gray-900 text-lg mb-1 truncate">
+                                    {podiumOrder[2].id === user?.id ? "Siz 🥉" : getDisplayName(podiumOrder[2])}
+                                  </h3>
+                                  <p className="text-sm text-gray-600 mb-3 truncate">@{podiumOrder[2].username}</p>
+                                  <div className="bg-gradient-to-r from-green-500 to-emerald-600 text-white px-3 py-2 rounded-xl text-sm font-bold mb-2">
+                                    {podiumOrder[2].experience} XP
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Bronze Podium Base */}
+                            <div className="relative">
+                              <div className="w-32 h-20 bg-gradient-to-t from-amber-500 to-amber-300 rounded-t-2xl shadow-2xl flex items-center justify-center border-t-4 border-amber-200">
+                                <div className="text-center">
+                                  <div className="text-3xl font-black text-amber-900 drop-shadow-lg">3</div>
+                                  <div className="text-sm font-bold text-amber-800">ÜÇÜNCÜ</div>
+                                </div>
+                              </div>
+                              {/* Bronze shine effect */}
+                              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-amber-200/40 to-transparent rounded-t-2xl animate-pulse"></div>
+                            </div>
+                          </div>
                         )}
                       </div>
-                    ))}
+                    </div>
+
+                    {/* Top 5 - 4th and 5th Place */}
+                    {leaderboard.length > 3 && (
+                      <div className="mt-12">
+                        <h4 className="text-2xl font-bold text-center mb-8 text-gray-800">⭐ En İyi 5 ⭐</h4>
+                        <div className="flex justify-center gap-8 max-w-4xl mx-auto">
+                          {leaderboard.slice(3, 5).map((student, index) => (
+                            <div key={student.id} className="flex flex-col items-center relative transform hover:scale-105 transition-all duration-500">
+                              {/* Floating star */}
+                              <div className="absolute -top-6 left-1/2 transform -translate-x-1/2 animate-bounce" style={{animationDelay: `${index * 200}ms`}}>
+                                <Award className="h-6 w-6 text-indigo-500" />
+                              </div>
+
+                              {/* Student Card */}
+                              <div className="w-32 bg-gradient-to-br from-indigo-50 to-purple-100 border-3 border-indigo-300 rounded-xl p-4 shadow-xl hover:shadow-indigo-500/30">
+                                <div className="text-center">
+                                  <div className="w-8 h-8 mx-auto mb-3 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-full flex items-center justify-center shadow-lg">
+                                    <span className="text-white font-bold text-sm">{index + 4}</span>
+                                  </div>
+                                  <Avatar className="h-16 w-16 mx-auto mb-2 ring-3 ring-indigo-300 shadow-lg">
+                                    <AvatarFallback className="bg-gradient-to-br from-indigo-200 to-purple-300 text-indigo-900 text-lg font-bold">
+                                      {getDisplayName(student).charAt(0)}
+                                    </AvatarFallback>
+                                  </Avatar>
+                                  <h3 className="font-bold text-gray-900 text-sm mb-1 truncate">
+                                    {student.id === user?.id ? "Siz ⭐" : getDisplayName(student)}
+                                  </h3>
+                                  <p className="text-xs text-gray-600 mb-2 truncate">@{student.username}</p>
+                                  <div className="bg-gradient-to-r from-green-500 to-emerald-600 text-white px-2 py-1 rounded-lg text-xs font-bold mb-1">
+                                    {student.experience} XP
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Additional visual enhancements */}
+                    {leaderboard.length > 5 && (
+                      <div className="mt-12 text-center">
+                        <div className="text-lg text-gray-600 font-semibold bg-gradient-to-r from-gray-100 to-gray-200 rounded-full px-6 py-3 inline-block shadow-lg">
+                          ve {leaderboard.length - 5} öğrenci daha yarışıyor... 🎯
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </CardContent>
               </Card>

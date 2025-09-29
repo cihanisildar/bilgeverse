@@ -12,9 +12,9 @@ export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
     
-    if (!session?.user || session.user.role !== UserRole.TUTOR) {
+    if (!session?.user || (session.user.role !== UserRole.TUTOR && session.user.role !== UserRole.ASISTAN)) {
       return NextResponse.json(
-        { error: 'Unauthorized: Only tutors can access reports' },
+        { error: 'Unauthorized: Only tutors and asistans can access reports' },
         { status: 403 }
       );
     }
@@ -29,9 +29,29 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    // First check if the student exists and is active
+    const student = await prisma.user.findFirst({
+      where: {
+        id: studentId,
+        role: UserRole.STUDENT,
+        isActive: true
+      },
+      select: { id: true }
+    });
+
+    if (!student) {
+      return NextResponse.json(
+        { error: 'Student not found or is currently inactive' },
+        { status: 404 }
+      );
+    }
+
     const reports = await prisma.studentReport.findMany({
       where: {
         studentId: studentId,
+        student: {
+          isActive: true
+        }
       },
       include: {
         tutor: {
@@ -63,9 +83,9 @@ export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
     
-    if (!session?.user || session.user.role !== UserRole.TUTOR) {
+    if (!session?.user || (session.user.role !== UserRole.TUTOR && session.user.role !== UserRole.ASISTAN)) {
       return NextResponse.json(
-        { error: 'Unauthorized: Only tutors can create reports' },
+        { error: 'Unauthorized: Only tutors and asistans can create reports' },
         { status: 403 }
       );
     }
@@ -77,6 +97,23 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         { error: 'Student ID, title, and content are required' },
         { status: 400 }
+      );
+    }
+
+    // Check if the student exists and is active before creating a report
+    const student = await prisma.user.findFirst({
+      where: {
+        id: studentId,
+        role: UserRole.STUDENT,
+        isActive: true
+      },
+      select: { id: true }
+    });
+
+    if (!student) {
+      return NextResponse.json(
+        { error: 'Cannot create report: Student not found or is currently inactive' },
+        { status: 404 }
       );
     }
 
@@ -117,9 +154,9 @@ export async function PUT(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
     
-    if (!session?.user || session.user.role !== UserRole.TUTOR) {
+    if (!session?.user || (session.user.role !== UserRole.TUTOR && session.user.role !== UserRole.ASISTAN)) {
       return NextResponse.json(
-        { error: 'Unauthorized: Only tutors can update reports' },
+        { error: 'Unauthorized: Only tutors and asistans can update reports' },
         { status: 403 }
       );
     }
@@ -134,7 +171,7 @@ export async function PUT(request: NextRequest) {
       );
     }
 
-    // Verify the report belongs to this tutor
+    // Verify the report belongs to this tutor/asistan
     const existingReport = await prisma.studentReport.findUnique({
       where: { id },
     });
@@ -186,9 +223,9 @@ export async function DELETE(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
     
-    if (!session?.user || session.user.role !== UserRole.TUTOR) {
+    if (!session?.user || (session.user.role !== UserRole.TUTOR && session.user.role !== UserRole.ASISTAN)) {
       return NextResponse.json(
-        { error: 'Unauthorized: Only tutors can delete reports' },
+        { error: 'Unauthorized: Only tutors and asistans can delete reports' },
         { status: 403 }
       );
     }
@@ -203,7 +240,7 @@ export async function DELETE(request: NextRequest) {
       );
     }
 
-    // Verify the report belongs to this tutor
+    // Verify the report belongs to this tutor/asistan
     const existingReport = await prisma.studentReport.findUnique({
       where: { id },
     });

@@ -1,27 +1,25 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend, BarChart, Bar, XAxis, YAxis, CartesianGrid } from 'recharts';
-import { 
-  Activity, 
-  Award, 
-  Calendar, 
-  TrendingUp, 
-  Users, 
-  BookOpen, 
-  MessageCircle, 
-  Palette,
-  Trophy,
-  Star,
-  Target,
+import {
+  Activity,
+  BookOpen,
+  Calendar,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  MessageCircle,
+  Palette,
+Star,
+  Target,
+  Trophy,
+  Users
 } from 'lucide-react';
+import { useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
+import { Cell, Legend, Pie, PieChart, ResponsiveContainer, Tooltip } from 'recharts';
 
 type OverallStatsReportProps = {
   userRole: 'ADMIN' | 'TUTOR';
@@ -60,11 +58,58 @@ type OverallStatsData = {
   };
 };
 
+// Default/fallback data structure
+const DEFAULT_STATS_DATA: OverallStatsData = {
+  totalStudents: 0,
+  totalPoints: 0,
+  totalExperience: 0,
+  totalPointsEarned: 0,
+  totalExperienceEarned: 0,
+  activityDistribution: [],
+  averagePointsPerStudent: 0,
+  averageExperiencePerStudent: 0,
+  topStudentsByPoints: [],
+  topStudentsByExperience: [],
+  summary: {
+    eventsParticipated: 0,
+    totalTransactions: 0,
+    averageEventParticipation: 0
+  }
+};
+
 const COLORS = [
   '#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8', 
   '#82CA9D', '#FFC658', '#FF7C7C', '#8DD1E1', '#D084D0',
   '#87CEEB', '#DDA0DD', '#F0E68C', '#FF6347', '#40E0D0'
 ];
+
+// Helper function for safe data access with proper fallbacks
+// This handles both old and new API response formats
+const getSafeStatsData = (data: any): OverallStatsData => {
+  if (!data) return DEFAULT_STATS_DATA;
+  
+  // Handle backward compatibility - check if summary exists
+  const hasSummary = data.summary && typeof data.summary === 'object';
+  console.log('Processing data:', { hasSummary, summary: data.summary }); // Debug log
+  
+  return {
+    totalStudents: data.totalStudents ?? 0,
+    totalPoints: data.totalPoints ?? 0,
+    totalExperience: data.totalExperience ?? 0,
+    totalPointsEarned: data.totalPointsEarned ?? 0,
+    totalExperienceEarned: data.totalExperienceEarned ?? 0,
+    activityDistribution: Array.isArray(data.activityDistribution) ? data.activityDistribution : [],
+    averagePointsPerStudent: data.averagePointsPerStudent ?? 0,
+    averageExperiencePerStudent: data.averageExperiencePerStudent ?? 0,
+    topStudentsByPoints: Array.isArray(data.topStudentsByPoints) ? data.topStudentsByPoints : [],
+    topStudentsByExperience: Array.isArray(data.topStudentsByExperience) ? data.topStudentsByExperience : [],
+    summary: {
+      eventsParticipated: hasSummary ? (data.summary.eventsParticipated ?? 0) : 0,
+      totalTransactions: hasSummary ? (data.summary.totalTransactions ?? 0) : 0,
+      averageEventParticipation: hasSummary ? (data.summary.averageEventParticipation ?? 0) : 0
+    }
+  };
+};
 
 export default function OverallStatsReport({ userRole }: OverallStatsReportProps) {
   const [statsData, setStatsData] = useState<OverallStatsData | null>(null);
@@ -84,6 +129,7 @@ export default function OverallStatsReport({ userRole }: OverallStatsReportProps
       if (!response.ok) throw new Error('Failed to fetch overall stats');
       
       const data = await response.json();
+      console.log('Received API data:', data); // Debug log
       setStatsData(data);
     } catch (error) {
       console.error('Error fetching overall stats:', error);
@@ -125,7 +171,7 @@ export default function OverallStatsReport({ userRole }: OverallStatsReportProps
 
   // Pagination logic for activities
   const getPaginatedActivities = () => {
-    if (!statsData?.activityDistribution) return [];
+    if (!statsData?.activityDistribution || !Array.isArray(statsData.activityDistribution)) return [];
     
     const startIndex = (currentPage - 1) * itemsPerPage;
     const endIndex = startIndex + itemsPerPage;
@@ -133,7 +179,7 @@ export default function OverallStatsReport({ userRole }: OverallStatsReportProps
   };
 
   const getTotalPages = () => {
-    if (!statsData?.activityDistribution) return 0;
+    if (!statsData?.activityDistribution || !Array.isArray(statsData.activityDistribution)) return 0;
     return Math.ceil(statsData.activityDistribution.length / itemsPerPage);
   };
 
@@ -151,7 +197,7 @@ export default function OverallStatsReport({ userRole }: OverallStatsReportProps
 
   // Prepare data for pie chart with better organization
   const getChartData = () => {
-    if (!statsData?.activityDistribution) return [];
+    if (!statsData?.activityDistribution || !Array.isArray(statsData.activityDistribution)) return [];
     
     // Sort by percentage descending
     const sortedData = [...statsData.activityDistribution].sort((a, b) => b.percentage - a.percentage);
@@ -202,6 +248,8 @@ export default function OverallStatsReport({ userRole }: OverallStatsReportProps
     );
   }
 
+  // Use safe data access with proper fallbacks
+  const safeStatsData = getSafeStatsData(statsData);
   const chartData = getChartData();
   const paginatedActivities = getPaginatedActivities();
   const totalPages = getTotalPages();
@@ -336,28 +384,28 @@ export default function OverallStatsReport({ userRole }: OverallStatsReportProps
                 <div className="grid grid-cols-2 gap-4">
                   <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200">
                     <CardContent className="p-4 text-center">
-                      <div className="text-2xl font-bold text-blue-700">{statsData.totalStudents}</div>
+                      <div className="text-2xl font-bold text-blue-700">{safeStatsData.totalStudents}</div>
                       <p className="text-sm text-blue-600">Aktif Öğrenci</p>
                     </CardContent>
                   </Card>
                   
                   <Card className="bg-gradient-to-br from-green-50 to-green-100 border-green-200">
                     <CardContent className="p-4 text-center">
-                      <div className="text-2xl font-bold text-green-700">{statsData.summary.eventsParticipated}</div>
+                      <div className="text-2xl font-bold text-green-700">{safeStatsData.summary.eventsParticipated}</div>
                       <p className="text-sm text-green-600">Etkinlik Katılımı</p>
                     </CardContent>
                   </Card>
                   
                   <Card className="bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200">
                     <CardContent className="p-4 text-center">
-                      <div className="text-2xl font-bold text-purple-700">{statsData.averagePointsPerStudent}</div>
+                      <div className="text-2xl font-bold text-purple-700">{safeStatsData.averagePointsPerStudent}</div>
                       <p className="text-sm text-purple-600">Ortalama Puan</p>
                     </CardContent>
                   </Card>
                   
                   <Card className="bg-gradient-to-br from-orange-50 to-orange-100 border-orange-200">
                     <CardContent className="p-4 text-center">
-                      <div className="text-2xl font-bold text-orange-700">{statsData.summary.totalTransactions}</div>
+                      <div className="text-2xl font-bold text-orange-700">{safeStatsData.summary.totalTransactions}</div>
                       <p className="text-sm text-orange-600">Toplam İşlem</p>
                     </CardContent>
                   </Card>
@@ -416,7 +464,7 @@ export default function OverallStatsReport({ userRole }: OverallStatsReportProps
                     ))}
                   </div>
                   
-                  {statsData.activityDistribution.length === 0 && (
+                  {(!statsData.activityDistribution || !Array.isArray(statsData.activityDistribution) || statsData.activityDistribution.length === 0) && (
                     <div className="text-center py-8 text-gray-500">
                       <Activity className="h-12 w-12 text-gray-300 mx-auto mb-2" />
                       <p className="text-sm">Henüz aktivite verisi bulunmuyor</p>
@@ -445,7 +493,7 @@ export default function OverallStatsReport({ userRole }: OverallStatsReportProps
               </div>
             </CardHeader>
             <CardContent>
-              {statsData.activityDistribution.length > 0 ? (
+              {statsData.activityDistribution && Array.isArray(statsData.activityDistribution) && statsData.activityDistribution.length > 0 ? (
                 <>
                   <div className="h-96">
                     <ResponsiveContainer width="100%" height="100%">
@@ -510,12 +558,12 @@ export default function OverallStatsReport({ userRole }: OverallStatsReportProps
                     <div className="flex items-center justify-between mb-4">
                       <h4 className="font-semibold text-gray-800 text-sm">Detaylı Aktivite Listesi</h4>
                       <Badge variant="outline" className="text-xs">
-                        {statsData.activityDistribution.length} aktivite
+                        {statsData.activityDistribution?.length || 0} aktivite
                       </Badge>
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-48 overflow-y-auto">
                       {statsData.activityDistribution
-                        .sort((a, b) => b.percentage - a.percentage)
+                        ?.sort((a, b) => b.percentage - a.percentage)
                         .map((activity, index) => (
                           <div key={activity.name} className="flex items-center justify-between p-2 bg-gray-50 rounded-lg text-xs">
                             <div className="flex items-center gap-2 flex-1 min-w-0">
@@ -567,8 +615,8 @@ export default function OverallStatsReport({ userRole }: OverallStatsReportProps
               </CardHeader>
               <CardContent>
                 <div className="space-y-3 max-h-96 overflow-y-auto">
-                  {statsData.topStudentsByPoints.length > 0 ? (
-                    statsData.topStudentsByPoints.map((student) => (
+                  {safeStatsData.topStudentsByPoints.length > 0 ? (
+                    safeStatsData.topStudentsByPoints.map((student) => (
                       <div key={student.id} className="flex items-center justify-between p-4 bg-gradient-to-r from-yellow-50 to-orange-50 rounded-xl border border-yellow-200 hover:shadow-md transition-all duration-200">
                         <div className="flex items-center gap-3">
                           <div className="w-10 h-10 rounded-full bg-gradient-to-r from-yellow-400 to-orange-500 flex items-center justify-center text-white font-bold text-sm shadow-lg">
@@ -614,8 +662,8 @@ export default function OverallStatsReport({ userRole }: OverallStatsReportProps
               </CardHeader>
               <CardContent>
                 <div className="space-y-3 max-h-96 overflow-y-auto">
-                  {statsData.topStudentsByExperience.length > 0 ? (
-                    statsData.topStudentsByExperience.map((student) => (
+                  {safeStatsData.topStudentsByExperience.length > 0 ? (
+                    safeStatsData.topStudentsByExperience.map((student) => (
                       <div key={student.id} className="flex items-center justify-between p-4 bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl border border-blue-200 hover:shadow-md transition-all duration-200">
                         <div className="flex items-center gap-3">
                           <div className="w-10 h-10 rounded-full bg-gradient-to-r from-blue-400 to-purple-500 flex items-center justify-center text-white font-bold text-sm shadow-lg">

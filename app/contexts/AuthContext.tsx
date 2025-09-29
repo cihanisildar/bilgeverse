@@ -31,9 +31,11 @@ type AuthUser = {
 type AuthContextType = {
   user: AuthUser | null;
   loading: boolean;
+  isAuthenticated: boolean;
   login: (username: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
   checkAuth: () => Promise<void>;
+  refreshUser: () => Promise<void>;
   isAdmin: boolean;
   isTutor: boolean;
   isStudent: boolean;
@@ -152,7 +154,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       // Use router.replace for navigation
       if (session?.user?.role === UserRole.ADMIN) {
         await router.replace('/admin');
-      } else if (session?.user?.role === UserRole.TUTOR) {
+      } else if (session?.user?.role === UserRole.TUTOR || session?.user?.role === UserRole.ASISTAN) {
         await router.replace('/tutor');
       } else {
         await router.replace('/student');
@@ -181,18 +183,50 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  const refreshUser = async () => {
+    try {
+      console.log('Refreshing user data...');
+      const res = await fetch("/api/auth/refresh", {
+        method: 'POST',
+        credentials: 'include',
+        headers: {
+          'Cache-Control': 'no-cache',
+        },
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        console.log('User data refreshed:', data.user);
+        setUser(data.user);
+        setUserUpdatedFromAPI(true);
+
+        // Reset the flag after a short delay
+        setTimeout(() => {
+          setUserUpdatedFromAPI(false);
+        }, 1000);
+      } else {
+        console.error('Failed to refresh user data');
+      }
+    } catch (error) {
+      console.error("Refresh user error:", error);
+    }
+  };
+
   const isAdmin = user?.role === UserRole.ADMIN;
-  const isTutor = user?.role === UserRole.TUTOR;
+  const isTutor = user?.role === UserRole.TUTOR || user?.role === UserRole.ASISTAN;
   const isStudent = user?.role === UserRole.STUDENT;
+  const isAuthenticated = user && !loading;
 
   return (
     <AuthContext.Provider
       value={{
         user,
         loading,
+        isAuthenticated,
         login,
         logout,
         checkAuth,
+        refreshUser,
         isAdmin,
         isTutor,
         isStudent,

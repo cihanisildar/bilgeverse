@@ -25,11 +25,14 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Get classroom info and students
+    // Get classroom info and active students only
     const classroom = await prisma.classroom.findUnique({
       where: { id: classroomId },
       include: {
         students: {
+          where: {
+            isActive: true
+          },
           select: {
             id: true,
             username: true,
@@ -132,12 +135,14 @@ export async function GET(request: NextRequest) {
       totalAttendances: tutorEvents.reduce((sum, event) => sum + event.participants.length, 0),
       averageAttendancePerEvent: tutorEvents.length > 0 ? Math.round(tutorEvents.reduce((sum, event) => sum + event.participants.length, 0) / tutorEvents.length) : 0
     };
-    // Aggregates
-    const totalPoints = students.reduce((sum, student) => sum + student.points, 0);
-    const totalExperience = students.reduce((sum, student) => sum + student.experience, 0);
+    // Calculate totals from transactions (not user table)
     const totalPointsFromEvents = eventParticipations.reduce((sum, participation) => sum + (participation.event.points || 0), 0);
     const totalPointsFromTransactions = pointsTransactions.reduce((sum, transaction) => sum + transaction.points, 0);
     const totalExperienceFromTransactions = experienceTransactions.reduce((sum, transaction) => sum + transaction.amount, 0);
+    
+    // Use calculated values instead of user table values
+    const totalPoints = totalPointsFromEvents + totalPointsFromTransactions;
+    const totalExperience = totalExperienceFromTransactions;
     // Categorize points by activity type
     const activityCategories = categorizeAllPointsByActivity(pointsTransactions, eventParticipations);
     const totalAllPoints = totalPointsFromEvents + totalPointsFromTransactions;

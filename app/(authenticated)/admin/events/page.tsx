@@ -15,24 +15,25 @@ import {
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { 
-  Calendar, 
-  Edit, 
-  Loader2, 
-  Search, 
-  Trash, 
-  User, 
-  X, 
-  Users, 
-  MapPin, 
-  Clock, 
+import {
+  Calendar,
+  Edit,
+  Loader2,
+  Search,
+  Trash,
+  User,
+  X,
+  Users,
+  MapPin,
+  Clock,
   Star,
   Eye,
   Tag,
   CheckCircle,
   XCircle,
   PlayCircle,
-  PauseCircle
+  PauseCircle,
+  Settings
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
@@ -60,6 +61,12 @@ type Event = {
   eventScope: 'GLOBAL' | 'GROUP';
   createdAt: string;
   enrolledStudents?: number;
+  eventTypeId?: string;
+  eventType?: {
+    id: string;
+    name: string;
+    description?: string;
+  };
 };
 
 type Tutor = {
@@ -69,11 +76,29 @@ type Tutor = {
   lastName?: string;
 };
 
+type EventType = {
+  id: string;
+  name: string;
+  description?: string;
+};
+
+type Period = {
+  id: string;
+  name: string;
+  description?: string;
+  startDate: string;
+  endDate?: string;
+  status: 'ACTIVE' | 'INACTIVE' | 'ARCHIVED';
+  createdAt: string;
+};
+
 export default function AdminEventsPage() {
   const router = useRouter();
   const { user, isAdmin } = useAuth();
   const [events, setEvents] = useState<Event[]>([]);
   const [tutors, setTutors] = useState<Tutor[]>([]);
+  const [periods, setPeriods] = useState<Period[]>([]);
+  const [eventTypes, setEventTypes] = useState<EventType[]>([]);
   const [filteredEvents, setFilteredEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -97,7 +122,9 @@ export default function AdminEventsPage() {
     experience: 0,
     eventScope: 'GLOBAL' as 'GLOBAL' | 'GROUP',
     tags: [] as string[],
-    createdForTutorId: ''
+    createdForTutorId: '',
+    periodId: '',
+    eventTypeId: ''
   });
   const [currentEventId, setCurrentEventId] = useState<string | null>(null);
   const [formErrors, setFormErrors] = useState({
@@ -105,7 +132,9 @@ export default function AdminEventsPage() {
     description: '',
     startDate: '',
     startTime: '',
-    createdForTutorId: ''
+    createdForTutorId: '',
+    periodId: '',
+    eventTypeId: ''
   });
   const [formSubmitting, setFormSubmitting] = useState(false);
   const [deleteDialog, setDeleteDialog] = useState<{ isOpen: boolean; eventId: string; title: string }>({
@@ -179,10 +208,78 @@ export default function AdminEventsPage() {
     }
   };
 
+  const fetchPeriods = async () => {
+    try {
+      console.log('Fetching periods...');
+      const response = await fetch('/api/admin/periods', {
+        method: 'GET',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+          'Cache-Control': 'no-cache'
+        }
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error('Period fetch error response:', errorData);
+        throw new Error(errorData.error || 'Failed to fetch periods');
+      }
+
+      const data = await response.json();
+      console.log('Fetched periods data:', data);
+      
+      if (!data.periods || !Array.isArray(data.periods)) {
+        throw new Error('Invalid period data received');
+      }
+      
+      setPeriods(data.periods);
+    } catch (err: any) {
+      console.error('Error fetching periods:', err);
+      toast.error('Dönemler yüklenirken bir hata oluştu. Lütfen sayfayı yenileyin.');
+      setPeriods([]); // Set empty array to prevent undefined errors
+    }
+  };
+
+  const fetchEventTypes = async () => {
+    try {
+      console.log('Fetching event types...');
+      const response = await fetch('/api/event-types', {
+        method: 'GET',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+          'Cache-Control': 'no-cache'
+        }
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error('Event types fetch error response:', errorData);
+        throw new Error(errorData.error || 'Failed to fetch event types');
+      }
+
+      const data = await response.json();
+      console.log('Fetched event types data:', data);
+      
+      if (!data.eventTypes || !Array.isArray(data.eventTypes)) {
+        throw new Error('Invalid event types data received');
+      }
+      
+      setEventTypes(data.eventTypes);
+    } catch (err: any) {
+      console.error('Error fetching event types:', err);
+      toast.error('Etkinlik türleri yüklenirken bir hata oluştu. Lütfen sayfayı yenileyin.');
+      setEventTypes([]); // Set empty array to prevent undefined errors
+    }
+  };
+
   useEffect(() => {
     if (user) {
       fetchEvents();
       fetchTutors();
+      fetchPeriods();
+      fetchEventTypes();
     }
   }, [user]);
 
@@ -226,17 +323,20 @@ export default function AdminEventsPage() {
   useEffect(() => {
     if (isModalOpen) {
       console.log('Modal opened with initialEventScope:', initialEventScope);
+      // Set default period to active period if available
+      const activePeriod = periods.find(p => p.status === 'ACTIVE');
       setEventForm(prev => {
         const newForm = {
           ...prev,
           eventScope: initialEventScope,
-          createdForTutorId: initialEventScope === 'GROUP' ? '' : prev.createdForTutorId
+          createdForTutorId: initialEventScope === 'GROUP' ? '' : prev.createdForTutorId,
+          periodId: activePeriod?.id || ''
         };
         console.log('Updated event form:', newForm);
         return newForm;
       });
     }
-  }, [isModalOpen, initialEventScope]);
+  }, [isModalOpen, initialEventScope, periods]);
 
   const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
     setSearchQuery(e.target.value);
@@ -284,6 +384,7 @@ export default function AdminEventsPage() {
   const openAddEventModal = () => {
     console.log('Opening add event modal with scope:', initialEventScope);
     setCurrentEventId(null);
+    const activePeriod = periods.find(p => p.status === 'ACTIVE');
     setEventForm({
       title: '',
       description: '',
@@ -296,14 +397,18 @@ export default function AdminEventsPage() {
       experience: 0,
       eventScope: initialEventScope,
       tags: [],
-      createdForTutorId: ''
+      createdForTutorId: '',
+      periodId: activePeriod?.id || '',
+      eventTypeId: ''
     });
     setFormErrors({
       title: '',
       description: '',
       startDate: '',
       startTime: '',
-      createdForTutorId: ''
+      createdForTutorId: '',
+      periodId: '',
+      eventTypeId: ''
     });
     setIsModalOpen(true);
   };
@@ -322,14 +427,18 @@ export default function AdminEventsPage() {
       experience: event.experience || 0,
       eventScope: event.eventScope,
       tags: event.tags,
-      createdForTutorId: ''
+      createdForTutorId: '',
+      periodId: '', // Will be set from existing event data
+      eventTypeId: event.eventTypeId || ''
     });
     setFormErrors({
       title: '',
       description: '',
       startDate: '',
       startTime: '',
-      createdForTutorId: ''
+      createdForTutorId: '',
+      periodId: '',
+      eventTypeId: ''
     });
     setIsModalOpen(true);
   };
@@ -374,7 +483,9 @@ export default function AdminEventsPage() {
       description: '',
       startDate: '',
       startTime: '',
-      createdForTutorId: ''
+      createdForTutorId: '',
+      periodId: '',
+      eventTypeId: ''
     };
     let isValid = true;
     
@@ -400,6 +511,16 @@ export default function AdminEventsPage() {
 
     if (eventForm.eventScope === 'GROUP' && !eventForm.createdForTutorId) {
       errors.createdForTutorId = 'Eğitmen seçimi gereklidir';
+      isValid = false;
+    }
+
+    if (!eventForm.periodId) {
+      errors.periodId = 'Dönem seçimi gereklidir';
+      isValid = false;
+    }
+
+    if (!eventForm.eventTypeId) {
+      errors.eventTypeId = 'Etkinlik türü seçimi gereklidir';
       isValid = false;
     }
     
@@ -435,7 +556,9 @@ export default function AdminEventsPage() {
         eventScope: eventForm.eventScope,
         status: 'YAKINDA',
         tags: eventForm.tags || [],
-        createdForTutorId: eventForm.eventScope === 'GROUP' ? eventForm.createdForTutorId : undefined
+        createdForTutorId: eventForm.eventScope === 'GROUP' ? eventForm.createdForTutorId : undefined,
+        periodId: eventForm.periodId,
+        eventTypeId: eventForm.eventTypeId
       };
       
       console.log('Submitting event data:', eventData);
@@ -778,22 +901,31 @@ export default function AdminEventsPage() {
               </div>
             </div>
             <div className="flex flex-col sm:flex-row gap-3">
-              <Button 
+              <Button
+                onClick={() => router.push('/admin/events/event-types')}
+                size="lg"
+                variant="outline"
+                className="bg-white/10 text-white border-white/20 hover:bg-white/20 shadow-lg hover:shadow-xl transition-all duration-200"
+              >
+                <Settings className="h-5 w-5 mr-2" />
+                Etkinlik Türleri
+              </Button>
+              <Button
                 onClick={() => {
                   setInitialEventScope('GLOBAL');
                   openAddEventModal();
-                }} 
+                }}
                 size="lg"
                 className="bg-white text-blue-600 hover:bg-blue-50 shadow-lg hover:shadow-xl transition-all duration-200"
               >
                 <Calendar className="h-5 w-5 mr-2" />
                 Genel Etkinlik Oluştur
               </Button>
-              <Button 
+              <Button
                 onClick={() => {
                   setInitialEventScope('GROUP');
                   openAddEventModal();
-                }} 
+                }}
                 size="lg"
                 className="bg-blue-500 text-white hover:bg-blue-600 border border-blue-400 shadow-lg hover:shadow-xl transition-all duration-200"
               >
@@ -1029,9 +1161,96 @@ export default function AdminEventsPage() {
             <div className="p-6 overflow-y-auto flex-1">
               <form onSubmit={handleSubmitEvent}>
                 <div className="space-y-6">
+                  <div className="bg-gray-50 p-4 rounded-lg">
+                    <label className="text-sm font-semibold text-gray-900 mb-2 block">Dönem Seç *</label>
+                    <Select
+                      value={eventForm.periodId}
+                      onValueChange={(value) => {
+                        setEventForm(prev => ({ ...prev, periodId: value }));
+                        if (formErrors.periodId) {
+                          setFormErrors(prev => ({ ...prev, periodId: '' }));
+                        }
+                      }}
+                    >
+                      <SelectTrigger className={`h-11 ${formErrors.periodId ? "border-red-500" : ""}`}>
+                        <SelectValue placeholder="Dönem seçin" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {periods.length === 0 ? (
+                          <SelectItem value="no-periods" disabled>Dönem bulunamadı</SelectItem>
+                        ) : (
+                          periods.map(period => (
+                            <SelectItem key={period.id} value={period.id}>
+                              <div className="flex items-center justify-between w-full">
+                                <span>{period.name}</span>
+                                <span className={`ml-2 text-xs px-2 py-1 rounded ${
+                                  period.status === 'ACTIVE' ? 'bg-green-100 text-green-800' :
+                                  period.status === 'INACTIVE' ? 'bg-yellow-100 text-yellow-800' :
+                                  'bg-gray-100 text-gray-800'
+                                }`}>
+                                  {period.status === 'ACTIVE' ? 'Aktif' :
+                                   period.status === 'INACTIVE' ? 'Pasif' : 'Arşiv'}
+                                </span>
+                              </div>
+                            </SelectItem>
+                          ))
+                        )}
+                      </SelectContent>
+                    </Select>
+                    {formErrors.periodId && (
+                      <p className="text-sm text-red-500 mt-2">{formErrors.periodId}</p>
+                    )}
+                  </div>
+
+                  <div className="bg-gray-50 p-4 rounded-lg">
+                    <label className="text-sm font-semibold text-gray-900 mb-2 block">Etkinlik Türü *</label>
+                    <Select
+                      value={eventForm.eventTypeId}
+                      onValueChange={(value) => {
+                        setEventForm(prev => ({ ...prev, eventTypeId: value }));
+                        if (formErrors.eventTypeId) {
+                          setFormErrors(prev => ({ ...prev, eventTypeId: '' }));
+                        }
+                      }}
+                    >
+                      <SelectTrigger className={`h-11 ${formErrors.eventTypeId ? "border-red-500" : ""}`}>
+                        <SelectValue placeholder="Etkinlik türü seçin" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {eventTypes.length === 0 ? (
+                          <SelectItem value="no-event-types" disabled>Etkinlik türü bulunamadı</SelectItem>
+                        ) : (
+                          eventTypes.map(eventType => (
+                            <SelectItem key={eventType.id} value={eventType.id}>
+                              <div className="flex flex-col">
+                                <span className="font-medium">{eventType.name}</span>
+                                {eventType.description && (
+                                  <span className="text-sm text-gray-500">{eventType.description}</span>
+                                )}
+                              </div>
+                            </SelectItem>
+                          ))
+                        )}
+                      </SelectContent>
+                    </Select>
+                    {formErrors.eventTypeId && (
+                      <p className="text-sm text-red-500 mt-2">{formErrors.eventTypeId}</p>
+                    )}
+                  </div>
+
                   {eventForm.eventScope === 'GROUP' && (
                     <div className="bg-blue-50 p-4 rounded-lg">
-                      <label className="text-sm font-semibold text-blue-900 mb-2 block">Eğitmen Seç *</label>
+                      <div className="flex items-center justify-between mb-2">
+                        <label className="text-sm font-semibold text-blue-900">Eğitmen Seç *</label>
+                        {eventForm.eventTypeId && (
+                          <div className="flex items-center text-sm text-blue-700">
+                            <span className="font-medium">Tür:</span>
+                            <span className="ml-1 px-2 py-1 bg-blue-100 text-blue-800 rounded-md">
+                              {eventTypes.find(et => et.id === eventForm.eventTypeId)?.name || 'Bilinmeyen'}
+                            </span>
+                          </div>
+                        )}
+                      </div>
                       <Select
                         value={eventForm.createdForTutorId}
                         onValueChange={(value) => {
@@ -1046,7 +1265,7 @@ export default function AdminEventsPage() {
                         </SelectTrigger>
                         <SelectContent>
                           {tutors.length === 0 ? (
-                            <SelectItem value="" disabled>Eğitmen bulunamadı</SelectItem>
+                            <SelectItem value="no-tutors" disabled>Eğitmen bulunamadı</SelectItem>
                           ) : (
                             tutors.map(tutor => (
                               <SelectItem key={tutor.id} value={tutor.id}>

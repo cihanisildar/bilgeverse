@@ -3,13 +3,14 @@ import prisma from '@/lib/prisma';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '../../../auth/[...nextauth]/auth.config';
 import { UserRole } from '@prisma/client';
+import { requireActivePeriod } from '@/lib/periods';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-    
+
     if (!session?.user || session.user.role !== UserRole.ADMIN) {
       return NextResponse.json(
         { error: 'Unauthorized: Only admins can access this endpoint' },
@@ -17,11 +18,25 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Get all experience transactions
+    // Get active period and filter transactions by it
+    const activePeriod = await requireActivePeriod();
+
+    // Get experience transactions for the active period only
     const transactions = await prisma.experienceTransaction.findMany({
-      where: { rolledBack: false },
+      where: {
+        rolledBack: false,
+        periodId: activePeriod.id
+      },
       include: {
         student: {
+          select: {
+            id: true,
+            username: true,
+            firstName: true,
+            lastName: true
+          }
+        },
+        tutor: {
           select: {
             id: true,
             username: true,

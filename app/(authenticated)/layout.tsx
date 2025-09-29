@@ -6,7 +6,7 @@ import { useAuth } from '../contexts/AuthContext';
 import Link from 'next/link';
 import { Button } from "../../components/ui/button";
 import { Avatar, AvatarFallback } from "../../components/ui/avatar";
-import { LogOut, LayoutDashboard, Users, FileText, Calendar, ShoppingBag, PieChart, GraduationCap, Trophy, ShoppingCart, ClipboardList, School, Award, TrendingUp, Menu, CreditCard, Bell } from "lucide-react";
+import { LogOut, LayoutDashboard, Users, FileText, Calendar, ShoppingBag, PieChart, GraduationCap, Trophy, ShoppingCart, ClipboardList, School, Award, TrendingUp, Menu, CreditCard, Bell, Clock, BookOpen } from "lucide-react";
 import { UserRole } from '@prisma/client';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "../../components/ui/sheet";
 
@@ -47,6 +47,7 @@ export default function AuthenticatedLayout({
   // Define navigation links based on role with Lucide icons
   const adminLinks: NavLink[] = [
     { href: '/admin', label: 'Gösterge Paneli', icon: <LayoutDashboard className="h-5 w-5" /> },
+    { href: '/admin/periods', label: 'Dönem Yönetimi', icon: <Clock className="h-5 w-5" /> },
     { href: '/admin/announcements', label: 'Duyuru Panosu', icon: <Bell className="h-5 w-5" /> },
     { href: '/admin/users', label: 'Kullanıcı Yönetimi', icon: <Users className="h-5 w-5" /> },
     // { href: '/admin/registration-requests', label: 'Kayıt İstekleri', icon: <FileText className="h-5 w-5" /> },
@@ -58,6 +59,7 @@ export default function AuthenticatedLayout({
     { href: '/admin/point-cards', label: 'Puan Kartları', icon: <Award className="h-5 w-5" /> },
     { href: '/admin/transactions/rollback', label: 'İşlem Geri Alma', icon: <CreditCard className="h-5 w-5" /> },
     { href: '/admin/wishes', label: 'İstek ve Dilekler', icon: <ClipboardList className="h-5 w-5" /> },
+    { href: '/admin/weekly-reports', label: 'Haftalık Raporlar', icon: <BookOpen className="h-5 w-5" /> },
     { href: '/admin/leaderboard', label: 'Liderlik Tablosu', icon: <Trophy className="h-5 w-5" /> },
     { href: '/admin/reports', label: 'Raporlar', icon: <PieChart className="h-5 w-5" /> },
   ];
@@ -70,6 +72,7 @@ export default function AuthenticatedLayout({
     { href: '/tutor/points', label: 'Puan Yönetimi', icon: <Award className="h-5 w-5" /> },
     { href: '/tutor/point-cards', label: 'Puan Kartları', icon: <CreditCard className="h-5 w-5" /> },
     { href: '/tutor/experience', label: 'Tecrübe Yönetimi', icon: <TrendingUp className="h-5 w-5" /> },
+    { href: '/tutor/weekly-reports', label: 'Haftalık Raporlar', icon: <BookOpen className="h-5 w-5" /> },
     { href: '/tutor/leaderboard', label: 'Liderlik Tablosu', icon: <Trophy className="h-5 w-5" /> },
     { href: '/tutor/reports', label: 'Raporlar', icon: <PieChart className="h-5 w-5" /> },
     { href: '/tutor/store', label: 'Mağaza', icon: <ShoppingCart className="h-5 w-5" /> },
@@ -176,7 +179,7 @@ export default function AuthenticatedLayout({
           <div className="ml-3 overflow-hidden">
             <p className="text-sm font-medium text-gray-800 truncate tracking-wide">{user?.username}</p>
             <p className="text-xs text-gray-500 tracking-wide">
-              {user?.role === UserRole.ADMIN ? 'Yönetici' : user?.role === UserRole.TUTOR ? 'Öğretmen' : 'Öğrenci'}
+              {user?.role === UserRole.ADMIN ? 'Yönetici' : user?.role === UserRole.TUTOR ? 'Öğretmen' : user?.role === UserRole.ASISTAN ? 'Asistan' : 'Öğrenci'}
             </p>
           </div>
           <Button
@@ -226,7 +229,7 @@ export default function AuthenticatedLayout({
                   <div className="ml-3 overflow-hidden">
                     <p className="text-sm font-medium text-gray-800 truncate tracking-wide">{user?.username}</p>
                     <p className="text-xs text-gray-500 tracking-wide">
-                      {user?.role === UserRole.ADMIN ? 'Yönetici' : user?.role === UserRole.TUTOR ? 'Öğretmen' : 'Öğrenci'}
+                      {user?.role === UserRole.ADMIN ? 'Yönetici' : user?.role === UserRole.TUTOR ? 'Öğretmen' : user?.role === UserRole.ASISTAN ? 'Asistan' : 'Öğrenci'}
                     </p>
                   </div>
                   <Button
@@ -270,7 +273,7 @@ export default function AuthenticatedLayout({
               </span>
             )}
           </div>
-          <div className="flex-1 py-4">
+          <div className="flex-1 py-4 overflow-y-auto">
             <NavigationLinks />
           </div>
           <div className="p-3 border-t border-gray-100">

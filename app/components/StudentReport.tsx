@@ -83,6 +83,7 @@ type OverallStats = {
   totalExperienceEarned: number;
   memberSince: string;
   eventParticipations: number;
+  totalEventsCreated: number;
   totalTransactions: number;
 };
 
@@ -288,7 +289,7 @@ export default function StudentReport({
           <div style="font-size: 13px; line-height: 1.8;">
             <div style="margin-bottom: 8px;">• <strong>Toplam Bilge Parası:</strong> ${reportData.student.points} (Kazanılan: ${totalEarned})</div>
             <div style="margin-bottom: 8px;">• <strong>Toplam Deneyim:</strong> ${reportData.student.experience} XP</div>
-            <div style="margin-bottom: 8px;">• <strong>Etkinlik Katılımı:</strong> ${reportData.overallStats.eventParticipations} etkinlik</div>
+            <div style="margin-bottom: 8px;">• <strong>Etkinlik Katılımı:</strong> ${reportData.overallStats.eventParticipations} / ${reportData.overallStats.totalEventsCreated} etkinlik (${Math.round((reportData.overallStats.eventParticipations / reportData.overallStats.totalEventsCreated) * 100)}% katılım oranı)</div>
             <div style="margin-bottom: 8px;">• <strong>Toplam İşlem Sayısı:</strong> ${reportData.overallStats.totalTransactions}</div>
             <div>• <strong>Aktiflik Skoru:</strong> ${Math.round((reportData.overallStats.eventParticipations + reportData.overallStats.totalTransactions) / 2)} puan</div>
           </div>
@@ -524,6 +525,9 @@ export default function StudentReport({
                         {reportData.overallStats.eventParticipations}
                       </div>
                       <p className="text-xs sm:text-sm text-blue-600 font-medium">Etkinlik Katılımı</p>
+                      <p className="text-xs text-blue-500 mt-1">
+                        {reportData.overallStats.eventParticipations} / {reportData.overallStats.totalEventsCreated} etkinlik
+                      </p>
                     </CardContent>
                   </Card>
 
@@ -555,6 +559,51 @@ export default function StudentReport({
                         {totalEarned}
                       </div>
                       <p className="text-xs sm:text-sm text-orange-600 font-medium">Kazanılan Puan</p>
+                    </CardContent>
+                  </Card>
+                </div>
+
+                {/* Event Participation Ratio */}
+                <div className="mt-6">
+                  <Card className="bg-gradient-to-r from-indigo-50 to-purple-50 border-indigo-200">
+                    <CardContent className="p-4 sm:p-6">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <div className="p-2 bg-gradient-to-r from-indigo-500 to-purple-500 rounded-lg text-white">
+                            <Calendar className="h-4 w-4 sm:h-5 sm:w-5" />
+                          </div>
+                          <div>
+                            <h4 className="font-semibold text-gray-800 text-sm sm:text-base">
+                              Etkinlik Katılım Oranı
+                            </h4>
+                            <p className="text-xs sm:text-sm text-gray-600">
+                              Toplam etkinliklere katılım durumu
+                            </p>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <div className="text-2xl sm:text-3xl font-bold text-indigo-700">
+                            {reportData.overallStats.totalEventsCreated > 0 
+                              ? Math.round((reportData.overallStats.eventParticipations / reportData.overallStats.totalEventsCreated) * 100)
+                              : 0}%
+                          </div>
+                          <p className="text-xs text-indigo-600">
+                            {reportData.overallStats.eventParticipations} / {reportData.overallStats.totalEventsCreated}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="mt-4">
+                        <div className="w-full bg-gray-200 rounded-full h-2 sm:h-3">
+                          <div
+                            className="h-2 sm:h-3 rounded-full bg-gradient-to-r from-indigo-500 to-purple-500 transition-all duration-500"
+                            style={{
+                              width: `${reportData.overallStats.totalEventsCreated > 0 
+                                ? Math.min((reportData.overallStats.eventParticipations / reportData.overallStats.totalEventsCreated) * 100, 100)
+                                : 0}%`,
+                            }}
+                          ></div>
+                        </div>
+                      </div>
                     </CardContent>
                   </Card>
                 </div>

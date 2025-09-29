@@ -3,6 +3,7 @@ import prisma from '@/lib/prisma';
 import { UserRole } from '@prisma/client';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '../../auth/[...nextauth]/auth.config';
+import { requireActivePeriod } from '@/lib/periods';
 
 export const dynamic = 'force-dynamic';
 
@@ -10,30 +11,79 @@ export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
     
-    if (!session?.user || session.user.role !== UserRole.TUTOR) {
+    if (!session?.user || (session.user.role !== UserRole.TUTOR && session.user.role !== UserRole.ASISTAN)) {
       return NextResponse.json(
-        { error: 'Unauthorized: Only tutors can access this endpoint' },
+        { error: 'Unauthorized: Only tutors and asistans can access this endpoint' },
         { status: 403 }
       );
     }
 
-    // Get all students with their experience
-    const students = await prisma.user.findMany({
-      where: { 
-        role: UserRole.STUDENT 
+    // Get active period
+    const activePeriod = await requireActivePeriod();
+
+    // Get all active students with their basic information
+    const studentsRaw = await prisma.user.findMany({
+      where: {
+        role: UserRole.STUDENT,
+        isActive: true
       },
       select: {
         id: true,
         username: true,
         firstName: true,
         lastName: true,
-        points: true,
-        experience: true
-      },
-      orderBy: {
-        experience: 'desc'
+        points: true
       }
     });
+
+    // Calculate actual experience from non-rolled-back transactions in current period
+    const students = await Promise.all(
+      studentsRaw.map(async (student) => {
+        const studentExperienceTransactions = await prisma.experienceTransaction.findMany({
+          where: {
+            studentId: student.id,
+            rolledBack: false,
+            periodId: activePeriod.id
+          },
+          select: {
+            amount: true,
+          },
+        });
+
+        // Also get experience from points transactions (when points were awarded, experience was also added)
+        const studentPointsTransactions = await prisma.pointsTransaction.findMany({
+          where: {
+            studentId: student.id,
+            type: 'AWARD',
+            rolledBack: false,
+            periodId: activePeriod.id
+          },
+          select: {
+            points: true,
+          },
+        });
+
+        const experienceFromTransactions = studentExperienceTransactions.reduce(
+          (sum, transaction) => sum + transaction.amount,
+          0
+        );
+
+        const experienceFromPoints = studentPointsTransactions.reduce(
+          (sum, transaction) => sum + transaction.points,
+          0
+        );
+
+        const calculatedExperience = experienceFromTransactions + experienceFromPoints;
+
+        return {
+          ...student,
+          experience: calculatedExperience,
+        };
+      })
+    );
+
+    // Sort by calculated experience
+    students.sort((a, b) => b.experience - a.experience);
 
     // Map students to leaderboard entries with ranks
     const leaderboard = students.map((student, index) => ({

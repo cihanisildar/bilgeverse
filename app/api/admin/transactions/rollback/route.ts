@@ -3,6 +3,15 @@ import prisma from '@/lib/prisma';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/app/api/auth/[...nextauth]/auth.config';
 import { UserRole } from '@prisma/client';
+import { requireActivePeriod } from '@/lib/periods';
+
+// Helper function to sync user table values with calculated values from transactions (NOT USED - period-aware system doesn't sync to user table)
+async function syncUserTableValues(studentId: string) {
+  // NOTE: This function is deprecated in the period-aware system
+  // Points and experience are calculated dynamically from transactions per period
+  // The user table's points/experience fields are no longer used
+  console.log('syncUserTableValues called but skipped - using period-aware calculations');
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -18,6 +27,9 @@ export async function POST(request: NextRequest) {
     if (!['POINTS', 'EXPERIENCE'].includes(transactionType)) {
       return NextResponse.json({ error: 'transactionType must be POINTS or EXPERIENCE' }, { status: 400 });
     }
+
+    // Get active period
+    const activePeriod = await requireActivePeriod();
 
     // Prevent double rollback
     const alreadyRolledBack = await prisma.transactionRollback.findFirst({
@@ -49,7 +61,8 @@ export async function POST(request: NextRequest) {
             transactionType,
             studentId: transaction.studentId,
             adminId: session.user.id,
-            reason
+            reason,
+            periodId: activePeriod.id
           }
         });
         return { student, rollback };
@@ -75,12 +88,19 @@ export async function POST(request: NextRequest) {
             transactionType,
             studentId: transaction.studentId,
             adminId: session.user.id,
-            reason
+            reason,
+            periodId: activePeriod.id
           }
         });
         return { student, rollback };
       });
     }
+
+    // Sync user table values with calculated values from transactions
+    if (rollbackResult?.student) {
+      await syncUserTableValues(rollbackResult.student.id);
+    }
+
     return NextResponse.json({ success: true, ...rollbackResult });
   } catch (error: any) {
     console.error('Rollback error:', error);
@@ -95,7 +115,13 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized: Only admin can view rollback history' }, { status: 403 });
     }
 
+    // Get active period and filter rollbacks by it
+    const activePeriod = await requireActivePeriod();
+
     const rollbacks = await prisma.transactionRollback.findMany({
+      where: {
+        periodId: activePeriod.id
+      },
       orderBy: { createdAt: 'desc' },
       include: {
         student: { select: { id: true, username: true, firstName: true, lastName: true } },

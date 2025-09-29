@@ -27,6 +27,63 @@ type StoreItem = {
   }[];
 };
 
+type SalesData = {
+  id: string;
+  status: string;
+  pointsSpent: number;
+  createdAt: string;
+  student: {
+    id: string;
+    username: string;
+    firstName?: string;
+    lastName?: string;
+    email: string;
+  };
+  tutor: {
+    id: string;
+    username: string;
+    firstName?: string;
+    lastName?: string;
+  };
+  item: {
+    id: string;
+    name: string;
+    pointsRequired: number;
+    imageUrl?: string;
+  };
+};
+
+type SalesStatistics = {
+  totalSales: number;
+  totalPointsSpent: number;
+  recentSales: number;
+};
+
+type SalesByItem = {
+  itemId: string;
+  _count: { id: number };
+  _sum: { pointsSpent: number | null };
+  item?: {
+    id: string;
+    name: string;
+    pointsRequired: number;
+    imageUrl?: string;
+  };
+};
+
+type TopBuyer = {
+  studentId: string;
+  _count: { id: number };
+  _sum: { pointsSpent: number | null };
+  student?: {
+    id: string;
+    username: string;
+    firstName?: string;
+    lastName?: string;
+    email: string;
+  };
+};
+
 export default function AdminStore() {
   const { isAdmin } = useAuth();
   const [items, setItems] = useState<StoreItem[]>([]);
@@ -64,8 +121,14 @@ export default function AdminStore() {
   const [editImageError, setEditImageError] = useState(false);
   const [editIsImageLoading, setEditIsImageLoading] = useState(false);
 
+  // Sales data states
+  const [salesData, setSalesData] = useState<SalesData[]>([]);
+  const [salesStats, setSalesStats] = useState<SalesStatistics | null>(null);
+  const [salesByItem, setSalesByItem] = useState<SalesByItem[]>([]);
+  const [topBuyers, setTopBuyers] = useState<TopBuyer[]>([]);
+  const [salesLoading, setSalesLoading] = useState(false);
+  const [activeTab, setActiveTab] = useState<'items' | 'sales'>('items');
 
-  // Remove tutors fetching since we don't need it anymore
 
   // Fetch store items
   useEffect(() => {
@@ -105,6 +168,49 @@ export default function AdminStore() {
       fetchStoreItems();
     }
   }, [isAdmin]);
+
+  // Fetch sales data
+  const fetchSalesData = async () => {
+    try {
+      setSalesLoading(true);
+      
+      const res = await fetch('/api/admin/store/sales', {
+        method: 'GET',
+        credentials: 'include',
+        headers: {
+          'Cache-Control': 'no-cache',
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      if (!res.ok) {
+        if (res.status === 403) {
+          toast.error('Yetkiniz yok');
+          return;
+        }
+        const errorData = await res.json();
+        throw new Error(errorData.error || 'Satış verileri yüklenemedi');
+      }
+      
+      const data = await res.json();
+      setSalesData(data.sales);
+      setSalesStats(data.statistics);
+      setSalesByItem(data.salesByItem);
+      setTopBuyers(data.topBuyers);
+    } catch (err) {
+      console.error('Satış verilerini getirme hatası:', err);
+      toast.error('Satış verileri yüklenemedi. Lütfen tekrar deneyin.');
+    } finally {
+      setSalesLoading(false);
+    }
+  };
+
+  // Fetch sales data when switching to sales tab
+  useEffect(() => {
+    if (isAdmin && activeTab === 'sales' && salesData.length === 0) {
+      fetchSalesData();
+    }
+  }, [isAdmin, activeTab]);
 
   const openAddModal = () => {
     setNewItem({
@@ -639,23 +745,57 @@ export default function AdminStore() {
           <div className="relative overflow-hidden bg-gradient-to-r from-blue-600 via-purple-600 to-indigo-700 rounded-3xl shadow-2xl">
             <div className="absolute inset-0 bg-black/10"></div>
             <div className="absolute inset-0 bg-gradient-to-r from-white/5 to-transparent"></div>
-            <div className="relative px-8 py-10">
-              <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between">
-                <div className="flex-1">
-                  <div className="flex items-center space-x-3 mb-4">
-                    <div className="p-3 bg-white/20 backdrop-blur-sm rounded-2xl">
-                      <svg className="w-8 h-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
-                      </svg>
-                    </div>
-                    <div>
-                      <h1 className="text-3xl font-bold text-white">Mağaza Yönetimi</h1>
-                      <p className="text-blue-100 mt-1">Öğretmenlerin mağaza ürünlerini yönetin ve düzenleyin</p>
-                    </div>
+            <div className="relative px-8 py-8">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-3">
+                  <div className="p-3 bg-white/20 backdrop-blur-sm rounded-2xl">
+                    <svg className="w-8 h-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+                    </svg>
+                  </div>
+                  <div>
+                    <h1 className="text-3xl font-bold text-white">Mağaza Yönetimi</h1>
+                    <p className="text-blue-100 mt-1">Mağaza ürünlerini yönetin ve satış raporlarını görüntüleyin</p>
+                  </div>
+                </div>
+                
+                <div className="flex items-center space-x-4">
+                  {/* Tabs */}
+                  <div className="flex space-x-1 bg-white/10 backdrop-blur-sm rounded-xl p-1">
+                    <button
+                      onClick={() => setActiveTab('items')}
+                      className={`px-6 py-3 rounded-lg font-semibold transition-all ${
+                        activeTab === 'items'
+                          ? 'bg-white text-indigo-600 shadow-lg'
+                          : 'text-white/80 hover:text-white hover:bg-white/10'
+                      }`}
+                    >
+                      <div className="flex items-center space-x-2">
+                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                        </svg>
+                        <span>Ürünler</span>
+                      </div>
+                    </button>
+                    <button
+                      onClick={() => setActiveTab('sales')}
+                      className={`px-6 py-3 rounded-lg font-semibold transition-all ${
+                        activeTab === 'sales'
+                          ? 'bg-white text-indigo-600 shadow-lg'
+                          : 'text-white/80 hover:text-white hover:bg-white/10'
+                      }`}
+                    >
+                      <div className="flex items-center space-x-2">
+                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                        </svg>
+                        <span>Satış Raporları</span>
+                      </div>
+                    </button>
                   </div>
                   
                   {/* Controls */}
-                  <div className="flex justify-end mt-6">
+                  {activeTab === 'items' && (
                     <button
                       onClick={openAddModal}
                       className="bg-white text-indigo-600 hover:bg-blue-50 px-6 py-3 rounded-xl font-semibold flex items-center space-x-2 transition-all shadow-lg transform hover:scale-105"
@@ -665,7 +805,7 @@ export default function AdminStore() {
                       </svg>
                       <span>Yeni Ürün Ekle</span>
                     </button>
-                  </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -674,104 +814,115 @@ export default function AdminStore() {
         
         {/* Content */}
         <div className="pb-8">
-          {items.length === 0 ? (
-            <div className="bg-white rounded-3xl shadow-lg border border-slate-200/60 p-12 text-center">
-              <div className="max-w-md mx-auto">
-                <div className="w-24 h-24 bg-gradient-to-br from-blue-100 to-indigo-100 rounded-full flex items-center justify-center mx-auto mb-6">
-                  <svg className="w-12 h-12 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
-                  </svg>
+          {activeTab === 'items' ? (
+            // Items Tab Content
+            items.length === 0 ? (
+              <div className="bg-white rounded-3xl shadow-lg border border-slate-200/60 p-12 text-center">
+                <div className="max-w-md mx-auto">
+                  <div className="w-24 h-24 bg-gradient-to-br from-blue-100 to-indigo-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                    <svg className="w-12 h-12 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+                    </svg>
+                  </div>
+                  <h3 className="text-2xl font-bold text-gray-900 mb-3">Henüz Ürün Bulunmuyor</h3>
+                  <p className="text-gray-600 mb-8">Mağazanızda henüz hiç ürün bulunmamaktadır. İlk ürününüzü ekleyerek başlayın.</p>
+                  <button
+                    onClick={openAddModal}
+                    className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white px-8 py-4 rounded-2xl font-semibold flex items-center space-x-2 mx-auto transition-all shadow-lg transform hover:scale-105"
+                  >
+                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                    </svg>
+                    <span>İlk Ürünü Ekle</span>
+                  </button>
                 </div>
-                <h3 className="text-2xl font-bold text-gray-900 mb-3">Henüz Ürün Bulunmuyor</h3>
-                <p className="text-gray-600 mb-8">Mağazanızda henüz hiç ürün bulunmamaktadır. İlk ürününüzü ekleyerek başlayın.</p>
-                <button
-                  onClick={openAddModal}
-                  className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white px-8 py-4 rounded-2xl font-semibold flex items-center space-x-2 mx-auto transition-all shadow-lg transform hover:scale-105"
-                >
-                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                  </svg>
-                  <span>İlk Ürünü Ekle</span>
-                </button>
               </div>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-              {items.map((item) => (
-                <div key={item.id} className="group bg-white rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 border border-slate-200/60 overflow-hidden transform hover:-translate-y-1">
-                  {/* Image Section */}
-                  <div className="relative h-48 bg-gradient-to-br from-slate-100 to-slate-200">
-                    {item.imageUrl ? (
-                      <Image
-                        src={item.imageUrl}
-                        alt={item.name}
-                        fill
-                        className="object-cover transition-transform duration-300 group-hover:scale-105"
-                        onError={(e) => {
-                          // Hide the broken image and show fallback
-                          e.currentTarget.style.display = 'none';
-                          const fallback = e.currentTarget.nextElementSibling as HTMLElement;
-                          if (fallback) fallback.style.display = 'flex';
-                        }}
-                      />
-                    ) : null}
-                    {/* Fallback content - shown when no image or when image fails */}
-                    <div className={`absolute inset-0 flex items-center justify-center ${item.imageUrl ? 'hidden' : 'flex'}`}>
-                      <div className="text-center">
-                        <div className="w-16 h-16 bg-gradient-to-br from-indigo-100 to-purple-100 rounded-2xl flex items-center justify-center mx-auto mb-3">
-                          <svg className="w-8 h-8 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
-                          </svg>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                {items.map((item) => (
+                  <div key={item.id} className="group bg-white rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 border border-slate-200/60 overflow-hidden transform hover:-translate-y-1">
+                    {/* Image Section */}
+                    <div className="relative h-48 bg-gradient-to-br from-slate-100 to-slate-200">
+                      {item.imageUrl ? (
+                        <Image
+                          src={item.imageUrl}
+                          alt={item.name}
+                          fill
+                          className="object-cover transition-transform duration-300 group-hover:scale-105"
+                          onError={(e) => {
+                            // Hide the broken image and show fallback
+                            e.currentTarget.style.display = 'none';
+                            const fallback = e.currentTarget.nextElementSibling as HTMLElement;
+                            if (fallback) fallback.style.display = 'flex';
+                          }}
+                        />
+                      ) : null}
+                      {/* Fallback content - shown when no image or when image fails */}
+                      <div className={`absolute inset-0 flex items-center justify-center ${item.imageUrl ? 'hidden' : 'flex'}`}>
+                        <div className="text-center">
+                          <div className="w-16 h-16 bg-gradient-to-br from-indigo-100 to-purple-100 rounded-2xl flex items-center justify-center mx-auto mb-3">
+                            <svg className="w-8 h-8 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+                            </svg>
+                          </div>
+                          {item.imageUrl && (
+                            <p className="text-xs text-gray-500 px-2">Görsel yüklenemedi</p>
+                          )}
                         </div>
-                        {item.imageUrl && (
-                          <p className="text-xs text-gray-500 px-2">Görsel yüklenemedi</p>
-                        )}
+                      </div>
+                      
+                      {/* Action Buttons */}
+                      <div className="absolute top-3 right-3 flex space-x-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                        <button
+                          onClick={() => handleEditClick(item.id)}
+                          className="p-2 bg-white/90 backdrop-blur-sm rounded-xl shadow-lg hover:bg-white transition-all transform hover:scale-110"
+                        >
+                          <svg className="w-4 h-4 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                          </svg>
+                        </button>
+                        <button
+                          onClick={() => handleDeleteClick(item.id)}
+                          className="p-2 bg-white/90 backdrop-blur-sm rounded-xl shadow-lg hover:bg-red-50 transition-all transform hover:scale-110"
+                        >
+                          <svg className="w-4 h-4 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                          </svg>
+                        </button>
                       </div>
                     </div>
                     
-                    {/* Action Buttons */}
-                    <div className="absolute top-3 right-3 flex space-x-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-                      <button
-                        onClick={() => handleEditClick(item.id)}
-                        className="p-2 bg-white/90 backdrop-blur-sm rounded-xl shadow-lg hover:bg-white transition-all transform hover:scale-110"
-                      >
-                        <svg className="w-4 h-4 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                        </svg>
-                      </button>
-                      <button
-                        onClick={() => handleDeleteClick(item.id)}
-                        className="p-2 bg-white/90 backdrop-blur-sm rounded-xl shadow-lg hover:bg-red-50 transition-all transform hover:scale-110"
-                      >
-                        <svg className="w-4 h-4 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                        </svg>
-                      </button>
-                    </div>
-                  </div>
-                  
-                  {/* Content */}
-                  <div className="p-6">
-                    <div className="flex items-start justify-between mb-3">
-                      <h3 className="font-bold text-gray-900 text-lg leading-tight line-clamp-2 flex-1">
-                        {item.name}
-                      </h3>
-                      <div className="ml-3 flex-shrink-0">
-                        <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold bg-gradient-to-r from-indigo-100 to-purple-100 text-indigo-700">
-                          {item.pointsRequired} puan
-                        </span>
+                    {/* Content */}
+                    <div className="p-6">
+                      <div className="flex items-start justify-between mb-3">
+                        <h3 className="font-bold text-gray-900 text-lg leading-tight line-clamp-2 flex-1">
+                          {item.name}
+                        </h3>
+                        <div className="ml-3 flex-shrink-0">
+                          <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold bg-gradient-to-r from-indigo-100 to-purple-100 text-indigo-700">
+                            {item.pointsRequired} puan
+                          </span>
+                        </div>
                       </div>
+                      
+                      <p className="text-gray-600 text-sm line-clamp-2 mb-4">
+                        {item.description}
+                      </p>
                     </div>
-                    
-                    <p className="text-gray-600 text-sm line-clamp-2 mb-4">
-                      {item.description}
-                    </p>
-                    
-
                   </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )
+          ) : (
+            // Sales Tab Content
+            <SalesReportContent 
+              salesData={salesData}
+              salesStats={salesStats}
+              salesByItem={salesByItem}
+              topBuyers={topBuyers}
+              loading={salesLoading}
+              onRefresh={fetchSalesData}
+            />
           )}
         </div>
         
@@ -1289,6 +1440,267 @@ export default function AdminStore() {
     </div>
   );
 }
+
+// Sales Report Content Component
+const SalesReportContent = ({ 
+  salesData, 
+  salesStats, 
+  salesByItem, 
+  topBuyers, 
+  loading, 
+  onRefresh 
+}: {
+  salesData: SalesData[];
+  salesStats: SalesStatistics | null;
+  salesByItem: SalesByItem[];
+  topBuyers: TopBuyer[];
+  loading: boolean;
+  onRefresh: () => void;
+}) => {
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="bg-white rounded-2xl shadow-lg border border-slate-200/60 p-6">
+              <div className="animate-pulse">
+                <div className="h-4 bg-gray-200 rounded w-3/4 mb-4"></div>
+                <div className="h-8 bg-gray-200 rounded w-1/2"></div>
+              </div>
+            </div>
+          ))}
+        </div>
+        <div className="bg-white rounded-2xl shadow-lg border border-slate-200/60 p-6">
+          <div className="animate-pulse">
+            <div className="h-6 bg-gray-200 rounded w-1/4 mb-4"></div>
+            <div className="space-y-3">
+              {[1, 2, 3, 4, 5].map((i) => (
+                <div key={i} className="h-4 bg-gray-200 rounded"></div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* Statistics Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="bg-white rounded-2xl shadow-lg border border-slate-200/60 p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-gray-600">Toplam Satış</p>
+              <p className="text-3xl font-bold text-gray-900">{salesStats?.totalSales || 0}</p>
+            </div>
+            <div className="p-3 bg-blue-100 rounded-xl">
+              <svg className="w-6 h-6 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+              </svg>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-2xl shadow-lg border border-slate-200/60 p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-gray-600">Toplam Puan Harcaması</p>
+              <p className="text-3xl font-bold text-gray-900">{salesStats?.totalPointsSpent?.toLocaleString() || 0}</p>
+            </div>
+            <div className="p-3 bg-green-100 rounded-xl">
+              <svg className="w-6 h-6 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-2xl shadow-lg border border-slate-200/60 p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-gray-600">Son 30 Gün</p>
+              <p className="text-3xl font-bold text-gray-900">{salesStats?.recentSales || 0}</p>
+            </div>
+            <div className="p-3 bg-purple-100 rounded-xl">
+              <svg className="w-6 h-6 text-purple-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+              </svg>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Top Selling Items */}
+      <div className="bg-white rounded-2xl shadow-lg border border-slate-200/60 p-6">
+        <div className="flex items-center justify-between mb-6">
+          <h3 className="text-xl font-bold text-gray-900">En Çok Satan Ürünler</h3>
+          <button
+            onClick={onRefresh}
+            className="px-4 py-2 text-sm font-medium text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 rounded-lg transition-colors"
+          >
+            <svg className="w-4 h-4 inline mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            </svg>
+            Yenile
+          </button>
+        </div>
+        
+        {salesByItem.length === 0 ? (
+          <div className="text-center py-8">
+            <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <svg className="w-8 h-8 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+              </svg>
+            </div>
+            <p className="text-gray-500">Henüz satış verisi bulunmuyor</p>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {salesByItem.map((sale, index) => (
+              <div key={sale.itemId} className="flex items-center justify-between p-4 bg-gray-50 rounded-xl">
+                <div className="flex items-center space-x-4">
+                  <div className="w-10 h-10 bg-indigo-100 rounded-lg flex items-center justify-center">
+                    <span className="text-sm font-bold text-indigo-600">#{index + 1}</span>
+                  </div>
+                  <div>
+                    <h4 className="font-semibold text-gray-900">{sale.item?.name || 'Bilinmeyen Ürün'}</h4>
+                    <p className="text-sm text-gray-600">{sale.item?.pointsRequired} puan</p>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <p className="font-bold text-gray-900">{sale._count.id} satış</p>
+                  <p className="text-sm text-gray-600">{sale._sum.pointsSpent?.toLocaleString() || 0} puan</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Top Buyers */}
+      <div className="bg-white rounded-2xl shadow-lg border border-slate-200/60 p-6">
+        <h3 className="text-xl font-bold text-gray-900 mb-6">En Çok Alışveriş Yapan Öğrenciler</h3>
+        
+        {topBuyers.length === 0 ? (
+          <div className="text-center py-8">
+            <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <svg className="w-8 h-8 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z" />
+              </svg>
+            </div>
+            <p className="text-gray-500">Henüz alışveriş verisi bulunmuyor</p>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {topBuyers.map((buyer, index) => (
+              <div key={buyer.studentId} className="flex items-center justify-between p-4 bg-gray-50 rounded-xl">
+                <div className="flex items-center space-x-4">
+                  <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
+                    <span className="text-sm font-bold text-green-600">#{index + 1}</span>
+                  </div>
+                  <div>
+                    <h4 className="font-semibold text-gray-900">
+                      {buyer.student?.firstName && buyer.student?.lastName 
+                        ? `${buyer.student.firstName} ${buyer.student.lastName}`
+                        : buyer.student?.username || 'Bilinmeyen Öğrenci'
+                      }
+                    </h4>
+                    <p className="text-sm text-gray-600">{buyer.student?.email}</p>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <p className="font-bold text-gray-900">{buyer._count.id} alışveriş</p>
+                  <p className="text-sm text-gray-600">{buyer._sum.pointsSpent?.toLocaleString() || 0} puan</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Recent Sales */}
+      <div className="bg-white rounded-2xl shadow-lg border border-slate-200/60 p-6">
+        <h3 className="text-xl font-bold text-gray-900 mb-6">Son Satışlar</h3>
+        
+        {salesData.length === 0 ? (
+          <div className="text-center py-8">
+            <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <svg className="w-8 h-8 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+              </svg>
+            </div>
+            <p className="text-gray-500">Henüz satış verisi bulunmuyor</p>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b border-gray-200">
+                  <th className="text-left py-3 px-4 font-semibold text-gray-900">Öğrenci</th>
+                  <th className="text-left py-3 px-4 font-semibold text-gray-900">Ürün</th>
+                  <th className="text-left py-3 px-4 font-semibold text-gray-900">Durum</th>
+                  <th className="text-left py-3 px-4 font-semibold text-gray-900">Puan</th>
+                  <th className="text-left py-3 px-4 font-semibold text-gray-900">Tarih</th>
+                </tr>
+              </thead>
+              <tbody>
+                {salesData.slice(0, 10).map((sale) => (
+                  <tr key={sale.id} className="border-b border-gray-100 hover:bg-gray-50">
+                    <td className="py-3 px-4">
+                      <div>
+                        <p className="font-medium text-gray-900">
+                          {sale.student.firstName && sale.student.lastName 
+                            ? `${sale.student.firstName} ${sale.student.lastName}`
+                            : sale.student.username
+                          }
+                        </p>
+                        <p className="text-sm text-gray-600">{sale.student.email}</p>
+                      </div>
+                    </td>
+                    <td className="py-3 px-4">
+                      <div className="flex items-center space-x-3">
+                        {sale.item.imageUrl && (
+                          <img 
+                            src={sale.item.imageUrl} 
+                            alt={sale.item.name}
+                            className="w-10 h-10 rounded-lg object-cover"
+                          />
+                        )}
+                        <div>
+                          <p className="font-medium text-gray-900">{sale.item.name}</p>
+                          <p className="text-sm text-gray-600">{sale.item.pointsRequired} puan</p>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="py-3 px-4">
+                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                        sale.status === 'APPROVED' 
+                          ? 'bg-green-100 text-green-800'
+                          : sale.status === 'PENDING'
+                          ? 'bg-yellow-100 text-yellow-800'
+                          : 'bg-red-100 text-red-800'
+                      }`}>
+                        {sale.status === 'APPROVED' ? 'Onaylandı' : 
+                         sale.status === 'PENDING' ? 'Beklemede' : 'Reddedildi'}
+                      </span>
+                    </td>
+                    <td className="py-3 px-4 font-medium text-gray-900">
+                      {sale.pointsSpent.toLocaleString()}
+                    </td>
+                    <td className="py-3 px-4 text-sm text-gray-600">
+                      {new Date(sale.createdAt).toLocaleDateString('tr-TR')}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
 
 // Image Editor Component
 const ImageEditor = ({ imageSrc, onSave, onCancel }: {

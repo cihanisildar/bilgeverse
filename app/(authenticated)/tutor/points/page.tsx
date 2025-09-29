@@ -53,6 +53,12 @@ type Transaction = {
     firstName?: string;
     lastName?: string;
   };
+  tutor: {
+    id: string;
+    username: string;
+    firstName?: string;
+    lastName?: string;
+  };
   points: number;
   type: string;
   reason: string;
@@ -301,7 +307,7 @@ function PointsManagement() {
         const transactionsData = await transactionsRes.json();
 
         if (transactionsData.transactions) {
-          // Ensure each transaction has complete student data
+          // Ensure each transaction has complete student and tutor data
           const transactions = transactionsData.transactions.map(
             (transaction: Transaction) => {
               // If student data is missing or incomplete, create a default student object
@@ -318,6 +324,22 @@ function PointsManagement() {
                   },
                 };
               }
+
+              // If tutor data is missing or incomplete, create a default tutor object
+              const tutor = transaction.tutor || {};
+              if (!tutor.username) {
+                console.error("Transaction missing tutor data:", transaction);
+                return {
+                  ...transaction,
+                  tutor: {
+                    id: tutor.id || "unknown",
+                    username: tutor.username || "Bilinmeyen",
+                    firstName: tutor.firstName || null,
+                    lastName: tutor.lastName || null,
+                  },
+                };
+              }
+
               return transaction;
             }
           );
@@ -337,11 +359,15 @@ function PointsManagement() {
         const reasonsData = await reasonsRes.json();
         console.log("Point reasons data:", reasonsData);
 
-        if (reasonsData.reasons) {
+        if (reasonsData.reasons && Array.isArray(reasonsData.reasons)) {
           setPointReasons(reasonsData.reasons);
         } else if (reasonsData.error) {
           console.error("Error fetching point reasons:", reasonsData.error);
           toast.error(`Puan sebepleri yüklenirken hata oluştu: ${reasonsData.error}`);
+          setPointReasons([]); // Ensure it's always an array
+        } else {
+          // If no reasons or reasons is not an array, set empty array
+          setPointReasons([]);
         }
       } catch (error) {
         console.error("Error fetching data:", error);
@@ -666,7 +692,7 @@ function PointsManagement() {
                       }}
                     />
                   </div>
-                  {pointReasons.length > 0 ? (
+                  {pointReasons && Array.isArray(pointReasons) && pointReasons.length > 0 ? (
                     <>
                       <RadioGroup
                         value={selectedReasonId}
@@ -745,7 +771,7 @@ function PointsManagement() {
                     isSubmitting ||
                     points <= 0 ||
                     !selectedReasonId ||
-                    pointReasons.length === 0
+                    !pointReasons || !Array.isArray(pointReasons) || pointReasons.length === 0
                   }
                   className={`w-full py-4 text-lg font-semibold rounded-xl transition-all duration-200 transform hover:scale-[1.02] hover:shadow-lg ${
                     isDecreasing 
@@ -814,6 +840,9 @@ function PointsManagement() {
                         <p className="text-sm font-medium text-gray-700">
                           {transaction.reason}
                         </p>
+                      </div>
+                      <div className="mt-2 text-xs text-gray-500">
+                        Puan veren: {transaction.tutor?.firstName || transaction.tutor?.username || "Bilinmeyen"}
                       </div>
                     </div>
                     <div className="text-right ml-4">

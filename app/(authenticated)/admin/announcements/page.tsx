@@ -15,6 +15,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
+import toast from "react-hot-toast";
 import { format } from "date-fns";
 import { Bell, Plus, Trash2, Pencil } from "lucide-react";
 import { AnnouncementsSkeleton } from "@/components/announcements-skeleton";
@@ -41,7 +42,10 @@ export default function AnnouncementsPage() {
   const [editTitle, setEditTitle] = useState("");
   const [editContent, setEditContent] = useState("");
   const [isLoading, setIsLoading] = useState(true);
-  const { toast } = useToast();
+  const [isCreating, setIsCreating] = useState(false);
+  const [isUpdating, setIsUpdating] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const { toast: shadcnToast } = useToast();
 
   const fetchAnnouncements = async () => {
     try {
@@ -58,11 +62,7 @@ export default function AnnouncementsPage() {
       }
     } catch (error) {
       console.error("Error fetching announcements:", error);
-      toast({
-        title: "Hata",
-        description: "Duyurular yüklenirken bir hata oluştu.",
-        variant: "destructive",
-      });
+      toast.error("Duyurular yüklenirken bir hata oluştu.");
       setAnnouncements([]);
     } finally {
       setIsLoading(false);
@@ -71,6 +71,7 @@ export default function AnnouncementsPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setIsCreating(true);
     try {
       const response = await fetch("/api/admin/announcements", {
         method: "POST",
@@ -84,21 +85,16 @@ export default function AnnouncementsPage() {
         throw new Error("Failed to create announcement");
       }
 
-      toast({
-        title: "Başarılı",
-        description: "Duyuru başarıyla oluşturuldu.",
-      });
+      toast.success("Duyuru başarıyla oluşturuldu.");
       setIsOpen(false);
       setTitle("");
       setContent("");
       fetchAnnouncements();
     } catch (error) {
       console.error("Error creating announcement:", error);
-      toast({
-        title: "Hata",
-        description: "Duyuru oluşturulurken bir hata oluştu.",
-        variant: "destructive",
-      });
+      toast.error("Duyuru oluşturulurken bir hata oluştu.");
+    } finally {
+      setIsCreating(false);
     }
   };
 
@@ -113,6 +109,7 @@ export default function AnnouncementsPage() {
     e.preventDefault();
     if (!selectedAnnouncementId) return;
 
+    setIsUpdating(true);
     try {
       const response = await fetch("/api/admin/announcements", {
         method: "PUT",
@@ -130,10 +127,7 @@ export default function AnnouncementsPage() {
         throw new Error("Failed to update announcement");
       }
 
-      toast({
-        title: "Başarılı",
-        description: "Duyuru başarıyla güncellendi.",
-      });
+      toast.success("Duyuru başarıyla güncellendi.");
       setIsEditOpen(false);
       setSelectedAnnouncementId(null);
       setEditTitle("");
@@ -141,11 +135,9 @@ export default function AnnouncementsPage() {
       fetchAnnouncements();
     } catch (error) {
       console.error("Error updating announcement:", error);
-      toast({
-        title: "Hata",
-        description: "Duyuru güncellenirken bir hata oluştu.",
-        variant: "destructive",
-      });
+      toast.error("Duyuru güncellenirken bir hata oluştu.");
+    } finally {
+      setIsUpdating(false);
     }
   };
 
@@ -157,6 +149,7 @@ export default function AnnouncementsPage() {
   const handleDelete = async () => {
     if (!selectedAnnouncementId) return;
 
+    setIsDeleting(true);
     try {
       const response = await fetch("/api/admin/announcements", {
         method: "DELETE",
@@ -170,20 +163,15 @@ export default function AnnouncementsPage() {
         throw new Error("Failed to delete announcement");
       }
 
-      toast({
-        title: "Başarılı",
-        description: "Duyuru başarıyla silindi.",
-      });
+      toast.success("Duyuru başarıyla silindi.");
       setIsDeleteDialogOpen(false);
       setSelectedAnnouncementId(null);
       fetchAnnouncements();
     } catch (error) {
       console.error("Error deleting announcement:", error);
-      toast({
-        title: "Hata",
-        description: "Duyuru silinirken bir hata oluştu.",
-        variant: "destructive",
-      });
+      toast.error("Duyuru silinirken bir hata oluştu.");
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -246,11 +234,12 @@ export default function AnnouncementsPage() {
                     className="min-h-[200px] resize-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
                   />
                 </div>
-                <Button 
-                  type="submit" 
-                  className="w-full text-white bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 transition-all duration-300"
+                <Button
+                  type="submit"
+                  disabled={isCreating}
+                  className="w-full text-white bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  Duyuru Ekle
+                  {isCreating ? "Oluşturuluyor..." : "Duyuru Ekle"}
                 </Button>
               </form>
             </DialogContent>
@@ -300,11 +289,12 @@ export default function AnnouncementsPage() {
                 >
                   İptal
                 </Button>
-                <Button 
-                  type="submit" 
-                  className="text-white bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 transition-all duration-300"
+                <Button
+                  type="submit"
+                  disabled={isUpdating}
+                  className="text-white bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  Güncelle
+                  {isUpdating ? "Güncelleniyor..." : "Güncelle"}
                 </Button>
               </div>
             </form>
@@ -329,9 +319,11 @@ export default function AnnouncementsPage() {
               </Button>
               <Button
                 variant="destructive"
+                disabled={isDeleting}
                 onClick={handleDelete}
+                className="disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Sil
+                {isDeleting ? "Siliniyor..." : "Sil"}
               </Button>
             </DialogFooter>
           </DialogContent>

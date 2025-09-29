@@ -10,9 +10,9 @@ export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
     
-    if (!session?.user || session.user.role !== UserRole.TUTOR) {
+    if (!session?.user || (session.user.role !== UserRole.TUTOR && session.user.role !== UserRole.ASISTAN)) {
       return NextResponse.json(
-        { error: 'Unauthorized: Only tutors can access this endpoint' },
+        { error: 'Unauthorized: Only tutors and asistans can access this endpoint' },
         { status: 403 }
       );
     }

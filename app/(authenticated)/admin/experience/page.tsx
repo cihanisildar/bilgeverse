@@ -35,6 +35,12 @@ type ExperienceTransaction = {
     firstName?: string;
     lastName?: string;
   };
+  tutor: {
+    id: string;
+    username: string;
+    firstName?: string;
+    lastName?: string;
+  };
   amount: number;
   createdAt: string;
 };
@@ -164,7 +170,7 @@ function ExperienceManagement() {
         // Find the student in our local state to get their details
         const student = students.find(s => s.id === studentId);
         
-        // Create a complete transaction object with student details
+        // Create a complete transaction object with student and tutor details
         const completeTransaction = {
           ...data.transaction,
           student: {
@@ -172,6 +178,12 @@ function ExperienceManagement() {
             username: student?.username || '',
             firstName: student?.firstName || null,
             lastName: student?.lastName || null
+          },
+          tutor: {
+            id: user?.id || '',
+            username: user?.username || '',
+            firstName: user?.firstName || null,
+            lastName: user?.lastName || null
           }
         };
         
@@ -493,11 +505,14 @@ function ExperienceManagement() {
                       <p className="font-semibold text-gray-900 text-lg mb-2">
                         {getDisplayName(transaction.student)}
                       </p>
-                      <div className="flex items-center gap-2 text-sm text-gray-600">
+                      <div className="flex items-center gap-2 text-sm text-gray-600 mb-2">
                         <div className="p-1 bg-gray-100 rounded-full">
                           <Clock className="h-3 w-3" />
                         </div>
                         <span className="font-medium">{formatDate(transaction.createdAt)}</span>
+                      </div>
+                      <div className="text-xs text-gray-500">
+                        Tecrübe veren: {transaction.tutor?.firstName || transaction.tutor?.username || 'Bilinmeyen'}
                       </div>
                     </div>
                     <div className="text-right ml-4">

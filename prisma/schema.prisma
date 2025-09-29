@@ -13,6 +13,7 @@ datasource db {
 enum UserRole {
   ADMIN
   TUTOR
+  ASISTAN
   STUDENT
 }
 
@@ -27,10 +28,16 @@ enum TransactionType {
   REDEEM
 }
 
-enum EventType {
-  CEVRIMICI
-  YUZ_YUZE
-  KARMA
+model EventType {
+  id          String   @id @default(uuid())
+  name        String   @unique
+  description String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  events      Event[]  @relation("EventTypeEvents")
 }
 
 enum EventStatus {
@@ -45,10 +52,41 @@ enum EventScope {
   GROUP
 }
 
+enum PeriodStatus {
+  ACTIVE
+  INACTIVE
+  ARCHIVED
+}
+
 enum ParticipantStatus {
   REGISTERED
   ATTENDED
   ABSENT
+}
+
+model Period {
+  id          String       @id @default(uuid())
+  name        String       @unique
+  description String?
+  startDate   DateTime
+  endDate     DateTime?
+  status      PeriodStatus @default(INACTIVE)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  // Relations
+  events               Event[]                @relation("PeriodEvents")
+  pointsTransactions   PointsTransaction[]    @relation("PeriodPointsTransactions")
+  experienceTransactions ExperienceTransaction[] @relation("PeriodExperienceTransactions")
+  itemRequests         ItemRequest[]          @relation("PeriodItemRequests")
+  wishes               Wish[]                 @relation("PeriodWishes")
+  studentNotes         StudentNote[]          @relation("PeriodStudentNotes")
+  studentReports       StudentReport[]        @relation("PeriodStudentReports")
+  rollbacks            TransactionRollback[]  @relation("PeriodRollbacks")
+  announcements        Announcement[]         @relation("PeriodAnnouncements")
+  weeklyReports        WeeklyReport[]         @relation("PeriodWeeklyReports")
+
+  @@index([status])
 }
 
 model User {
@@ -68,6 +106,9 @@ model User {
   specialization  String?
   bio             String?          @db.Text
   preferences     Json?
+  isActive        Boolean          @default(true)  // Active/Passive status for period participation
+  statusChangedAt DateTime?        // When status was last changed
+  statusChangedBy String?          // Who changed the status (admin/tutor)
 
   // Relations
   classroom       Classroom?       @relation("ClassroomTutor")
@@ -76,6 +117,11 @@ model User {
   tutorId         String?
   classroomStudents Classroom?     @relation("ClassroomStudents", fields: [studentClassroomId], references: [id])
   studentClassroomId String?
+
+  // ASISTAN-TUTOR relationship
+  assistedTutor   User?            @relation("AsistanTutor", fields: [assistedTutorId], references: [id])
+  assistedTutorId String?
+  asistans        User[]           @relation("AsistanTutor")
 
   // Event relations
   createdEvents   Event[]          @relation("EventCreator")
@@ -119,6 +165,11 @@ model User {
   rollbacksAsStudent TransactionRollback[] @relation("RollbackStudent")
   rollbacksAsAdmin   TransactionRollback[] @relation("RollbackAdmin")
 
+  // Weekly report relations
+  weeklyReports      WeeklyReport[]       @relation("UserWeeklyReports")
+  reviewedReports    WeeklyReport[]       @relation("AdminReviewedReports")
+  createdQuestions   WeeklyReportQuestion[] @relation("AdminQuestions")
+
   @@index([tutorId])
 }
 
@@ -142,7 +193,7 @@ model Event {
   startDateTime DateTime
   endDateTime   DateTime?
   location      String    @default("Online")
-  type          EventType @default(YUZ_YUZE)
+  customName    String?   // Used when event type is "Others"
   capacity      Int       @default(20)
   points        Int       @default(0)
   experience    Int       @default(0)
@@ -152,12 +203,22 @@ model Event {
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
+  // Period relation
+  periodId      String
+  period        Period    @relation("PeriodEvents", fields: [periodId], references: [id])
+
+  // Event type relation
+  eventTypeId   String
+  eventType     EventType @relation("EventTypeEvents", fields: [eventTypeId], references: [id])
+
   // Relations
   createdBy     User      @relation("EventCreator", fields: [createdById], references: [id])
   createdById   String
   participants  EventParticipant[] @relation("EventParticipations")
   createdForTutor User?   @relation("TutorEvents", fields: [createdForTutorId], references: [id])
   createdForTutorId String?
+
+  @@index([periodId])
 }
 
 model EventParticipant {
@@ -215,6 +276,10 @@ model ItemRequest {
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 
+  // Period relation
+  periodId    String
+  period      Period    @relation("PeriodItemRequests", fields: [periodId], references: [id])
+
   // Relations
   student     User      @relation("StudentRequests", fields: [studentId], references: [id])
   studentId   String
@@ -222,6 +287,8 @@ model ItemRequest {
   tutorId     String
   item        StoreItem @relation(fields: [itemId], references: [id])
   itemId      String
+
+  @@index([periodId])
 }
 
 model PointsTransaction {
@@ -233,6 +300,10 @@ model PointsTransaction {
   updatedAt   DateTime  @updatedAt
   rolledBack  Boolean   @default(false)
 
+  // Period relation
+  periodId    String
+  period      Period    @relation("PeriodPointsTransactions", fields: [periodId], references: [id])
+
   // Relations
   student     User      @relation("StudentPoints", fields: [studentId], references: [id])
   studentId   String
@@ -240,6 +311,8 @@ model PointsTransaction {
   tutorId     String
   pointReason PointReason? @relation("ReasonTransactions", fields: [pointReasonId], references: [id])
   pointReasonId String?
+
+  @@index([periodId])
 }
 
 model ExperienceTransaction {
@@ -249,11 +322,17 @@ model ExperienceTransaction {
   updatedAt   DateTime  @updatedAt
   rolledBack  Boolean   @default(false)
 
+  // Period relation
+  periodId    String
+  period      Period    @relation("PeriodExperienceTransactions", fields: [periodId], references: [id])
+
   // Relations
   student     User      @relation("StudentExperience", fields: [studentId], references: [id])
   studentId   String
   tutor       User      @relation("TutorExperience", fields: [tutorId], references: [id])
   tutorId     String
+
+  @@index([periodId])
 }
 
 model Wish {
@@ -266,9 +345,15 @@ model Wish {
   createdAt   DateTime    @default(now())
   updatedAt   DateTime    @updatedAt
 
+  // Period relation
+  periodId    String
+  period      Period      @relation("PeriodWishes", fields: [periodId], references: [id])
+
   // Relations
   student     User        @relation("StudentWishes", fields: [studentId], references: [id])
   studentId   String
+
+  @@index([periodId])
 }
 
 model StudentNote {
@@ -276,6 +361,10 @@ model StudentNote {
   content   String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  // Period relation
+  periodId  String
+  period    Period   @relation("PeriodStudentNotes", fields: [periodId], references: [id])
 
   // Relations
   student   User     @relation("StudentNotes", fields: [studentId], references: [id])
@@ -285,6 +374,7 @@ model StudentNote {
 
   @@index([studentId])
   @@index([tutorId])
+  @@index([periodId])
 }
 
 model StudentReport {
@@ -294,6 +384,10 @@ model StudentReport {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  // Period relation
+  periodId  String
+  period    Period   @relation("PeriodStudentReports", fields: [periodId], references: [id])
+
   // Relations
   student   User     @relation("StudentReports", fields: [studentId], references: [id])
   studentId String
@@ -302,6 +396,7 @@ model StudentReport {
 
   @@index([studentId])
   @@index([tutorId])
+  @@index([periodId])
 }
 
 model PointEarningCard {
@@ -342,9 +437,15 @@ model Announcement {
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 
+  // Period relation
+  periodId    String
+  period      Period    @relation("PeriodAnnouncements", fields: [periodId], references: [id])
+
   // Relations
   createdBy   User      @relation("AdminAnnouncements", fields: [createdById], references: [id])
   createdById String
+
+  @@index([periodId])
 }
 
 model TransactionRollback {
@@ -356,6 +457,147 @@ model TransactionRollback {
   reason           String
   createdAt        DateTime @default(now())
 
+  // Period relation
+  periodId        String
+  period          Period   @relation("PeriodRollbacks", fields: [periodId], references: [id])
+
   student          User     @relation("RollbackStudent", fields: [studentId], references: [id])
   admin            User     @relation("RollbackAdmin", fields: [adminId], references: [id])
-} 
+
+  @@index([periodId])
+}
+
+enum WeeklyReportStatus {
+  DRAFT
+  SUBMITTED
+  APPROVED
+  REJECTED
+}
+
+enum AttendanceStatus {
+  YAPILDI      // ✓
+  YAPILMADI    // X
+  YOKTU        // O - For variable criteria only
+}
+
+model WeeklyReport {
+  id                   String              @id @default(uuid())
+  weekNumber           Int                 // 1-8 for the 8-week period
+  status               WeeklyReportStatus  @default(DRAFT)
+  submissionDate       DateTime?
+  reviewDate           DateTime?
+  reviewNotes          String?             @db.Text
+  createdAt            DateTime            @default(now())
+  updatedAt            DateTime            @updatedAt
+
+  // Period relation
+  periodId             String
+  period               Period              @relation("PeriodWeeklyReports", fields: [periodId], references: [id])
+
+  // User relation (TUTOR or ASISTAN)
+  userId               String
+  user                 User                @relation("UserWeeklyReports", fields: [userId], references: [id])
+
+  // Reviewed by admin
+  reviewedById         String?
+  reviewedBy           User?               @relation("AdminReviewedReports", fields: [reviewedById], references: [id])
+
+  // Fixed criteria responses
+  fixedCriteria        WeeklyReportFixedCriteria?
+
+  // Variable criteria responses
+  variableCriteria     WeeklyReportVariableCriteria?
+
+  // Comments for each week
+  comments             String?             @db.Text
+
+  // Points awarded for this week's report
+  pointsAwarded        Int                 @default(0)
+
+  // Dynamic question responses
+  questionResponses    WeeklyReportQuestionResponse[]
+
+  @@unique([userId, periodId, weekNumber])
+  @@index([periodId])
+  @@index([userId])
+  @@index([weekNumber])
+}
+
+model WeeklyReportFixedCriteria {
+  id                              String            @id @default(uuid())
+  reportId                        String            @unique
+  report                          WeeklyReport      @relation(fields: [reportId], references: [id], onDelete: Cascade)
+
+  // For TUTOR role
+  weeklyMeeting                   AttendanceStatus? // Haftalık sohbetinize katıldınız mı?
+  groupMeeting                    AttendanceStatus? // Haftalık buluşmanıza katıldınız mı?
+  calledAbsentStudents           AttendanceStatus? // Gelmeyen öğrencileri aradınız mı?
+  curriculumEducation            AttendanceStatus? // Müfredat eğitimini işlediniz mi?
+  groupActivity                  AttendanceStatus? // Gurubunuza veya genele bir etkinlik yaptınız mı?
+  individualAttention           AttendanceStatus? // Haftalık buluşma dışında gurubunuzdaki bir gençle veya gençlerle bir arada bulunup ilgi gösterdiniz mi?
+
+  // For ASISTAN role (different criteria)
+  weeklyMeetingAsistan           AttendanceStatus? // Haftalık sohbetinize katıldınız mı?
+  groupMeetingAsistan            AttendanceStatus? // Haftalık buluşmanıza katıldınız mı?
+  informationMessages            AttendanceStatus? // Özel günlerde gurubu bilgilendirme mesajları paylaşıldı mı?
+  bilgeverseDataEntry           AttendanceStatus? // Bilgeverse'e öğrenci veri girişi yaptınız mı?
+  groupActivityAsistan          AttendanceStatus? // Gurubunuza veya genele bir etkinlik yaptınız mı?
+  individualAttentionAsistan    AttendanceStatus? // Haftalık buluşma dışında gurubunuzdaki bir gençle veya gençlerle bir arada bulunup ilgi gösterdiniz mi?
+  workshopParticipation         AttendanceStatus? // Rehber Yardımcılığının yanında Bir Atölye Sorumlusu ise Atölye Çalışmalarına Katıldı mı?
+}
+
+model WeeklyReportVariableCriteria {
+  id                              String            @id @default(uuid())
+  reportId                        String            @unique
+  report                          WeeklyReport      @relation(fields: [reportId], references: [id], onDelete: Cascade)
+
+  // Variable criteria (same for both TUTOR and ASISTAN)
+  internalTraining               AttendanceStatus? // Dernek içi eğitim ve programlara katıldınız mı?
+  jointActivityLeadership        AttendanceStatus? // Ortak faaliyette gurubunuzun başında bulundunuz mu?
+  originalActivity               AttendanceStatus? // Orijinal bir etkinlik ürettiniz mi?
+
+  // Only for TUTOR
+  parentMeeting                  AttendanceStatus? // Gençlerin Aileleriyle Tanıştınız mı?
+}
+
+enum QuestionType {
+  FIXED
+  VARIABLE
+}
+
+model WeeklyReportQuestion {
+  id                String         @id @default(uuid())
+  text              String         @db.Text
+  type              QuestionType   // FIXED or VARIABLE
+  targetRole        UserRole       // TUTOR, ASISTAN, or both
+  orderIndex        Int            // For display ordering
+  isActive          Boolean        @default(true)
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+
+  // Relations
+  createdBy         User           @relation("AdminQuestions", fields: [createdById], references: [id])
+  createdById       String
+
+  // Question responses
+  responses         WeeklyReportQuestionResponse[]
+
+  @@index([type, targetRole, isActive])
+  @@index([orderIndex])
+}
+
+model WeeklyReportQuestionResponse {
+  id                String            @id @default(uuid())
+  response          AttendanceStatus  // YAPILDI, YAPILMADI, YOKTU
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+
+  // Relations
+  question          WeeklyReportQuestion @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  questionId        String
+  report            WeeklyReport      @relation(fields: [reportId], references: [id], onDelete: Cascade)
+  reportId          String
+
+  @@unique([questionId, reportId])
+  @@index([reportId])
+}

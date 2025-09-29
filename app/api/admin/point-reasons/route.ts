@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "../../auth/[...nextauth]/auth.config";
 import prisma from "@/lib/prisma";
+import { getActivePeriod } from "@/lib/periods";
 
 export async function GET(request: NextRequest) {
   try {
@@ -17,9 +18,18 @@ export async function GET(request: NextRequest) {
       select: { role: true },
     });
 
-    if (!user || user.role !== "ADMIN") {
+    if (!user) {
+      return NextResponse.json({ 
+        error: "Session invalid - please log in again" 
+      }, { status: 401 });
+    }
+
+    if (user.role !== "ADMIN") {
       return NextResponse.json({ error: "Forbidden - Admin access required" }, { status: 403 });
     }
+
+    // Get the active period to filter transactions
+    const activePeriod = await getActivePeriod();
 
     // Fetch all point reasons with creator info and usage count
     const reasons = await prisma.pointReason.findMany({
@@ -35,12 +45,18 @@ export async function GET(request: NextRequest) {
         _count: {
           select: {
             transactions: {
-              where: { rolledBack: false }
+              where: {
+                rolledBack: false,
+                ...(activePeriod && { periodId: activePeriod.id })
+              }
             },
           },
         },
         transactions: {
-          where: { rolledBack: false },
+          where: {
+            rolledBack: false,
+            ...(activePeriod && { periodId: activePeriod.id })
+          },
           take: 1,
           select: {
             id: true,
@@ -53,20 +69,13 @@ export async function GET(request: NextRequest) {
       },
     });
 
-    // Add detailed logging
-    console.log('Point reasons query result with sample transactions:', reasons.map(r => ({
-      id: r.id,
-      name: r.name,
-      transactionCount: r._count?.transactions,
-      sampleTransaction: r.transactions[0] || null
-    })));
 
     // Remove transactions from response to keep it clean
     const cleanReasons = reasons.map(({ transactions, ...rest }) => rest);
 
     return NextResponse.json({
       success: true,
-      reasons: cleanReasons,
+      reasons: cleanReasons || [],
     });
   } catch (error) {
     console.error("Error fetching point reasons:", error);

@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
-import { TransactionType, UserRole } from '@prisma/client';
+import { UserRole } from '@prisma/client';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '../auth/[...nextauth]/auth.config';
+import { calculateMultipleUserPoints, calculateUserExperience } from '@/lib/points';
+import { requireActivePeriod } from '@/lib/periods';
 
 export const dynamic = 'force-dynamic';
 
@@ -32,17 +34,20 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // Get all students with their experience and tutor information
-    const students = await prisma.user.findMany({
-      where: { 
-        role: UserRole.STUDENT 
+    // Get active period
+    const activePeriod = await requireActivePeriod();
+
+    // Get all active students with their basic information
+    const studentsRaw = await prisma.user.findMany({
+      where: {
+        role: UserRole.STUDENT,
+        isActive: true
       },
       select: {
         id: true,
         username: true,
         firstName: true,
         lastName: true,
-        experience: true,
         tutor: {
           select: {
             id: true,
@@ -51,11 +56,22 @@ export async function GET(request: NextRequest) {
             lastName: true
           }
         }
-      },
-      orderBy: {
-        experience: 'desc'
       }
     });
+
+    // Calculate experience for all students efficiently
+    const students = await Promise.all(
+      studentsRaw.map(async (student) => {
+        const experience = await calculateUserExperience(student.id, activePeriod.id);
+        return {
+          ...student,
+          experience,
+        };
+      })
+    );
+
+    // Sort by calculated experience
+    students.sort((a, b) => b.experience - a.experience);
 
     // Map students to leaderboard entries with ranks
     const leaderboard = students.map((student, index) => ({

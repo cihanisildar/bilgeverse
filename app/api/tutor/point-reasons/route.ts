@@ -33,9 +33,9 @@ export async function GET(request: NextRequest) {
     });
     console.log('Point reasons API - User role:', user?.role);
 
-    if (!user || (user.role !== "TUTOR" && user.role !== "ADMIN")) {
+    if (!user || (user.role !== "TUTOR" && user.role !== "ADMIN" && user.role !== "ASISTAN")) {
       return NextResponse.json({ 
-        error: "Forbidden - Tutor or Admin access required",
+        error: "Forbidden - Tutor, Admin, or Asistan access required",
         debug: {
           userExists: !!user,
           userRole: user?.role
@@ -60,9 +60,14 @@ export async function GET(request: NextRequest) {
     });
     console.log('Point reasons API - Found reasons:', reasons.length);
 
+    // Handle case when no reasons exist
+    if (reasons.length === 0) {
+      console.log('Point reasons API - No active point reasons found in database');
+    }
+
     return NextResponse.json({
       success: true,
-      reasons,
+      reasons: reasons || [],
     });
   } catch (error) {
     console.error("Error fetching point reasons:", error);

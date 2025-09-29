@@ -3,6 +3,8 @@ import prisma from '@/lib/prisma';
 import { TransactionType, UserRole } from '@prisma/client';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '../auth/[...nextauth]/auth.config';
+import { requireActivePeriod } from '@/lib/periods';
+import { calculateUserPoints } from '@/lib/points';
 
 export const dynamic = 'force-dynamic';
 
@@ -10,9 +12,9 @@ export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
     
-    if (!session?.user || session.user.role !== UserRole.ADMIN && session.user.role !== UserRole.TUTOR) {
+    if (!session?.user || (session.user.role !== UserRole.ADMIN && session.user.role !== UserRole.TUTOR && session.user.role !== UserRole.ASISTAN)) {
       return NextResponse.json(
-        { error: 'Unauthorized: Only admin or tutor can award points' },
+        { error: 'Unauthorized: Only admin, tutor or asistan can award points' },
         { status: 403 }
       );
     }
@@ -37,6 +39,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Get active period
+    const activePeriod = await requireActivePeriod();
+
     // Use Prisma transaction
     const result = await prisma.$transaction(async (tx) => {
       // Check if student exists and is actually a student
@@ -56,9 +61,61 @@ export async function POST(request: NextRequest) {
         throw new Error('Unauthorized: Student not assigned to this tutor');
       }
 
+      // If asistan, check if the student is in the same classroom as the assisted tutor
+      if (session.user.role === UserRole.ASISTAN) {
+        // Get the asistan's assisted tutor
+        const asistan = await tx.user.findUnique({
+          where: { id: session.user.id },
+          select: { assistedTutorId: true }
+        });
+
+        if (!asistan?.assistedTutorId) {
+          throw new Error('Unauthorized: Asistan not assigned to any tutor');
+        }
+
+        // Get the assisted tutor's classroom
+        const assistedTutor = await tx.user.findUnique({
+          where: { id: asistan.assistedTutorId },
+          select: { classroom: { select: { id: true } } }
+        });
+
+        if (!assistedTutor?.classroom) {
+          throw new Error('Unauthorized: Assisted tutor has no classroom');
+        }
+
+        // Check if the student is in the same classroom
+        if (student.studentClassroomId !== assistedTutor.classroom.id) {
+          throw new Error('Unauthorized: Student not in the assisted tutor\'s classroom');
+        }
+      }
+
       // Check if decreasing points would result in negative balance
-      if (points < 0 && Math.abs(points) > student.points) {
-        throw new Error('Cannot decrease more points than student has');
+      if (points < 0) {
+        // Calculate current balance efficiently within transaction
+        const currentTransactions = await tx.pointsTransaction.findMany({
+          where: {
+            studentId,
+            periodId: activePeriod.id,
+            rolledBack: false
+          },
+          select: {
+            points: true,
+            type: true
+          }
+        });
+
+        const currentPoints = currentTransactions.reduce((sum, transaction) => {
+          if (transaction.type === TransactionType.AWARD) {
+            return sum + transaction.points;
+          } else if (transaction.type === TransactionType.REDEEM) {
+            return sum - transaction.points;
+          }
+          return sum;
+        }, 0);
+
+        if (Math.abs(points) > currentPoints) {
+          throw new Error('Cannot decrease more points than student has');
+        }
       }
 
       // Create transaction record
@@ -69,7 +126,8 @@ export async function POST(request: NextRequest) {
           points: Math.abs(points),
           type: points >= 0 ? TransactionType.AWARD : TransactionType.REDEEM,
           reason: reason || (points >= 0 ? 'Puan eklendi' : 'Puan azaltıldı'),
-          pointReasonId: pointReasonId || null
+          pointReasonId: pointReasonId || null,
+          periodId: activePeriod.id
         }
       });
 
@@ -84,35 +142,19 @@ export async function POST(request: NextRequest) {
         pointReasonId: transaction.pointReasonId
       });
 
-      // Update student's points
-      const updatedStudent = await tx.user.update({
-        where: { id: studentId },
-        data: {
-          points: {
-            increment: points
-          },
-          // Also update experience if points are being increased
-          ...(points > 0 && {
-            experience: {
-              increment: points
-            }
-          })
-        },
-        select: {
-          id: true,
-          points: true,
-          experience: true
-        }
-      });
-
-      return { transaction, newBalance: updatedStudent.points };
+      return { transaction };
+    }, {
+      timeout: 10000, // Increase timeout to 10 seconds
     });
+
+    // Calculate new balance outside the transaction to avoid timeout
+    const newBalance = await calculateUserPoints(studentId, activePeriod.id);
 
     return NextResponse.json(
       {
         message: points >= 0 ? 'Puan başarıyla eklendi' : 'Puan başarıyla azaltıldı',
         transaction: result.transaction,
-        newBalance: result.newBalance
+        newBalance: newBalance
       },
       { status: 200 }
     );
@@ -203,13 +245,71 @@ export async function GET(request: NextRequest) {
         };
       }
     }
+    // If asistan, can only see transactions for students in the assisted tutor's classroom
+    else if (session.user.role === UserRole.ASISTAN) {
+      // Get the asistan's assisted tutor
+      const asistan = await prisma.user.findUnique({
+        where: { id: session.user.id },
+        select: { assistedTutorId: true }
+      });
+
+      if (!asistan?.assistedTutorId) {
+        return NextResponse.json(
+          { error: 'Asistan not assigned to any tutor' },
+          { status: 403 }
+        );
+      }
+
+      // Get the assisted tutor's classroom
+      const assistedTutor = await prisma.user.findUnique({
+        where: { id: asistan.assistedTutorId },
+        select: { classroom: { select: { id: true } } }
+      });
+
+      if (!assistedTutor?.classroom) {
+        return NextResponse.json(
+          { error: 'Assisted tutor has no classroom' },
+          { status: 403 }
+        );
+      }
+
+      if (studentId) {
+        // Check if student is in the same classroom
+        const student = await prisma.user.findFirst({
+          where: {
+            id: studentId,
+            studentClassroomId: assistedTutor.classroom.id,
+            role: UserRole.STUDENT
+          }
+        });
+        
+        if (!student) {
+          return NextResponse.json(
+            { error: 'Student not found or not in the assisted tutor\'s classroom' },
+            { status: 404 }
+          );
+        }
+        
+        where.studentId = studentId;
+      } else {
+        // Get all transactions for students in the classroom
+        where.student = {
+          studentClassroomId: assistedTutor.classroom.id,
+          role: UserRole.STUDENT
+        };
+      }
+    }
     // If student, can only see their own transactions
     else {
       where.studentId = session.user.id;
     }
 
-    // Only include non-rolled-back transactions
+    // Only include non-rolled-back transactions and from active period
     where.rolledBack = false;
+
+    // Get active period and filter by it
+    const activePeriod = await requireActivePeriod();
+    where.periodId = activePeriod.id;
 
     const transactions = await prisma.pointsTransaction.findMany({
       where,
@@ -231,6 +331,12 @@ export async function GET(request: NextRequest) {
             username: true,
             firstName: true,
             lastName: true
+          }
+        },
+        period: {
+          select: {
+            id: true,
+            name: true
           }
         }
       }

@@ -21,6 +21,12 @@ type Transaction = {
     firstName?: string;
     lastName?: string;
   };
+  tutor: {
+    id: string;
+    username: string;
+    firstName?: string;
+    lastName?: string;
+  };
   points: number;
   type: "AWARD" | "REDEEM";
   reason: string;
@@ -306,6 +312,9 @@ export default function PointsHistoryPage() {
                       <p className="text-gray-700">
                         {transaction.reason}
                       </p>
+                      <div className="mt-2 text-xs text-gray-500">
+                        Puan veren: {transaction.tutor.firstName || transaction.tutor.username}
+                      </div>
                     </div>
                   </div>
                 </div>

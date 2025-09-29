@@ -3,23 +3,24 @@
 import OverallStatsReport from '@/app/components/OverallStatsReport';
 import { useAuth } from '@/app/contexts/AuthContext';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
+  Activity,
   Award,
   BookOpen,
+  Calendar,
   ChevronRight,
   FileText,
   GraduationCap,
   PieChart,
+  School,
   Search,
-  Sparkles,
   Star,
   TrendingUp,
-  Users,
-  Calendar,
-  Activity
+  Users
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
@@ -177,9 +178,9 @@ export default function AdminReportsPage() {
     );
   }
 
-  const totalPoints = students.reduce((sum, student) => sum + student.points, 0);
-  const totalExperience = students.reduce((sum, student) => sum + student.experience, 0);
-  const activeClassrooms = tutors.filter(tutor => tutor.students && tutor.students.length > 0).length;
+  const totalPoints = students.length > 0 ? students.reduce((sum, student) => sum + student.points, 0) : 0;
+  const totalExperience = students.length > 0 ? students.reduce((sum, student) => sum + student.experience, 0) : 0;
+  const activeClassrooms = tutors.length > 0 ? tutors.filter(tutor => tutor.students && tutor.students.length > 0).length : 0;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
@@ -206,6 +207,13 @@ export default function AdminReportsPage() {
               </div>
 
               <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4">
+                <Button
+                  onClick={() => router.push('/admin/reports/period')}
+                  className="bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white"
+                >
+                  <School className="h-4 w-4 mr-2" />
+                  Dönem Raporu
+                </Button>
                 <Badge className="bg-indigo-100 text-indigo-800 text-sm sm:text-base px-3 sm:px-4 py-2 border border-indigo-200">
                   <FileText className="h-4 w-4 mr-2" />
                   Analiz Merkezi
@@ -327,7 +335,14 @@ export default function AdminReportsPage() {
 
                 {/* Enhanced Student Grid */}
                 <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-6 max-h-[50vh] sm:max-h-[70vh] overflow-y-auto pr-2">
-                  {filteredStudents.map((student) => (
+                  {filteredStudents.length === 0 ? (
+                    <div className="col-span-full flex flex-col items-center justify-center py-12 text-gray-500">
+                      <GraduationCap className="h-16 w-16 text-gray-300 mb-4" />
+                      <p className="text-lg font-medium">Henüz öğrenci bulunmuyor</p>
+                      <p className="text-sm text-gray-400">Öğrenciler kayıt oldukça burada görünecek</p>
+                    </div>
+                  ) : (
+                    filteredStudents.map((student) => (
                     <Card 
                       key={student.id} 
                       className="group cursor-pointer transition-all duration-300 hover:shadow-2xl hover:-translate-y-1 sm:hover:-translate-y-2 bg-white/90 backdrop-blur-sm border-white/30 overflow-hidden"
@@ -371,7 +386,8 @@ export default function AdminReportsPage() {
                         </div>
                       </CardContent>
                     </Card>
-                  ))}
+                    ))
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -412,7 +428,14 @@ export default function AdminReportsPage() {
 
                 {/* Enhanced Tutor Grid */}
                 <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 max-h-[70vh] overflow-y-auto pr-2">
-                  {filteredTutors.map((tutor) => {
+                  {filteredTutors.length === 0 ? (
+                    <div className="col-span-full flex flex-col items-center justify-center py-12 text-gray-500">
+                      <BookOpen className="h-16 w-16 text-gray-300 mb-4" />
+                      <p className="text-lg font-medium">Henüz eğitmen bulunmuyor</p>
+                      <p className="text-sm text-gray-400">Eğitmenler kayıt oldukça burada görünecek</p>
+                    </div>
+                  ) : (
+                    filteredTutors.map((tutor) => {
                     const studentCount = tutor.students?.length || 0;
                     const totalClassPoints = tutor.students?.reduce((acc: number, s: any) => acc + s.points, 0) || 0;
                     const hasClassroom = tutor.classroom && tutor.classroom.id;
@@ -494,7 +517,8 @@ export default function AdminReportsPage() {
                         </CardContent>
                       </Card>
                     );
-                  })}
+                  })
+                  )}
                 </div>
               </CardContent>
             </Card>

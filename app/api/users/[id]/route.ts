@@ -3,6 +3,7 @@ import prisma from '@/lib/prisma';
 import { UserRole } from '@prisma/client';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '../../auth/[...nextauth]/auth.config';
+import { getUserWithCalculatedStats } from '@/lib/points';
 
 export const dynamic = 'force-dynamic';
 
@@ -22,28 +23,8 @@ export async function GET(
     
     const userId = params.id;
 
-    const user = await prisma.user.findUnique({
-      where: { id: userId },
-      select: {
-        id: true,
-        username: true,
-        email: true,
-        role: true,
-        firstName: true,
-        lastName: true,
-        points: true,
-        tutorId: true,
-        createdAt: true,
-        tutor: {
-          select: {
-            id: true,
-            username: true,
-            firstName: true,
-            lastName: true
-          }
-        }
-      }
-    });
+    // Get user with calculated points and experience for current period
+    const user = await getUserWithCalculatedStats(userId);
 
     if (!user) {
       return NextResponse.json(
@@ -52,18 +33,35 @@ export async function GET(
       );
     }
 
+    // Get additional user data not included in calculated stats
+    const userData = await prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        email: true,
+        tutorId: true,
+        createdAt: true
+      }
+    });
+
+    const enrichedUser = {
+      ...user,
+      email: userData?.email,
+      tutorId: userData?.tutorId,
+      createdAt: userData?.createdAt
+    };
+
     // Only allow access if:
     // 1. User is looking at their own profile
     // 2. User is an admin
-    // 3. User is a tutor looking at their own student
+    // 3. User is a tutor or asistan looking at their own student
     const isSelf = session.user.id === userId;
     const isAdminUser = session.user.role === UserRole.ADMIN;
-    const isTutorViewingStudent = 
-      session.user.role === UserRole.TUTOR && 
-      user.role === UserRole.STUDENT && 
-      user.tutorId && 
-      user.tutorId === session.user.id;
-    
+    const isTutorViewingStudent =
+      (session.user.role === UserRole.TUTOR || session.user.role === UserRole.ASISTAN) &&
+      enrichedUser.role === UserRole.STUDENT &&
+      enrichedUser.tutorId &&
+      enrichedUser.tutorId === session.user.id;
+
     if (!isSelf && !isAdminUser && !isTutorViewingStudent) {
       return NextResponse.json(
         { error: 'Unauthorized: Cannot access this user' },
@@ -71,7 +69,7 @@ export async function GET(
       );
     }
 
-    return NextResponse.json({ user }, { status: 200 });
+    return NextResponse.json({ user: enrichedUser }, { status: 200 });
   } catch (error) {
     console.error('Get user error:', error);
     return NextResponse.json(
@@ -131,7 +129,7 @@ export async function PUT(
     // If changing to student role or user is already a student, validate tutorId
     if (role === UserRole.STUDENT || user.role === UserRole.STUDENT) {
       if (tutorId) {
-        // Verify tutor exists and is a tutor
+        // Verify tutor exists and is a tutor (not asistan)
         const tutor = await prisma.user.findFirst({
           where: {
             id: tutorId,
@@ -156,27 +154,27 @@ export async function PUT(
     // Update user with transaction to handle classroom assignment
     const updatedUser = await prisma.$transaction(async (tx) => {
       let classroomId = undefined;
-      
-      // If assigning to a tutor, also assign to tutor's classroom
+
+      // If assigning to a tutor, also assign to their classroom
       if (tutorId) {
         const tutorClassroom = await tx.classroom.findUnique({
           where: { tutorId: tutorId }
         });
-        
+
         if (tutorClassroom) {
           classroomId = tutorClassroom.id;
         } else {
           // Create classroom for tutor if it doesn't exist
           const tutor = await tx.user.findUnique({
             where: { id: tutorId },
-            select: { firstName: true, lastName: true, username: true }
+            select: { firstName: true, lastName: true, username: true, role: true }
           });
-          
+
           if (tutor) {
-            const classroomName = tutor.firstName && tutor.lastName 
+            const classroomName = tutor.firstName && tutor.lastName
               ? `${tutor.firstName} ${tutor.lastName} Sınıfı`
               : `${tutor.username} Sınıfı`;
-              
+
             const classroomDescription = tutor.firstName && tutor.lastName
               ? `${tutor.firstName} ${tutor.lastName} öğretmeninin sınıfı`
               : `${tutor.username} öğretmeninin sınıfı`;
@@ -188,22 +186,22 @@ export async function PUT(
                 tutorId: tutorId,
               }
             });
-            
+
             classroomId = newClassroom.id;
           }
         }
       }
-      
-              return await tx.user.update({
-          where: { id: userId },
-          data: {
-            ...(username && { username }),
-            ...(role && { role: role as UserRole }),
-            ...(firstName !== undefined && { firstName }),
-            ...(lastName !== undefined && { lastName }),
-            ...(points !== undefined && { points: parseInt(points) || 0 }),
-            ...(tutorId && { tutorId, studentClassroomId: classroomId })
-          },
+
+      return await tx.user.update({
+        where: { id: userId },
+        data: {
+          ...(username && { username }),
+          ...(role && { role: role as UserRole }),
+          ...(firstName !== undefined && { firstName }),
+          ...(lastName !== undefined && { lastName }),
+          ...(points !== undefined && { points: parseInt(points) || 0 }),
+          ...(tutorId && { tutorId, studentClassroomId: classroomId })
+        },
         select: {
           id: true,
           username: true,
@@ -231,6 +229,83 @@ export async function PUT(
       );
     }
     
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    );
+  }
+}
+
+export async function PATCH(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const session = await getServerSession(authOptions);
+
+    if (!session?.user || (session.user.role !== UserRole.ADMIN && session.user.role !== UserRole.TUTOR)) {
+      return NextResponse.json(
+        { error: 'Unauthorized: Admin or Tutor access required' },
+        { status: 403 }
+      );
+    }
+
+    const userId = params.id;
+    const body = await request.json();
+    const { isActive } = body;
+
+    if (typeof isActive !== 'boolean') {
+      return NextResponse.json(
+        { error: 'isActive must be a boolean value' },
+        { status: 400 }
+      );
+    }
+
+    // Check if user exists
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true, role: true, tutorId: true }
+    });
+
+    if (!user) {
+      return NextResponse.json(
+        { error: 'User not found' },
+        { status: 404 }
+      );
+    }
+
+    // For tutors, they can only update their own students' status
+    if (session.user.role === UserRole.TUTOR) {
+      if (user.role !== UserRole.STUDENT || user.tutorId !== session.user.id) {
+        return NextResponse.json(
+          { error: 'Unauthorized: Can only update your own students' },
+          { status: 403 }
+        );
+      }
+    }
+
+    const updatedUser = await prisma.user.update({
+      where: { id: userId },
+      data: {
+        isActive,
+        statusChangedAt: new Date(),
+        statusChangedBy: session.user.id
+      },
+      select: {
+        id: true,
+        username: true,
+        isActive: true,
+        statusChangedAt: true,
+        statusChangedBy: true
+      }
+    });
+
+    return NextResponse.json({
+      message: 'User status updated successfully',
+      user: updatedUser
+    }, { status: 200 });
+  } catch (error) {
+    console.error('Update user status error:', error);
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

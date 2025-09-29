@@ -46,6 +46,12 @@ type PointTransaction = {
     firstName?: string;
     lastName?: string;
   };
+  tutor?: {
+    id: string;
+    username: string;
+    firstName?: string;
+    lastName?: string;
+  } | null;
   points: number;
   type: string;
   reason: string;
@@ -144,10 +150,13 @@ function PointsManagement() {
         });
         const reasonsData = await reasonsRes.json();
 
-        if (reasonsData.reasons) {
+        if (reasonsData.reasons && Array.isArray(reasonsData.reasons)) {
           // Only show active reasons
           const activeReasons = reasonsData.reasons.filter((reason: any) => reason.isActive);
           setPointReasons(activeReasons);
+        } else {
+          // If no reasons or reasons is not an array, set empty array
+          setPointReasons([]);
         }
       } catch (error) {
         console.error("Error fetching data:", error);
@@ -512,7 +521,7 @@ function PointsManagement() {
                     </div>
 
                     {/* Predefined Reasons */}
-                    {pointReasons.length > 0 && (
+                    {pointReasons && Array.isArray(pointReasons) && pointReasons.length > 0 && (
                       <div className="space-y-3">
                         <Label className="text-sm font-medium text-gray-600">Hazır Sebepler</Label>
                         <div className="grid grid-cols-1 gap-2">
@@ -679,6 +688,9 @@ function PointsManagement() {
                         <p className="text-sm font-medium text-gray-700">
                           {transaction.reason}
                         </p>
+                      </div>
+                      <div className="mt-2 text-xs text-gray-500">
+                        Puan veren: {transaction.tutor?.firstName || transaction.tutor?.username || 'Bilinmeyen'}
                       </div>
                     </div>
                     <div className="text-right ml-4">

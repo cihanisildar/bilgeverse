@@ -10,9 +10,9 @@ export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
     
-    if (!session?.user || (session.user.role !== UserRole.ADMIN && session.user.role !== UserRole.TUTOR)) {
+    if (!session?.user || (session.user.role !== UserRole.ADMIN && session.user.role !== UserRole.TUTOR && session.user.role !== UserRole.ASISTAN)) {
       return NextResponse.json(
-        { error: 'Unauthorized: Only admins and tutors can access student reports' },
+        { error: 'Unauthorized: Only admins, tutors, and asistans can access student reports' },
         { status: 403 }
       );
     }
@@ -27,27 +27,32 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // If tutor, verify they have access to this student
-    if (session.user.role === UserRole.TUTOR) {
+    // If tutor or asistan, verify they have access to this student
+    if (session.user.role === UserRole.TUTOR || session.user.role === UserRole.ASISTAN) {
       const student = await prisma.user.findFirst({
         where: {
           id: studentId,
           tutorId: session.user.id,
-          role: UserRole.STUDENT
+          role: UserRole.STUDENT,
+          isActive: true
         }
       });
 
       if (!student) {
         return NextResponse.json(
-          { error: 'Student not found or not assigned to you' },
+          { error: 'Student not found, not assigned to you, or is currently inactive' },
           { status: 404 }
         );
       }
     }
 
-    // Get student information
-    const student = await prisma.user.findUnique({
-      where: { id: studentId },
+    // Get student information (only if active)
+    const student = await prisma.user.findFirst({
+      where: {
+        id: studentId,
+        role: UserRole.STUDENT,
+        isActive: true
+      },
       select: {
         id: true,
         username: true,
@@ -61,7 +66,7 @@ export async function GET(request: NextRequest) {
 
     if (!student) {
       return NextResponse.json(
-        { error: 'Student not found' },
+        { error: 'Student not found or is currently inactive' },
         { status: 404 }
       );
     }
@@ -132,6 +137,9 @@ export async function GET(request: NextRequest) {
       }
     });
 
+    // Get total number of events created in the system
+    const totalEventsCreated = await prisma.event.count();
+
     // Categorize points by point reason
     const pointsByActivity = categorizePointsByActivity(pointsTransactions);
     
@@ -181,6 +189,7 @@ export async function GET(request: NextRequest) {
       totalExperienceEarned: totalExperienceFromTransactions,
       memberSince: student.createdAt,
       eventParticipations: eventParticipations.length,
+      totalEventsCreated: totalEventsCreated,
       totalTransactions: pointsTransactions.length + experienceTransactions.length
     };
 

@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { getServerSession } from 'next-auth';
-import { EventScope, EventType, EventStatus, UserRole } from '@prisma/client';
+import { EventScope, EventStatus, UserRole } from '@prisma/client';
 import { authOptions } from '../../auth/[...nextauth]/auth.config';
+import { getActivePeriod } from '@/lib/periods';
 
 export const dynamic = 'force-dynamic';
 
@@ -10,9 +11,9 @@ export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
     
-    if (!session?.user || session.user.role !== UserRole.TUTOR) {
+    if (!session?.user || (session.user.role !== UserRole.TUTOR && session.user.role !== UserRole.ASISTAN)) {
       return NextResponse.json(
-        { error: 'Unauthorized: Only tutors can create events' },
+        { error: 'Unauthorized: Only tutors and asistans can create events' },
         { status: 403 }
       );
     }
@@ -27,13 +28,54 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Validate event type
-    if (!Object.values(EventType).includes(data.type)) {
+    // Validate periodId
+    if (!data.periodId) {
       return NextResponse.json(
-        { error: `Invalid event type. Must be one of: ${Object.values(EventType).join(', ')}` },
+        { error: 'Period selection is required' },
         { status: 400 }
       );
     }
+
+    // Validate eventTypeId
+    if (!data.eventTypeId) {
+      return NextResponse.json(
+        { error: 'Event type selection is required' },
+        { status: 400 }
+      );
+    }
+
+    // Verify the period exists
+    const selectedPeriod = await prisma.period.findUnique({
+      where: { id: data.periodId }
+    });
+
+    if (!selectedPeriod) {
+      return NextResponse.json(
+        { error: 'Selected period not found' },
+        { status: 400 }
+      );
+    }
+
+    // Verify the event type exists and is active
+    const selectedEventType = await prisma.eventType.findUnique({
+      where: { id: data.eventTypeId }
+    });
+
+    if (!selectedEventType) {
+      return NextResponse.json(
+        { error: 'Selected event type not found' },
+        { status: 400 }
+      );
+    }
+
+    if (!selectedEventType.isActive) {
+      return NextResponse.json(
+        { error: 'Selected event type is not active' },
+        { status: 400 }
+      );
+    }
+
+    // All event types are now specific catalog activities - no custom name validation needed
 
     // Validate event scope
     if (!data.eventScope || !Object.values(EventScope).includes(data.eventScope)) {
@@ -51,14 +93,16 @@ export async function POST(request: NextRequest) {
         startDateTime: new Date(data.startDateTime),
         endDateTime: new Date(data.endDateTime),
         location: data.location || 'Online',
-        type: data.type as EventType,
+        customName: null, // No custom names for catalog activities
         capacity: parseInt(String(data.capacity)) || 20,
         points: parseInt(String(data.points)) || 0,
         experience: parseInt(String(data.experience)) || 0,
         tags: data.tags || [],
         createdById: session.user.id,
         status: EventStatus.YAKINDA,
-        eventScope: data.eventScope as EventScope
+        eventScope: data.eventScope as EventScope,
+        periodId: selectedPeriod.id,
+        eventTypeId: selectedEventType.id
       }
     });
 
@@ -92,18 +136,27 @@ export async function POST(request: NextRequest) {
 export async function GET(request: NextRequest) {
   try {
     console.log('GET /api/tutor/events - Starting request');
-    
+
     const session = await getServerSession(authOptions);
     console.log('Current user:', session?.user);
-    
-    if (!session?.user || session.user.role !== UserRole.TUTOR) {
-      console.log('Unauthorized access attempt:', { 
-        isAuthenticated: !!session?.user, 
-        role: session?.user?.role 
+
+    if (!session?.user || (session.user.role !== UserRole.TUTOR && session.user.role !== UserRole.ASISTAN)) {
+      console.log('Unauthorized access attempt:', {
+        isAuthenticated: !!session?.user,
+        role: session?.user?.role
       });
       return NextResponse.json(
-        { error: 'Unauthorized: Only tutors can view events' },
+        { error: 'Unauthorized: Only tutors and asistans can view events' },
         { status: 403 }
+      );
+    }
+
+    // Get active period
+    const activePeriod = await getActivePeriod();
+    if (!activePeriod) {
+      return NextResponse.json(
+        { error: 'No active period found' },
+        { status: 400 }
       );
     }
 
@@ -111,6 +164,7 @@ export async function GET(request: NextRequest) {
     console.log('Fetching events for tutor:', session.user.id);
     const events = await prisma.event.findMany({
       where: {
+        periodId: activePeriod.id,
         OR: [
           // Events created by this tutor
           { createdById: session.user.id },
@@ -127,6 +181,13 @@ export async function GET(request: NextRequest) {
         participants: {
           where: {
             status: 'REGISTERED'
+          }
+        },
+        eventType: {
+          select: {
+            id: true,
+            name: true,
+            description: true
           }
         }
       }

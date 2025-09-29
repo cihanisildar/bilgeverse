@@ -16,13 +16,35 @@ import { Textarea } from "@/components/ui/textarea";
 import { ChevronLeft, Info, Save, X } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
+import { useToast } from "@/hooks/use-toast";
+
+type Period = {
+  id: string;
+  name: string;
+  description?: string;
+  startDate: string;
+  endDate?: string;
+  status: 'ACTIVE' | 'INACTIVE' | 'ARCHIVED';
+  createdAt: string;
+};
+
+type EventType = {
+  id: string;
+  name: string;
+  description?: string;
+};
 
 export default function CreateEventPage() {
   const router = useRouter();
+  const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [newTag, setNewTag] = useState("");
+  const [periods, setPeriods] = useState<Period[]>([]);
+  const [periodsLoading, setPeriodsLoading] = useState(true);
+  const [eventTypes, setEventTypes] = useState<EventType[]>([]);
+  const [eventTypesLoading, setEventTypesLoading] = useState(true);
 
   const [formData, setFormData] = useState({
     title: "",
@@ -30,12 +52,14 @@ export default function CreateEventPage() {
     startDate: "",
     startTime: "",
     location: "",
-    type: "YUZ_YUZE",
+    eventTypeId: "",
+    customName: "",
     capacity: 20,
     points: 0,
     experience: 0,
     tags: [] as string[],
     eventScope: "GROUP" as "GROUP" | "GLOBAL",
+    periodId: "",
   });
 
   const handleInputChange = (
@@ -64,6 +88,90 @@ export default function CreateEventPage() {
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
+  const fetchPeriods = async () => {
+    try {
+      const response = await fetch('/api/admin/periods', {
+        method: 'GET',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+          'Cache-Control': 'no-cache'
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch periods');
+      }
+
+      const data = await response.json();
+
+      if (!data.periods || !Array.isArray(data.periods)) {
+        throw new Error('Invalid period data received');
+      }
+
+      setPeriods(data.periods);
+
+      // Set default period to active period if available
+      const activePeriod = data.periods.find((p: Period) => p.status === 'ACTIVE');
+      if (activePeriod) {
+        setFormData(prev => ({ ...prev, periodId: activePeriod.id }));
+      }
+    } catch (err: any) {
+      console.error('Error fetching periods:', err);
+      toast({
+        title: "Hata",
+        description: "Dönemler yüklenirken bir hata oluştu. Lütfen sayfayı yenileyin.",
+        variant: "destructive",
+      });
+    } finally {
+      setPeriodsLoading(false);
+    }
+  };
+
+  const fetchEventTypes = async () => {
+    try {
+      const response = await fetch('/api/event-types', {
+        method: 'GET',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+          'Cache-Control': 'no-cache'
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch event types');
+      }
+
+      const data = await response.json();
+
+      if (!data.eventTypes || !Array.isArray(data.eventTypes)) {
+        throw new Error('Invalid event type data received');
+      }
+
+      setEventTypes(data.eventTypes);
+
+      // Set default event type to first available if any
+      if (data.eventTypes.length > 0) {
+        setFormData(prev => ({ ...prev, eventTypeId: data.eventTypes[0].id }));
+      }
+    } catch (err: any) {
+      console.error('Error fetching event types:', err);
+      toast({
+        title: "Hata",
+        description: "Etkinlik türleri yüklenirken bir hata oluştu. Lütfen sayfayı yenileyin.",
+        variant: "destructive",
+      });
+    } finally {
+      setEventTypesLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchPeriods();
+    fetchEventTypes();
+  }, []);
+
   const handleAddTag = () => {
     if (newTag.trim() && !formData.tags.includes(newTag.trim())) {
       setFormData((prev) => ({
@@ -83,6 +191,42 @@ export default function CreateEventPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Validate required fields
+    if (!formData.title.trim()) {
+      toast({
+        title: "Hata",
+        description: "Başlık gereklidir",
+        variant: "destructive",
+      });
+      return;
+    }
+    if (!formData.description.trim()) {
+      toast({
+        title: "Hata",
+        description: "Açıklama gereklidir",
+        variant: "destructive",
+      });
+      return;
+    }
+    if (!formData.periodId) {
+      toast({
+        title: "Hata",
+        description: "Dönem seçimi gereklidir",
+        variant: "destructive",
+      });
+      return;
+    }
+    if (!formData.eventTypeId) {
+      toast({
+        title: "Hata",
+        description: "Etkinlik türü seçimi gereklidir",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // All event types are now specific catalog activities - no custom name needed
 
     try {
       setIsSubmitting(true);
@@ -114,12 +258,14 @@ export default function CreateEventPage() {
           new Date(startDateTime).getTime() + 2 * 60 * 60 * 1000
         ).toISOString(), // Default 2 hours duration
         location: formData.location || "Online",
-        type: formData.type.replace("-", "_"),
+        eventTypeId: formData.eventTypeId,
+        customName: null, // No custom names needed for catalog activities
         capacity: parseInt(String(formData.capacity)),
         points: parseInt(String(formData.points)),
         experience: parseInt(String(formData.experience)),
         tags: formData.tags,
         eventScope: formData.eventScope,
+        periodId: formData.periodId,
       };
 
       // Log the final event data being sent
@@ -166,10 +312,18 @@ export default function CreateEventPage() {
           message: error.message,
           stack: error.stack,
         });
-        alert("Etkinlik oluşturulurken bir hata oluştu: " + error.message);
+        toast({
+          title: "Hata",
+          description: "Etkinlik oluşturulurken bir hata oluştu: " + error.message,
+          variant: "destructive",
+        });
       } else {
         console.error("An unknown error occurred:", error);
-        alert("Etkinlik oluşturulurken bir hata oluştu: " + error);
+        toast({
+          title: "Hata",
+          description: "Etkinlik oluşturulurken bir hata oluştu: " + error,
+          variant: "destructive",
+        });
       }
     } finally {
       setIsSubmitting(false);
@@ -279,6 +433,51 @@ export default function CreateEventPage() {
                 </div>
               </div>
 
+              {/* Period Selection Section */}
+              <div className="space-y-4">
+                <h2 className="text-lg font-semibold">Dönem Seçimi</h2>
+                <div>
+                  <label
+                    htmlFor="periodId"
+                    className="block text-sm font-medium text-gray-700 mb-1"
+                  >
+                    Dönem *
+                  </label>
+                  <Select
+                    value={formData.periodId}
+                    onValueChange={(value) => handleSelectChange("periodId", value)}
+                    disabled={periodsLoading}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder={periodsLoading ? "Dönemler yükleniyor..." : "Dönem seçin"} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {periods.length === 0 ? (
+                        <SelectItem value="no-periods" disabled>
+                          {periodsLoading ? "Dönemler yükleniyor..." : "Dönem bulunamadı"}
+                        </SelectItem>
+                      ) : (
+                        periods.map(period => (
+                          <SelectItem key={period.id} value={period.id}>
+                            <div className="flex items-center justify-between w-full">
+                              <span>{period.name}</span>
+                              <span className={`ml-2 text-xs px-2 py-1 rounded ${
+                                period.status === 'ACTIVE' ? 'bg-green-100 text-green-800' :
+                                period.status === 'INACTIVE' ? 'bg-yellow-100 text-yellow-800' :
+                                'bg-gray-100 text-gray-800'
+                              }`}>
+                                {period.status === 'ACTIVE' ? 'Aktif' :
+                                 period.status === 'INACTIVE' ? 'Pasif' : 'Arşiv'}
+                              </span>
+                            </div>
+                          </SelectItem>
+                        ))
+                      )}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
               {/* Date and Time Section */}
               <div className="space-y-4">
                 <h2 className="text-lg font-semibold">Tarih ve Saat</h2>
@@ -321,8 +520,8 @@ export default function CreateEventPage() {
               {/* Event Details Section */}
               <div className="space-y-4">
                 <h2 className="text-lg font-semibold">Etkinlik Detayları</h2>
-                <div className="grid grid-cols-4 gap-4">
-                  <div className="col-span-2">
+                <div className="grid grid-cols-3 gap-4">
+                  <div>
                     <label
                       htmlFor="location"
                       className="block text-sm font-medium text-gray-700 mb-1"
@@ -340,30 +539,35 @@ export default function CreateEventPage() {
                   </div>
                   <div>
                     <label
-                      htmlFor="type"
+                      htmlFor="eventTypeId"
                       className="block text-sm font-medium text-gray-700 mb-1"
                     >
-                      Tür *
+                      Etkinlik Türü *
                     </label>
                     <Select
-                      onValueChange={(value) =>
-                        handleSelectChange(
-                          "type",
-                          value as "CEVRIMICI" | "YUZ_YUZE" | "KARMA"
-                        )
-                      }
-                      defaultValue={formData.type}
+                      value={formData.eventTypeId}
+                      onValueChange={(value) => handleSelectChange("eventTypeId", value)}
+                      disabled={eventTypesLoading}
                     >
                       <SelectTrigger>
-                        <SelectValue placeholder="Etkinlik türünü seçin" />
+                        <SelectValue placeholder={eventTypesLoading ? "Türler yükleniyor..." : "Etkinlik türünü seçin"} />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="YUZ_YUZE">Yüz yüze</SelectItem>
-                        <SelectItem value="CEVRIMICI">Çevrimiçi</SelectItem>
-                        <SelectItem value="KARMA">Karma</SelectItem>
+                        {eventTypes.length === 0 ? (
+                          <SelectItem value="no-types" disabled>
+                            {eventTypesLoading ? "Türler yükleniyor..." : "Tür bulunamadı"}
+                          </SelectItem>
+                        ) : (
+                          eventTypes.map(eventType => (
+                            <SelectItem key={eventType.id} value={eventType.id}>
+                              {eventType.name}
+                            </SelectItem>
+                          ))
+                        )}
                       </SelectContent>
                     </Select>
                   </div>
+                  {/* Custom Name Field removed - using specific catalog activities */}
                   <div>
                     <label
                       htmlFor="capacity"

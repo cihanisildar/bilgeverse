@@ -10,6 +10,7 @@ import toast from 'react-hot-toast';
 import { AlertCircle, Award, Bell, Clock, Plus, Search, TrendingUp, ArrowRight, Users } from 'lucide-react';
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import CurrentPeriod from '@/app/components/CurrentPeriod';
 
 interface TutorStats {
   totalStudents: number;
@@ -27,6 +28,12 @@ interface RecentTransaction {
   student: {
     firstName: string;
     username: string;
+  };
+  tutor: {
+    id: string;
+    username: string;
+    firstName?: string;
+    lastName?: string;
   };
 }
 
@@ -537,6 +544,9 @@ function RecentTransactions() {
                   <div className="text-xs text-gray-500 mt-2">
                     {new Date(transaction.createdAt).toLocaleString("tr-TR")}
                   </div>
+                  <div className="text-xs text-gray-400 mt-1">
+                    Puan veren: {transaction.tutor.firstName || transaction.tutor.username}
+                  </div>
                 </div>
               ))}
             </div>
@@ -633,6 +643,9 @@ export default function TutorDashboard() {
         ) : (
           <>
             <DashboardHeader />
+            <div className="mt-8">
+              <CurrentPeriod />
+            </div>
             <div className="mt-8">
               <DashboardStats />
             </div>

@@ -15,6 +15,9 @@ type UserWithTutor = {
   points: number;
   tutorId: string | null;
   createdAt: Date;
+  isActive: boolean;
+  statusChangedAt: Date | null;
+  statusChangedBy: string | null;
   tutor?: {
     id: string;
     username: string;
@@ -26,7 +29,7 @@ type UserWithTutor = {
 export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-    
+
     if (!session?.user) {
       return NextResponse.json(
         { error: 'Unauthorized' },
@@ -35,7 +38,7 @@ export async function GET(request: NextRequest) {
     }
 
     let users: UserWithTutor[] = [];
-    
+
     // If admin, return all users
     if (session.user.role === UserRole.ADMIN) {
       users = await prisma.user.findMany({
@@ -48,6 +51,9 @@ export async function GET(request: NextRequest) {
           points: true,
           tutorId: true,
           createdAt: true,
+          isActive: true,
+          statusChangedAt: true,
+          statusChangedBy: true,
           tutor: {
             select: {
               id: true,
@@ -78,6 +84,9 @@ export async function GET(request: NextRequest) {
           points: true,
           tutorId: true,
           createdAt: true,
+          isActive: true,
+          statusChangedAt: true,
+          statusChangedBy: true,
           tutor: {
             select: {
               id: true,
