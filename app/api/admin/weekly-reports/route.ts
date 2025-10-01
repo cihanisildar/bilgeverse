@@ -87,24 +87,43 @@ export async function GET(request: NextRequest) {
       ],
     });
 
+    // Transform fixedCriteria and variableCriteria to plain objects for all reports
+    const transformedReports = reports.map(report => ({
+      ...report,
+      fixedCriteria: report.fixedCriteria ? {
+        ...Object.fromEntries(
+          Object.entries(report.fixedCriteria).filter(
+            ([key]) => key !== 'id' && key !== 'reportId'
+          )
+        )
+      } : null,
+      variableCriteria: report.variableCriteria ? {
+        ...Object.fromEntries(
+          Object.entries(report.variableCriteria).filter(
+            ([key]) => key !== 'id' && key !== 'reportId'
+          )
+        )
+      } : null,
+    }));
+
     // Calculate statistics
     const stats = {
-      total: reports.length,
+      total: transformedReports.length,
       byStatus: {
-        DRAFT: reports.filter(r => r.status === "DRAFT").length,
-        SUBMITTED: reports.filter(r => r.status === "SUBMITTED").length,
-        APPROVED: reports.filter(r => r.status === "APPROVED").length,
-        REJECTED: reports.filter(r => r.status === "REJECTED").length,
+        DRAFT: transformedReports.filter(r => r.status === "DRAFT").length,
+        SUBMITTED: transformedReports.filter(r => r.status === "SUBMITTED").length,
+        APPROVED: transformedReports.filter(r => r.status === "APPROVED").length,
+        REJECTED: transformedReports.filter(r => r.status === "REJECTED").length,
       },
       byRole: {
-        TUTOR: reports.filter(r => r.user.role === "TUTOR").length,
-        ASISTAN: reports.filter(r => r.user.role === "ASISTAN").length,
+        TUTOR: transformedReports.filter(r => r.user.role === "TUTOR").length,
+        ASISTAN: transformedReports.filter(r => r.user.role === "ASISTAN").length,
       },
-      totalPointsAwarded: reports.reduce((sum, r) => sum + r.pointsAwarded, 0),
+      totalPointsAwarded: transformedReports.reduce((sum, r) => sum + r.pointsAwarded, 0),
     };
 
     return NextResponse.json({
-      reports,
+      reports: transformedReports,
       stats,
       period: activePeriod
     });

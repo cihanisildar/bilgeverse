@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import { UserRole } from "@prisma/client";
+import { UserRole, PeriodStatus } from "@prisma/client";
 import prisma from "@/lib/prisma";
 import { requireActivePeriod } from "@/lib/periods";
 
@@ -47,13 +47,34 @@ export async function GET(request: NextRequest) {
             name: true,
           },
         },
+        fixedCriteria: true,
+        variableCriteria: true,
       },
       orderBy: {
         weekNumber: "asc",
       },
     });
 
-    return NextResponse.json({ reports });
+    // Transform fixedCriteria and variableCriteria to plain objects
+    const transformedReports = reports.map(report => ({
+      ...report,
+      fixedCriteria: report.fixedCriteria ? {
+        ...Object.fromEntries(
+          Object.entries(report.fixedCriteria).filter(
+            ([key]) => key !== 'id' && key !== 'reportId'
+          )
+        )
+      } : null,
+      variableCriteria: report.variableCriteria ? {
+        ...Object.fromEntries(
+          Object.entries(report.variableCriteria).filter(
+            ([key]) => key !== 'id' && key !== 'reportId'
+          )
+        )
+      } : null,
+    }));
+
+    return NextResponse.json({ reports: transformedReports });
   } catch (error: any) {
     console.error("Error fetching weekly reports:", error);
     return NextResponse.json(
@@ -66,14 +87,19 @@ export async function GET(request: NextRequest) {
 // POST - Create a new weekly report
 export async function POST(request: NextRequest) {
   try {
+    console.log('[Weekly Report POST] Request received');
+
     const session = await getServerSession(authOptions);
 
     if (!session?.user || (session.user.role !== UserRole.TUTOR && session.user.role !== UserRole.ASISTAN)) {
+      console.log('[Weekly Report POST] Auth failed');
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const userId = session.user.id;
     const userRole = session.user.role;
+
+    console.log('[Weekly Report POST] User authenticated:', { userId, userRole });
 
     const body = await request.json();
     const {
@@ -86,6 +112,8 @@ export async function POST(request: NextRequest) {
       questionResponses, // New field for dynamic questions
     } = body;
 
+    console.log('[Weekly Report POST] Request body:', { weekNumber, periodId, status, hasQuestionResponses: !!questionResponses });
+
     // Validate required fields
     if (!weekNumber || !periodId) {
       return NextResponse.json(
@@ -95,11 +123,37 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if period exists and is active
+    console.log('[Weekly Report] Looking up period:', periodId);
+
     const period = await prisma.period.findUnique({
       where: { id: periodId },
     });
 
-    if (!period || period.status !== "ACTIVE") {
+    console.log('[Weekly Report] Period lookup result:', {
+      periodId,
+      found: !!period,
+      status: period?.status,
+      statusType: typeof period?.status,
+      periodData: period,
+      isStatusActive: period?.status === "ACTIVE",
+      isStatusActiveEnum: period?.status === PeriodStatus.ACTIVE
+    });
+
+    if (!period) {
+      console.error('[Weekly Report] Period not found:', periodId);
+      return NextResponse.json(
+        { error: "Invalid or inactive period" },
+        { status: 400 }
+      );
+    }
+
+    if (period.status !== "ACTIVE") {
+      console.error('[Weekly Report] Period is not ACTIVE:', {
+        periodId,
+        currentStatus: period.status,
+        statusType: typeof period.status,
+        expectedStatus: "ACTIVE"
+      });
       return NextResponse.json(
         { error: "Invalid or inactive period" },
         { status: 400 }

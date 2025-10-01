@@ -176,12 +176,33 @@ function PointsManagement() {
     (student.lastName && student.lastName.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
+  // Check if any selected student has insufficient points for decreasing
+  const hasInsufficientPoints = isDecreasing && Array.from(selectedStudentIds).some(id => {
+    const student = students.find(s => s.id === id);
+    return student && student.points < points;
+  });
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     // Validate form
     if (!selectedStudentIds.size || !points) return;
     if (!isDecreasing && !selectedReasonId) return;
+
+    // Check if decreasing points would make any student go below 0
+    if (isDecreasing) {
+      const studentsWithInsufficientPoints = Array.from(selectedStudentIds)
+        .map(id => students.find(s => s.id === id))
+        .filter(student => student && student.points < points);
+
+      if (studentsWithInsufficientPoints.length > 0) {
+        const studentNames = studentsWithInsufficientPoints
+          .map(s => s?.firstName && s?.lastName ? `${s.firstName} ${s.lastName}` : s?.username)
+          .join(', ');
+        toast.error(`Bu öğrenciler yeterli puana sahip değil: ${studentNames}`);
+        return;
+      }
+    }
 
     setIsSubmitting(true);
 
@@ -613,13 +634,23 @@ function PointsManagement() {
                   </div>
                 )}
 
+                {/* Warning message when students have insufficient points */}
+                {hasInsufficientPoints && (
+                  <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
+                    <p className="text-sm text-red-800 font-medium">
+                      ⚠️ Seçili öğrencilerden bazıları yeterli puana sahip değil
+                    </p>
+                  </div>
+                )}
+
                 <Button
                   type="submit"
                   disabled={
                     selectedStudentIds.size === 0 ||
                     isSubmitting ||
                     points <= 0 ||
-                    (!isDecreasing && !selectedReasonId)
+                    (!isDecreasing && !selectedReasonId) ||
+                    hasInsufficientPoints
                   }
                   className={`w-full py-4 text-lg font-semibold rounded-xl transition-all duration-200 transform hover:scale-[1.02] hover:shadow-lg ${
                     isDecreasing 

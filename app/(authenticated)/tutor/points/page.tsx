@@ -32,7 +32,6 @@ import {
   MinusCircle,
   PlusCircle,
 } from "lucide-react";
-import { Switch } from "@/components/ui/switch";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 
 // Types
@@ -228,7 +227,6 @@ function PointsManagement() {
   const [searchTerm, setSearchTerm] = useState<string>("");
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
-  const [isDecreasing, setIsDecreasing] = useState<boolean>(false);
   const [transactionSearchTerm, setTransactionSearchTerm] =
     useState<string>("");
   const [currentPage, setCurrentPage] = useState<number>(1);
@@ -238,25 +236,6 @@ function PointsManagement() {
   const [reasonSearchTerm, setReasonSearchTerm] = useState<string>("");
   const [reasonCurrentPage, setReasonCurrentPage] = useState<number>(1);
   const reasonsPerPage = 5;
-
-  // Add color theme based on mode
-  const getThemeColors = () => {
-    return isDecreasing
-      ? {
-          primary: "bg-red-600 hover:bg-red-700",
-          secondary: "bg-red-100 text-red-800",
-          border: "border-red-200",
-          highlight: "bg-red-50 text-red-700",
-          accent: "text-red-700",
-        }
-      : {
-          primary: "bg-emerald-600 hover:bg-emerald-700",
-          secondary: "bg-emerald-100 text-emerald-800",
-          border: "border-emerald-200",
-          highlight: "bg-emerald-50 text-emerald-700",
-          accent: "text-emerald-700",
-        };
-  };
 
   // Debug current auth state
   useEffect(() => {
@@ -405,7 +384,8 @@ function PointsManagement() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (selectedStudentIds.size === 0 || !selectedReasonId) return;
+    if (selectedStudentIds.size === 0) return;
+    if (!selectedReasonId) return;
 
     setIsSubmitting(true);
     try {
@@ -417,10 +397,9 @@ function PointsManagement() {
         const selectedStudent = students.find((s) => s.id === studentId);
         if (!selectedStudent) continue;
 
-        // Handle points modification
         const selectedReason = pointReasons.find(r => r.id === selectedReasonId);
         const finalReason = selectedReason?.name || "";
-        
+
         const response = await fetch(`/api/points`, {
           method: "POST",
           headers: {
@@ -428,7 +407,7 @@ function PointsManagement() {
           },
           body: JSON.stringify({
             studentId: studentId,
-            points: isDecreasing ? -points : points,
+            points: points,
             reason: finalReason,
             pointReasonId: selectedReasonId,
           }),
@@ -473,16 +452,13 @@ function PointsManagement() {
 
       const count = selectedStudentIds.size;
       toast.success(
-        `${isDecreasing ? "Azaltıldı" : "Eklendi"} ${count} öğrenci${
-          count > 1 ? "ye" : "ye"
-        } ${points} puan ${isDecreasing ? "dan" : ""}`
+        `${count} öğrenciye ${points} puan eklendi`
       );
 
       // Reset form
       setPoints(0);
       setSelectedReasonId("");
       setSelectedStudentIds(new Set());
-      setIsDecreasing(false);
     } catch (error) {
       console.error("Submit error:", error);
       toast.error("İşlem başarısız oldu");
@@ -553,7 +529,7 @@ function PointsManagement() {
                 Öğrenci Ara
               </CardTitle>
               <CardDescription className="text-gray-600">
-                {isDecreasing ? "Puan düşmek" : "Puan vermek"} için öğrenci seçin
+                Puan vermek için öğrenci seçin
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -629,19 +605,15 @@ function PointsManagement() {
 
         {/* Right Column - Points Management Form */}
         <div className="lg:col-span-2">
-          <Card className={`border-0 shadow-xl backdrop-blur-sm transition-all duration-300 ${
-            isDecreasing 
-              ? "bg-gradient-to-br from-red-50 to-pink-50/50" 
-              : "bg-gradient-to-br from-white to-emerald-50/30"
-          }`}>
+          <Card className="border-0 shadow-xl backdrop-blur-sm transition-all duration-300 bg-gradient-to-br from-white to-emerald-50/30">
             <CardHeader className="pb-6">
               <CardTitle className="text-2xl font-bold text-gray-800">
-                {isDecreasing ? "Puan Azaltma" : "Puan Verme"}
+                Puan Verme
               </CardTitle>
               <CardDescription className="text-gray-600 text-base">
-                {selectedStudentIds.size > 0 
-                  ? `${selectedStudentIds.size} öğrenci seçildi` 
-                  : "Öğrencilere puan ekleyin veya çıkarın"
+                {selectedStudentIds.size > 0
+                  ? `${selectedStudentIds.size} öğrenci seçildi`
+                  : "Öğrencilere puan ekleyin"
                 }
               </CardDescription>
             </CardHeader>
@@ -651,35 +623,23 @@ function PointsManagement() {
                 {/* Value Input */}
                 <div className="space-y-3">
                   <Label className="text-base font-semibold text-gray-700">Puan Miktarı</Label>
-                  <div className="flex items-center space-x-6">
-                    <div className="relative">
-                      <Input
-                        type="number"
-                        min="0"
-                        value={points}
-                        onChange={(e) => {
-                          const value = parseInt(e.target.value) || 0;
-                          setPoints(value);
-                        }}
-                        className="w-32 text-lg font-bold text-center border-2 border-gray-200 rounded-xl focus:border-emerald-400 focus:ring-4 focus:ring-emerald-100 transition-all duration-200"
-                      />
-                    </div>
-                    <div className="flex items-center space-x-3 bg-white/80 p-3 rounded-xl border border-gray-200">
-                      <Switch
-                        checked={isDecreasing}
-                        onCheckedChange={setIsDecreasing}
-                        className="data-[state=checked]:bg-red-500"
-                      />
-                      <Label className={`font-medium ${isDecreasing ? 'text-red-600' : 'text-emerald-600'}`}>
-                        {isDecreasing ? "Puan Azalt" : "Puan Ekle"}
-                      </Label>
-                    </div>
+                  <div className="relative">
+                    <Input
+                      type="number"
+                      min="0"
+                      value={points}
+                      onChange={(e) => {
+                        const value = parseInt(e.target.value) || 0;
+                        setPoints(value);
+                      }}
+                      className="w-32 text-lg font-bold text-center border-2 border-gray-200 rounded-xl focus:border-emerald-400 focus:ring-4 focus:ring-emerald-100 transition-all duration-200"
+                    />
                   </div>
                 </div>
 
                 {/* Reason Input */}
                 <div className="space-y-4">
-                  <Label className="text-base font-semibold text-gray-700">Sebep Seçin</Label>
+                    <Label className="text-base font-semibold text-gray-700">Sebep Seçin</Label>
                   <div className="relative group mb-4">
                     <Search className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-500 group-focus-within:text-emerald-500 transition-colors" />
                     <Input
@@ -771,13 +731,9 @@ function PointsManagement() {
                     isSubmitting ||
                     points <= 0 ||
                     !selectedReasonId ||
-                    !pointReasons || !Array.isArray(pointReasons) || pointReasons.length === 0
+                    (!pointReasons || !Array.isArray(pointReasons) || pointReasons.length === 0)
                   }
-                  className={`w-full py-4 text-lg font-semibold rounded-xl transition-all duration-200 transform hover:scale-[1.02] hover:shadow-lg ${
-                    isDecreasing 
-                      ? "bg-gradient-to-r from-red-500 to-pink-500 hover:from-red-600 hover:to-pink-600 shadow-red-200" 
-                      : "bg-gradient-to-r from-emerald-500 to-green-500 hover:from-emerald-600 hover:to-green-600 shadow-emerald-200"
-                  } text-white shadow-lg disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none`}
+                  className="w-full py-4 text-lg font-semibold rounded-xl transition-all duration-200 transform hover:scale-[1.02] hover:shadow-lg bg-gradient-to-r from-emerald-500 to-green-500 hover:from-emerald-600 hover:to-green-600 shadow-emerald-200 text-white shadow-lg disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
                 >
                   {isSubmitting ? (
                     <div className="flex items-center justify-center space-x-2">
@@ -785,7 +741,7 @@ function PointsManagement() {
                       <span>İşleniyor...</span>
                     </div>
                   ) : (
-                    `${selectedStudentIds.size} öğrenciye ${points} puan ${isDecreasing ? "azalt" : "ekle"}`
+                    `${selectedStudentIds.size} öğrenciye ${points} puan ekle`
                   )}
                 </Button>
               </form>

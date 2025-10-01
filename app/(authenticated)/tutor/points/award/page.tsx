@@ -29,7 +29,7 @@ type PointReason = {
   id: string;
   name: string;
   description?: string;
-  isActive: boolean;
+  createdAt?: string;
 };
 
 // Award reasons presets to help tutors
@@ -156,7 +156,7 @@ export default function AwardPointsPage() {
 
         const reasonsData = await reasonsRes.json();
         if (reasonsData.reasons && Array.isArray(reasonsData.reasons)) {
-          setPointReasons(reasonsData.reasons.filter((r: PointReason) => r.isActive));
+          setPointReasons(reasonsData.reasons);
         } else {
           // If no reasons or reasons is not an array, set empty array
           setPointReasons([]);

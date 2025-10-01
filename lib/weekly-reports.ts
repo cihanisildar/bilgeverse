@@ -61,6 +61,13 @@ export function calculateSuggestedPoints(attendanceScore: number, userRole: stri
  */
 export async function getWeeklyReportStats(periodId: string) {
   try {
+    const period = await prisma.period.findUnique({
+      where: { id: periodId },
+      select: { totalWeeks: true },
+    });
+
+    const totalWeeks = period?.totalWeeks || 8;
+
     const reports = await prisma.weeklyReport.findMany({
       where: { periodId },
       include: {
@@ -94,7 +101,7 @@ export async function getWeeklyReportStats(periodId: string) {
     };
 
     // Calculate by week
-    for (let week = 1; week <= 8; week++) {
+    for (let week = 1; week <= totalWeeks; week++) {
       stats.byWeek[week] = reports.filter(r => r.weekNumber === week).length;
     }
 
@@ -113,6 +120,13 @@ export async function getWeeklyReportStats(periodId: string) {
  */
 export async function getTutorPerformanceSummary(userId: string, periodId: string) {
   try {
+    const period = await prisma.period.findUnique({
+      where: { id: periodId },
+      select: { totalWeeks: true },
+    });
+
+    const totalWeeks = period?.totalWeeks || 8;
+
     const reports = await prisma.weeklyReport.findMany({
       where: {
         userId,
@@ -162,7 +176,7 @@ export async function getTutorPerformanceSummary(userId: string, periodId: strin
     let totalAttendanceScore = 0;
     let reportsWithAttendance = 0;
 
-    for (let week = 1; week <= 8; week++) {
+    for (let week = 1; week <= totalWeeks; week++) {
       const weekReport = reports.find(r => r.weekNumber === week);
 
       if (weekReport) {

@@ -27,6 +27,7 @@ interface FormData {
 interface CurrentPeriod {
   id: string;
   name: string;
+  totalWeeks: number;
 }
 
 interface WeeklyReportQuestion {
@@ -321,7 +322,7 @@ export default function CreateWeeklyReportPage() {
                   <SelectValue placeholder="Hafta seçiniz" />
                 </SelectTrigger>
                 <SelectContent>
-                  {Array.from({ length: 8 }, (_, i) => i + 1).map(week => (
+                  {Array.from({ length: currentPeriod?.totalWeeks || 8 }, (_, i) => i + 1).map(week => (
                     <SelectItem key={week} value={week.toString()} className="text-base py-3">
                       {week}. Hafta
                     </SelectItem>

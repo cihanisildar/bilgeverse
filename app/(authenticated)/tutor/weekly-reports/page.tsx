@@ -28,6 +28,7 @@ interface CurrentPeriod {
   name: string;
   startDate: string;
   endDate: string | null;
+  totalWeeks: number;
 }
 
 export default function WeeklyReportsPage() {
@@ -125,8 +126,9 @@ export default function WeeklyReportsPage() {
       weeklyReportsMap.set(report.weekNumber, report);
     });
 
-    // Generate 8 weeks with reports or placeholders
-    return Array.from({ length: 8 }, (_, index) => {
+    // Generate weeks with reports or placeholders based on period totalWeeks
+    const totalWeeks = currentPeriod?.totalWeeks || 8;
+    return Array.from({ length: totalWeeks }, (_, index) => {
       const weekNumber = index + 1;
       return weeklyReportsMap.get(weekNumber) || {
         weekNumber,
@@ -149,7 +151,7 @@ export default function WeeklyReportsPage() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {Array.from({ length: 8 }).map((_, index) => (
+            {Array.from({ length: currentPeriod?.totalWeeks || 8 }).map((_, index) => (
               <Card key={index} className="border-0 shadow-md">
                 <CardHeader className="pb-3">
                   <Skeleton className="h-6 w-24" />

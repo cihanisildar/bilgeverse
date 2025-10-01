@@ -71,6 +71,7 @@ model Period {
   startDate   DateTime
   endDate     DateTime?
   status      PeriodStatus @default(INACTIVE)
+  totalWeeks  Int          @default(8)
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
 

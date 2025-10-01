@@ -77,6 +77,7 @@ interface CurrentPeriod {
   name: string;
   startDate: string;
   endDate: string | null;
+  totalWeeks: number;
 }
 
 export default function AdminWeeklyReportsPage() {
@@ -102,6 +103,11 @@ export default function AdminWeeklyReportsPage() {
   const [bulkReviewStatus, setBulkReviewStatus] = useState<"APPROVED" | "REJECTED">("APPROVED");
   const [bulkReviewNotes, setBulkReviewNotes] = useState("");
   const [bulkPointsAwarded, setBulkPointsAwarded] = useState(10);
+
+  // Period settings
+  const [isPeriodDialogOpen, setIsPeriodDialogOpen] = useState(false);
+  const [periodTotalWeeks, setPeriodTotalWeeks] = useState(8);
+  const [isUpdatingPeriod, setIsUpdatingPeriod] = useState(false);
 
   const isAdmin = user?.role === "ADMIN";
 
@@ -134,6 +140,9 @@ export default function AdminWeeklyReportsPage() {
         setReports(data.reports || []);
         setStats(data.stats);
         setCurrentPeriod(data.period);
+        if (data.period) {
+          setPeriodTotalWeeks(data.period.totalWeeks || 8);
+        }
       } else {
         throw new Error("Failed to fetch reports");
       }
@@ -242,6 +251,42 @@ export default function AdminWeeklyReportsPage() {
     }
   };
 
+  const handleUpdatePeriod = async () => {
+    if (!currentPeriod) {
+      toast.error("Aktif dönem bulunamadı.");
+      return;
+    }
+
+    if (periodTotalWeeks < 1 || periodTotalWeeks > 52) {
+      toast.error("Hafta sayısı 1-52 arasında olmalıdır.");
+      return;
+    }
+
+    try {
+      setIsUpdatingPeriod(true);
+
+      const response = await fetch(`/api/admin/periods/${currentPeriod.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ totalWeeks: periodTotalWeeks }),
+      });
+
+      if (response.ok) {
+        toast.success("Dönem ayarları güncellendi.");
+        setIsPeriodDialogOpen(false);
+        fetchReports(); // Refresh data
+      } else {
+        const error = await response.json();
+        throw new Error(error.message);
+      }
+    } catch (error: any) {
+      console.error("Error updating period:", error);
+      toast.error(error.message || "Dönem güncellenirken hata oluştu.");
+    } finally {
+      setIsUpdatingPeriod(false);
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gradient-to-b from-indigo-50/50 to-white">
@@ -305,6 +350,52 @@ export default function AdminWeeklyReportsPage() {
             </p>
           </div>
           <div className="flex gap-2">
+            <Dialog open={isPeriodDialogOpen} onOpenChange={setIsPeriodDialogOpen}>
+              <DialogTrigger asChild>
+                <Button variant="outline">
+                  <Calendar className="h-4 w-4 mr-2" />
+                  Dönem Ayarları
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-md">
+                <DialogHeader>
+                  <DialogTitle>Dönem Ayarları</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-4">
+                  <div>
+                    <Label htmlFor="period-name">Dönem Adı</Label>
+                    <Input
+                      id="period-name"
+                      value={currentPeriod?.name || ""}
+                      disabled
+                      className="bg-gray-50"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="total-weeks">Toplam Hafta Sayısı</Label>
+                    <Input
+                      id="total-weeks"
+                      type="number"
+                      min="1"
+                      max="52"
+                      value={periodTotalWeeks}
+                      onChange={(e) => setPeriodTotalWeeks(Number(e.target.value))}
+                      placeholder="Hafta sayısını girin"
+                    />
+                    <p className="text-sm text-gray-500 mt-1">
+                      Rehberlerin haftalık rapor doldurabilecekleri hafta sayısını belirler.
+                    </p>
+                  </div>
+                  <Button
+                    onClick={handleUpdatePeriod}
+                    disabled={isUpdatingPeriod}
+                    className="w-full"
+                  >
+                    {isUpdatingPeriod ? "Güncelleniyor..." : "Kaydet"}
+                  </Button>
+                </div>
+              </DialogContent>
+            </Dialog>
             <Link href="/admin/weekly-reports/questions">
               <Button variant="outline">
                 <Settings className="h-4 w-4 mr-2" />
@@ -425,7 +516,7 @@ export default function AdminWeeklyReportsPage() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">Tüm haftalar</SelectItem>
-                    {Array.from({ length: 8 }, (_, i) => i + 1).map(week => (
+                    {Array.from({ length: currentPeriod?.totalWeeks || 8 }, (_, i) => i + 1).map(week => (
                       <SelectItem key={week} value={week.toString()}>
                         {week}. Hafta
                       </SelectItem>

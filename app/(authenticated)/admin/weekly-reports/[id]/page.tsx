@@ -53,6 +53,17 @@ interface WeeklyReportDetail {
   } | null;
   fixedCriteria: Record<string, string> | null;
   variableCriteria: Record<string, string> | null;
+  questionResponses?: Array<{
+    id: string;
+    response: string;
+    question: {
+      id: string;
+      text: string;
+      type: "FIXED" | "VARIABLE";
+      targetRole: string;
+      orderIndex: number;
+    };
+  }>;
   period: {
     id: string;
     name: string;
@@ -208,6 +219,16 @@ export default function AdminWeeklyReportDetailPage() {
   };
 
   const calculateAttendanceScore = () => {
+    // Use questionResponses if available (new system)
+    if (report?.questionResponses && report.questionResponses.length > 0) {
+      const totalCriteria = report.questionResponses.length;
+      const completedCriteria = report.questionResponses.filter(
+        r => r.response === "YAPILDI"
+      ).length;
+      return totalCriteria > 0 ? Math.round((completedCriteria / totalCriteria) * 100) : 0;
+    }
+
+    // Fall back to old static criteria system
     if (!report?.fixedCriteria && !report?.variableCriteria) return 0;
 
     let totalCriteria = 0;
@@ -472,71 +493,146 @@ export default function AdminWeeklyReportDetailPage() {
               </CardContent>
             </Card>
 
-            {/* Fixed Criteria */}
-            <Card className="border-0 shadow-md">
-              <CardHeader>
-                <CardTitle>Sabit Kriterler</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {fixedCriteria.map((criterion) => {
-                    const value = report.fixedCriteria?.[criterion.key];
-                    return (
-                      <div key={criterion.key} className="p-4 bg-gray-50 rounded-lg">
-                        <div className="flex items-start justify-between">
-                          <p className="text-sm font-medium text-gray-900 leading-relaxed flex-1">
-                            {criterion.label}
-                          </p>
-                          <div className="flex items-center space-x-2 ml-4">
-                            {value && getAttendanceIcon(value)}
-                            <span className={`text-sm font-medium ${
-                              value === "YAPILDI" ? "text-green-600" :
-                              value === "YAPILMADI" ? "text-red-600" :
-                              "text-gray-600"
-                            }`}>
-                              {value ? getAttendanceLabel(value) : "Cevaplanmamış"}
-                            </span>
-                          </div>
-                        </div>
+            {/* Questions - Dynamic (new system) or Static (old system) */}
+            {report.questionResponses && report.questionResponses.length > 0 ? (
+              <>
+                {/* Fixed Questions */}
+                {report.questionResponses.some(r => r.question.type === "FIXED") && (
+                  <Card className="border-0 shadow-md">
+                    <CardHeader>
+                      <CardTitle>Sabit Kriterler</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-4">
+                        {report.questionResponses
+                          .filter(r => r.question.type === "FIXED")
+                          .map((qr) => (
+                            <div key={qr.id} className="p-4 bg-gray-50 rounded-lg">
+                              <div className="flex items-start justify-between">
+                                <p className="text-sm font-medium text-gray-900 leading-relaxed flex-1">
+                                  {qr.question.text}
+                                </p>
+                                <div className="flex items-center space-x-2 ml-4">
+                                  {getAttendanceIcon(qr.response)}
+                                  <span className={`text-sm font-medium ${
+                                    qr.response === "YAPILDI" ? "text-green-600" :
+                                    qr.response === "YAPILMADI" ? "text-red-600" :
+                                    "text-gray-600"
+                                  }`}>
+                                    {getAttendanceLabel(qr.response)}
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
                       </div>
-                    );
-                  })}
-                </div>
-              </CardContent>
-            </Card>
+                    </CardContent>
+                  </Card>
+                )}
 
-            {/* Variable Criteria */}
-            <Card className="border-0 shadow-md">
-              <CardHeader>
-                <CardTitle>Değişken Kriterler</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {filteredVariableCriteria.map((criterion) => {
-                    const value = report.variableCriteria?.[criterion.key];
-                    return (
-                      <div key={criterion.key} className="p-4 bg-gray-50 rounded-lg">
-                        <div className="flex items-start justify-between">
-                          <p className="text-sm font-medium text-gray-900 leading-relaxed flex-1">
-                            {criterion.label}
-                          </p>
-                          <div className="flex items-center space-x-2 ml-4">
-                            {value && getAttendanceIcon(value)}
-                            <span className={`text-sm font-medium ${
-                              value === "YAPILDI" ? "text-green-600" :
-                              value === "YAPILMADI" ? "text-red-600" :
-                              "text-gray-600"
-                            }`}>
-                              {value ? getAttendanceLabel(value) : "Cevaplanmamış"}
-                            </span>
-                          </div>
-                        </div>
+                {/* Variable Questions */}
+                {report.questionResponses.some(r => r.question.type === "VARIABLE") && (
+                  <Card className="border-0 shadow-md">
+                    <CardHeader>
+                      <CardTitle>Değişken Kriterler</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-4">
+                        {report.questionResponses
+                          .filter(r => r.question.type === "VARIABLE")
+                          .map((qr) => (
+                            <div key={qr.id} className="p-4 bg-gray-50 rounded-lg">
+                              <div className="flex items-start justify-between">
+                                <p className="text-sm font-medium text-gray-900 leading-relaxed flex-1">
+                                  {qr.question.text}
+                                </p>
+                                <div className="flex items-center space-x-2 ml-4">
+                                  {getAttendanceIcon(qr.response)}
+                                  <span className={`text-sm font-medium ${
+                                    qr.response === "YAPILDI" ? "text-green-600" :
+                                    qr.response === "YAPILMADI" ? "text-red-600" :
+                                    "text-gray-600"
+                                  }`}>
+                                    {getAttendanceLabel(qr.response)}
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
                       </div>
-                    );
-                  })}
-                </div>
-              </CardContent>
-            </Card>
+                    </CardContent>
+                  </Card>
+                )}
+              </>
+            ) : (
+              <>
+                {/* Fixed Criteria (old static system) */}
+                <Card className="border-0 shadow-md">
+                  <CardHeader>
+                    <CardTitle>Sabit Kriterler</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-4">
+                      {fixedCriteria.map((criterion) => {
+                        const value = report.fixedCriteria?.[criterion.key];
+                        return (
+                          <div key={criterion.key} className="p-4 bg-gray-50 rounded-lg">
+                            <div className="flex items-start justify-between">
+                              <p className="text-sm font-medium text-gray-900 leading-relaxed flex-1">
+                                {criterion.label}
+                              </p>
+                              <div className="flex items-center space-x-2 ml-4">
+                                {value && getAttendanceIcon(value)}
+                                <span className={`text-sm font-medium ${
+                                  value === "YAPILDI" ? "text-green-600" :
+                                  value === "YAPILMADI" ? "text-red-600" :
+                                  "text-gray-600"
+                                }`}>
+                                  {value ? getAttendanceLabel(value) : "Cevaplanmamış"}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Variable Criteria (old static system) */}
+                <Card className="border-0 shadow-md">
+                  <CardHeader>
+                    <CardTitle>Değişken Kriterler</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-4">
+                      {filteredVariableCriteria.map((criterion) => {
+                        const value = report.variableCriteria?.[criterion.key];
+                        return (
+                          <div key={criterion.key} className="p-4 bg-gray-50 rounded-lg">
+                            <div className="flex items-start justify-between">
+                              <p className="text-sm font-medium text-gray-900 leading-relaxed flex-1">
+                                {criterion.label}
+                              </p>
+                              <div className="flex items-center space-x-2 ml-4">
+                                {value && getAttendanceIcon(value)}
+                                <span className={`text-sm font-medium ${
+                                  value === "YAPILDI" ? "text-green-600" :
+                                  value === "YAPILMADI" ? "text-red-600" :
+                                  "text-gray-600"
+                                }`}>
+                                  {value ? getAttendanceLabel(value) : "Cevaplanmamış"}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </CardContent>
+                </Card>
+              </>
+            )}
 
             {/* Comments */}
             {report.comments && (

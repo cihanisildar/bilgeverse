@@ -44,6 +44,23 @@ export async function GET(
         },
         fixedCriteria: true,
         variableCriteria: true,
+        questionResponses: {
+          include: {
+            question: {
+              select: {
+                id: true,
+                text: true,
+                type: true,
+                targetRole: true,
+                orderIndex: true,
+              },
+            },
+          },
+          orderBy: [
+            { question: { type: 'asc' } },
+            { question: { orderIndex: 'asc' } }
+          ]
+        },
       },
     });
 
@@ -51,7 +68,28 @@ export async function GET(
       return NextResponse.json({ error: "Report not found" }, { status: 404 });
     }
 
-    return NextResponse.json(report);
+    // Transform fixedCriteria and variableCriteria to plain objects
+    const transformedReport = {
+      ...report,
+      fixedCriteria: report.fixedCriteria ? {
+        // Remove id and reportId fields, keep only the criteria fields
+        ...Object.fromEntries(
+          Object.entries(report.fixedCriteria).filter(
+            ([key]) => key !== 'id' && key !== 'reportId'
+          )
+        )
+      } : null,
+      variableCriteria: report.variableCriteria ? {
+        // Remove id and reportId fields, keep only the criteria fields
+        ...Object.fromEntries(
+          Object.entries(report.variableCriteria).filter(
+            ([key]) => key !== 'id' && key !== 'reportId'
+          )
+        )
+      } : null,
+    };
+
+    return NextResponse.json(transformedReport);
   } catch (error: any) {
     console.error("Error fetching weekly report for admin:", error);
     return NextResponse.json(
@@ -128,12 +166,48 @@ export async function PUT(
         },
         fixedCriteria: true,
         variableCriteria: true,
+        questionResponses: {
+          include: {
+            question: {
+              select: {
+                id: true,
+                text: true,
+                type: true,
+                targetRole: true,
+                orderIndex: true,
+              },
+            },
+          },
+          orderBy: [
+            { question: { type: 'asc' } },
+            { question: { orderIndex: 'asc' } }
+          ]
+        },
       },
     });
 
+    // Transform fixedCriteria and variableCriteria to plain objects
+    const transformedReport = {
+      ...updatedReport,
+      fixedCriteria: updatedReport.fixedCriteria ? {
+        ...Object.fromEntries(
+          Object.entries(updatedReport.fixedCriteria).filter(
+            ([key]) => key !== 'id' && key !== 'reportId'
+          )
+        )
+      } : null,
+      variableCriteria: updatedReport.variableCriteria ? {
+        ...Object.fromEntries(
+          Object.entries(updatedReport.variableCriteria).filter(
+            ([key]) => key !== 'id' && key !== 'reportId'
+          )
+        )
+      } : null,
+    };
+
     return NextResponse.json({
       message: "Report updated successfully",
-      report: updatedReport,
+      report: transformedReport,
     });
   } catch (error: any) {
     console.error("Error updating weekly report:", error);

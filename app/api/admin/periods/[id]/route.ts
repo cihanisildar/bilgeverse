@@ -72,7 +72,7 @@ export async function PUT(
     }
 
     const body = await request.json();
-    const { name, description, startDate, endDate, status } = body;
+    const { name, description, startDate, endDate, status, totalWeeks } = body;
 
     // Check if period exists
     const existingPeriod = await prisma.period.findUnique({
@@ -117,6 +117,7 @@ export async function PUT(
     if (startDate) updateData.startDate = start;
     if (endDate !== undefined) updateData.endDate = end;
     if (status) updateData.status = status;
+    if (totalWeeks !== undefined) updateData.totalWeeks = totalWeeks;
 
     const period = await prisma.period.update({
       where: { id: params.id },
