@@ -4,6 +4,7 @@ import { RequestStatus, TransactionType, UserRole } from '@prisma/client';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '../../auth/[...nextauth]/auth.config';
 import { requireActivePeriod } from '@/lib/periods';
+import { calculateUserPoints } from '@/lib/points';
 
 // Get a specific request by ID
 export async function GET(
@@ -114,45 +115,70 @@ export async function PUT(
     // Get active period before starting transaction
     const activePeriod = await requireActivePeriod();
 
+    // Get the request first to validate and calculate points BEFORE starting transaction
+    const itemRequest = await prisma.itemRequest.findUnique({
+      where: { id: requestId },
+      include: {
+        student: true,
+        item: true
+      }
+    });
+
+    if (!itemRequest) {
+      return NextResponse.json(
+        { error: 'Request not found' },
+        { status: 404 }
+      );
+    }
+
+    // Validate all required relationships exist
+    if (!itemRequest.student || !itemRequest.item) {
+      return NextResponse.json(
+        { error: 'Invalid request: missing required relationships' },
+        { status: 400 }
+      );
+    }
+
+    if (!itemRequest.tutorId) {
+      return NextResponse.json(
+        { error: 'Invalid request: missing tutor assignment' },
+        { status: 400 }
+      );
+    }
+
+    // Check if request is already processed
+    if (itemRequest.status !== RequestStatus.PENDING) {
+      return NextResponse.json(
+        { error: 'Request has already been processed' },
+        { status: 400 }
+      );
+    }
+
+    // Tutor can only process their own students' requests
+    if (session.user.role === UserRole.TUTOR && itemRequest.tutorId !== session.user.id) {
+      return NextResponse.json(
+        { error: 'Unauthorized: This request belongs to another tutor' },
+        { status: 403 }
+      );
+    }
+
+    // Calculate student's current points BEFORE starting transaction
+    let currentPoints = 0;
+    if (status === RequestStatus.APPROVED) {
+      currentPoints = await calculateUserPoints(itemRequest.studentId, activePeriod.id);
+
+      // Check if student still has enough points
+      if (currentPoints < itemRequest.pointsSpent) {
+        return NextResponse.json(
+          { error: 'Student no longer has enough points' },
+          { status: 400 }
+        );
+      }
+    }
+
     // Use transaction to ensure data consistency
     const result = await prisma.$transaction(async (tx) => {
-      // Get the request with its related data
-      const itemRequest = await tx.itemRequest.findUnique({
-        where: { id: requestId },
-        include: {
-          student: true,
-          item: true
-        }
-      });
-
-      if (!itemRequest) {
-        throw new Error('Request not found');
-      }
-
-      // Validate all required relationships exist
-      if (!itemRequest.student || !itemRequest.item) {
-        throw new Error('Invalid request: missing required relationships');
-      }
-
-      if (!itemRequest.tutorId) {
-        throw new Error('Invalid request: missing tutor assignment');
-      }
-
-      // Check if request is already processed
-      if (itemRequest.status !== RequestStatus.PENDING) {
-        throw new Error('Request has already been processed');
-      }
-
-      // Tutor can only process their own students' requests
-      if (session.user.role === UserRole.TUTOR && itemRequest.tutorId !== session.user.id) {
-        throw new Error('Unauthorized: This request belongs to another tutor');
-      }
-
       if (status === RequestStatus.APPROVED) {
-        // Check if student still has enough points
-        if (itemRequest.student.points < itemRequest.pointsSpent) {
-          throw new Error('Student no longer has enough points');
-        }
 
         // Create points transaction
         await tx.pointsTransaction.create({
@@ -218,51 +244,7 @@ export async function PUT(
     );
   } catch (error: any) {
     console.error('Update request error:', error);
-    
-    if (error.message === 'Request not found') {
-      return NextResponse.json(
-        { error: 'Request not found' },
-        { status: 404 }
-      );
-    }
-    
-    if (error.message === 'Invalid request: missing required relationships') {
-      return NextResponse.json(
-        { error: error.message },
-        { status: 400 }
-      );
-    }
-    
-    if (error.message === 'Invalid request: missing tutor assignment') {
-      return NextResponse.json(
-        { error: error.message },
-        { status: 400 }
-      );
-    }
-    
-    if (error.message === 'Request has already been processed') {
-      return NextResponse.json(
-        { error: error.message },
-        { status: 400 }
-      );
-    }
-    
-    if (error.message === 'Unauthorized: This request belongs to another tutor') {
-      return NextResponse.json(
-        { error: error.message },
-        { status: 403 }
-      );
-    }
-    
 
-    
-    if (error.message === 'Student no longer has enough points') {
-      return NextResponse.json(
-        { error: error.message },
-        { status: 400 }
-      );
-    }
-    
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

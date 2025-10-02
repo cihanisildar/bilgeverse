@@ -50,13 +50,18 @@ type Event = {
   startDate: string;
   endDate: string;
   location: string;
-  type: "cevrimici" | "yuz_yuze" | "karma";
-  status: "yakinda" | "devam_ediyor" | "tamamlandi" | "iptal_edildi";
+  status: "YAKINDA" | "DEVAM_EDIYOR" | "TAMAMLANDI" | "IPTAL_EDILDI";
   capacity: number;
   enrolledStudents: number;
   points: number;
   experience: number;
   tags: string[];
+  eventScope?: string;
+  eventType?: {
+    id: string;
+    name: string;
+    description: string | null;
+  };
   createdBy: {
     id: string;
     name: string;
@@ -113,16 +118,17 @@ export default function EventDetails() {
           startDate: eventData.startDateTime || eventData.startDate,
           endDate: eventData.endDateTime || eventData.endDate,
           location: eventData.location,
-          type: eventData.type.toLowerCase(),
-          status: eventData.status.toLowerCase(),
+          status: eventData.status,
           capacity: eventData.capacity,
           enrolledStudents: eventData.enrolledStudents || 0,
           points: eventData.points,
           experience: eventData.experience || 0,
           tags: eventData.tags || [],
+          eventScope: eventData.eventScope,
+          eventType: eventData.eventType,
           createdBy: {
-            id: eventData.createdBy._id || eventData.createdBy.id,
-            name: eventData.createdBy.username || "Unknown",
+            id: eventData.createdBy?._id || eventData.createdBy?.id || eventData.createdById,
+            name: eventData.createdBy?.username || "Unknown",
           },
         };
 
@@ -153,13 +159,13 @@ export default function EventDetails() {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case "yakinda":
+      case "YAKINDA":
         return "bg-blue-100 text-blue-800";
-      case "devam_ediyor":
+      case "DEVAM_EDIYOR":
         return "bg-green-100 text-green-800";
-      case "tamamlandi":
+      case "TAMAMLANDI":
         return "bg-gray-100 text-gray-800";
-      case "iptal_edildi":
+      case "IPTAL_EDILDI":
         return "bg-red-100 text-red-800";
       default:
         return "bg-gray-100 text-gray-800";
@@ -168,42 +174,16 @@ export default function EventDetails() {
 
   const getStatusText = (status: string) => {
     switch (status) {
-      case "yakinda":
+      case "YAKINDA":
         return "Yakında";
-      case "devam_ediyor":
+      case "DEVAM_EDIYOR":
         return "Devam Ediyor";
-      case "tamamlandi":
+      case "TAMAMLANDI":
         return "Tamamlandı";
-      case "iptal_edildi":
+      case "IPTAL_EDILDI":
         return "İptal Edildi";
       default:
         return status;
-    }
-  };
-
-  const getTypeIcon = (type: string) => {
-    switch (type) {
-      case "cevrimici":
-        return <Video className="h-4 w-4 text-blue-600" />;
-      case "yuz_yuze":
-        return <User className="h-4 w-4 text-green-600" />;
-      case "karma":
-        return <Globe className="h-4 w-4 text-purple-600" />;
-      default:
-        return <Calendar className="h-4 w-4 text-gray-600" />;
-    }
-  };
-
-  const getTypeText = (type: string) => {
-    switch (type) {
-      case "cevrimici":
-        return "Çevrimiçi";
-      case "yuz_yuze":
-        return "Yüz Yüze";
-      case "karma":
-        return "Karma";
-      default:
-        return type;
     }
   };
 
@@ -293,7 +273,6 @@ export default function EventDetails() {
           description: event?.description,
           startDateTime: event?.startDate,
           location: event?.location,
-          type: event?.type.toUpperCase(),
           capacity: event?.capacity,
           points: event?.points,
           tags: event?.tags,
@@ -307,7 +286,7 @@ export default function EventDetails() {
       }
 
       // Update local event state
-      setEvent(prev => prev ? { ...prev, status: newStatus.toLowerCase() as "yakinda" | "devam_ediyor" | "tamamlandi" | "iptal_edildi" } : null);
+      setEvent(prev => prev ? { ...prev, status: newStatus as "YAKINDA" | "DEVAM_EDIYOR" | "TAMAMLANDI" | "IPTAL_EDILDI" } : null);
       
       // Show success toast
       toast({
@@ -360,9 +339,9 @@ export default function EventDetails() {
     }
 
     const buttons = [];
-    
+
     // Start Event button (only for upcoming events)
-    if (event.status === 'yakinda') {
+    if (event.status === 'YAKINDA') {
       buttons.push(
         <Button
           key="start"
@@ -374,9 +353,9 @@ export default function EventDetails() {
         </Button>
       );
     }
-    
+
     // Complete Event button (only for ongoing events)
-    if (event.status === 'devam_ediyor') {
+    if (event.status === 'DEVAM_EDIYOR') {
       buttons.push(
         <Button
           key="complete"
@@ -388,9 +367,9 @@ export default function EventDetails() {
         </Button>
       );
     }
-    
+
     // Cancel Event button (for upcoming and ongoing events)
-    if (event.status === 'yakinda' || event.status === 'devam_ediyor') {
+    if (event.status === 'YAKINDA' || event.status === 'DEVAM_EDIYOR') {
       buttons.push(
         <Button
           key="cancel"
@@ -469,20 +448,20 @@ export default function EventDetails() {
           {/* Status indicator dot */}
           <div className="flex items-center mb-6">
             <div className={`w-4 h-4 rounded-full mr-3 shadow-lg ${
-              event.status === 'yakinda' ? 'bg-blue-400 shadow-blue-400/50 animate-pulse' :
-              event.status === 'devam_ediyor' ? 'bg-green-400 shadow-green-400/50 animate-pulse' :
-              event.status === 'tamamlandi' ? 'bg-purple-400 shadow-purple-400/50' :
+              event.status === 'YAKINDA' ? 'bg-blue-400 shadow-blue-400/50 animate-pulse' :
+              event.status === 'DEVAM_EDIYOR' ? 'bg-green-400 shadow-green-400/50 animate-pulse' :
+              event.status === 'TAMAMLANDI' ? 'bg-purple-400 shadow-purple-400/50' :
               'bg-gray-400 shadow-gray-400/50'
             }`}></div>
             <Badge
               className={`font-semibold px-4 py-2 rounded-full text-sm border-0 ${
-                event.status === 'yakinda' ? 'bg-blue-500/90 text-white' :
-                event.status === 'devam_ediyor' ? 'bg-green-500/90 text-white' :
-                event.status === 'tamamlandi' ? 'bg-purple-500/90 text-white' :
+                event.status === 'YAKINDA' ? 'bg-blue-500/90 text-white' :
+                event.status === 'DEVAM_EDIYOR' ? 'bg-green-500/90 text-white' :
+                event.status === 'TAMAMLANDI' ? 'bg-purple-500/90 text-white' :
                 'bg-gray-500/90 text-white'
               }`}
             >
-              {getStatusText(event.status.toLowerCase())}
+              {getStatusText(event.status)}
             </Badge>
           </div>
 
@@ -494,13 +473,15 @@ export default function EventDetails() {
               
               {/* Enhanced badges section */}
               <div className="flex flex-wrap gap-3 items-center mb-6">
-                <div className="flex items-center gap-2 bg-white/10 backdrop-blur-sm rounded-full px-4 py-2 border border-white/20">
-                  {getTypeIcon(event.type)}
-                  <span className="text-white font-medium">
-                    {getTypeText(event.type.toLowerCase())}
-                  </span>
-                </div>
-                
+                {event.eventType && (
+                  <div className="flex items-center gap-2 bg-white/10 backdrop-blur-sm rounded-full px-4 py-2 border border-white/20">
+                    <Calendar className="h-4 w-4 text-white" />
+                    <span className="text-white font-medium">
+                      {event.eventType.name}
+                    </span>
+                  </div>
+                )}
+
                 {event.tags.map((tag) => (
                   <Badge
                     key={tag}
@@ -756,19 +737,21 @@ export default function EventDetails() {
               </CardHeader>
               <CardContent className="space-y-4 pt-6">
                 {/* Event Type */}
-                <div className="group">
-                  <h3 className="text-sm font-semibold text-gray-600 mb-3 uppercase tracking-wide">
-                    Etkinlik Türü
-                  </h3>
-                  <div className="flex items-center p-4 bg-gradient-to-r from-gray-50 to-white rounded-xl border border-gray-100 hover:border-gray-200 transition-colors group-hover:shadow-md">
-                    <div className="p-2 bg-gradient-to-br from-gray-100 to-gray-200 rounded-lg mr-3">
-                      {getTypeIcon(event.type)}
+                {event.eventType && (
+                  <div className="group">
+                    <h3 className="text-sm font-semibold text-gray-600 mb-3 uppercase tracking-wide">
+                      Etkinlik Türü
+                    </h3>
+                    <div className="flex items-center p-4 bg-gradient-to-r from-gray-50 to-white rounded-xl border border-gray-100 hover:border-gray-200 transition-colors group-hover:shadow-md">
+                      <div className="p-2 bg-gradient-to-br from-gray-100 to-gray-200 rounded-lg mr-3">
+                        <Calendar className="h-4 w-4 text-gray-600" />
+                      </div>
+                      <span className="text-gray-900 font-semibold">
+                        {event.eventType.name}
+                      </span>
                     </div>
-                    <span className="text-gray-900 font-semibold">
-                      {getTypeText(event.type.toLowerCase())}
-                    </span>
                   </div>
-                </div>
+                )}
 
                 {/* Start Time */}
                 <div className="group">
@@ -781,36 +764,6 @@ export default function EventDetails() {
                     </div>
                     <span className="text-gray-900 font-semibold">
                       {formatDate(event.startDate)}
-                    </span>
-                  </div>
-                </div>
-
-                {/* End Time */}
-                <div className="group">
-                  <h3 className="text-sm font-semibold text-gray-600 mb-3 uppercase tracking-wide">
-                    Bitiş
-                  </h3>
-                  <div className="flex items-center p-4 bg-gradient-to-r from-red-50 to-pink-50 rounded-xl border border-red-100 hover:border-red-200 transition-colors group-hover:shadow-md">
-                    <div className="p-2 bg-gradient-to-br from-red-500 to-pink-600 rounded-lg mr-3">
-                      <Clock className="text-white h-4 w-4" />
-                    </div>
-                    <span className="text-gray-900 font-semibold">
-                      {formatDate(event.endDate)}
-                    </span>
-                  </div>
-                </div>
-
-                {/* Duration */}
-                <div className="group">
-                  <h3 className="text-sm font-semibold text-gray-600 mb-3 uppercase tracking-wide">
-                    Süre
-                  </h3>
-                  <div className="flex items-center p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl border border-blue-100 hover:border-blue-200 transition-colors group-hover:shadow-md">
-                    <div className="p-2 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-lg mr-3">
-                      <Calendar className="text-white h-4 w-4" />
-                    </div>
-                    <span className="text-gray-900 font-semibold">
-                      {getDurationText(event.startDate, event.endDate)}
                     </span>
                   </div>
                 </div>

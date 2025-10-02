@@ -12,9 +12,10 @@ export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
 
-    if (!session?.user || session.user.role !== UserRole.ADMIN) {
+    // Allow ADMIN, TUTOR, and ASISTAN to read periods (needed for event creation)
+    if (!session?.user || (session.user.role !== UserRole.ADMIN && session.user.role !== UserRole.TUTOR && session.user.role !== UserRole.ASISTAN)) {
       return NextResponse.json(
-        { error: 'Unauthorized: Only admins can access periods' },
+        { error: 'Unauthorized: Authentication required' },
         { status: 403 }
       );
     }

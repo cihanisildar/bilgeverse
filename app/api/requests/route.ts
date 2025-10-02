@@ -4,6 +4,7 @@ import { RequestStatus, UserRole } from '@prisma/client';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '../auth/[...nextauth]/auth.config';
 import { requireActivePeriod } from '@/lib/periods';
+import { calculateUserPoints } from '@/lib/points';
 
 export const dynamic = 'force-dynamic';
 
@@ -101,6 +102,9 @@ export async function POST(request: NextRequest) {
     // Get active period before starting transaction
     const activePeriod = await requireActivePeriod();
 
+    // Calculate student's current points from transactions
+    const currentPoints = await calculateUserPoints(session.user.id, activePeriod.id);
+
     // Use Prisma transaction
     const result = await prisma.$transaction(async (tx) => {
       // Get the student with their tutor information
@@ -128,12 +132,12 @@ export async function POST(request: NextRequest) {
       // Since availableQuantity field was removed, we'll skip stock checking
       // Store items are now considered always available
 
-      // Check if student has enough points
-      if (student.points < item.pointsRequired) {
+      // Check if student has enough points (using calculated points from transactions)
+      if (currentPoints < item.pointsRequired) {
         throw new Error('Not enough points to request this item');
       }
 
-      // Create the request
+      // Create the request (points will be deducted when tutor approves)
       const newRequest = await tx.itemRequest.create({
         data: {
           studentId: student.id,
@@ -162,18 +166,6 @@ export async function POST(request: NextRequest) {
             }
           },
           item: true
-        }
-      });
-
-      // Store item quantity tracking was removed, so no need to update quantity
-
-      // Deduct points from student
-      await tx.user.update({
-        where: { id: student.id },
-        data: {
-          points: {
-            decrement: item.pointsRequired
-          }
         }
       });
 

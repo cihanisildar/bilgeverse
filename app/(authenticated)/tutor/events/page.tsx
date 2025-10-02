@@ -42,14 +42,18 @@ type Event = {
   startDate: string;  // This will be populated from startDateTime
   endDate: string;    // This will be populated from endDateTime
   location: string;
-  type: 'CEVRIMICI' | 'YUZ_YUZE' | 'KARMA';
   status: 'YAKINDA' | 'DEVAM_EDIYOR' | 'TAMAMLANDI' | 'IPTAL_EDILDI';
   capacity: number;
   enrolledStudents: number;
   points: number;
   experience: number;
   tags: string[];
-  eventScope: 'global' | 'group';
+  eventScope: 'GLOBAL' | 'GROUP';
+  eventType?: {
+    id: string;
+    name: string;
+    description: string | null;
+  };
   createdBy: {
     id: string;
     name: string;
@@ -261,13 +265,14 @@ function EventsList() {
         startDate: event.startDateTime,
         endDate: event.endDateTime || event.startDateTime,
         location: event.location,
-        type: event.type.toLowerCase(),
-        status: event.status.toLowerCase(),
+        status: event.status,
         capacity: event.capacity,
         enrolledStudents: event.enrolledStudents || 0,
         points: event.points,
+        experience: event.experience || 0,
         tags: event.tags,
-        eventScope: event.eventScope.toLowerCase(),
+        eventScope: event.eventScope,
+        eventType: event.eventType,
         createdBy: {
           id: event.createdById,
           name: 'You' // Since these are the tutor's own events
@@ -304,14 +309,14 @@ function EventsList() {
       );
     }
     
-    // Apply status filter - Convert both sides to uppercase for comparison
+    // Apply status filter
     if (activeFilter !== 'all') {
-      filtered = filtered.filter(event => event.status === activeFilter.toUpperCase());
+      filtered = filtered.filter(event => event.status === activeFilter);
     }
 
     // Apply scope filter
     if (scopeFilter !== 'all') {
-      filtered = filtered.filter(event => event.eventScope.toUpperCase() === scopeFilter);
+      filtered = filtered.filter(event => event.eventScope === scopeFilter);
     }
     
     setFilteredEvents(filtered);
@@ -446,15 +451,15 @@ function EventsList() {
                   >
                     {getStatusText(event.status)}
                   </Badge>
-                  <Badge 
-                    variant={event.eventScope === 'global' ? 'default' : 'secondary'}
+                  <Badge
+                    variant={event.eventScope === 'GLOBAL' ? 'default' : 'secondary'}
                     className={`font-medium ${
-                      event.eventScope === 'global' 
-                        ? 'bg-indigo-100 text-indigo-700 hover:bg-indigo-200' 
+                      event.eventScope === 'GLOBAL'
+                        ? 'bg-indigo-100 text-indigo-700 hover:bg-indigo-200'
                         : 'bg-amber-100 text-amber-700 hover:bg-amber-200'
                     }`}
                   >
-                    {event.eventScope === 'global' ? 'Genel Etkinlik' : 'Grup Etkinliği'}
+                    {event.eventScope === 'GLOBAL' ? 'Genel Etkinlik' : 'Grup Etkinliği'}
                   </Badge>
                 </div>
                 <h3 className="text-xl font-semibold mt-2 mb-1 text-gray-900 hover:text-blue-600 transition-colors">
@@ -573,14 +578,14 @@ export default function TutorEventsPage() {
         startDate: event.startDateTime,
         endDate: event.endDateTime || event.startDateTime,
         location: event.location,
-        type: event.type.toLowerCase(),
-        status: event.status.toLowerCase(),
+        status: event.status,
         capacity: event.capacity,
         enrolledStudents: event.enrolledStudents || 0,
         points: event.points,
         experience: event.experience || 0,
         tags: event.tags,
-        eventScope: event.eventScope.toLowerCase(),
+        eventScope: event.eventScope,
+        eventType: event.eventType,
         createdBy: {
           id: event.createdById,
           name: 'You' // Since these are the tutor's own events
@@ -617,14 +622,14 @@ export default function TutorEventsPage() {
       );
     }
     
-    // Apply status filter - Convert both sides to uppercase for comparison
+    // Apply status filter
     if (activeFilter !== 'all') {
-      filtered = filtered.filter(event => event.status === activeFilter.toUpperCase());
+      filtered = filtered.filter(event => event.status === activeFilter);
     }
 
     // Apply scope filter
     if (scopeFilter !== 'all') {
-      filtered = filtered.filter(event => event.eventScope.toUpperCase() === scopeFilter);
+      filtered = filtered.filter(event => event.eventScope === scopeFilter);
     }
     
     setFilteredEvents(filtered);
@@ -690,11 +695,11 @@ export default function TutorEventsPage() {
   // Calculate stats
   const eventStats = {
     total: events.length,
-    upcoming: events.filter(e => e.status.toUpperCase() === 'YAKINDA').length,
-    ongoing: events.filter(e => e.status.toUpperCase() === 'DEVAM_EDIYOR').length,
-    completed: events.filter(e => e.status.toUpperCase() === 'TAMAMLANDI').length,
+    upcoming: events.filter(e => e.status === 'YAKINDA').length,
+    ongoing: events.filter(e => e.status === 'DEVAM_EDIYOR').length,
+    completed: events.filter(e => e.status === 'TAMAMLANDI').length,
     myEvents: events.filter(e => e.createdBy.name === 'You').length,
-    globalEvents: events.filter(e => e.eventScope === 'global').length
+    globalEvents: events.filter(e => e.eventScope === 'GLOBAL').length
   };
 
   return (
@@ -903,21 +908,21 @@ export default function TutorEventsPage() {
                           >
                             {getStatusText(event.status)}
                           </Badge>
-                          {event.eventScope === 'global' && (
+                          {event.eventScope === 'GLOBAL' && (
                             <Badge className="bg-gradient-to-r from-rose-500 to-pink-500 text-white border-0 text-xs px-2 py-1 rounded-full font-medium shadow-sm">
                               ⭐ Admin
                             </Badge>
                           )}
                         </div>
-                        <Badge 
+                        <Badge
                           variant="outline"
                           className={`font-medium text-xs px-3 py-1 rounded-full w-fit ${
-                            event.eventScope === 'global' 
-                              ? 'bg-indigo-50 text-indigo-700 border-indigo-200' 
+                            event.eventScope === 'GLOBAL'
+                              ? 'bg-indigo-50 text-indigo-700 border-indigo-200'
                               : 'bg-amber-50 text-amber-700 border-amber-200'
                           }`}
                         >
-                          {event.eventScope === 'global' ? '🌍 Genel Etkinlik' : '👥 Grup Etkinliği'}
+                          {event.eventScope === 'GLOBAL' ? '🌍 Genel Etkinlik' : '👥 Grup Etkinliği'}
                         </Badge>
                       </div>
                       <DropdownMenu>
@@ -933,7 +938,7 @@ export default function TutorEventsPage() {
                               Görüntüle
                             </Link>
                           </DropdownMenuItem>
-                          {event.eventScope !== 'global' && (
+                          {event.eventScope !== 'GLOBAL' && (
                             <>
                               <DropdownMenuItem asChild>
                                 <Link href={`/tutor/events/${event.id}/edit`} className="flex items-center">

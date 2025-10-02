@@ -90,6 +90,7 @@ export default function CreateEventPage() {
 
   const fetchPeriods = async () => {
     try {
+      console.log('Fetching periods...');
       const response = await fetch('/api/admin/periods', {
         method: 'GET',
         credentials: 'include',
@@ -99,28 +100,36 @@ export default function CreateEventPage() {
         }
       });
 
+      console.log('Periods response status:', response.status);
+
       if (!response.ok) {
-        throw new Error('Failed to fetch periods');
+        const errorText = await response.text();
+        console.error('Periods fetch failed:', errorText);
+        throw new Error(`Failed to fetch periods: ${response.status}`);
       }
 
       const data = await response.json();
+      console.log('Periods data received:', data);
 
       if (!data.periods || !Array.isArray(data.periods)) {
+        console.error('Invalid period data structure:', data);
         throw new Error('Invalid period data received');
       }
 
+      console.log(`Found ${data.periods.length} periods`);
       setPeriods(data.periods);
 
       // Set default period to active period if available
       const activePeriod = data.periods.find((p: Period) => p.status === 'ACTIVE');
       if (activePeriod) {
+        console.log('Setting active period as default:', activePeriod.name);
         setFormData(prev => ({ ...prev, periodId: activePeriod.id }));
       }
     } catch (err: any) {
       console.error('Error fetching periods:', err);
       toast({
         title: "Hata",
-        description: "Dönemler yüklenirken bir hata oluştu. Lütfen sayfayı yenileyin.",
+        description: "Dönemler yüklenirken bir hata oluştu: " + err.message,
         variant: "destructive",
       });
     } finally {

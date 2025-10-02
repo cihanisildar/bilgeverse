@@ -72,7 +72,15 @@ export async function middleware(request: NextRequest) {
 
     // Check route permissions
     if (pathname.startsWith('/admin') || pathname.startsWith('/api/admin')) {
-      if (token.role !== UserRole.ADMIN) {
+      // Allow tutors and asistans to GET periods (needed for event creation)
+      if (pathname === '/api/admin/periods' && request.method === 'GET') {
+        if (token.role !== UserRole.ADMIN && token.role !== UserRole.TUTOR && token.role !== UserRole.ASISTAN) {
+          console.log('Unauthorized user attempting to access periods');
+          return isApiRoute
+            ? NextResponse.json({ error: 'Forbidden: Admin, Tutor, or Asistan access required' }, { status: 403 })
+            : NextResponse.redirect(new URL('/', request.url));
+        }
+      } else if (token.role !== UserRole.ADMIN) {
         console.log('Non-admin user attempting to access admin route');
         return isApiRoute
           ? NextResponse.json({ error: 'Forbidden: Admin access required' }, { status: 403 })

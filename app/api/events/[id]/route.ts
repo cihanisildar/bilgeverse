@@ -39,6 +39,13 @@ export async function GET(
             lastName: true
           }
         },
+        eventType: {
+          select: {
+            id: true,
+            name: true,
+            description: true
+          }
+        },
         participants: {
           where: {
             status: 'REGISTERED'
