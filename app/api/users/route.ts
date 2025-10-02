@@ -3,6 +3,8 @@ import prisma from '@/lib/prisma';
 import { UserRole, User } from '@prisma/client';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '../auth/[...nextauth]/auth.config';
+import { calculateMultipleUserPoints } from '@/lib/points';
+import { requireActivePeriod } from '@/lib/periods';
 
 export const dynamic = 'force-dynamic';
 
@@ -37,7 +39,10 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    let users: UserWithTutor[] = [];
+    // Get active period for period-aware points calculation
+    const activePeriod = await requireActivePeriod();
+
+    let users: any[] = [];
 
     // If admin, return all users
     if (session.user.role === UserRole.ADMIN) {
@@ -48,7 +53,6 @@ export async function GET(request: NextRequest) {
           role: true,
           firstName: true,
           lastName: true,
-          points: true,
           tutorId: true,
           createdAt: true,
           isActive: true,
@@ -81,7 +85,6 @@ export async function GET(request: NextRequest) {
           role: true,
           firstName: true,
           lastName: true,
-          points: true,
           tutorId: true,
           createdAt: true,
           isActive: true,
@@ -106,7 +109,17 @@ export async function GET(request: NextRequest) {
       users = [];
     }
 
-    return NextResponse.json({ users }, { status: 200 });
+    // Calculate period-aware points for all users
+    const userIds = users.map(u => u.id);
+    const pointsMap = await calculateMultipleUserPoints(userIds, activePeriod.id);
+
+    // Map calculated points to users
+    const usersWithCalculatedPoints = users.map(user => ({
+      ...user,
+      points: pointsMap.get(user.id) || 0
+    }));
+
+    return NextResponse.json({ users: usersWithCalculatedPoints }, { status: 200 });
   } catch (error) {
     console.error('Get users error:', error);
     return NextResponse.json(

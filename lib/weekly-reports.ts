@@ -102,7 +102,7 @@ export async function getWeeklyReportStats(periodId: string) {
 
     // Calculate by week
     for (let week = 1; week <= totalWeeks; week++) {
-      stats.byWeek[week] = reports.filter(r => r.weekNumber === week).length;
+  stats.byWeek[week] = reports.filter(r => r.weekNumber === week).length;
     }
 
     return stats;
