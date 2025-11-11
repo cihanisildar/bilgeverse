@@ -12,9 +12,7 @@ export const config = {
     "/api/tutor/:path*",
     "/api/student/:path*",
     // Protected pages
-    "/admin/:path*",
-    "/tutor/:path*",
-    "/student/:path*",
+    "/dashboard/:path*",
   ]
 };
 
@@ -70,8 +68,32 @@ export async function middleware(request: NextRequest) {
       return path.startsWith(pattern.replace('*', ''));
     };
 
+    // Redirect non-admin users away from parts 1-6 and 8-9 to part 7
+    if (pathname.startsWith('/dashboard/part') && !pathname.startsWith('/dashboard/part7')) {
+      if (token.role !== UserRole.ADMIN) {
+        console.log('Non-admin user attempting to access restricted part, redirecting to part 7');
+        const roleBasedPath = token.role === UserRole.STUDENT 
+          ? '/dashboard/part7/student'
+          : token.role === UserRole.TUTOR || token.role === UserRole.ASISTAN
+          ? '/dashboard/part7/tutor'
+          : '/dashboard/part7/student';
+        return NextResponse.redirect(new URL(roleBasedPath, request.url));
+      }
+    }
+
+    // Redirect non-admin users from /dashboard to part 7
+    if (pathname === '/dashboard' && token.role !== UserRole.ADMIN) {
+      console.log('Non-admin user accessing dashboard, redirecting to part 7');
+      const roleBasedPath = token.role === UserRole.STUDENT 
+        ? '/dashboard/part7/student'
+        : token.role === UserRole.TUTOR || token.role === UserRole.ASISTAN
+        ? '/dashboard/part7/tutor'
+        : '/dashboard/part7/student';
+      return NextResponse.redirect(new URL(roleBasedPath, request.url));
+    }
+
     // Check route permissions
-    if (pathname.startsWith('/admin') || pathname.startsWith('/api/admin')) {
+    if (pathname.startsWith('/dashboard/part7/admin') || pathname.startsWith('/api/admin')) {
       // Allow tutors and asistans to GET periods (needed for event creation)
       if (pathname === '/api/admin/periods' && request.method === 'GET') {
         if (token.role !== UserRole.ADMIN && token.role !== UserRole.TUTOR && token.role !== UserRole.ASISTAN) {
@@ -88,7 +110,7 @@ export async function middleware(request: NextRequest) {
       }
     }
     
-    if (pathname.startsWith('/tutor') || pathname.startsWith('/api/tutor')) {
+    if (pathname.startsWith('/dashboard/part7/tutor') || pathname.startsWith('/api/tutor')) {
       if (token.role !== UserRole.TUTOR && token.role !== UserRole.ASISTAN) {
         console.log('Non-tutor/asistan user attempting to access tutor route');
         return isApiRoute
@@ -105,7 +127,7 @@ export async function middleware(request: NextRequest) {
           ? NextResponse.json({ error: 'Forbidden: Admin, Tutor, Asistan, or Student access required' }, { status: 403 })
           : NextResponse.redirect(new URL('/', request.url));
       }
-    } else if (pathname.startsWith('/student') || pathname.startsWith('/api/student')) {
+    } else if (pathname.startsWith('/dashboard/part7/student') || pathname.startsWith('/api/student')) {
       if (token.role !== UserRole.STUDENT) {
         console.log('Non-student user attempting to access student route');
         return isApiRoute

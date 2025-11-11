@@ -150,7 +150,7 @@ export default function CurrentPeriod({ variant = 'full', className = '' }: Curr
           {error || 'Şu anda aktif bir dönem bulunmuyor. Lütfen yöneticinize başvurun.'}
         </p>
         <div className="text-sm text-red-600">
-          Yöneticiler <strong>/admin/periods</strong> sayfasından dönem oluşturabilir.
+          Yöneticiler <strong>/dashboard/part7/admin/periods</strong> sayfasından dönem oluşturabilir.
         </div>
       </div>
     );

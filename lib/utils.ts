@@ -5,6 +5,23 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
+/**
+ * Get the base URL for the application
+ * Uses NEXT_PUBLIC_APP_URL environment variable if available, otherwise falls back to window.location.origin
+ * This ensures correct URLs in both development and production environments
+ */
+export function getBaseUrl(): string {
+  // In server-side rendering, we can't use window
+  if (typeof window === 'undefined') {
+    // Return a placeholder or use environment variable
+    return process.env.NEXT_PUBLIC_APP_URL || process.env.NEXT_PUBLIC_DOMAIN || '';
+  }
+  
+  // Client-side: use environment variable if set, otherwise use current origin
+  // window.location.origin automatically uses the correct URL (localhost in dev, production URL in prod)
+  return process.env.NEXT_PUBLIC_APP_URL || window.location.origin;
+}
+
 export interface LevelInfo {
   level: number;
   title: string;

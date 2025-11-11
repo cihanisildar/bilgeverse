@@ -8,13 +8,24 @@ module.exports = {
     './hooks/**/*.{js,ts,jsx,tsx,mdx}',
     './unauthorized/**/*.{js,ts,jsx,tsx,mdx}',
   ],
+  safelist: [
+    {
+      pattern: /bg-gradient-to-r/,
+    },
+    {
+      pattern: /from-(indigo|blue|green|amber|red|teal|violet|rose|slate|purple|cyan|emerald|orange|pink)-(400|500|600)/,
+    },
+    {
+      pattern: /to-(indigo|blue|green|amber|red|teal|violet|rose|slate|purple|cyan|emerald|orange|pink)-(400|500|600)/,
+    },
+  ],
   theme: {
   	container: {
   		center: true,
   		padding: '2rem',
   		screens: {
-  			'2xl': '1400px',
-  		},
+  			'2xl': '1400px'
+  		}
   	},
   	extend: {
   		colors: {
@@ -24,41 +35,41 @@ module.exports = {
   			background: '#ffffff',
   			foreground: '#020817',
   			primary: {
-  				50: '#eff6ff',
-  				100: '#dbeafe',
-  				200: '#bfdbfe',
-  				300: '#93c5fd',
-  				400: '#60a5fa',
-  				500: '#3b82f6',
-  				600: '#2563eb',
-  				700: '#1d4ed8',
-  				800: '#1e40af',
-  				900: '#1e3a8a',
-  				950: '#172554',
+  				'50': '#eff6ff',
+  				'100': '#dbeafe',
+  				'200': '#bfdbfe',
+  				'300': '#93c5fd',
+  				'400': '#60a5fa',
+  				'500': '#3b82f6',
+  				'600': '#2563eb',
+  				'700': '#1d4ed8',
+  				'800': '#1e40af',
+  				'900': '#1e3a8a',
+  				'950': '#172554'
   			},
   			secondary: {
   				DEFAULT: '#6b7280',
-  				foreground: '#f9fafb',
+  				foreground: '#f9fafb'
   			},
   			destructive: {
   				DEFAULT: '#ef4444',
-  				foreground: '#fef2f2',
+  				foreground: '#fef2f2'
   			},
   			muted: {
   				DEFAULT: '#f3f4f6',
-  				foreground: '#6b7280',
+  				foreground: '#6b7280'
   			},
   			accent: {
   				DEFAULT: '#f3f4f6',
-  				foreground: '#1f2937',
+  				foreground: '#1f2937'
   			},
   			popover: {
   				DEFAULT: '#ffffff',
-  				foreground: '#020817',
+  				foreground: '#020817'
   			},
   			card: {
   				DEFAULT: '#ffffff',
-  				foreground: '#020817',
+  				foreground: '#020817'
   			},
   			chart: {
   				'1': '#3b82f6',
@@ -66,6 +77,16 @@ module.exports = {
   				'3': '#22c55e',
   				'4': '#eab308',
   				'5': '#ec4899'
+  			},
+  			sidebar: {
+  				DEFAULT: 'hsl(var(--sidebar-background))',
+  				foreground: 'hsl(var(--sidebar-foreground))',
+  				primary: 'hsl(var(--sidebar-primary))',
+  				'primary-foreground': 'hsl(var(--sidebar-primary-foreground))',
+  				accent: 'hsl(var(--sidebar-accent))',
+  				'accent-foreground': 'hsl(var(--sidebar-accent-foreground))',
+  				border: 'hsl(var(--sidebar-border))',
+  				ring: 'hsl(var(--sidebar-ring))'
   			}
   		},
   		fontFamily: {
@@ -92,30 +113,42 @@ module.exports = {
   			xl: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1)',
   			'2xl': '0 25px 50px -12px rgba(0, 0, 0, 0.25)'
   		},
-  				borderRadius: {
-			lg: '0.5rem',
-			md: '0.375rem',
-			sm: '0.25rem'
-		},
-		keyframes: {
-			'accordion-down': {
-				from: { height: 0 },
-				to: { height: 'var(--radix-accordion-content-height)' },
-			},
-			'accordion-up': {
-				from: { height: 'var(--radix-accordion-content-height)' },
-				to: { height: 0 },
-			},
-			shimmer: {
-				'0%': { transform: 'translateX(-100%)' },
-				'100%': { transform: 'translateX(100%)' },
-			},
-		},
-		animation: {
-			'accordion-down': 'accordion-down 0.2s ease-out',
-			'accordion-up': 'accordion-up 0.2s ease-out',
-			shimmer: 'shimmer 2s ease-in-out infinite',
-		},
+  		borderRadius: {
+  			lg: '0.5rem',
+  			md: '0.375rem',
+  			sm: '0.25rem'
+  		},
+  		keyframes: {
+  			'accordion-down': {
+  				from: {
+  					height: 0
+  				},
+  				to: {
+  					height: 'var(--radix-accordion-content-height)'
+  				}
+  			},
+  			'accordion-up': {
+  				from: {
+  					height: 'var(--radix-accordion-content-height)'
+  				},
+  				to: {
+  					height: 0
+  				}
+  			},
+  			shimmer: {
+  				'0%': {
+  					transform: 'translateX(-100%)'
+  				},
+  				'100%': {
+  					transform: 'translateX(100%)'
+  				}
+  			}
+  		},
+  		animation: {
+  			'accordion-down': 'accordion-down 0.2s ease-out',
+  			'accordion-up': 'accordion-up 0.2s ease-out',
+  			shimmer: 'shimmer 2s ease-in-out infinite'
+  		}
   	}
   },
   plugins: [require("tailwindcss-animate")],

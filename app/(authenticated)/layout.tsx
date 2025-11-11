@@ -6,7 +6,7 @@ import { useAuth } from '../contexts/AuthContext';
 import Link from 'next/link';
 import { Button } from "../../components/ui/button";
 import { Avatar, AvatarFallback } from "../../components/ui/avatar";
-import { LogOut, LayoutDashboard, Users, FileText, Calendar, ShoppingBag, PieChart, GraduationCap, Trophy, ShoppingCart, ClipboardList, School, Award, TrendingUp, Menu, CreditCard, Bell, Clock, BookOpen } from "lucide-react";
+import { LogOut, LayoutDashboard, Users, FileText, Calendar, ShoppingBag, PieChart, GraduationCap, Trophy, ShoppingCart, ClipboardList, School, Award, TrendingUp, Menu, CreditCard, Bell, Clock, BookOpen, Grid3x3 } from "lucide-react";
 import { UserRole } from '@prisma/client';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "../../components/ui/sheet";
 
@@ -36,8 +36,8 @@ export default function AuthenticatedLayout({
 
   // Function to check if a link is active - fix the issue with exact comparison
   const isActive = (path: string) => {
-    // For root paths like /admin, /tutor, /student, only match exactly
-    if (path === '/admin' || path === '/tutor' || path === '/student') {
+    // For root paths like /dashboard/part7/admin, /dashboard/part7/tutor, /dashboard/part7/student, only match exactly
+    if (path === '/dashboard/part7/admin' || path === '/dashboard/part7/tutor' || path === '/dashboard/part7/student') {
       return pathname === path;
     }
     // For subpaths, match if pathname starts with the path
@@ -46,59 +46,59 @@ export default function AuthenticatedLayout({
 
   // Define navigation links based on role with Lucide icons
   const adminLinks: NavLink[] = [
-    { href: '/admin', label: 'Gösterge Paneli', icon: <LayoutDashboard className="h-5 w-5" /> },
-    { href: '/admin/periods', label: 'Dönem Yönetimi', icon: <Clock className="h-5 w-5" /> },
-    { href: '/admin/announcements', label: 'Duyuru Panosu', icon: <Bell className="h-5 w-5" /> },
-    { href: '/admin/users', label: 'Kullanıcı Yönetimi', icon: <Users className="h-5 w-5" /> },
-    // { href: '/admin/registration-requests', label: 'Kayıt İstekleri', icon: <FileText className="h-5 w-5" /> },
-    { href: '/admin/events', label: 'Etkinlikler', icon: <Calendar className="h-5 w-5" /> },
-    { href: '/admin/points', label: 'Puan Yönetimi', icon: <Award className="h-5 w-5" /> },
-    { href: '/admin/point-reasons', label: 'Puan Sebepleri', icon: <FileText className="h-5 w-5" /> },
-    { href: '/admin/experience', label: 'Tecrübe Yönetimi', icon: <TrendingUp className="h-5 w-5" /> },
-    { href: '/admin/store', label: 'Mağaza Yönetimi', icon: <ShoppingBag className="h-5 w-5" /> },
-    { href: '/admin/point-cards', label: 'Puan Kartları', icon: <Award className="h-5 w-5" /> },
-    { href: '/admin/transactions/rollback', label: 'İşlem Geri Alma', icon: <CreditCard className="h-5 w-5" /> },
-    { href: '/admin/wishes', label: 'İstek ve Dilekler', icon: <ClipboardList className="h-5 w-5" /> },
-    { href: '/admin/weekly-reports', label: 'Haftalık Raporlar', icon: <BookOpen className="h-5 w-5" /> },
-    { href: '/admin/leaderboard', label: 'Liderlik Tablosu', icon: <Trophy className="h-5 w-5" /> },
-    { href: '/admin/reports', label: 'Raporlar', icon: <PieChart className="h-5 w-5" /> },
+    { href: '/dashboard/part7/admin', label: 'Gösterge Paneli', icon: <LayoutDashboard className="h-5 w-5" /> },
+    { href: '/dashboard/part7/admin/periods', label: 'Dönem Yönetimi', icon: <Clock className="h-5 w-5" /> },
+    { href: '/dashboard/part7/admin/announcements', label: 'Duyuru Panosu', icon: <Bell className="h-5 w-5" /> },
+    { href: '/dashboard/part7/admin/users', label: 'Kullanıcı Yönetimi', icon: <Users className="h-5 w-5" /> },
+    // { href: '/dashboard/part7/admin/registration-requests', label: 'Kayıt İstekleri', icon: <FileText className="h-5 w-5" /> },
+    { href: '/dashboard/part7/admin/events', label: 'Etkinlikler', icon: <Calendar className="h-5 w-5" /> },
+    { href: '/dashboard/part7/admin/points', label: 'Puan Yönetimi', icon: <Award className="h-5 w-5" /> },
+    { href: '/dashboard/part7/admin/point-reasons', label: 'Puan Sebepleri', icon: <FileText className="h-5 w-5" /> },
+    { href: '/dashboard/part7/admin/experience', label: 'Tecrübe Yönetimi', icon: <TrendingUp className="h-5 w-5" /> },
+    { href: '/dashboard/part7/admin/store', label: 'Mağaza Yönetimi', icon: <ShoppingBag className="h-5 w-5" /> },
+    { href: '/dashboard/part7/admin/point-cards', label: 'Puan Kartları', icon: <Award className="h-5 w-5" /> },
+    { href: '/dashboard/part7/admin/transactions/rollback', label: 'İşlem Geri Alma', icon: <CreditCard className="h-5 w-5" /> },
+    { href: '/dashboard/part7/admin/wishes', label: 'İstek ve Dilekler', icon: <ClipboardList className="h-5 w-5" /> },
+    { href: '/dashboard/part7/admin/weekly-reports', label: 'Haftalık Raporlar', icon: <BookOpen className="h-5 w-5" /> },
+    { href: '/dashboard/part7/admin/leaderboard', label: 'Liderlik Tablosu', icon: <Trophy className="h-5 w-5" /> },
+    { href: '/dashboard/part7/admin/reports', label: 'Raporlar', icon: <PieChart className="h-5 w-5" /> },
   ];
 
   const tutorLinks: NavLink[] = [
-    { href: '/tutor', label: 'Gösterge Paneli', icon: <LayoutDashboard className="h-5 w-5" /> },
-    { href: '/tutor/announcements', label: 'Duyuru Panosu', icon: <Bell className="h-5 w-5" /> },
-    { href: '/tutor/students', label: 'Öğrencilerim', icon: <GraduationCap className="h-5 w-5" /> },
-    { href: '/tutor/events', label: 'Etkinlikler', icon: <Calendar className="h-5 w-5" /> },
-    { href: '/tutor/points', label: 'Puan Yönetimi', icon: <Award className="h-5 w-5" /> },
-    { href: '/tutor/point-cards', label: 'Puan Kartları', icon: <CreditCard className="h-5 w-5" /> },
-    { href: '/tutor/experience', label: 'Tecrübe Yönetimi', icon: <TrendingUp className="h-5 w-5" /> },
-    { href: '/tutor/weekly-reports', label: 'Haftalık Raporlar', icon: <BookOpen className="h-5 w-5" /> },
-    { href: '/tutor/leaderboard', label: 'Liderlik Tablosu', icon: <Trophy className="h-5 w-5" /> },
-    { href: '/tutor/reports', label: 'Raporlar', icon: <PieChart className="h-5 w-5" /> },
-    { href: '/tutor/store', label: 'Mağaza', icon: <ShoppingCart className="h-5 w-5" /> },
-    { href: '/tutor/requests', label: 'Ürün İstekleri', icon: <ClipboardList className="h-5 w-5" /> },
+    { href: '/dashboard/part7/tutor', label: 'Gösterge Paneli', icon: <LayoutDashboard className="h-5 w-5" /> },
+    { href: '/dashboard/part7/tutor/announcements', label: 'Duyuru Panosu', icon: <Bell className="h-5 w-5" /> },
+    { href: '/dashboard/part7/tutor/students', label: 'Öğrencilerim', icon: <GraduationCap className="h-5 w-5" /> },
+    { href: '/dashboard/part7/tutor/events', label: 'Etkinlikler', icon: <Calendar className="h-5 w-5" /> },
+    { href: '/dashboard/part7/tutor/points', label: 'Puan Yönetimi', icon: <Award className="h-5 w-5" /> },
+    { href: '/dashboard/part7/tutor/point-cards', label: 'Puan Kartları', icon: <CreditCard className="h-5 w-5" /> },
+    { href: '/dashboard/part7/tutor/experience', label: 'Tecrübe Yönetimi', icon: <TrendingUp className="h-5 w-5" /> },
+    { href: '/dashboard/part7/tutor/weekly-reports', label: 'Haftalık Raporlar', icon: <BookOpen className="h-5 w-5" /> },
+    { href: '/dashboard/part7/tutor/leaderboard', label: 'Liderlik Tablosu', icon: <Trophy className="h-5 w-5" /> },
+    { href: '/dashboard/part7/tutor/reports', label: 'Raporlar', icon: <PieChart className="h-5 w-5" /> },
+    { href: '/dashboard/part7/tutor/store', label: 'Mağaza', icon: <ShoppingCart className="h-5 w-5" /> },
+    { href: '/dashboard/part7/tutor/requests', label: 'Ürün İstekleri', icon: <ClipboardList className="h-5 w-5" /> },
   ];
 
   const studentLinks: NavLink[] = [
-    { href: '/student', label: 'Gösterge Paneli', icon: <LayoutDashboard className="h-5 w-5" /> },
-    { href: '/student/announcements', label: 'Duyuru Panosu', icon: <Bell className="h-5 w-5" /> },
-    { href: '/student/classroom', label: 'Sınıfım', icon: <School className="h-5 w-5" /> },
-    { href: '/student/events', label: 'Etkinlikler', icon: <Calendar className="h-5 w-5" /> },
-    { href: '/student/leaderboard', label: 'Liderlik Tablosu', icon: <Trophy className="h-5 w-5" /> },
-    { href: '/student/store', label: 'Mağaza', icon: <ShoppingCart className="h-5 w-5" /> },
-    { href: '/student/requests', label: 'İsteklerim', icon: <ClipboardList className="h-5 w-5" /> },
-    { href: '/student/wishes', label: 'Dilek ve İstekler', icon: <FileText className="h-5 w-5" /> },
-    { href: '/student/tips', label: 'Başarı Rehberi', icon: <TrendingUp className="h-5 w-5" /> },
+    { href: '/dashboard/part7/student', label: 'Gösterge Paneli', icon: <LayoutDashboard className="h-5 w-5" /> },
+    { href: '/dashboard/part7/student/announcements', label: 'Duyuru Panosu', icon: <Bell className="h-5 w-5" /> },
+    { href: '/dashboard/part7/student/classroom', label: 'Sınıfım', icon: <School className="h-5 w-5" /> },
+    { href: '/dashboard/part7/student/events', label: 'Etkinlikler', icon: <Calendar className="h-5 w-5" /> },
+    { href: '/dashboard/part7/student/leaderboard', label: 'Liderlik Tablosu', icon: <Trophy className="h-5 w-5" /> },
+    { href: '/dashboard/part7/student/store', label: 'Mağaza', icon: <ShoppingCart className="h-5 w-5" /> },
+    { href: '/dashboard/part7/student/requests', label: 'İsteklerim', icon: <ClipboardList className="h-5 w-5" /> },
+    { href: '/dashboard/part7/student/wishes', label: 'Dilek ve İstekler', icon: <FileText className="h-5 w-5" /> },
+    { href: '/dashboard/part7/student/tips', label: 'Başarı Rehberi', icon: <TrendingUp className="h-5 w-5" /> },
   ];
 
   // Determine which set of links to show based on user role AND path
   let navLinks: NavLink[] = [];
   
-  if (isAdmin && pathname?.startsWith('/admin')) {
+  if (isAdmin && pathname?.startsWith('/dashboard/part7/admin')) {
     navLinks = adminLinks;
-  } else if (isTutor && pathname?.startsWith('/tutor')) {
+  } else if (isTutor && pathname?.startsWith('/dashboard/part7/tutor')) {
     navLinks = tutorLinks;
-  } else if (isStudent && pathname?.startsWith('/student')) {
+  } else if (isStudent && pathname?.startsWith('/dashboard/part7/student')) {
     navLinks = studentLinks;
   } else if (isAdmin) {
     navLinks = adminLinks;
@@ -125,15 +125,15 @@ export default function AuthenticatedLayout({
   let activeLinkColor = "";
   let activeIconBg = "";
   
-  if (pathname?.startsWith('/admin')) {
+  if (pathname?.startsWith('/dashboard/part7/admin')) {
     sidebarTitle = "Yönetici Paneli";
     activeLinkColor = "text-indigo-600";
     activeIconBg = "bg-indigo-100";
-  } else if (pathname?.startsWith('/tutor')) {
+  } else if (pathname?.startsWith('/dashboard/part7/tutor')) {
     sidebarTitle = "Öğretmen Paneli";
     activeLinkColor = "text-blue-600";
     activeIconBg = "bg-blue-100";
-  } else if (pathname?.startsWith('/student')) {
+  } else if (pathname?.startsWith('/dashboard/part7/student')) {
     sidebarTitle = "Öğrenci Paneli";
     activeLinkColor = "text-teal-600";
     activeIconBg = "bg-teal-100";
@@ -145,6 +145,22 @@ export default function AuthenticatedLayout({
 
   const NavigationLinks = () => (
     <ul className="space-y-2">
+      <li>
+        <Link 
+          href="/dashboard" 
+          className={`flex items-center justify-start px-4 py-2 rounded-lg transition-all duration-200 ${
+            pathname === '/dashboard'
+              ? `${activeIconBg} ${activeLinkColor} font-medium` 
+              : 'text-gray-500 hover:bg-gray-50 hover:text-gray-800'
+          }`}
+          onClick={() => setIsMobileMenuOpen(false)}
+        >
+          <div className="flex-shrink-0 mr-3">
+            <Grid3x3 className="h-5 w-5" />
+          </div>
+          <span className="truncate text-sm tracking-wide">Bölümlere Dön</span>
+        </Link>
+      </li>
       {navLinks.map((link) => (
         <li key={link.href}>
           <Link 

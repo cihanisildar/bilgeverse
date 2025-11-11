@@ -151,14 +151,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       // Show success message
       toast.success('Giriş başarılı!');
 
-      // Use router.replace for navigation
-      if (session?.user?.role === UserRole.ADMIN) {
-        await router.replace('/admin');
-      } else if (session?.user?.role === UserRole.TUTOR || session?.user?.role === UserRole.ASISTAN) {
-        await router.replace('/tutor');
-      } else {
-        await router.replace('/student');
-      }
+      // Redirect to dashboard
+      await router.replace('/dashboard');
       
     } catch (error) {
       console.error("Login error:", error);
