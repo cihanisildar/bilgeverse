@@ -145,22 +145,24 @@ export default function AuthenticatedLayout({
 
   const NavigationLinks = () => (
     <ul className="space-y-2">
-      <li>
-        <Link 
-          href="/dashboard" 
-          className={`flex items-center justify-start px-4 py-2 rounded-lg transition-all duration-200 ${
-            pathname === '/dashboard'
-              ? `${activeIconBg} ${activeLinkColor} font-medium` 
-              : 'text-gray-500 hover:bg-gray-50 hover:text-gray-800'
-          }`}
-          onClick={() => setIsMobileMenuOpen(false)}
-        >
-          <div className="flex-shrink-0 mr-3">
-            <Grid3x3 className="h-5 w-5" />
-          </div>
-          <span className="truncate text-sm tracking-wide">Bölümlere Dön</span>
-        </Link>
-      </li>
+      {isAdmin && (
+        <li>
+          <Link 
+            href="/dashboard" 
+            className={`flex items-center justify-start px-4 py-2 rounded-lg transition-all duration-200 ${
+              pathname === '/dashboard'
+                ? `${activeIconBg} ${activeLinkColor} font-medium` 
+                : 'text-gray-500 hover:bg-gray-50 hover:text-gray-800'
+            }`}
+            onClick={() => setIsMobileMenuOpen(false)}
+          >
+            <div className="flex-shrink-0 mr-3">
+              <Grid3x3 className="h-5 w-5" />
+            </div>
+            <span className="truncate text-sm tracking-wide">Bölümlere Dön</span>
+          </Link>
+        </li>
+      )}
       {navLinks.map((link) => (
         <li key={link.href}>
           <Link 
