@@ -58,6 +58,7 @@ import {
 import { CSS } from '@dnd-kit/utilities';
 import { DecisionStatus } from '@prisma/client';
 import Loading from '@/app/components/Loading';
+import { DecisionWithUser } from '@/app/types/meetings';
 
 const statusColumns: DecisionStatus[] = ['TODO', 'IN_PROGRESS', 'DONE'];
 const statusLabels: Record<DecisionStatus, string> = {
@@ -971,7 +972,7 @@ function DecisionDetailDialog({
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  decision: any;
+  decision: DecisionWithUser | { status: DecisionStatus; [key: string]: any };
   onEdit: () => void;
   isAdmin: boolean;
 }) {

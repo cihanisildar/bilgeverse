@@ -34,6 +34,7 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { DecisionStatus } from '@prisma/client';
+import { DecisionWithUser } from '@/app/types/meetings';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import {
@@ -1698,7 +1699,7 @@ function DecisionDetailDialog({
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  decision: any;
+  decision: DecisionWithUser | { status: DecisionStatus; [key: string]: any };
   onEdit: () => void;
   isAdmin: boolean;
 }) {

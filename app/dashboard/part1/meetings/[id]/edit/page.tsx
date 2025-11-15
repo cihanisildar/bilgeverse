@@ -111,7 +111,7 @@ export default function EditMeetingPage() {
       plainData.title = String(data.title);
     }
     if (data.description !== undefined && data.description !== null) {
-      plainData.description = String(data.description).trim() || null;
+      plainData.description = String(data.description).trim() || undefined;
     }
     if (data.meetingDate !== undefined && data.meetingDate !== null) {
       plainData.meetingDate = String(data.meetingDate);
