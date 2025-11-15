@@ -17,12 +17,16 @@ export async function getMeetingDecisions(meetingId: string) {
     const decisions = await prisma.meetingDecision.findMany({
       where: { meetingId },
       include: {
-        responsibleUser: {
-          select: {
-            id: true,
-            username: true,
-            firstName: true,
-            lastName: true,
+        responsibleUsers: {
+          include: {
+            user: {
+              select: {
+                id: true,
+                username: true,
+                firstName: true,
+                lastName: true,
+              },
+            },
           },
         },
       },
@@ -41,15 +45,14 @@ export async function getMeetingDecisions(meetingId: string) {
         targetDate: decision.targetDate?.toISOString() || null,
         status: decision.status,
         meetingId: decision.meetingId,
-        responsibleUserId: decision.responsibleUserId,
         createdAt: decision.createdAt.toISOString(),
         updatedAt: decision.updatedAt.toISOString(),
-        responsibleUser: decision.responsibleUser ? {
-          id: decision.responsibleUser.id,
-          username: decision.responsibleUser.username,
-          firstName: decision.responsibleUser.firstName,
-          lastName: decision.responsibleUser.lastName,
-        } : null,
+        responsibleUsers: decision.responsibleUsers.map((ru) => ({
+          id: ru.user.id,
+          username: ru.user.username,
+          firstName: ru.user.firstName,
+          lastName: ru.user.lastName,
+        })),
       })),
     };
   } catch (error) {
@@ -73,16 +76,24 @@ export async function createDecision(meetingId: string, data: unknown) {
         meetingId,
         title: validated.title,
         description: validated.description || null,
-        responsibleUserId: validated.responsibleUserId || null,
         targetDate: validated.targetDate ? new Date(validated.targetDate) : null,
+        responsibleUsers: {
+          create: validated.responsibleUserIds.map((userId) => ({
+            userId,
+          })),
+        },
       },
       include: {
-        responsibleUser: {
-          select: {
-            id: true,
-            username: true,
-            firstName: true,
-            lastName: true,
+        responsibleUsers: {
+          include: {
+            user: {
+              select: {
+                id: true,
+                username: true,
+                firstName: true,
+                lastName: true,
+              },
+            },
           },
         },
       },
@@ -98,15 +109,14 @@ export async function createDecision(meetingId: string, data: unknown) {
         targetDate: decision.targetDate?.toISOString() || null,
         status: decision.status,
         meetingId: decision.meetingId,
-        responsibleUserId: decision.responsibleUserId,
         createdAt: decision.createdAt.toISOString(),
         updatedAt: decision.updatedAt.toISOString(),
-        responsibleUser: decision.responsibleUser ? {
-          id: decision.responsibleUser.id,
-          username: decision.responsibleUser.username,
-          firstName: decision.responsibleUser.firstName,
-          lastName: decision.responsibleUser.lastName,
-        } : null,
+        responsibleUsers: decision.responsibleUsers.map((ru) => ({
+          id: ru.user.id,
+          username: ru.user.username,
+          firstName: ru.user.firstName,
+          lastName: ru.user.lastName,
+        })),
       },
     };
   } catch (error: any) {
@@ -131,20 +141,37 @@ export async function updateDecision(id: string, data: unknown) {
     const updateData: any = {};
     if (validated.title !== undefined) updateData.title = validated.title;
     if (validated.description !== undefined) updateData.description = validated.description || null;
-    if (validated.responsibleUserId !== undefined) updateData.responsibleUserId = validated.responsibleUserId || null;
     if (validated.targetDate !== undefined) updateData.targetDate = validated.targetDate ? new Date(validated.targetDate) : null;
     if (validated.status !== undefined) updateData.status = validated.status;
+
+    // Handle responsible users update
+    if (validated.responsibleUserIds !== undefined) {
+      // Delete existing responsible users
+      await prisma.decisionResponsibleUser.deleteMany({
+        where: { decisionId: id },
+      });
+      // Create new responsible users
+      updateData.responsibleUsers = {
+        create: validated.responsibleUserIds.map((userId) => ({
+          userId,
+        })),
+      };
+    }
 
     const decision = await prisma.meetingDecision.update({
       where: { id },
       data: updateData,
       include: {
-        responsibleUser: {
-          select: {
-            id: true,
-            username: true,
-            firstName: true,
-            lastName: true,
+        responsibleUsers: {
+          include: {
+            user: {
+              select: {
+                id: true,
+                username: true,
+                firstName: true,
+                lastName: true,
+              },
+            },
           },
         },
       },
@@ -160,15 +187,14 @@ export async function updateDecision(id: string, data: unknown) {
         targetDate: decision.targetDate?.toISOString() || null,
         status: decision.status,
         meetingId: decision.meetingId,
-        responsibleUserId: decision.responsibleUserId,
         createdAt: decision.createdAt.toISOString(),
         updatedAt: decision.updatedAt.toISOString(),
-        responsibleUser: decision.responsibleUser ? {
-          id: decision.responsibleUser.id,
-          username: decision.responsibleUser.username,
-          firstName: decision.responsibleUser.firstName,
-          lastName: decision.responsibleUser.lastName,
-        } : null,
+        responsibleUsers: decision.responsibleUsers.map((ru) => ({
+          id: ru.user.id,
+          username: ru.user.username,
+          firstName: ru.user.firstName,
+          lastName: ru.user.lastName,
+        })),
       },
     };
   } catch (error: any) {
@@ -192,12 +218,16 @@ export async function updateDecisionStatus(id: string, status: DecisionStatus) {
       where: { id },
       data: { status },
       include: {
-        responsibleUser: {
-          select: {
-            id: true,
-            username: true,
-            firstName: true,
-            lastName: true,
+        responsibleUsers: {
+          include: {
+            user: {
+              select: {
+                id: true,
+                username: true,
+                firstName: true,
+                lastName: true,
+              },
+            },
           },
         },
       },
@@ -213,15 +243,14 @@ export async function updateDecisionStatus(id: string, status: DecisionStatus) {
         targetDate: decision.targetDate?.toISOString() || null,
         status: decision.status,
         meetingId: decision.meetingId,
-        responsibleUserId: decision.responsibleUserId,
         createdAt: decision.createdAt.toISOString(),
         updatedAt: decision.updatedAt.toISOString(),
-        responsibleUser: decision.responsibleUser ? {
-          id: decision.responsibleUser.id,
-          username: decision.responsibleUser.username,
-          firstName: decision.responsibleUser.firstName,
-          lastName: decision.responsibleUser.lastName,
-        } : null,
+        responsibleUsers: decision.responsibleUsers.map((ru) => ({
+          id: ru.user.id,
+          username: ru.user.username,
+          firstName: ru.user.firstName,
+          lastName: ru.user.lastName,
+        })),
       },
     };
   } catch (error) {

@@ -8,9 +8,8 @@ export const createDecisionSchema = z.object({
     .max(2000, 'Açıklama çok uzun')
     .optional()
     .nullable(),
-  responsibleUserId: z.string({ invalid_type_error: 'Sorumlu kullanıcı ID metin olmalıdır' })
-    .optional()
-    .nullable(),
+  responsibleUserIds: z.array(z.string(), { required_error: 'Sorumlu yönetim kurulu üyesi gereklidir' })
+    .min(1, 'En az bir sorumlu yönetim kurulu üyesi atanmalıdır'),
   targetDate: z.string({ invalid_type_error: 'Hedef tarih metin olmalıdır' })
     .refine(
       (date) => !date || !isNaN(Date.parse(date)),
@@ -30,9 +29,9 @@ export const updateDecisionSchema = z.object({
     .max(2000, 'Açıklama çok uzun')
     .optional()
     .nullable(),
-  responsibleUserId: z.string({ invalid_type_error: 'Sorumlu kullanıcı ID metin olmalıdır' })
-    .optional()
-    .nullable(),
+  responsibleUserIds: z.array(z.string(), { invalid_type_error: 'Sorumlu kullanıcı ID\'leri array olmalıdır' })
+    .min(1, 'En az bir sorumlu yönetim kurulu üyesi atanmalıdır')
+    .optional(),
   targetDate: z.string({ invalid_type_error: 'Hedef tarih metin olmalıdır' })
     .refine(
       (date) => !date || !isNaN(Date.parse(date)),

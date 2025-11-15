@@ -43,11 +43,11 @@ export type DecisionWithUser = {
   status: DecisionStatus;
   createdAt: Date;
   updatedAt: Date;
-  responsibleUser: {
+  responsibleUsers: {
     id: string;
     username: string;
     firstName: string | null;
     lastName: string | null;
-  } | null;
+  }[];
 };
 

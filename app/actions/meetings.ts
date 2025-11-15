@@ -69,6 +69,79 @@ export async function getMeetings() {
   }
 }
 
+export async function getUserMeetings() {
+  try {
+    const session = await getServerSession(authOptions);
+    
+    if (!session?.user) {
+      return { error: 'Yetkisiz erişim', data: null };
+    }
+
+    // Get all meetings where user has attendance
+    const attendances = await prisma.meetingAttendance.findMany({
+      where: {
+        userId: session.user.id,
+      },
+      include: {
+        meeting: {
+          include: {
+            createdBy: {
+              select: {
+                id: true,
+                username: true,
+                firstName: true,
+                lastName: true,
+              },
+            },
+            _count: {
+              select: {
+                attendees: true,
+                decisions: true,
+              },
+            },
+          },
+        },
+      },
+      orderBy: {
+        checkInTime: 'desc',
+      },
+    });
+
+    // Extract meetings from attendances
+    const meetings = attendances.map((attendance) => attendance.meeting);
+
+    // Serialize Date objects to ISO strings and ensure plain objects
+    return {
+      error: null,
+      data: meetings.map((meeting) => ({
+        id: meeting.id,
+        title: meeting.title,
+        description: meeting.description,
+        meetingDate: meeting.meetingDate.toISOString(),
+        location: meeting.location,
+        status: meeting.status,
+        qrCodeToken: meeting.qrCodeToken,
+        qrCodeExpiresAt: meeting.qrCodeExpiresAt?.toISOString() || null,
+        createdAt: meeting.createdAt.toISOString(),
+        updatedAt: meeting.updatedAt.toISOString(),
+        createdBy: {
+          id: meeting.createdBy.id,
+          username: meeting.createdBy.username,
+          firstName: meeting.createdBy.firstName,
+          lastName: meeting.createdBy.lastName,
+        },
+        _count: {
+          attendees: meeting._count.attendees,
+          decisions: meeting._count.decisions,
+        },
+      })),
+    };
+  } catch (error) {
+    console.error('Error fetching user meetings:', error);
+    return { error: 'Toplantılar yüklenirken bir hata oluştu', data: null };
+  }
+}
+
 export async function getMeetingById(id: string) {
   try {
     const session = await getServerSession(authOptions);
@@ -148,7 +221,7 @@ export async function createMeeting(data: unknown) {
         title: validated.title,
         description: validated.description || null,
         meetingDate: new Date(validated.meetingDate),
-        location: validated.location,
+        location: validated.location || '',
         createdById: session.user.id,
       },
       include: {

@@ -3,7 +3,7 @@ import prisma from '@/lib/prisma';
 import { UserRole } from '@prisma/client';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '../auth/[...nextauth]/auth.config';
-import { calculateMultipleUserPoints, calculateUserExperience } from '@/lib/points';
+import { calculateMultipleUserPoints, calculateMultipleUserExperience } from '@/lib/points';
 import { requireActivePeriod } from '@/lib/periods';
 
 export const dynamic = 'force-dynamic';
@@ -59,16 +59,15 @@ export async function GET(request: NextRequest) {
       }
     });
 
-    // Calculate experience for all students efficiently
-    const students = await Promise.all(
-      studentsRaw.map(async (student) => {
-        const experience = await calculateUserExperience(student.id, activePeriod.id);
-        return {
-          ...student,
-          experience,
-        };
-      })
-    );
+    // Calculate experience for all students efficiently using batch query
+    const studentIds = studentsRaw.map(s => s.id);
+    const experienceMap = await calculateMultipleUserExperience(studentIds, activePeriod.id);
+    
+    // Map students with their experience
+    const students = studentsRaw.map((student) => ({
+      ...student,
+      experience: experienceMap.get(student.id) || 0,
+    }));
 
     // Sort by calculated experience
     students.sort((a, b) => b.experience - a.experience);

@@ -177,7 +177,7 @@ model User {
   // Meeting relations
   createdMeetings      ManagerMeeting[]    @relation("MeetingCreator")
   meetingAttendances   MeetingAttendance[] @relation("UserAttendances")
-  responsibleDecisions MeetingDecision[]   @relation("DecisionResponsible")
+  responsibleDecisions DecisionResponsibleUser[] @relation("DecisionResponsible")
 
   @@index([tutorId])
 }
@@ -649,16 +649,18 @@ enum DecisionStatus {
 }
 
 model ManagerMeeting {
-  id              String        @id @default(uuid())
-  title           String
-  description     String?       @db.Text
-  meetingDate     DateTime
-  location        String
-  status          MeetingStatus @default(PLANNED)
-  qrCodeToken     String?       @unique
-  qrCodeExpiresAt DateTime?
-  createdAt       DateTime      @default(now())
-  updatedAt       DateTime      @updatedAt
+  id                 String        @id @default(uuid())
+  title              String
+  description        String?       @db.Text
+  meetingDate        DateTime
+  location           String
+  status             MeetingStatus @default(PLANNED)
+  qrCodeToken        String?       @unique
+  qrCodeExpiresAt    DateTime?
+  maxAttendees       Int?          // Maximum number of attendees (null = unlimited)
+  allowGuestAttendees Boolean      @default(false) // Allow non-admin users to attend
+  createdAt          DateTime      @default(now())
+  updatedAt          DateTime      @updatedAt
 
   // Relations
   createdBy   User                @relation("MeetingCreator", fields: [createdById], references: [id])
@@ -699,12 +701,22 @@ model MeetingDecision {
   updatedAt   DateTime       @updatedAt
 
   // Relations
-  meeting           ManagerMeeting @relation("MeetingDecisions", fields: [meetingId], references: [id], onDelete: Cascade)
-  meetingId         String
-  responsibleUser   User?          @relation("DecisionResponsible", fields: [responsibleUserId], references: [id])
-  responsibleUserId String?
+  meeting            ManagerMeeting              @relation("MeetingDecisions", fields: [meetingId], references: [id], onDelete: Cascade)
+  meetingId          String
+  responsibleUsers   DecisionResponsibleUser[]  @relation("DecisionResponsibleUsers")
 
   @@index([meetingId])
-  @@index([responsibleUserId])
   @@index([status])
+}
+
+model DecisionResponsibleUser {
+  id         String          @id @default(uuid())
+  decision   MeetingDecision @relation("DecisionResponsibleUsers", fields: [decisionId], references: [id], onDelete: Cascade)
+  decisionId String
+  user       User            @relation("DecisionResponsible", fields: [userId], references: [id], onDelete: Cascade)
+  userId     String
+
+  @@unique([decisionId, userId])
+  @@index([decisionId])
+  @@index([userId])
 }

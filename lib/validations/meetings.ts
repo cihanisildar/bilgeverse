@@ -13,9 +13,10 @@ export const createMeetingSchema = z.object({
       (date) => !isNaN(Date.parse(date)),
       'Geçerli bir tarih seçin'
     ),
-  location: z.string({ required_error: 'Konum gereklidir', invalid_type_error: 'Konum metin olmalıdır' })
-    .min(1, 'Konum gereklidir')
-    .max(200, 'Konum çok uzun'),
+  location: z.string({ invalid_type_error: 'Konum metin olmalıdır' })
+    .max(200, 'Konum çok uzun')
+    .optional()
+    .nullable(),
 });
 
 export const updateMeetingSchema = z.object({

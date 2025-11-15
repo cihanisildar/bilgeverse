@@ -2,14 +2,27 @@
 
 import { ArrowRight, User2 } from 'lucide-react';
 import Link from 'next/link';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useSearchParams, useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
 import { useAuth } from '../contexts/AuthContext';
 
 export default function LoginPage() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
-  const { login, loading } = useAuth();
+  const { login, loading, user } = useAuth();
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const callbackUrl = searchParams.get('callbackUrl');
+
+  // Redirect if already logged in
+  useEffect(() => {
+    if (user && callbackUrl) {
+      router.push(callbackUrl);
+    } else if (user) {
+      router.push('/dashboard');
+    }
+  }, [user, callbackUrl, router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -20,7 +33,7 @@ export default function LoginPage() {
     }
 
     try {
-      await login(username.toLowerCase(), password);
+      await login(username.toLowerCase(), password, callbackUrl || undefined);
     } catch (err: any) {
       console.error('Login error:', err);
       toast.error('Giriş başarısız. Lütfen tekrar deneyin.');

@@ -33,3 +33,33 @@ export async function getAllUsers() {
   }
 }
 
+export async function getAdminUsers() {
+  try {
+    const session = await getServerSession(authOptions);
+    
+    if (!session?.user) {
+      return { error: 'Unauthorized', data: null };
+    }
+
+    const users = await prisma.user.findMany({
+      where: {
+        role: UserRole.ADMIN,
+      },
+      select: {
+        id: true,
+        username: true,
+        firstName: true,
+        lastName: true,
+      },
+      orderBy: {
+        username: 'asc',
+      },
+    });
+
+    return { error: null, data: users };
+  } catch (error) {
+    console.error('Error fetching admin users:', error);
+    return { error: 'Failed to fetch admin users', data: null };
+  }
+}
+

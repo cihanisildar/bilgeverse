@@ -68,8 +68,13 @@ export async function middleware(request: NextRequest) {
       return path.startsWith(pattern.replace('*', ''));
     };
 
-    // Redirect non-admin users away from parts 1-6 and 8-9 to part 7
-    if (pathname.startsWith('/dashboard/part') && !pathname.startsWith('/dashboard/part7')) {
+    // Allow check-in pages and meeting detail pages for all authenticated users
+    // (students, tutors, etc. can check in as guests and view meetings they're attending)
+    const isCheckInPage = pathname.includes('/meetings/') && pathname.includes('/check-in');
+    const isMeetingDetailPage = pathname.match(/\/dashboard\/part1\/meetings\/[^\/]+$/);
+    
+    // Redirect non-admin users away from parts 1-6 and 8-9 to part 7 (except check-in and meeting detail pages)
+    if (pathname.startsWith('/dashboard/part') && !pathname.startsWith('/dashboard/part7') && !isCheckInPage && !isMeetingDetailPage) {
       if (token.role !== UserRole.ADMIN) {
         console.log('Non-admin user attempting to access restricted part, redirecting to part 7');
         const roleBasedPath = token.role === UserRole.STUDENT 

@@ -55,7 +55,7 @@ export async function getMeetingAttendance(meetingId: string) {
   }
 }
 
-export async function checkInWithQR(meetingId: string, qrToken: string) {
+export async function checkInWithQR(meetingId: string) {
   try {
     const session = await getServerSession(authOptions);
     
@@ -63,18 +63,20 @@ export async function checkInWithQR(meetingId: string, qrToken: string) {
       return { error: 'Yetkisiz erişim', data: null };
     }
 
-    // Find meeting with valid QR token
+    // Find meeting with valid QR token (token is stored in meeting, not passed as parameter)
     const meeting = await prisma.managerMeeting.findFirst({
       where: {
         id: meetingId,
-        qrCodeToken: qrToken,
+        qrCodeToken: {
+          not: null,
+        },
         qrCodeExpiresAt: {
           gte: new Date(),
         },
       },
     });
 
-    if (!meeting) {
+    if (!meeting || !meeting.qrCodeToken) {
       return { error: 'Geçersiz veya süresi dolmuş QR kod', data: null };
     }
 

@@ -154,14 +154,18 @@ export function useDeleteDecision() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: deleteDecision,
+    mutationFn: async (id: string) => {
+      // Ensure we pass a plain string to the server action
+      const plainId = String(id);
+      return deleteDecision(plainId);
+    },
     onSuccess: (result) => {
       if (result.error) {
         toast.error(result.error);
       } else {
-        // Invalidate all decision queries
+        // Invalidate all decision queries - this will refetch all meetings and their decisions
+        // Invalidating ['meetings'] will also invalidate ['meetings', meetingId, 'decisions']
         queryClient.invalidateQueries({ queryKey: ['meetings'] });
-        queryClient.invalidateQueries({ queryKey: ['decisions'] });
         toast.success('Karar başarıyla silindi');
       }
     },

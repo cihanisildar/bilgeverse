@@ -1,6 +1,6 @@
 'use client';
 
-import { useRouter, useParams, useSearchParams } from 'next/navigation';
+import { useRouter, useParams } from 'next/navigation';
 import { useAuth } from '@/app/contexts/AuthContext';
 import { useCheckIn } from '@/app/hooks/use-attendance';
 import { useMeeting } from '@/app/hooks/use-meetings';
@@ -9,66 +9,42 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { ArrowLeft, CheckCircle2, QrCode, Camera } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { Html5Qrcode } from 'html5-qrcode';
-import QRCode from 'qrcode';
-import { getBaseUrl } from '@/lib/utils';
 
 export default function CheckInPage() {
   const router = useRouter();
   const params = useParams();
-  const searchParams = useSearchParams();
   const meetingId = params.id as string;
-  const qrToken = searchParams.get('token');
-  const { user } = useAuth();
-  const { data: meeting } = useMeeting(meetingId);
+  const { user, loading: authLoading, isAdmin, isTutor } = useAuth();
+  const { data: meeting, isLoading: meetingLoading } = useMeeting(meetingId);
   const checkIn = useCheckIn();
   const [scannerActive, setScannerActive] = useState(false);
-  const [scannedToken, setScannedToken] = useState<string | null>(null);
   const scannerRef = useRef<Html5Qrcode | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [qrImageUrl, setQrImageUrl] = useState<string | null>(null);
   const [isCheckingIn, setIsCheckingIn] = useState(false);
   const [hasCheckedIn, setHasCheckedIn] = useState(false);
 
+  // Redirect to login if not authenticated
   useEffect(() => {
-    // If token is provided in URL, check in directly
-    if (qrToken && meeting && !hasCheckedIn && !checkIn.isPending && !checkIn.isSuccess) {
-      setIsCheckingIn(true);
-      setError(null);
-      handleCheckIn(qrToken);
+    if (!authLoading && !user) {
+      const callbackUrl = `/dashboard/part1/meetings/${meetingId}/check-in`;
+      router.push(`/login?callbackUrl=${encodeURIComponent(callbackUrl)}`);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [qrToken, meeting, hasCheckedIn]);
+  }, [user, authLoading, meetingId, router]);
 
-  // Generate QR code image when meeting data is available
-  useEffect(() => {
-    if (meeting?.qrCodeToken && !qrImageUrl) {
-      // Uses production URL automatically in production
-      const baseUrl = getBaseUrl();
-      const qrData = `${baseUrl}/dashboard/part1/meetings/${meetingId}/check-in?token=${encodeURIComponent(meeting.qrCodeToken)}`;
-      QRCode.toDataURL(qrData, {
-        errorCorrectionLevel: 'M',
-        margin: 1,
-        width: 300,
-      })
-        .then(setQrImageUrl)
-        .catch((err) => {
-          console.error('QR Code generation error:', err);
-          setError('QR kod oluşturulurken bir hata oluştu');
-        });
-    }
-  }, [meeting, meetingId, qrImageUrl]);
+  // Note: Auto check-in removed - users should manually check in via button or QR scanner
+  // This allows guests (students, tutors) to see the page and choose when to check in
+  // QR code generation removed - users already arrived via QR code, no need to show it again
 
-  const handleCheckIn = async (token: string) => {
-    if (!token || !token.trim()) {
-      setError('Geçersiz token. Lütfen QR kodu tekrar tarayın.');
-      setIsCheckingIn(false);
+  const handleCheckIn = async () => {
+    if (!user) {
+      const callbackUrl = `/dashboard/part1/meetings/${meetingId}/check-in`;
+      router.push(`/login?callbackUrl=${encodeURIComponent(callbackUrl)}`);
       return;
     }
     
     try {
-      console.log('Attempting check-in with token:', token);
       setError(null);
-      const result = await checkIn.mutateAsync({ meetingId, qrToken: token.trim() });
+      const result = await checkIn.mutateAsync({ meetingId });
       
       if (result.error) {
         setError(result.error);
@@ -78,6 +54,7 @@ export default function CheckInPage() {
         setIsCheckingIn(false);
         // Small delay to show success message before redirect
         setTimeout(() => {
+          // All users can view meeting details after check-in
           router.push(`/dashboard/part1/meetings/${meetingId}`);
         }, 1000);
       }
@@ -119,46 +96,43 @@ export default function CheckInPage() {
         (decodedText) => {
           console.log('QR Code scanned:', decodedText);
           
-          let token: string | null = null;
+          let scannedMeetingId: string | null = null;
           
-          // Try to extract token from URL
+          // Extract meeting ID from URL
           try {
-            // If it's a full URL, parse it
-            if (decodedText.includes('token=')) {
-              const url = new URL(decodedText);
-              token = url.searchParams.get('token');
-            } 
-            // If it's a relative URL with query params
-            else if (decodedText.includes('/check-in?token=')) {
-              const tokenMatch = decodedText.match(/token=([^&]+)/);
-              token = tokenMatch ? decodeURIComponent(tokenMatch[1]) : null;
-            }
-            // If it's just the token
-            else {
-              token = decodedText.trim();
+            // Parse URL to get meeting ID
+            const urlMatch = decodedText.match(/\/meetings\/([^\/]+)\/check-in/);
+            if (urlMatch) {
+              scannedMeetingId = urlMatch[1];
+            } else {
+              // If it's just a meeting ID
+              scannedMeetingId = decodedText.trim();
             }
           } catch (e) {
-            // If URL parsing fails, try regex
-            const tokenMatch = decodedText.match(/token=([^&]+)/);
-            if (tokenMatch) {
-              token = decodeURIComponent(tokenMatch[1]);
-            } else {
-              token = decodedText.trim();
-            }
-          }
-          
-          if (!token) {
-            setError('QR kodda token bulunamadı. Lütfen geçerli bir QR kod tarayın.');
+            console.error('Error parsing QR code:', e);
+            setError('QR kod okunamadı. Lütfen geçerli bir QR kod tarayın.');
             return;
           }
           
-          console.log('Extracted token:', token);
-          setScannedToken(token);
-          scanner.stop().catch(console.error);
-          setScannerActive(false);
-          setIsCheckingIn(true);
-          setError(null);
-          handleCheckIn(token);
+          if (!scannedMeetingId) {
+            setError('QR kodda toplantı bilgisi bulunamadı. Lütfen geçerli bir QR kod tarayın.');
+            return;
+          }
+          
+          // If scanned meeting ID matches current meeting, proceed with check-in
+          if (scannedMeetingId === meetingId) {
+            console.log('Scanned meeting ID matches, proceeding with check-in');
+            scanner.stop().catch(console.error);
+            setScannerActive(false);
+            setIsCheckingIn(true);
+            setError(null);
+            handleCheckIn();
+          } else {
+            // Redirect to the scanned meeting's check-in page
+            scanner.stop().catch(console.error);
+            setScannerActive(false);
+            router.push(`/dashboard/part1/meetings/${scannedMeetingId}/check-in`);
+          }
         },
         (errorMessage) => {
           // Ignore scanning errors (they're frequent during scanning)
@@ -189,11 +163,42 @@ export default function CheckInPage() {
     };
   }, []);
 
+  // Show loading state while meeting is being fetched
+  if (meetingLoading || authLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50 p-6 lg:p-8">
+        <div className="max-w-2xl mx-auto">
+          <div className="text-center py-12">
+            <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mb-4"></div>
+            <p className="text-gray-600">Yükleniyor...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Show error if meeting not found after loading
   if (!meeting) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50 p-6 lg:p-8">
         <div className="max-w-2xl mx-auto">
           <div className="text-center py-12 text-red-600">Toplantı bulunamadı</div>
+          <Button
+            variant="outline"
+            onClick={() => {
+              if (isAdmin) {
+                router.push('/dashboard/part1/meetings');
+              } else if (isTutor) {
+                router.push('/dashboard/part7/tutor');
+              } else {
+                router.push('/dashboard/part7/student');
+              }
+            }}
+            className="mt-4"
+          >
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Ana Sayfaya Dön
+          </Button>
         </div>
       </div>
     );
@@ -210,7 +215,10 @@ export default function CheckInPage() {
       <div className="max-w-2xl mx-auto">
         <Button
           variant="ghost"
-          onClick={() => router.push(`/dashboard/part1/meetings/${meetingId}`)}
+          onClick={() => {
+            // All users can access meeting detail page (read-only for non-admins)
+            router.push(`/dashboard/part1/meetings/${meetingId}`);
+          }}
           className="mb-6"
         >
           <ArrowLeft className="h-4 w-4 mr-2" />
@@ -240,7 +248,7 @@ export default function CheckInPage() {
                   onClick={() => router.push(`/dashboard/part1/meetings/${meetingId}`)}
                   className="bg-indigo-600 hover:bg-indigo-700 text-white"
                 >
-                  Toplantı Detaylarına Dön
+                  Toplantı Detaylarına Git
                 </Button>
               </div>
             ) : !hasQRCode ? (
@@ -256,7 +264,7 @@ export default function CheckInPage() {
                   className="w-full"
                 >
                   <ArrowLeft className="h-4 w-4 mr-2" />
-                  Toplantı Detaylarına Dön
+                  Toplantı Detaylarına Git
                 </Button>
               </div>
             ) : isQRCodeExpired ? (
@@ -272,7 +280,7 @@ export default function CheckInPage() {
                   className="w-full"
                 >
                   <ArrowLeft className="h-4 w-4 mr-2" />
-                  Toplantı Detaylarına Dön
+                  Toplantı Detaylarına Git
                 </Button>
               </div>
             ) : (
@@ -283,48 +291,50 @@ export default function CheckInPage() {
                   </div>
                 )}
 
-                {/* Display QR Code */}
-                {qrImageUrl && (
-                  <div className="text-center py-6 border-b border-gray-200">
-                    <p className="text-sm font-medium text-gray-700 mb-3">
-                      Bu QR kodu tarayarak toplantıya giriş yapabilirsiniz
-                    </p>
-                    <div className="flex justify-center mb-4">
-                      <div className="bg-white p-4 rounded-lg border-2 border-gray-200 shadow-sm">
-                        <img 
-                          src={qrImageUrl} 
-                          alt="QR Code" 
-                          className="w-64 h-64 mx-auto"
-                        />
-                      </div>
-                    </div>
-                    <p className="text-xs text-gray-500">
-                      Veya aşağıdaki butona tıklayarak kameranızı kullanabilirsiniz
-                    </p>
-                  </div>
-                )}
-
-                {!scannerActive ? (
-                  <div className="text-center py-8">
-                    {!qrImageUrl && (
+                {/* Manual Check-in Button */}
+                <div className="text-center py-4 border-b border-gray-200">
+                  <Button
+                    onClick={handleCheckIn}
+                    disabled={isCheckingIn || checkIn.isPending}
+                    className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white shadow-lg shadow-indigo-500/50 w-full mb-4"
+                  >
+                    {isCheckingIn || checkIn.isPending ? (
                       <>
-                        <QrCode className="h-16 w-16 mx-auto mb-4 text-indigo-600" />
-                        <p className="text-lg font-medium text-gray-800 mb-2">QR Kod Tarayıcı</p>
-                        <p className="text-sm text-gray-600 mb-6">
-                          QR kodu taramak için kamerayı başlatın
-                        </p>
+                        <div className="inline-block animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                        Giriş Yapılıyor...
+                      </>
+                    ) : (
+                      <>
+                        <CheckCircle2 className="h-4 w-4 mr-2" />
+                        Toplantıya Giriş Yap
                       </>
                     )}
+                  </Button>
+                  <p className="text-xs text-gray-500">
+                    Veya QR kod tarayarak giriş yapabilirsiniz
+                  </p>
+                </div>
+
+                {/* QR Scanner - Only show if user wants to scan another QR code */}
+                {!scannerActive ? (
+                  <div className="text-center py-4 border-t border-gray-200 pt-6">
+                    <QrCode className="h-12 w-12 mx-auto mb-3 text-indigo-600" />
+                    <p className="text-sm font-medium text-gray-700 mb-2">Başka bir QR kod taramak istiyor musunuz?</p>
+                    <p className="text-xs text-gray-500 mb-4">
+                      Farklı bir toplantıya katılmak için QR kod tarayıcıyı kullanabilirsiniz
+                    </p>
                     <Button
                       onClick={startScanner}
-                      className="bg-indigo-600 hover:bg-indigo-700 text-white w-full"
+                      variant="outline"
+                      className="w-full border-indigo-200 text-indigo-600 hover:bg-indigo-50"
                     >
                       <Camera className="h-4 w-4 mr-2" />
-                      Kamerayı Başlat
+                      QR Kod Tarayıcıyı Başlat
                     </Button>
                   </div>
                 ) : (
-                  <div className="space-y-4">
+                  <div className="space-y-4 border-t border-gray-200 pt-6">
+                    <p className="text-sm font-medium text-gray-700 text-center mb-2">QR Kod Tarayıcı</p>
                     <div id="qr-reader" className="w-full min-h-[300px]"></div>
                     <Button
                       onClick={stopScanner}

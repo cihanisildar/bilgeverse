@@ -111,6 +111,74 @@ export async function calculateUserExperience(userId: string, periodId?: string)
 }
 
 /**
+ * Calculate experience for multiple users efficiently using batch queries
+ * @param userIds Array of user IDs
+ * @param periodId Optional specific period ID (defaults to active period)
+ * @returns Map of userId to experience
+ */
+export async function calculateMultipleUserExperience(userIds: string[], periodId?: string): Promise<Map<string, number>> {
+  try {
+    // Use provided periodId or get active period
+    let targetPeriodId = periodId;
+    if (!targetPeriodId) {
+      const activePeriod = await getActivePeriod();
+      if (!activePeriod) {
+        return new Map(); // No active period, no experience
+      }
+      targetPeriodId = activePeriod.id;
+    }
+
+    // Get all experience transactions for all users in a single query
+    const experienceTransactions = await prisma.experienceTransaction.findMany({
+      where: {
+        studentId: { in: userIds },
+        periodId: targetPeriodId,
+        rolledBack: false
+      },
+      select: {
+        studentId: true,
+        amount: true
+      }
+    });
+
+    // Get all points transactions for all users in a single query
+    const pointsTransactions = await prisma.pointsTransaction.findMany({
+      where: {
+        studentId: { in: userIds },
+        periodId: targetPeriodId,
+        type: TransactionType.AWARD,
+        rolledBack: false
+      },
+      select: {
+        studentId: true,
+        points: true
+      }
+    });
+
+    // Initialize all users with 0 experience
+    const userExperienceMap = new Map<string, number>();
+    userIds.forEach(userId => userExperienceMap.set(userId, 0));
+
+    // Calculate experience from experience transactions
+    experienceTransactions.forEach(transaction => {
+      const currentExperience = userExperienceMap.get(transaction.studentId) || 0;
+      userExperienceMap.set(transaction.studentId, currentExperience + transaction.amount);
+    });
+
+    // Calculate experience from points transactions (points = experience)
+    pointsTransactions.forEach(transaction => {
+      const currentExperience = userExperienceMap.get(transaction.studentId) || 0;
+      userExperienceMap.set(transaction.studentId, currentExperience + transaction.points);
+    });
+
+    return userExperienceMap;
+  } catch (error) {
+    console.error('Error calculating multiple user experience:', error);
+    return new Map();
+  }
+}
+
+/**
  * Calculate points for multiple users efficiently
  * @param userIds Array of user IDs
  * @param periodId Optional specific period ID (defaults to active period)

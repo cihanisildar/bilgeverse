@@ -1,12 +1,17 @@
 'use client';
 
 import { useAuth } from '@/app/contexts/AuthContext';
-import { Card } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ArrowRight, Calendar, Clock, Star, Trophy, Settings, User } from 'lucide-react';
+import { Button } from "@/components/ui/button";
+import { ArrowRight, Calendar, Clock, Star, Trophy, Settings, User, Users, FileText, MapPin } from 'lucide-react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import CurrentPeriod from '@/app/components/CurrentPeriod';
+import { useUserMeetings } from '@/app/hooks/use-meetings';
+import { format } from 'date-fns';
+import { tr } from 'date-fns/locale';
 
 type StudentStats = {
   points: number;
@@ -147,11 +152,13 @@ function LoadingDashboard() {
 
 export default function StudentDashboard() {
   const { user, isStudent, refreshUser } = useAuth();
+  const router = useRouter();
   const [stats, setStats] = useState<StudentStats | null>(null);
   const [upcomingEvents, setUpcomingEvents] = useState<Event[]>([]);
   const [recentPoints, setRecentPoints] = useState<PointHistory[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const { data: userMeetings, isLoading: meetingsLoading } = useUserMeetings();
 
   useEffect(() => {
       const fetchDashboardData = async () => {
@@ -444,6 +451,84 @@ export default function StudentDashboard() {
           </div>
         </Card>
       </div>
+
+      {/* My Meetings Section - Only show if user has attended meetings */}
+      {!meetingsLoading && userMeetings && userMeetings.length > 0 && (
+        <div className="px-4 sm:px-6 mt-6 sm:mt-8">
+          <Card className="border-0 shadow-md">
+            <div className="flex items-center justify-between p-3 sm:p-4 border-b">
+              <div className="flex items-center">
+                <Users className="h-4 w-4 sm:h-5 sm:w-5 text-indigo-500 mr-2" />
+                <h2 className="text-base sm:text-lg font-medium">Katıldığım Toplantılar</h2>
+              </div>
+            </div>
+            <div className="p-3 sm:p-4">
+              <div className="space-y-3 sm:space-y-4">
+                {userMeetings.slice(0, 5).map((meeting) => (
+                  <div
+                    key={meeting.id}
+                    className="border border-gray-200 rounded-lg p-3 sm:p-4 hover:border-indigo-300 hover:shadow-md transition-all cursor-pointer"
+                    onClick={() => router.push(`/dashboard/part1/meetings/${meeting.id}`)}
+                  >
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <h3 className="font-semibold text-base sm:text-lg text-gray-900 mb-2">
+                          {meeting.title}
+                        </h3>
+                        {meeting.description && (
+                          <p className="text-xs sm:text-sm text-gray-600 mb-3 line-clamp-2">
+                            {meeting.description}
+                          </p>
+                        )}
+                        <div className="flex flex-wrap items-center gap-3 sm:gap-4 text-xs sm:text-sm text-gray-500">
+                          <div className="flex items-center">
+                            <Calendar className="h-3 w-3 sm:h-4 sm:w-4 mr-1.5" />
+                            {format(new Date(meeting.meetingDate), 'd MMMM yyyy, HH:mm', { locale: tr })}
+                          </div>
+                          {meeting.location && (
+                            <div className="flex items-center">
+                              <MapPin className="h-3 w-3 sm:h-4 sm:w-4 mr-1.5" />
+                              {meeting.location}
+                            </div>
+                          )}
+                          <div className="flex items-center">
+                            <Users className="h-3 w-3 sm:h-4 sm:w-4 mr-1.5" />
+                            {meeting._count?.attendees || 0} katılımcı
+                          </div>
+                          <div className="flex items-center">
+                            <FileText className="h-3 w-3 sm:h-4 sm:w-4 mr-1.5" />
+                            {meeting._count?.decisions || 0} karar
+                          </div>
+                        </div>
+                      </div>
+                      <div className="ml-3 sm:ml-4">
+                        <span className={`inline-flex items-center px-2 sm:px-3 py-1 rounded-full text-xs font-medium ${
+                          meeting.status === 'COMPLETED' ? 'bg-green-100 text-green-700' :
+                          meeting.status === 'ONGOING' ? 'bg-blue-100 text-blue-700' :
+                          meeting.status === 'CANCELLED' ? 'bg-red-100 text-red-700' :
+                          'bg-gray-100 text-gray-700'
+                        }`}>
+                          {meeting.status === 'COMPLETED' ? 'Tamamlandı' :
+                           meeting.status === 'ONGOING' ? 'Devam Ediyor' :
+                           meeting.status === 'CANCELLED' ? 'İptal Edildi' :
+                           'Planlandı'}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+                {userMeetings.length > 5 && (
+                  <div className="text-center pt-2">
+                    <p className="text-sm text-gray-500">
+                      +{userMeetings.length - 5} toplantı daha
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
+          </Card>
+        </div>
+      )}
     </div>
   );
 } 

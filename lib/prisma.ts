@@ -1,10 +1,30 @@
 import { PrismaClient } from '@prisma/client';
 
 const prismaClientSingleton = () => {
+  // Parse DATABASE_URL and add connection pool parameters if not present
+  let databaseUrl = process.env.DATABASE_URL || '';
+  
+  // Add connection pool parameters to handle concurrent requests
+  // connection_limit: Maximum number of connections in the pool (default is 1)
+  // pool_timeout: Maximum time to wait for a connection (default is 10 seconds)
+  if (databaseUrl && !databaseUrl.includes('connection_limit')) {
+    try {
+      const url = new URL(databaseUrl);
+      url.searchParams.set('connection_limit', '10');
+      url.searchParams.set('pool_timeout', '60');
+      databaseUrl = url.toString();
+    } catch (error) {
+      // If URL parsing fails, try to append parameters manually
+      // This handles PostgreSQL connection strings that might not be standard URLs
+      const separator = databaseUrl.includes('?') ? '&' : '?';
+      databaseUrl = `${databaseUrl}${separator}connection_limit=10&pool_timeout=60`;
+    }
+  }
+
   const prisma = new PrismaClient({
     datasources: {
       db: {
-        url: process.env.DATABASE_URL
+        url: databaseUrl
       }
     },
     log: process.env.NODE_ENV === 'development' ? ['query', 'error', 'warn'] : ['error'],

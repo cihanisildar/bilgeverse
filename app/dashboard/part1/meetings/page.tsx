@@ -215,7 +215,7 @@ export default function MeetingsPage() {
                           size="sm"
                           onClick={(e) => {
                             e.stopPropagation();
-                            router.push(`/dashboard/part1/meetings/${meeting.id}?edit=true`);
+                            router.push(`/dashboard/part1/meetings/${meeting.id}/edit`);
                           }}
                           className="border-gray-200 text-gray-600 hover:bg-gray-50 hover:border-gray-300 h-8 w-8 p-0"
                         >

@@ -32,7 +32,7 @@ type AuthContextType = {
   user: AuthUser | null;
   loading: boolean;
   isAuthenticated: boolean;
-  login: (username: string, password: string) => Promise<void>;
+  login: (username: string, password: string, callbackUrl?: string) => Promise<void>;
   logout: () => Promise<void>;
   checkAuth: () => Promise<void>;
   refreshUser: () => Promise<void>;
@@ -122,7 +122,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setLoading(false);
   }, [session?.user?.id, status, user?.id, userUpdatedFromAPI]); // Only depend on user ID and status, not the entire session
 
-  const login = async (username: string, password: string) => {
+  const login = async (username: string, password: string, callbackUrl?: string) => {
     try {
       setLoading(true);
       console.log('Login attempt started for user:', username);
@@ -151,8 +151,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       // Show success message
       toast.success('Giriş başarılı!');
 
-      // Redirect to dashboard
-      await router.replace('/dashboard');
+      // Redirect to callbackUrl if provided, otherwise to dashboard
+      const redirectUrl = callbackUrl || '/dashboard';
+      await router.replace(redirectUrl);
       
     } catch (error) {
       console.error("Login error:", error);

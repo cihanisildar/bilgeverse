@@ -49,16 +49,20 @@ export default function NewMeetingPage() {
       title: string;
       description?: string;
       meetingDate: string;
-      location: string;
+      location?: string;
     } = {
       title: String(data.title || ''),
       meetingDate: String(data.meetingDate || ''),
-      location: String(data.location || ''),
     };
     
     // Only add description if it exists and is not empty
     if (data.description && String(data.description).trim()) {
       plainData.description = String(data.description);
+    }
+    
+    // Only add location if it exists and is not empty
+    if (data.location && String(data.location).trim()) {
+      plainData.location = String(data.location);
     }
     
     const result = await createMeeting.mutateAsync(plainData);
@@ -127,11 +131,11 @@ export default function NewMeetingPage() {
               </div>
 
               <div>
-                <Label htmlFor="location">Konum *</Label>
+                <Label htmlFor="location">Konum</Label>
                 <Input
                   id="location"
                   {...register('location')}
-                  placeholder="Toplantı konumu"
+                  placeholder="Toplantı konumu (opsiyonel)"
                   className="mt-1"
                 />
                 {errors.location && (

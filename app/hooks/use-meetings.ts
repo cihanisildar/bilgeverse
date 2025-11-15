@@ -4,6 +4,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   getMeetings,
   getMeetingById,
+  getUserMeetings,
   createMeeting,
   updateMeeting,
   deleteMeeting,
@@ -35,6 +36,20 @@ export function useMeeting(id: string) {
       return result.data;
     },
     enabled: !!id,
+    refetchOnMount: true,
+  });
+}
+
+export function useUserMeetings() {
+  return useQuery({
+    queryKey: ['user-meetings'],
+    queryFn: async () => {
+      const result = await getUserMeetings();
+      if (result.error) {
+        throw new Error(result.error);
+      }
+      return result.data;
+    },
   });
 }
 

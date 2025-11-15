@@ -27,11 +27,8 @@ export function useCheckIn() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ meetingId, qrToken }: { meetingId: string; qrToken?: string }) => {
-      if (qrToken) {
-        return checkInWithQR(meetingId, qrToken);
-      }
-      throw new Error('QR token is required');
+    mutationFn: ({ meetingId }: { meetingId: string }) => {
+      return checkInWithQR(meetingId);
     },
     onSuccess: (result, variables) => {
       if (result.error) {
