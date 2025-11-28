@@ -8,7 +8,7 @@ import { UserRole, CheckInMethod } from '@prisma/client';
 export async function getMeetingAttendance(meetingId: string) {
   try {
     const session = await getServerSession(authOptions);
-    
+
     if (!session?.user) {
       return { error: 'Yetkisiz erişim', data: null };
     }
@@ -22,6 +22,12 @@ export async function getMeetingAttendance(meetingId: string) {
             username: true,
             firstName: true,
             lastName: true,
+            boardMember: {
+              select: {
+                title: true,
+                isActive: true,
+              },
+            },
           },
         },
       },
@@ -46,6 +52,7 @@ export async function getMeetingAttendance(meetingId: string) {
           username: a.user.username,
           firstName: a.user.firstName,
           lastName: a.user.lastName,
+          boardMemberTitle: a.user.boardMember?.title || null,
         },
       })),
     };
@@ -58,7 +65,7 @@ export async function getMeetingAttendance(meetingId: string) {
 export async function checkInWithQR(meetingId: string) {
   try {
     const session = await getServerSession(authOptions);
-    
+
     if (!session?.user) {
       return { error: 'Yetkisiz erişim', data: null };
     }
@@ -144,7 +151,7 @@ export async function checkInWithQR(meetingId: string) {
 export async function manualCheckIn(meetingId: string, userId: string) {
   try {
     const session = await getServerSession(authOptions);
-    
+
     if (!session?.user || session.user.role !== UserRole.ADMIN) {
       return { error: 'Yetkisiz erişim: Sadece yöneticiler manuel giriş yapabilir', data: null };
     }
@@ -213,7 +220,7 @@ export async function manualCheckIn(meetingId: string, userId: string) {
 export async function removeAttendance(attendanceId: string) {
   try {
     const session = await getServerSession(authOptions);
-    
+
     if (!session?.user || session.user.role !== UserRole.ADMIN) {
       return { error: 'Yetkisiz erişim: Sadece yöneticiler katılım kaydını silebilir', data: null };
     }

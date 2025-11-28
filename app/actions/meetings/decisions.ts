@@ -9,7 +9,7 @@ import { UserRole, DecisionStatus } from '@prisma/client';
 export async function getMeetingDecisions(meetingId: string) {
   try {
     const session = await getServerSession(authOptions);
-    
+
     if (!session?.user) {
       return { error: 'Yetkisiz erişim', data: null };
     }
@@ -64,13 +64,13 @@ export async function getMeetingDecisions(meetingId: string) {
 export async function createDecision(meetingId: string, data: unknown) {
   try {
     const session = await getServerSession(authOptions);
-    
+
     if (!session?.user || session.user.role !== UserRole.ADMIN) {
       return { error: 'Yetkisiz erişim: Sadece yöneticiler karar oluşturabilir', data: null };
     }
 
     const validated = createDecisionSchema.parse(data);
-    
+
     const decision = await prisma.meetingDecision.create({
       data: {
         meetingId,
@@ -131,13 +131,13 @@ export async function createDecision(meetingId: string, data: unknown) {
 export async function updateDecision(id: string, data: unknown) {
   try {
     const session = await getServerSession(authOptions);
-    
+
     if (!session?.user || session.user.role !== UserRole.ADMIN) {
       return { error: 'Yetkisiz erişim: Sadece yöneticiler karar güncelleyebilir', data: null };
     }
 
     const validated = updateDecisionSchema.parse(data);
-    
+
     const updateData: any = {};
     if (validated.title !== undefined) updateData.title = validated.title;
     if (validated.description !== undefined) updateData.description = validated.description || null;
@@ -209,7 +209,7 @@ export async function updateDecision(id: string, data: unknown) {
 export async function updateDecisionStatus(id: string, status: DecisionStatus) {
   try {
     const session = await getServerSession(authOptions);
-    
+
     if (!session?.user || session.user.role !== UserRole.ADMIN) {
       return { error: 'Yetkisiz erişim: Sadece yöneticiler karar durumunu güncelleyebilir', data: null };
     }
@@ -262,7 +262,7 @@ export async function updateDecisionStatus(id: string, status: DecisionStatus) {
 export async function deleteDecision(id: string) {
   try {
     const session = await getServerSession(authOptions);
-    
+
     if (!session?.user || session.user.role !== UserRole.ADMIN) {
       return { error: 'Yetkisiz erişim: Sadece yöneticiler karar silebilir', data: null };
     }
@@ -277,4 +277,44 @@ export async function deleteDecision(id: string) {
     return { error: 'Karar silinirken bir hata oluştu', data: null };
   }
 }
+
+export async function getDecisionStatistics() {
+  try {
+    const session = await getServerSession(authOptions);
+
+    if (!session?.user) {
+      return { error: 'Yetkisiz erişim', data: null };
+    }
+
+    // Get all decisions count
+    const totalDecisions = await prisma.meetingDecision.count();
+
+    // Get completed decisions count
+    const completedDecisions = await prisma.meetingDecision.count({
+      where: { status: DecisionStatus.DONE },
+    });
+
+    // Get pending decisions count (TODO + IN_PROGRESS)
+    const pendingDecisions = await prisma.meetingDecision.count({
+      where: {
+        status: {
+          in: [DecisionStatus.TODO, DecisionStatus.IN_PROGRESS],
+        },
+      },
+    });
+
+    return {
+      error: null,
+      data: {
+        total: totalDecisions,
+        completed: completedDecisions,
+        pending: pendingDecisions,
+      },
+    };
+  } catch (error) {
+    console.error('Error fetching decision statistics:', error);
+    return { error: 'Karar istatistikleri yüklenirken bir hata oluştu', data: null };
+  }
+}
+
 

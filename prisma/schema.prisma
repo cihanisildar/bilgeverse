@@ -179,6 +179,9 @@ model User {
   meetingAttendances   MeetingAttendance[] @relation("UserAttendances")
   responsibleDecisions DecisionResponsibleUser[] @relation("DecisionResponsible")
 
+  // Board member relation
+  boardMember BoardMember? @relation("BoardMemberUser")
+
   @@index([tutorId])
 }
 
@@ -720,3 +723,17 @@ model DecisionResponsibleUser {
   @@index([decisionId])
   @@index([userId])
 }
+
+model BoardMember {
+  id        String   @id @default(uuid())
+  userId    String   @unique // Reference to User
+  user      User     @relation("BoardMemberUser", fields: [userId], references: [id], onDelete: Cascade)
+  title     String   // Position/title in the board (e.g., "Başkan", "Üye", "Sekreter")
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([isActive])
+  @@index([userId])
+}
+

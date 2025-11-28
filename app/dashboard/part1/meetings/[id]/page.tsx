@@ -4,7 +4,7 @@ import { useRouter, useParams } from 'next/navigation';
 import { useAuth } from '@/app/contexts/AuthContext';
 import { useMeeting, useGenerateQRCode } from '@/app/hooks/use-meetings';
 import { useMeetingAttendance, useManualCheckIn, useRemoveAttendance } from '@/app/hooks/use-attendance';
-import { 
+import {
   useMeetingDecisions,
   useCreateDecision,
   useUpdateDecision,
@@ -94,7 +94,7 @@ export default function MeetingDetailPage() {
   const updateDecision = useUpdateDecision();
   const updateStatus = useUpdateDecisionStatus();
   const deleteDecision = useDeleteDecision();
-  
+
   // All hooks must be called before any conditional returns
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -167,7 +167,7 @@ export default function MeetingDetailPage() {
 
   const handleToggleUser = async (userId: string) => {
     const isCheckedIn = attendance?.some((a) => a.userId === userId);
-    
+
     if (isCheckedIn) {
       // Remove attendance
       const attendanceRecord = attendance?.find((a) => a.userId === userId);
@@ -182,7 +182,7 @@ export default function MeetingDetailPage() {
 
   const handleBulkCheckIn = async () => {
     if (!adminUsersData) return;
-    
+
     for (const user of adminUsersData) {
       const isCheckedIn = attendance?.some((a) => a.userId === user.id);
       if (!isCheckedIn) {
@@ -193,11 +193,11 @@ export default function MeetingDetailPage() {
 
   const handleBulkCheckOut = async () => {
     if (!attendance || !adminUsersData) return;
-    
+
     const adminAttendanceIds = attendance
       .filter((a) => adminUsersData.some((admin) => admin.id === a.userId))
       .map((a) => a.id);
-    
+
     for (const attendanceId of adminAttendanceIds) {
       await removeAttendance.mutateAsync(attendanceId);
     }
@@ -288,7 +288,7 @@ export default function MeetingDetailPage() {
 
   const handleDeleteDecisionConfirm = () => {
     if (!selectedDecisionId) return;
-    
+
     const decisionId = String(selectedDecisionId);
     deleteDecision.mutate(decisionId, {
       onSuccess: (result) => {
@@ -486,16 +486,21 @@ export default function MeetingDetailPage() {
                                 ? `${a.user.firstName} ${a.user.lastName}`
                                 : a.user.username}
                             </p>
+                            {a.user.boardMemberTitle && (
+                              <p className="text-xs text-indigo-600 font-medium mt-0.5">
+                                {a.user.boardMemberTitle}
+                              </p>
+                            )}
                             <p className="text-xs text-gray-500 flex items-center gap-1 mt-0.5">
                               <Calendar className="h-3 w-3" />
                               {format(new Date(a.checkInTime), 'dd MMMM yyyy, HH:mm', { locale: tr })}
                             </p>
                           </div>
                         </div>
-                        <Badge 
-                          variant="outline" 
-                          className={a.checkInMethod === 'QR' 
-                            ? 'border-emerald-200 bg-emerald-50 text-emerald-700' 
+                        <Badge
+                          variant="outline"
+                          className={a.checkInMethod === 'QR'
+                            ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
                             : 'border-blue-200 bg-blue-50 text-blue-700'
                           }
                         >
@@ -662,7 +667,7 @@ export default function MeetingDetailPage() {
                     const displayName = user.firstName && user.lastName
                       ? `${user.firstName} ${user.lastName}`
                       : user.username;
-                    
+
                     return (
                       <div
                         key={user.id}
@@ -745,8 +750,8 @@ export default function MeetingDetailPage() {
                           const selectedUser = usersData.find((u: any) => u.id === selectedGuestUserId);
                           return selectedUser
                             ? (selectedUser.firstName && selectedUser.lastName
-                                ? `${selectedUser.firstName} ${selectedUser.lastName}`
-                                : selectedUser.username)
+                              ? `${selectedUser.firstName} ${selectedUser.lastName}`
+                              : selectedUser.username)
                             : 'Kullanıcı seçin...';
                         })()
                       ) : (
@@ -754,7 +759,7 @@ export default function MeetingDetailPage() {
                       )}
                       <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                     </Button>
-                    
+
                     {guestDropdownOpen && (
                       <div className="absolute z-[100] w-full mt-1 bg-popover border rounded-md shadow-md">
                         {/* Search Input */}
@@ -768,7 +773,7 @@ export default function MeetingDetailPage() {
                             autoFocus
                           />
                         </div>
-                        
+
                         {/* User List */}
                         <div className="max-h-[300px] overflow-y-auto p-1">
                           {usersData
@@ -809,7 +814,7 @@ export default function MeetingDetailPage() {
                                 const displayName = user.firstName && user.lastName
                                   ? `${user.firstName} ${user.lastName}`
                                   : user.username;
-                                
+
                                 return (
                                   <div
                                     key={user.id}
@@ -840,7 +845,7 @@ export default function MeetingDetailPage() {
                         </div>
                       </div>
                     )}
-                    
+
                     {/* Click outside to close */}
                     {guestDropdownOpen && (
                       <div
@@ -911,7 +916,7 @@ export default function MeetingDetailPage() {
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
-              <AlertDialogCancel 
+              <AlertDialogCancel
                 disabled={deleteDecision.isPending}
                 onClick={() => {
                   setDeleteDecisionDialogOpen(false);
@@ -973,10 +978,10 @@ export default function MeetingDetailPage() {
                         </p>
                       </div>
                     </div>
-                    <Badge 
-                      variant="outline" 
-                      className={a.checkInMethod === 'QR' 
-                        ? 'border-emerald-200 bg-emerald-50 text-emerald-700' 
+                    <Badge
+                      variant="outline"
+                      className={a.checkInMethod === 'QR'
+                        ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
                         : 'border-blue-200 bg-blue-50 text-blue-700'
                       }
                     >
@@ -1048,9 +1053,8 @@ function StatusColumn({
       </div>
       <div
         ref={setNodeRef}
-        className={`space-y-3 min-h-[200px] p-2 rounded-lg transition-colors ${
-          isOver ? 'bg-indigo-50 border-2 border-indigo-300 border-dashed' : 'bg-gray-50'
-        }`}
+        className={`space-y-3 min-h-[200px] p-2 rounded-lg transition-colors ${isOver ? 'bg-indigo-50 border-2 border-indigo-300 border-dashed' : 'bg-gray-50'
+          }`}
       >
         <SortableContext
           items={decisions.map((d) => d.id)}
@@ -1291,7 +1295,7 @@ function CreateDecisionDialog({
                 : 'Üye seçin...'}
               <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
             </Button>
-            
+
             {comboboxOpen && (
               <div className="absolute z-[100] w-full mt-1 bg-popover border rounded-md shadow-md">
                 <div className="flex items-center border-b px-3 py-2">
@@ -1304,19 +1308,19 @@ function CreateDecisionDialog({
                     autoFocus
                   />
                 </div>
-                
+
                 <div className="max-h-[300px] overflow-y-auto p-1">
                   {loadingUsers ? (
                     <div className="py-6 text-center text-sm text-muted-foreground">
                       Yükleniyor...
                     </div>
                   ) : adminUsers.filter((user) => {
-                      if (!searchQuery) return true;
-                      const displayName = user.firstName && user.lastName
-                        ? `${user.firstName} ${user.lastName}`
-                        : user.username;
-                      return displayName.toLowerCase().includes(searchQuery.toLowerCase());
-                    }).length === 0 ? (
+                    if (!searchQuery) return true;
+                    const displayName = user.firstName && user.lastName
+                      ? `${user.firstName} ${user.lastName}`
+                      : user.username;
+                    return displayName.toLowerCase().includes(searchQuery.toLowerCase());
+                  }).length === 0 ? (
                     <div className="py-6 text-center text-sm text-muted-foreground">
                       Üye bulunamadı.
                     </div>
@@ -1360,7 +1364,7 @@ function CreateDecisionDialog({
                 </div>
               </div>
             )}
-            
+
             {comboboxOpen && (
               <div
                 className="fixed inset-0 z-[90]"
@@ -1487,7 +1491,7 @@ function EditDecisionDialog({
   const currentDecision = open && decision ? decision : null;
   const displayTitle = currentDecision?.title || title;
   const displayDescription = currentDecision?.description || description;
-  const displayTargetDate = currentDecision?.targetDate 
+  const displayTargetDate = currentDecision?.targetDate
     ? format(new Date(currentDecision.targetDate as string), 'yyyy-MM-dd')
     : targetDate;
   const displayUserIds = currentDecision?.responsibleUsers?.map((u: any) => u.id) || selectedUserIds;
@@ -1559,7 +1563,7 @@ function EditDecisionDialog({
                 : 'Üye seçin...'}
               <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
             </Button>
-            
+
             {comboboxOpen && (
               <div className="absolute z-[100] w-full mt-1 bg-popover border rounded-md shadow-md">
                 <div className="flex items-center border-b px-3 py-2">
@@ -1572,19 +1576,19 @@ function EditDecisionDialog({
                     autoFocus
                   />
                 </div>
-                
+
                 <div className="max-h-[300px] overflow-y-auto p-1">
                   {loadingUsers ? (
                     <div className="py-6 text-center text-sm text-muted-foreground">
                       Yükleniyor...
                     </div>
                   ) : adminUsers.filter((user) => {
-                      if (!searchQuery) return true;
-                      const displayName = user.firstName && user.lastName
-                        ? `${user.firstName} ${user.lastName}`
-                        : user.username;
-                      return displayName.toLowerCase().includes(searchQuery.toLowerCase());
-                    }).length === 0 ? (
+                    if (!searchQuery) return true;
+                    const displayName = user.firstName && user.lastName
+                      ? `${user.firstName} ${user.lastName}`
+                      : user.username;
+                    return displayName.toLowerCase().includes(searchQuery.toLowerCase());
+                  }).length === 0 ? (
                     <div className="py-6 text-center text-sm text-muted-foreground">
                       Üye bulunamadı.
                     </div>
@@ -1628,7 +1632,7 @@ function EditDecisionDialog({
                 </div>
               </div>
             )}
-            
+
             {comboboxOpen && (
               <div
                 className="fixed inset-0 z-[90]"
@@ -1669,8 +1673,8 @@ function EditDecisionDialog({
             )}
           </div>
           <div className="flex justify-end space-x-2">
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               onClick={() => onOpenChange(false)}
               disabled={isPending}
             >
@@ -1699,7 +1703,7 @@ function DecisionDetailDialog({
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  decision: DecisionWithUser | { status: DecisionStatus; [key: string]: any };
+  decision: DecisionWithUser | { status: DecisionStatus;[key: string]: any };
   onEdit: () => void;
   isAdmin: boolean;
 }) {
@@ -1740,7 +1744,7 @@ function DecisionDetailDialog({
             )}
           </div>
         </DialogHeader>
-        
+
         <div className="space-y-6 mt-4">
           {decision.description && (
             <div className="space-y-2">

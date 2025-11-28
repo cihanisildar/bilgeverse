@@ -3,7 +3,8 @@
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/app/contexts/AuthContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { ArrowRight, FileText, Calendar, ExternalLink, Power } from 'lucide-react';
+import { Skeleton } from '@/components/ui/skeleton';
+import { ArrowRight, FileText, Calendar, ExternalLink, Power, Users, CheckCircle2, Clock, ListTodo } from 'lucide-react';
 import { PARTS } from '@/app/lib/parts';
 import { getRoleBasedPath } from '@/app/lib/navigation';
 import { useEffect, useState } from 'react';
@@ -11,6 +12,7 @@ import { usePathname } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import Loading from '@/app/components/Loading';
 import toast from 'react-hot-toast';
+import { getDecisionStatistics } from '@/app/actions/meetings/decisions';
 
 type PartPdf = {
   id: string;
@@ -35,6 +37,8 @@ export default function Part1Page() {
   const { user, loading, isAdmin } = useAuth();
   const [pdfs, setPdfs] = useState<PartPdf[]>([]);
   const [loadingPdfs, setLoadingPdfs] = useState(true);
+  const [decisionStats, setDecisionStats] = useState<{ total: number; completed: number; pending: number } | null>(null);
+  const [loadingStats, setLoadingStats] = useState(true);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -52,6 +56,7 @@ export default function Part1Page() {
   useEffect(() => {
     if (user) {
       fetchPdfs();
+      fetchDecisionStats();
     }
   }, [user]);
 
@@ -67,6 +72,22 @@ export default function Part1Page() {
       toast.error('Belgeleri yüklerken bir hata oluştu');
     } finally {
       setLoadingPdfs(false);
+    }
+  };
+
+  const fetchDecisionStats = async () => {
+    try {
+      setLoadingStats(true);
+      const result = await getDecisionStatistics();
+      if (result.error) {
+        throw new Error(result.error);
+      }
+      setDecisionStats(result.data);
+    } catch (error) {
+      console.error('Error fetching decision statistics:', error);
+      toast.error('Karar istatistikleri yüklenirken bir hata oluştu');
+    } finally {
+      setLoadingStats(false);
     }
   };
 
@@ -166,6 +187,73 @@ export default function Part1Page() {
               <p className="text-gray-600">Yönetim kurulu toplantılarını yönetin ve katılım takibi yapın</p>
             </div>
 
+            {/* Decision Summary Cards */}
+            {loadingStats ? (
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                {[1, 2, 3].map((i) => (
+                  <Card key={i} className="border-0 shadow-md rounded-xl overflow-hidden bg-white">
+                    <div className="h-1.5 bg-gradient-to-r from-gray-200 to-gray-300"></div>
+                    <CardContent className="pt-6">
+                      <div className="flex items-center justify-between">
+                        <div className="flex-1">
+                          <Skeleton className="h-4 w-32 mb-3" />
+                          <Skeleton className="h-9 w-16" />
+                        </div>
+                        <Skeleton className="w-12 h-12 rounded-full" />
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            ) : decisionStats ? (
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                <Card className="border-0 shadow-md rounded-xl overflow-hidden bg-white">
+                  <div className="h-1.5 bg-gradient-to-r from-blue-500 to-cyan-500"></div>
+                  <CardContent className="pt-6">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-medium text-gray-600">Toplam Kararlar</p>
+                        <p className="text-3xl font-bold text-gray-800 mt-2">{decisionStats.total}</p>
+                      </div>
+                      <div className="w-12 h-12 flex items-center justify-center rounded-full bg-blue-100 text-blue-600">
+                        <ListTodo className="h-6 w-6" />
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card className="border-0 shadow-md rounded-xl overflow-hidden bg-white">
+                  <div className="h-1.5 bg-gradient-to-r from-green-500 to-emerald-500"></div>
+                  <CardContent className="pt-6">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-medium text-gray-600">Tamamlanan Kararlar</p>
+                        <p className="text-3xl font-bold text-gray-800 mt-2">{decisionStats.completed}</p>
+                      </div>
+                      <div className="w-12 h-12 flex items-center justify-center rounded-full bg-green-100 text-green-600">
+                        <CheckCircle2 className="h-6 w-6" />
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card className="border-0 shadow-md rounded-xl overflow-hidden bg-white">
+                  <div className="h-1.5 bg-gradient-to-r from-orange-500 to-amber-500"></div>
+                  <CardContent className="pt-6">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-medium text-gray-600">Bekleyen Kararlar</p>
+                        <p className="text-3xl font-bold text-gray-800 mt-2">{decisionStats.pending}</p>
+                      </div>
+                      <div className="w-12 h-12 flex items-center justify-center rounded-full bg-orange-100 text-orange-600">
+                        <Clock className="h-6 w-6" />
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            ) : null}
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
               {/* Meetings Card */}
               {isAdmin && (
@@ -188,6 +276,33 @@ export default function Part1Page() {
                   <CardContent>
                     <div className="flex items-center text-sm font-medium text-gray-600">
                       Toplantılara Git
+                      <ArrowRight className="ml-2 h-4 w-4" />
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Board Members Card */}
+              {isAdmin && (
+                <Card
+                  className="border-0 shadow-lg rounded-xl overflow-hidden transition-all duration-200 hover:shadow-xl hover:-translate-y-1 cursor-pointer bg-gradient-to-br from-purple-50 to-pink-50"
+                  onClick={() => router.push('/dashboard/part1/board-members')}
+                >
+                  <div className="h-2 bg-gradient-to-r from-purple-500 to-pink-500"></div>
+                  <CardHeader>
+                    <div className="flex items-center space-x-4">
+                      <div className="w-16 h-16 flex items-center justify-center rounded-full bg-purple-100 text-purple-600">
+                        <Users className="h-8 w-8" />
+                      </div>
+                      <div>
+                        <CardTitle className="text-xl">Yönetim Kurulu Üyeleri</CardTitle>
+                        <CardDescription className="mt-1">Yönetim kurulu üyelerini tanımlayın ve yönetin</CardDescription>
+                      </div>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="flex items-center text-sm font-medium text-gray-600">
+                      Üyelere Git
                       <ArrowRight className="ml-2 h-4 w-4" />
                     </div>
                   </CardContent>
@@ -245,11 +360,10 @@ export default function Part1Page() {
                       </CardHeader>
                       <CardContent className="pt-0">
                         <div className="flex items-center gap-2 mb-4">
-                          <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold ${
-                            pdf.isActive 
-                              ? 'bg-gradient-to-r from-green-400 to-emerald-500 text-white' 
-                              : 'bg-gray-100 text-gray-600'
-                          }`}>
+                          <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold ${pdf.isActive
+                            ? 'bg-gradient-to-r from-green-400 to-emerald-500 text-white'
+                            : 'bg-gray-100 text-gray-600'
+                            }`}>
                             <Power className={`h-3 w-3 mr-1 ${pdf.isActive ? 'text-white' : 'text-gray-500'}`} />
                             {pdf.isActive ? 'Aktif' : 'Pasif'}
                           </span>

@@ -10,7 +10,7 @@ import { randomBytes } from 'crypto';
 export async function getMeetings() {
   try {
     const session = await getServerSession(authOptions);
-    
+
     if (!session?.user) {
       return { error: 'Yetkisiz erişim', data: null };
     }
@@ -72,7 +72,7 @@ export async function getMeetings() {
 export async function getUserMeetings() {
   try {
     const session = await getServerSession(authOptions);
-    
+
     if (!session?.user) {
       return { error: 'Yetkisiz erişim', data: null };
     }
@@ -145,7 +145,7 @@ export async function getUserMeetings() {
 export async function getMeetingById(id: string) {
   try {
     const session = await getServerSession(authOptions);
-    
+
     if (!session?.user) {
       return { error: 'Yetkisiz erişim', data: null };
     }
@@ -209,13 +209,24 @@ export async function getMeetingById(id: string) {
 export async function createMeeting(data: unknown) {
   try {
     const session = await getServerSession(authOptions);
-    
+
     if (!session?.user || session.user.role !== UserRole.ADMIN) {
       return { error: 'Yetkisiz erişim: Sadece yöneticiler toplantı oluşturabilir', data: null };
     }
 
     const validated = createMeetingSchema.parse(data);
-    
+
+    // Get all active board members
+    const activeBoardMembers = await prisma.boardMember.findMany({
+      where: { isActive: true },
+    });
+
+    // Get all admin users to auto-add as attendees
+    const adminUsers = await prisma.user.findMany({
+      where: { role: UserRole.ADMIN },
+      select: { id: true },
+    });
+
     const meeting = await prisma.managerMeeting.create({
       data: {
         title: validated.title,
@@ -223,6 +234,13 @@ export async function createMeeting(data: unknown) {
         meetingDate: new Date(validated.meetingDate),
         location: validated.location || '',
         createdById: session.user.id,
+        // Auto-add admin users as attendees
+        attendees: {
+          create: adminUsers.map((admin) => ({
+            userId: admin.id,
+            checkInMethod: 'MANUAL',
+          })),
+        },
       },
       include: {
         createdBy: {
@@ -257,9 +275,12 @@ export async function createMeeting(data: unknown) {
           lastName: meeting.createdBy.lastName,
         },
         _count: {
-          attendees: 0,
+          attendees: adminUsers.length,
           decisions: 0,
         },
+        boardMembersInfo: activeBoardMembers.length > 0
+          ? `${activeBoardMembers.length} yönetim kurulu üyesi otomatik olarak eklendi`
+          : null,
       },
     };
   } catch (error: any) {
@@ -274,13 +295,13 @@ export async function createMeeting(data: unknown) {
 export async function updateMeeting(id: string, data: unknown) {
   try {
     const session = await getServerSession(authOptions);
-    
+
     if (!session?.user || session.user.role !== UserRole.ADMIN) {
       return { error: 'Yetkisiz erişim: Sadece yöneticiler toplantı güncelleyebilir', data: null };
     }
 
     const validated = updateMeetingSchema.parse(data);
-    
+
     const updateData: any = {};
     if (validated.title !== undefined) updateData.title = validated.title;
     if (validated.description !== undefined) updateData.description = validated.description || null;
@@ -343,7 +364,7 @@ export async function updateMeeting(id: string, data: unknown) {
 export async function deleteMeeting(id: string) {
   try {
     const session = await getServerSession(authOptions);
-    
+
     if (!session?.user || session.user.role !== UserRole.ADMIN) {
       return { error: 'Yetkisiz erişim: Sadece yöneticiler toplantı silebilir', data: null };
     }
@@ -368,16 +389,16 @@ export async function deleteMeeting(id: string) {
     return { error: null, data: { success: true } };
   } catch (error: any) {
     console.error('Error deleting meeting:', error);
-    
+
     // Provide more specific error messages
     if (error?.code === 'P2025') {
       return { error: 'Toplantı bulunamadı', data: null };
     }
-    
+
     if (error?.code === 'P2003') {
       return { error: 'Bu toplantıya bağlı kayıtlar silinemedi', data: null };
     }
-    
+
     const errorMessage = error?.message || 'Toplantı silinirken bir hata oluştu';
     return { error: errorMessage, data: null };
   }
@@ -386,7 +407,7 @@ export async function deleteMeeting(id: string) {
 export async function generateQRCode(meetingId: string) {
   try {
     const session = await getServerSession(authOptions);
-    
+
     if (!session?.user || session.user.role !== UserRole.ADMIN) {
       return { error: 'Yetkisiz erişim: Sadece yöneticiler QR kod oluşturabilir', data: null };
     }
@@ -402,7 +423,7 @@ export async function generateQRCode(meetingId: string) {
 
     // Generate secure random token
     const token = randomBytes(32).toString('hex');
-    
+
     // Set expiration to meeting date + 1 day
     const expiresAt = new Date(meeting.meetingDate);
     expiresAt.setDate(expiresAt.getDate() + 1);
