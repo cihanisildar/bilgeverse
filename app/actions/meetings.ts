@@ -219,6 +219,7 @@ export async function createMeeting(data: unknown) {
     // Get all active board members
     const activeBoardMembers = await prisma.boardMember.findMany({
       where: { isActive: true },
+      select: { userId: true },
     });
 
     // Get all admin users to auto-add as attendees
@@ -227,6 +228,11 @@ export async function createMeeting(data: unknown) {
       select: { id: true },
     });
 
+    // Combine board members and admins, removing duplicates
+    const boardMemberUserIds = activeBoardMembers.map(bm => bm.userId);
+    const adminUserIds = adminUsers.map(admin => admin.id);
+    const allAttendeeIds = [...new Set([...boardMemberUserIds, ...adminUserIds])];
+
     const meeting = await prisma.managerMeeting.create({
       data: {
         title: validated.title,
@@ -234,10 +240,10 @@ export async function createMeeting(data: unknown) {
         meetingDate: new Date(validated.meetingDate),
         location: validated.location || '',
         createdById: session.user.id,
-        // Auto-add admin users as attendees
+        // Auto-add board members and admin users as attendees
         attendees: {
-          create: adminUsers.map((admin) => ({
-            userId: admin.id,
+          create: allAttendeeIds.map((userId) => ({
+            userId: userId,
             checkInMethod: 'MANUAL',
           })),
         },
@@ -275,12 +281,9 @@ export async function createMeeting(data: unknown) {
           lastName: meeting.createdBy.lastName,
         },
         _count: {
-          attendees: adminUsers.length,
+          attendees: allAttendeeIds.length,
           decisions: 0,
         },
-        boardMembersInfo: activeBoardMembers.length > 0
-          ? `${activeBoardMembers.length} yönetim kurulu üyesi otomatik olarak eklendi`
-          : null,
       },
     };
   } catch (error: any) {
