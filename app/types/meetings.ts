@@ -39,15 +39,25 @@ export type DecisionWithUser = {
   id: string;
   title: string;
   description: string | null;
-  targetDate: Date | null;
+  targetDate: string | null;
   status: DecisionStatus;
-  createdAt: Date;
-  updatedAt: Date;
+  meetingId: string;
+  createdAt: string;
+  updatedAt: string;
   responsibleUsers: {
     id: string;
     username: string;
     firstName: string | null;
     lastName: string | null;
   }[];
+};
+
+export type BoardMemberUser = {
+  id: string;
+  username: string;
+  firstName: string | null;
+  lastName: string | null;
+  boardMemberTitle: string;
+  isActive: boolean;
 };
 

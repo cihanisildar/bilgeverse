@@ -207,7 +207,10 @@ export default function Part1Page() {
               </div>
             ) : decisionStats ? (
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-                <Card className="border-0 shadow-md rounded-xl overflow-hidden bg-white">
+                <Card
+                  className="border-0 shadow-md rounded-xl overflow-hidden bg-white cursor-pointer transition-all duration-200 hover:shadow-xl hover:-translate-y-1"
+                  onClick={() => router.push('/dashboard/part1/decisions?status=all')}
+                >
                   <div className="h-1.5 bg-gradient-to-r from-blue-500 to-cyan-500"></div>
                   <CardContent className="pt-6">
                     <div className="flex items-center justify-between">
@@ -222,7 +225,10 @@ export default function Part1Page() {
                   </CardContent>
                 </Card>
 
-                <Card className="border-0 shadow-md rounded-xl overflow-hidden bg-white">
+                <Card
+                  className="border-0 shadow-md rounded-xl overflow-hidden bg-white cursor-pointer transition-all duration-200 hover:shadow-xl hover:-translate-y-1"
+                  onClick={() => router.push('/dashboard/part1/decisions?status=completed')}
+                >
                   <div className="h-1.5 bg-gradient-to-r from-green-500 to-emerald-500"></div>
                   <CardContent className="pt-6">
                     <div className="flex items-center justify-between">
@@ -237,7 +243,10 @@ export default function Part1Page() {
                   </CardContent>
                 </Card>
 
-                <Card className="border-0 shadow-md rounded-xl overflow-hidden bg-white">
+                <Card
+                  className="border-0 shadow-md rounded-xl overflow-hidden bg-white cursor-pointer transition-all duration-200 hover:shadow-xl hover:-translate-y-1"
+                  onClick={() => router.push('/dashboard/part1/decisions?status=pending')}
+                >
                   <div className="h-1.5 bg-gradient-to-r from-orange-500 to-amber-500"></div>
                   <CardContent className="pt-6">
                     <div className="flex items-center justify-between">

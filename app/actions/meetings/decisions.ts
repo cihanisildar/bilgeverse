@@ -278,6 +278,84 @@ export async function deleteDecision(id: string) {
   }
 }
 
+export async function getAllDecisions(statusFilter?: 'all' | 'completed' | 'pending') {
+  try {
+    const session = await getServerSession(authOptions);
+
+    if (!session?.user) {
+      return { error: 'Yetkisiz erişim', data: null };
+    }
+
+    // Build where clause based on status filter
+    const whereClause: any = {};
+    if (statusFilter === 'completed') {
+      whereClause.status = DecisionStatus.DONE;
+    } else if (statusFilter === 'pending') {
+      whereClause.status = {
+        in: [DecisionStatus.TODO, DecisionStatus.IN_PROGRESS],
+      };
+    }
+    // If statusFilter is 'all' or undefined, no status filter is applied
+
+    const decisions = await prisma.meetingDecision.findMany({
+      where: whereClause,
+      include: {
+        meeting: {
+          select: {
+            id: true,
+            title: true,
+            meetingDate: true,
+          },
+        },
+        responsibleUsers: {
+          include: {
+            user: {
+              select: {
+                id: true,
+                username: true,
+                firstName: true,
+                lastName: true,
+              },
+            },
+          },
+        },
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
+    });
+
+    // Serialize Date objects to ISO strings and ensure plain objects
+    return {
+      error: null,
+      data: decisions.map((decision) => ({
+        id: decision.id,
+        title: decision.title,
+        description: decision.description,
+        targetDate: decision.targetDate?.toISOString() || null,
+        status: decision.status,
+        meetingId: decision.meetingId,
+        createdAt: decision.createdAt.toISOString(),
+        updatedAt: decision.updatedAt.toISOString(),
+        meeting: {
+          id: decision.meeting.id,
+          title: decision.meeting.title,
+          meetingDate: decision.meeting.meetingDate.toISOString(),
+        },
+        responsibleUsers: decision.responsibleUsers.map((ru) => ({
+          id: ru.user.id,
+          username: ru.user.username,
+          firstName: ru.user.firstName,
+          lastName: ru.user.lastName,
+        })),
+      })),
+    };
+  } catch (error) {
+    console.error('Error fetching all decisions:', error);
+    return { error: 'Kararlar yüklenirken bir hata oluştu', data: null };
+  }
+}
+
 export async function getDecisionStatistics() {
   try {
     const session = await getServerSession(authOptions);

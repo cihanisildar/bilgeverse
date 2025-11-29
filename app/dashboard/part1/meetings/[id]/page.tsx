@@ -34,7 +34,7 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { DecisionStatus } from '@prisma/client';
-import { DecisionWithUser } from '@/app/types/meetings';
+import { DecisionWithUser, AttendanceWithUser, BoardMemberUser } from '@/app/types/meetings';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import {
@@ -49,7 +49,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { format } from 'date-fns';
 import { tr } from 'date-fns/locale';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -62,6 +62,7 @@ import { MeetingStatus } from '@prisma/client';
 import QRCode from 'qrcode';
 import { useQuery } from '@tanstack/react-query';
 import { getAllUsers, getAdminUsers } from '@/app/actions/users';
+import { getBoardMembers } from '@/app/actions/board-members';
 import Loading from '@/app/components/Loading';
 import { Checkbox } from '@/components/ui/checkbox';
 
@@ -151,10 +152,8 @@ export default function MeetingDetailPage() {
   const handleGenerateQR = async () => {
     const result = await generateQR.mutateAsync(meetingId);
     if (!result.error && result.data) {
-      // Create the full URL without token - uses production URL automatically in production
       const baseUrl = getBaseUrl();
       const qrData = `${baseUrl}/dashboard/part1/meetings/${meetingId}/check-in`;
-      console.log('Generating QR code with data:', qrData);
       const url = await QRCode.toDataURL(qrData, {
         errorCorrectionLevel: 'M',
         margin: 1,
@@ -268,12 +267,22 @@ export default function MeetingDetailPage() {
     }
   };
 
-  const handleCreateDecision = async (data: any) => {
+  const handleCreateDecision = async (data: {
+    title: string;
+    description: string | null;
+    targetDate: string | null;
+    responsibleUserIds: string[];
+  }) => {
     await createDecision.mutateAsync({ meetingId, data });
     setCreateDecisionDialogOpen(false);
   };
 
-  const handleEditDecision = async (data: any) => {
+  const handleEditDecision = async (data: {
+    title: string;
+    description: string | null;
+    targetDate: string | null;
+    responsibleUserIds: string[];
+  }) => {
     if (selectedDecision) {
       await updateDecision.mutateAsync({ id: selectedDecision.id, data });
       setEditDecisionDialogOpen(false);
@@ -662,8 +671,8 @@ export default function MeetingDetailPage() {
               {/* Board Members List */}
               <div className="space-y-2 max-h-[400px] overflow-y-auto">
                 {adminUsersData && adminUsersData.length > 0 ? (
-                  adminUsersData.map((user: any) => {
-                    const isCheckedIn = attendance?.some((a) => a.userId === user.id);
+                  adminUsersData.map((user) => {
+                    const isCheckedIn = attendance?.some((a) => a.user.id === user.id);
                     const displayName = user.firstName && user.lastName
                       ? `${user.firstName} ${user.lastName}`
                       : user.username;
@@ -747,7 +756,7 @@ export default function MeetingDetailPage() {
                     >
                       {selectedGuestUserId ? (
                         (() => {
-                          const selectedUser = usersData.find((u: any) => u.id === selectedGuestUserId);
+                          const selectedUser = usersData.find((u) => u.id === selectedGuestUserId);
                           return selectedUser
                             ? (selectedUser.firstName && selectedUser.lastName
                               ? `${selectedUser.firstName} ${selectedUser.lastName}`
@@ -777,7 +786,7 @@ export default function MeetingDetailPage() {
                         {/* User List */}
                         <div className="max-h-[300px] overflow-y-auto p-1">
                           {usersData
-                            .filter((user: any) => {
+                            .filter((user) => {
                               if (!guestSearchQuery) return true;
                               const displayName = user.firstName && user.lastName
                                 ? `${user.firstName} ${user.lastName}`
@@ -796,7 +805,7 @@ export default function MeetingDetailPage() {
                             </div>
                           ) : (
                             usersData
-                              .filter((user: any) => {
+                              .filter((user) => {
                                 if (!guestSearchQuery) return true;
                                 const displayName = user.firstName && user.lastName
                                   ? `${user.firstName} ${user.lastName}`
@@ -809,7 +818,7 @@ export default function MeetingDetailPage() {
                                   (user.lastName && user.lastName.toLowerCase().includes(searchLower))
                                 );
                               })
-                              .map((user: any) => {
+                              .map((user) => {
                                 const isSelected = selectedGuestUserId === user.id;
                                 const displayName = user.firstName && user.lastName
                                   ? `${user.firstName} ${user.lastName}`
@@ -1022,10 +1031,10 @@ function StatusColumn({
   isAdmin,
 }: {
   status: DecisionStatus;
-  decisions: any[];
-  onEdit: (decision: any) => void;
+  decisions: DecisionWithUser[];
+  onEdit: (decision: DecisionWithUser) => void;
   onDelete: (id: string) => void;
-  onView: (decision: any) => void;
+  onView: (decision: DecisionWithUser) => void;
   isAdmin: boolean;
 }) {
   const { setNodeRef, isOver } = useDroppable({
@@ -1088,7 +1097,7 @@ function DecisionCard({
   onView,
   isAdmin,
 }: {
-  decision: any;
+  decision: DecisionWithUser;
   onEdit: () => void;
   onDelete: () => void;
   onView: () => void;
@@ -1166,7 +1175,7 @@ function DecisionCard({
                 <Users className="h-4 w-4 mr-2" />
                 <span className="font-medium">Sorumlu Üyeler:</span>
               </div>
-              {decision.responsibleUsers.map((user: any) => (
+              {decision.responsibleUsers.map((user) => (
                 <div key={user.id} className="text-sm text-gray-600 ml-6">
                   {user.firstName && user.lastName
                     ? `${user.firstName} ${user.lastName}`
@@ -1195,25 +1204,46 @@ function CreateDecisionDialog({
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSubmit: (data: any) => void;
+  onSubmit: (data: {
+    title: string;
+    description: string | null;
+    targetDate: string | null;
+    responsibleUserIds: string[];
+  }) => void;
 }) {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [targetDate, setTargetDate] = useState('');
   const [selectedUserIds, setSelectedUserIds] = useState<string[]>([]);
-  const [adminUsers, setAdminUsers] = useState<any[]>([]);
+  const [adminUsers, setAdminUsers] = useState<BoardMemberUser[]>([]);
   const [loadingUsers, setLoadingUsers] = useState(false);
   const [comboboxOpen, setComboboxOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
-  const handleOpenChange = (newOpen: boolean) => {
-    if (newOpen) {
-      // Initialize when opening
+  // Load board members when dialog opens
+  useEffect(() => {
+    if (open) {
       setLoadingUsers(true);
-      getAdminUsers().then((result) => {
+      getBoardMembers().then((result) => {
         if (result.error === null && result.data) {
-          setAdminUsers(result.data);
+          const mappedBoardMembers: BoardMemberUser[] = result.data
+            .filter((member) => member.isActive)
+            .map((member) => ({
+              id: member.user.id,
+              username: member.user.username,
+              firstName: member.user.firstName,
+              lastName: member.user.lastName,
+              boardMemberTitle: member.title,
+              isActive: member.isActive,
+            }));
+
+          setAdminUsers(mappedBoardMembers);
+        } else {
+          setAdminUsers([]);
         }
+        setLoadingUsers(false);
+      }).catch(() => {
+        setAdminUsers([]);
         setLoadingUsers(false);
       });
     } else {
@@ -1224,7 +1254,11 @@ function CreateDecisionDialog({
       setSelectedUserIds([]);
       setSearchQuery('');
       setComboboxOpen(false);
+      setAdminUsers([]);
     }
+  }, [open]);
+
+  const handleOpenChange = (newOpen: boolean) => {
     onOpenChange(newOpen);
   };
 
@@ -1431,45 +1465,57 @@ function EditDecisionDialog({
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  decision: any;
-  onSubmit: (data: any) => void;
+  decision: DecisionWithUser;
+  onSubmit: (data: {
+    title: string;
+    description: string | null;
+    targetDate: string | null;
+    responsibleUserIds: string[];
+  }) => void;
   isPending?: boolean;
 }) {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [targetDate, setTargetDate] = useState('');
   const [selectedUserIds, setSelectedUserIds] = useState<string[]>([]);
-  const [adminUsers, setAdminUsers] = useState<any[]>([]);
+  const [adminUsers, setAdminUsers] = useState<BoardMemberUser[]>([]);
   const [loadingUsers, setLoadingUsers] = useState(false);
   const [comboboxOpen, setComboboxOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [initialized, setInitialized] = useState(false);
 
-  const handleOpenChange = (newOpen: boolean) => {
-    if (newOpen) {
-      // Initialize when opening
+  // Load board members when dialog opens
+  useEffect(() => {
+    if (open) {
       setTitle(decision?.title || '');
       setDescription(decision?.description || '');
       setTargetDate(
-        decision?.targetDate ? format(new Date(decision.targetDate as string), 'yyyy-MM-dd') : ''
+        decision?.targetDate ? format(new Date(decision.targetDate), 'yyyy-MM-dd') : ''
       );
-      setSelectedUserIds(decision?.responsibleUsers?.map((u: any) => u.id) || []);
+      setSelectedUserIds(decision?.responsibleUsers?.map((u) => u.id) || []);
       setSearchQuery('');
       setComboboxOpen(false);
       setInitialized(true);
       setLoadingUsers(true);
-      getAdminUsers().then((result) => {
-        console.log('getAdminUsers result:', result);
+      getBoardMembers().then((result) => {
         if (result.error === null && result.data) {
-          console.log('Admin users loaded:', result.data.length);
-          setAdminUsers(result.data || []);
+          const mappedBoardMembers: BoardMemberUser[] = result.data
+            .filter((member) => member.isActive)
+            .map((member) => ({
+              id: member.user.id,
+              username: member.user.username,
+              firstName: member.user.firstName,
+              lastName: member.user.lastName,
+              boardMemberTitle: member.title,
+              isActive: member.isActive,
+            }));
+
+          setAdminUsers(mappedBoardMembers);
         } else {
-          console.error('Error loading admin users:', result.error);
           setAdminUsers([]);
         }
         setLoadingUsers(false);
-      }).catch((error) => {
-        console.error('Error loading admin users:', error);
+      }).catch(() => {
         setAdminUsers([]);
         setLoadingUsers(false);
       });
@@ -1484,6 +1530,9 @@ function EditDecisionDialog({
       setSearchQuery('');
       setComboboxOpen(false);
     }
+  }, [open, decision]);
+
+  const handleOpenChange = (newOpen: boolean) => {
     onOpenChange(newOpen);
   };
 
@@ -1492,9 +1541,9 @@ function EditDecisionDialog({
   const displayTitle = currentDecision?.title || title;
   const displayDescription = currentDecision?.description || description;
   const displayTargetDate = currentDecision?.targetDate
-    ? format(new Date(currentDecision.targetDate as string), 'yyyy-MM-dd')
+    ? format(new Date(currentDecision.targetDate), 'yyyy-MM-dd')
     : targetDate;
-  const displayUserIds = currentDecision?.responsibleUsers?.map((u: any) => u.id) || selectedUserIds;
+  const displayUserIds = currentDecision?.responsibleUsers?.map((u) => u.id) || selectedUserIds;
 
   const handleSubmit = () => {
     if (!title.trim() || selectedUserIds.length === 0) return;
@@ -1765,7 +1814,7 @@ function DecisionDetailDialog({
                 Sorumlu Üyeler
               </div>
               <div className="space-y-2 pl-6">
-                {decision.responsibleUsers.map((user: any) => (
+                {decision.responsibleUsers.map((user: { id: string; username: string; firstName: string | null; lastName: string | null }) => (
                   <div key={user.id} className="flex items-center text-gray-600">
                     <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center mr-3">
                       <Users className="h-4 w-4 text-indigo-600" />
