@@ -13,7 +13,7 @@ import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import Loading from '@/app/components/Loading';
-import { Combobox } from '@/components/ui/combobox';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 const formSchema = z.object({
     userId: z.string().min(1, 'Kullanıcı seçilmelidir'),
@@ -119,15 +119,18 @@ export default function NewBoardMemberPage() {
                                     name="userId"
                                     control={control}
                                     render={({ field }) => (
-                                        <Combobox
-                                            options={userOptions}
-                                            value={field.value}
-                                            onValueChange={field.onChange}
-                                            placeholder="Kullanıcı seçin..."
-                                            searchPlaceholder="Kullanıcı ara..."
-                                            emptyText="Kullanıcı bulunamadı"
-                                            className="border-gray-300 focus:border-indigo-500 focus:ring-indigo-500"
-                                        />
+                                        <Select onValueChange={field.onChange} value={field.value}>
+                                            <SelectTrigger className="border-gray-300 focus:border-indigo-500 focus:ring-indigo-500">
+                                                <SelectValue placeholder="Kullanıcı seçin..." />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                {userOptions.map((option) => (
+                                                    <SelectItem key={option.value} value={option.value}>
+                                                        {option.label}
+                                                    </SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
                                     )}
                                 />
                                 {errors.userId && (

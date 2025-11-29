@@ -66,24 +66,35 @@ export function Combobox({
                     <CommandList>
                         <CommandEmpty>{emptyText}</CommandEmpty>
                         <CommandGroup>
-                            {options.map((option) => (
-                                <CommandItem
-                                    key={option.value}
-                                    value={option.label}
-                                    onSelect={() => {
-                                        onValueChange?.(option.value)
-                                        setOpen(false)
-                                    }}
-                                >
-                                    <Check
-                                        className={cn(
-                                            "mr-2 h-4 w-4",
-                                            value === option.value ? "opacity-100" : "opacity-0"
-                                        )}
-                                    />
-                                    {option.label}
-                                </CommandItem>
-                            ))}
+                            {options.map((option) => {
+                                const isSelected = value === option.value
+                                return (
+                                    <CommandItem
+                                        key={option.value}
+                                        value={option.label}
+                                        keywords={[option.value]}
+                                        onSelect={() => {
+                                            onValueChange?.(isSelected ? "" : option.value)
+                                            setOpen(false)
+                                        }}
+                                        onPointerDown={(e) => {
+                                            e.preventDefault()
+                                        }}
+                                        onPointerUp={() => {
+                                            onValueChange?.(isSelected ? "" : option.value)
+                                            setOpen(false)
+                                        }}
+                                    >
+                                        <Check
+                                            className={cn(
+                                                "mr-2 h-4 w-4",
+                                                isSelected ? "opacity-100" : "opacity-0"
+                                            )}
+                                        />
+                                        {option.label}
+                                    </CommandItem>
+                                )
+                            })}
                         </CommandGroup>
                     </CommandList>
                 </Command>
