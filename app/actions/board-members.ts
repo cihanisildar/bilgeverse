@@ -14,6 +14,23 @@ export async function getBoardMembers() {
             return { error: 'Yetkisiz erişim', data: null };
         }
 
+        // Get total number of relevant meetings (Completed, Ongoing, or Planned but past/current)
+        const now = new Date();
+        const totalMeetings = await prisma.managerMeeting.count({
+            where: {
+                OR: [
+                    { status: 'COMPLETED' },
+                    { status: 'ONGOING' },
+                    {
+                        status: 'PLANNED',
+                        meetingDate: {
+                            lte: now
+                        }
+                    }
+                ]
+            },
+        });
+
         const boardMembers = await prisma.boardMember.findMany({
             include: {
                 user: {
@@ -24,6 +41,28 @@ export async function getBoardMembers() {
                         lastName: true,
                         email: true,
                         phone: true,
+                        _count: {
+                            select: {
+                                meetingAttendances: {
+                                    where: {
+                                        // Count if attended is true OR null (not explicitly marked as false)
+                                        attended: { not: false },
+                                        meeting: {
+                                            OR: [
+                                                { status: 'COMPLETED' },
+                                                { status: 'ONGOING' },
+                                                {
+                                                    status: 'PLANNED',
+                                                    meetingDate: {
+                                                        lte: now
+                                                    }
+                                                }
+                                            ]
+                                        },
+                                    } as any,
+                                },
+                            },
+                        },
                     },
                 },
             },
@@ -34,22 +73,32 @@ export async function getBoardMembers() {
 
         return {
             error: null,
-            data: boardMembers.map((member) => ({
-                id: member.id,
-                userId: member.userId,
-                title: member.title,
-                isActive: member.isActive,
-                createdAt: member.createdAt.toISOString(),
-                updatedAt: member.updatedAt.toISOString(),
-                user: {
-                    id: member.user.id,
-                    username: member.user.username,
-                    firstName: member.user.firstName,
-                    lastName: member.user.lastName,
-                    email: member.user.email,
-                    phone: member.user.phone,
-                },
-            })),
+            data: boardMembers.map((member) => {
+                const user = member.user as any;
+                return {
+                    id: member.id,
+                    userId: member.userId,
+                    title: member.title,
+                    isActive: member.isActive,
+                    createdAt: member.createdAt.toISOString(),
+                    updatedAt: member.updatedAt.toISOString(),
+                    user: {
+                        id: member.user.id,
+                        username: member.user.username,
+                        firstName: member.user.firstName,
+                        lastName: member.user.lastName,
+                        email: member.user.email,
+                        phone: member.user.phone,
+                    },
+                    stats: {
+                        attendedMeetings: user._count?.meetingAttendances || 0,
+                        totalMeetings: totalMeetings,
+                        attendanceRate: totalMeetings > 0
+                            ? ((user._count?.meetingAttendances || 0) / totalMeetings) * 100
+                            : 0,
+                    },
+                };
+            }),
         };
     } catch (error) {
         console.error('Error fetching board members:', error);

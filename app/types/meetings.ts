@@ -27,11 +27,15 @@ export type AttendanceWithUser = {
   id: string;
   checkInMethod: CheckInMethod;
   checkInTime: Date;
+  attended: boolean | null;
+  markedBy: string | null;
+  markedAt: Date | null;
   user: {
     id: string;
     username: string;
     firstName: string | null;
     lastName: string | null;
+    boardMemberTitle: string | null;
   };
 };
 

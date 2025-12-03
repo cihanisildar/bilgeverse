@@ -165,6 +165,37 @@ export default function BoardMembersPage() {
                                                 <span className="font-medium">{member.user.phone}</span>
                                             </div>
                                         )}
+                                        {/* Attendance Stats */}
+                                        {member.stats && (
+                                            <div className="flex items-center text-sm text-gray-700 bg-gray-50 rounded-lg p-2.5">
+                                                <div className="flex items-center justify-center w-8 h-8 rounded-md bg-emerald-100 text-emerald-600 mr-3">
+                                                    <LayoutDashboard className="h-4 w-4" />
+                                                </div>
+                                                <div className="flex-1">
+                                                    <div className="flex justify-between items-center mb-1">
+                                                        <span className="font-medium">Katılım</span>
+                                                        <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${member.stats.attendanceRate >= 80 ? 'bg-green-100 text-green-700' :
+                                                                member.stats.attendanceRate >= 50 ? 'bg-yellow-100 text-yellow-700' :
+                                                                    'bg-red-100 text-red-700'
+                                                            }`}>
+                                                            %{member.stats.attendanceRate.toFixed(0)}
+                                                        </span>
+                                                    </div>
+                                                    <div className="w-full bg-gray-200 rounded-full h-1.5">
+                                                        <div
+                                                            className={`h-1.5 rounded-full ${member.stats.attendanceRate >= 80 ? 'bg-green-500' :
+                                                                    member.stats.attendanceRate >= 50 ? 'bg-yellow-500' :
+                                                                        'bg-red-500'
+                                                                }`}
+                                                            style={{ width: `${member.stats.attendanceRate}%` }}
+                                                        ></div>
+                                                    </div>
+                                                    <p className="text-xs text-gray-500 mt-1 text-right">
+                                                        {member.stats.attendedMeetings} / {member.stats.totalMeetings} Toplantı
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        )}
                                     </div>
                                     {isAdmin && (
                                         <div className="flex items-center justify-between pt-4 border-t border-gray-100">

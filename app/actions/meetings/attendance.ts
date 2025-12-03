@@ -43,6 +43,9 @@ export async function getMeetingAttendance(meetingId: string) {
         id: a.id,
         checkInMethod: a.checkInMethod,
         checkInTime: a.checkInTime.toISOString(),
+        attended: a.attended,
+        markedBy: a.markedBy,
+        markedAt: a.markedAt ? a.markedAt.toISOString() : null,
         createdAt: a.createdAt.toISOString(),
         updatedAt: a.updatedAt.toISOString(),
         meetingId: a.meetingId,
@@ -233,6 +236,69 @@ export async function removeAttendance(attendanceId: string) {
   } catch (error) {
     console.error('Error removing attendance:', error);
     return { error: 'Katılım kaydı silinirken bir hata oluştu', data: null };
+  }
+}
+
+export async function markAttendance(attendanceId: string, attended: boolean) {
+  try {
+    const session = await getServerSession(authOptions);
+
+    if (!session?.user || session.user.role !== UserRole.ADMIN) {
+      return { error: 'Yetkisiz erişim: Sadece yöneticiler katılımı işaretleyebilir', data: null };
+    }
+
+    // Update attendance record
+    const attendance = await prisma.meetingAttendance.update({
+      where: { id: attendanceId },
+      data: {
+        attended,
+        markedBy: session.user.id,
+        markedAt: new Date(),
+      },
+      include: {
+        user: {
+          select: {
+            id: true,
+            username: true,
+            firstName: true,
+            lastName: true,
+            boardMember: {
+              select: {
+                title: true,
+                isActive: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    // Serialize Date objects to ISO strings and ensure plain objects
+    return {
+      error: null,
+      data: {
+        id: attendance.id,
+        checkInMethod: attendance.checkInMethod,
+        checkInTime: attendance.checkInTime.toISOString(),
+        attended: attendance.attended,
+        markedBy: attendance.markedBy,
+        markedAt: attendance.markedAt ? attendance.markedAt.toISOString() : null,
+        createdAt: attendance.createdAt.toISOString(),
+        updatedAt: attendance.updatedAt.toISOString(),
+        meetingId: attendance.meetingId,
+        userId: attendance.userId,
+        user: {
+          id: attendance.user.id,
+          username: attendance.user.username,
+          firstName: attendance.user.firstName,
+          lastName: attendance.user.lastName,
+          boardMemberTitle: attendance.user.boardMember?.title || null,
+        },
+      },
+    };
+  } catch (error) {
+    console.error('Error marking attendance:', error);
+    return { error: 'Katılım işaretlenirken bir hata oluştu', data: null };
   }
 }
 

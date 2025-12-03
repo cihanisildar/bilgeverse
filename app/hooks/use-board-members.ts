@@ -12,15 +12,37 @@ import {
 } from '@/app/actions/board-members';
 import toast from 'react-hot-toast';
 
+export type BoardMemberWithStats = {
+    id: string;
+    userId: string;
+    title: string;
+    isActive: boolean;
+    createdAt: string;
+    updatedAt: string;
+    user: {
+        id: string;
+        username: string;
+        firstName: string | null;
+        lastName: string | null;
+        email: string | null;
+        phone: string | null;
+    };
+    stats?: {
+        attendedMeetings: number;
+        totalMeetings: number;
+        attendanceRate: number;
+    };
+};
+
 export function useBoardMembers() {
-    return useQuery({
+    return useQuery<BoardMemberWithStats[]>({
         queryKey: ['board-members'],
         queryFn: async () => {
             const result = await getBoardMembers();
             if (result.error) {
                 throw new Error(result.error);
             }
-            return result.data;
+            return result.data as BoardMemberWithStats[];
         },
     });
 }
@@ -39,18 +61,17 @@ export function useBoardMember(id: string) {
     });
 }
 
+export interface CreateBoardMemberInput {
+    userId: string;
+    title: string;
+}
+
 export function useCreateBoardMember() {
     const queryClient = useQueryClient();
 
     return useMutation({
-        mutationFn: async (data: unknown) => {
-            const plainData = typeof data === 'object' && data !== null
-                ? {
-                    userId: String((data as any).userId || ''),
-                    title: String((data as any).title || ''),
-                }
-                : data;
-            return createBoardMember(plainData);
+        mutationFn: async (data: CreateBoardMemberInput) => {
+            return createBoardMember(data);
         },
         onSuccess: (result) => {
             if (result.error) {
@@ -70,7 +91,7 @@ export function useUpdateBoardMember() {
     const queryClient = useQueryClient();
 
     return useMutation({
-        mutationFn: ({ id, data }: { id: string; data: unknown }) =>
+        mutationFn: ({ id, data }: { id: string; data: Partial<CreateBoardMemberInput> }) =>
             updateBoardMember(id, data),
         onSuccess: (result, variables) => {
             if (result.error) {

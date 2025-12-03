@@ -6,6 +6,7 @@ import {
   checkInWithQR,
   manualCheckIn,
   removeAttendance,
+  markAttendance,
 } from '@/app/actions/meetings/attendance';
 import toast from 'react-hot-toast';
 
@@ -83,6 +84,27 @@ export function useRemoveAttendance() {
     },
     onError: (error: Error) => {
       toast.error(error.message || 'Katılım kaydı silinirken bir hata oluştu');
+    },
+  });
+}
+
+export function useMarkAttendance() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ attendanceId, attended }: { attendanceId: string; attended: boolean }) =>
+      markAttendance(attendanceId, attended),
+    onSuccess: (result) => {
+      if (result.error) {
+        toast.error(result.error);
+      } else {
+        queryClient.invalidateQueries({ queryKey: ['meetings'] });
+        queryClient.invalidateQueries({ queryKey: ['attendance'] });
+        toast.success('Katılım durumu güncellendi');
+      }
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || 'Katılım durumu güncellenirken bir hata oluştu');
     },
   });
 }

@@ -25,11 +25,35 @@ export function useMeetingDecisions(meetingId: string) {
   });
 }
 
+export interface Decision {
+  id: string;
+  title: string;
+  description: string | null;
+  targetDate: string | null;
+  status: DecisionStatus;
+  meetingId: string;
+  createdAt: string;
+  updatedAt: string;
+  responsibleUsers: {
+    id: string;
+    username: string;
+    firstName: string | null;
+    lastName: string | null;
+  }[];
+}
+
+export interface CreateDecisionInput {
+  title: string;
+  description?: string | null;
+  targetDate?: string | Date | null;
+  responsibleUserIds: string[];
+}
+
 export function useCreateDecision() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ meetingId, data }: { meetingId: string; data: unknown }) =>
+    mutationFn: ({ meetingId, data }: { meetingId: string; data: CreateDecisionInput }) =>
       createDecision(meetingId, data),
     onSuccess: (result, variables) => {
       if (result.error) {
@@ -49,7 +73,7 @@ export function useUpdateDecision() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ id, data }: { id: string; data: unknown }) =>
+    mutationFn: ({ id, data }: { id: string; data: Partial<CreateDecisionInput> & { status?: DecisionStatus } }) =>
       updateDecision(id, data),
     onSuccess: (result, variables) => {
       if (result.error) {
@@ -79,7 +103,7 @@ export function useUpdateDecisionStatus() {
 
       // Snapshot the previous value for all decision queries
       const previousQueries: Array<[any, any]> = [];
-      
+
       // Get all queries that might contain decisions
       queryClient.getQueryCache().getAll().forEach((query) => {
         const queryKey = query.queryKey;
@@ -103,26 +127,28 @@ export function useUpdateDecisionStatus() {
           queryKey.length >= 2 &&
           queryKey[0] === 'meetings'
         ) {
-          queryClient.setQueryData(queryKey, (old: any) => {
+          queryClient.setQueryData(queryKey, (old: unknown) => {
             if (!old) return old;
-            
+
             // If it's an array of decisions (queryKey: ['meetings', meetingId, 'decisions'])
             if (Array.isArray(old) && queryKey.length === 3 && queryKey[2] === 'decisions') {
-              return old.map((decision: any) =>
+              return (old as Decision[]).map((decision) =>
                 decision.id === id ? { ...decision, status } : decision
               );
             }
-            
+
             // If it's a single meeting object with decisions (queryKey: ['meetings', meetingId])
-            if (old.decisions && Array.isArray(old.decisions)) {
+            // We cast to any here because Meeting type is complex and we only care about decisions property
+            const oldMeeting = old as any;
+            if (oldMeeting.decisions && Array.isArray(oldMeeting.decisions)) {
               return {
-                ...old,
-                decisions: old.decisions.map((decision: any) =>
+                ...oldMeeting,
+                decisions: oldMeeting.decisions.map((decision: Decision) =>
                   decision.id === id ? { ...decision, status } : decision
                 ),
               };
             }
-            
+
             return old;
           });
         }

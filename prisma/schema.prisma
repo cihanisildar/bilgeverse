@@ -680,6 +680,9 @@ model MeetingAttendance {
   id            String        @id @default(uuid())
   checkInMethod CheckInMethod
   checkInTime   DateTime      @default(now())
+  attended      Boolean?      // null = unverified, true = attended, false = did not attend
+  markedBy      String?       // User ID who marked attendance
+  markedAt      DateTime?     // When attendance was marked
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
 

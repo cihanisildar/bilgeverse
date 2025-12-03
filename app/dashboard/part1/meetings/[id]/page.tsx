@@ -3,7 +3,7 @@
 import { useRouter, useParams } from 'next/navigation';
 import { useAuth } from '@/app/contexts/AuthContext';
 import { useMeeting, useGenerateQRCode } from '@/app/hooks/use-meetings';
-import { useMeetingAttendance, useManualCheckIn, useRemoveAttendance } from '@/app/hooks/use-attendance';
+import { useMeetingAttendance, useManualCheckIn, useRemoveAttendance, useMarkAttendance } from '@/app/hooks/use-attendance';
 import {
   useMeetingDecisions,
   useCreateDecision,
@@ -91,6 +91,7 @@ export default function MeetingDetailPage() {
   const generateQR = useGenerateQRCode();
   const manualCheckIn = useManualCheckIn();
   const removeAttendance = useRemoveAttendance();
+  const markAttendance = useMarkAttendance();
   const createDecision = useCreateDecision();
   const updateDecision = useUpdateDecision();
   const updateStatus = useUpdateDecisionStatus();
@@ -506,15 +507,37 @@ export default function MeetingDetailPage() {
                             </p>
                           </div>
                         </div>
-                        <Badge
-                          variant="outline"
-                          className={a.checkInMethod === 'QR'
-                            ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
-                            : 'border-blue-200 bg-blue-50 text-blue-700'
-                          }
-                        >
-                          {a.checkInMethod === 'QR' ? 'QR Kod' : 'Manuel'}
-                        </Badge>
+                        <div className="flex items-center gap-2">
+                          {/* Attendance Status Badge */}
+                          {a.attended === true && (
+                            <Badge className="bg-green-100 text-green-700 border-green-200 hover:bg-green-100">
+                              <CheckCircle2 className="h-3 w-3 mr-1" />
+                              Katıldı
+                            </Badge>
+                          )}
+                          {a.attended === false && (
+                            <Badge className="bg-red-100 text-red-700 border-red-200 hover:bg-red-100">
+                              <X className="h-3 w-3 mr-1" />
+                              Katılmadı
+                            </Badge>
+                          )}
+                          {a.attended === null && (
+                            <Badge variant="outline" className="text-gray-500 border-gray-200">
+                              <Clock className="h-3 w-3 mr-1" />
+                              Bekleniyor
+                            </Badge>
+                          )}
+
+                          <Badge
+                            variant="outline"
+                            className={a.checkInMethod === 'QR'
+                              ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
+                              : 'border-blue-200 bg-blue-50 text-blue-700'
+                            }
+                          >
+                            {a.checkInMethod === 'QR' ? 'QR Kod' : 'Manuel'}
+                          </Badge>
+                        </div>
                       </div>
                     ))}
                     {attendance.length > 2 && (
@@ -699,10 +722,56 @@ export default function MeetingDetailPage() {
                           </div>
                         </div>
                         {isCheckedIn && (
-                          <Badge className="bg-green-500 text-white">
-                            <Check className="h-3 w-3 mr-1" />
-                            Katıldı
-                          </Badge>
+                          <div className="flex items-center gap-2">
+                            {/* Attendance Status Toggle */}
+                            <div className="flex items-center bg-white rounded-lg border border-gray-200 p-1">
+                              <button
+                                onClick={() => {
+                                  const attendanceRecord = attendance?.find((a) => a.userId === user.id);
+                                  if (attendanceRecord) {
+                                    markAttendance.mutate({
+                                      attendanceId: attendanceRecord.id,
+                                      attended: true
+                                    });
+                                  }
+                                }}
+                                className={cn(
+                                  "p-1.5 rounded-md transition-all",
+                                  attendance?.find((a) => a.userId === user.id)?.attended === true
+                                    ? "bg-green-100 text-green-700"
+                                    : "text-gray-400 hover:bg-gray-50"
+                                )}
+                                title="Katıldı"
+                              >
+                                <CheckCircle2 className="h-4 w-4" />
+                              </button>
+                              <button
+                                onClick={() => {
+                                  const attendanceRecord = attendance?.find((a) => a.userId === user.id);
+                                  if (attendanceRecord) {
+                                    markAttendance.mutate({
+                                      attendanceId: attendanceRecord.id,
+                                      attended: false
+                                    });
+                                  }
+                                }}
+                                className={cn(
+                                  "p-1.5 rounded-md transition-all",
+                                  attendance?.find((a) => a.userId === user.id)?.attended === false
+                                    ? "bg-red-100 text-red-700"
+                                    : "text-gray-400 hover:bg-gray-50"
+                                )}
+                                title="Katılmadı"
+                              >
+                                <X className="h-4 w-4" />
+                              </button>
+                            </div>
+
+                            <Badge className="bg-green-500 text-white">
+                              <Check className="h-3 w-3 mr-1" />
+                              Eklendi
+                            </Badge>
+                          </div>
                         )}
                       </div>
                     );
@@ -987,15 +1056,61 @@ export default function MeetingDetailPage() {
                         </p>
                       </div>
                     </div>
-                    <Badge
-                      variant="outline"
-                      className={a.checkInMethod === 'QR'
-                        ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
-                        : 'border-blue-200 bg-blue-50 text-blue-700'
-                      }
-                    >
-                      {a.checkInMethod === 'QR' ? 'QR Kod' : 'Manuel'}
-                    </Badge>
+                    <div className="flex items-center gap-2">
+                      {/* Admin Controls */}
+                      {isAdmin && (
+                        <div className="flex items-center bg-white rounded-lg border border-gray-200 p-1 mr-2">
+                          <button
+                            onClick={() => markAttendance.mutate({ attendanceId: a.id, attended: true })}
+                            className={cn(
+                              "p-1.5 rounded-md transition-all",
+                              a.attended === true
+                                ? "bg-green-100 text-green-700"
+                                : "text-gray-400 hover:bg-gray-50"
+                            )}
+                            title="Katıldı"
+                          >
+                            <CheckCircle2 className="h-4 w-4" />
+                          </button>
+                          <button
+                            onClick={() => markAttendance.mutate({ attendanceId: a.id, attended: false })}
+                            className={cn(
+                              "p-1.5 rounded-md transition-all",
+                              a.attended === false
+                                ? "bg-red-100 text-red-700"
+                                : "text-gray-400 hover:bg-gray-50"
+                            )}
+                            title="Katılmadı"
+                          >
+                            <X className="h-4 w-4" />
+                          </button>
+                        </div>
+                      )}
+
+                      {/* Status Badge */}
+                      {a.attended === true && (
+                        <Badge className="bg-green-100 text-green-700 border-green-200 hover:bg-green-100">
+                          <CheckCircle2 className="h-3 w-3 mr-1" />
+                          Katıldı
+                        </Badge>
+                      )}
+                      {a.attended === false && (
+                        <Badge className="bg-red-100 text-red-700 border-red-200 hover:bg-red-100">
+                          <X className="h-3 w-3 mr-1" />
+                          Katılmadı
+                        </Badge>
+                      )}
+
+                      <Badge
+                        variant="outline"
+                        className={a.checkInMethod === 'QR'
+                          ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
+                          : 'border-blue-200 bg-blue-50 text-blue-700'
+                        }
+                      >
+                        {a.checkInMethod === 'QR' ? 'QR Kod' : 'Manuel'}
+                      </Badge>
+                    </div>
                   </div>
                 ))
               )}

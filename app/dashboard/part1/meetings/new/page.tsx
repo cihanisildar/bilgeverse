@@ -12,6 +12,8 @@ import { ArrowLeft, Save } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { createMeetingSchema } from '@/lib/validations/meetings';
+import { CreateMeetingInput } from '@/app/hooks/use-meetings';
+import { z } from 'zod';
 import { useEffect } from 'react';
 import Loading from '@/app/components/Loading';
 
@@ -42,29 +44,16 @@ export default function NewMeetingPage() {
     return null;
   }
 
-  const onSubmit = async (data: any) => {
+  const onSubmit = async (data: z.infer<typeof createMeetingSchema>) => {
     // Convert form data to plain object to ensure serialization
     // Extract only the fields we need and ensure they are plain values
-    const plainData: {
-      title: string;
-      description?: string;
-      meetingDate: string;
-      location?: string;
-    } = {
-      title: String(data.title || ''),
-      meetingDate: String(data.meetingDate || ''),
+    const plainData: CreateMeetingInput = {
+      title: data.title as string,
+      meetingDate: data.meetingDate as string,
+      description: (data.description || undefined) as string | undefined,
+      location: (data.location || undefined) as string | undefined,
     };
-    
-    // Only add description if it exists and is not empty
-    if (data.description && String(data.description).trim()) {
-      plainData.description = String(data.description);
-    }
-    
-    // Only add location if it exists and is not empty
-    if (data.location && String(data.location).trim()) {
-      plainData.location = String(data.location);
-    }
-    
+
     const result = await createMeeting.mutateAsync(plainData);
     if (!result.error) {
       router.push(`/dashboard/part1/meetings/${result.data?.id}`);

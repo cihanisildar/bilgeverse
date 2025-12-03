@@ -53,21 +53,21 @@ export function useUserMeetings() {
   });
 }
 
+export interface CreateMeetingInput {
+  title: string;
+  description?: string | null | undefined;
+  meetingDate: string | Date;
+  location?: string | null | undefined;
+}
+
 export function useCreateMeeting() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (data: unknown) => {
+    mutationFn: async (data: CreateMeetingInput) => {
       // Ensure data is a plain object before passing to server action
-      const plainData = typeof data === 'object' && data !== null
-        ? {
-            title: String((data as any).title || ''),
-            description: (data as any).description ? String((data as any).description) : undefined,
-            meetingDate: String((data as any).meetingDate || ''),
-            location: String((data as any).location || ''),
-          }
-        : data;
-      return createMeeting(plainData);
+      // We can now trust the type if we enforce it at the call site
+      return createMeeting(data);
     },
     onSuccess: (result) => {
       if (result.error) {
@@ -87,7 +87,7 @@ export function useUpdateMeeting() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ id, data }: { id: string; data: unknown }) =>
+    mutationFn: ({ id, data }: { id: string; data: Partial<CreateMeetingInput> }) =>
       updateMeeting(id, data),
     onSuccess: (result, variables) => {
       if (result.error) {
@@ -135,7 +135,7 @@ export function useGenerateQRCode() {
       // Ensure meetingId is a plain string
       const plainMeetingId = String(meetingId);
       const result = await generateQRCode(plainMeetingId);
-      
+
       // Ensure result is serializable
       if (result.data) {
         return {
@@ -146,7 +146,7 @@ export function useGenerateQRCode() {
           },
         };
       }
-      
+
       return result;
     },
     onSuccess: (result, meetingId) => {
