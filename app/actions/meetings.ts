@@ -427,9 +427,10 @@ export async function generateQRCode(meetingId: string) {
     // Generate secure random token
     const token = randomBytes(32).toString('hex');
 
-    // Set expiration to meeting date + 1 day
-    const expiresAt = new Date(meeting.meetingDate);
-    expiresAt.setDate(expiresAt.getDate() + 1);
+    // Set expiration to 24 hours from now (current time + 1 day)
+    // This ensures QR code is valid regardless of meeting date
+    const expiresAt = new Date();
+    expiresAt.setHours(expiresAt.getHours() + 24);
 
     const updated = await prisma.managerMeeting.update({
       where: { id: meetingId },
