@@ -16,23 +16,7 @@ import { getBaseUrl, cn } from '@/lib/utils';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { ArrowLeft, Calendar, MapPin, Users, FileText, QrCode, UserPlus, ClipboardList, CheckCircle2, Clock, AlertCircle, Check, X, ChevronsUpDown, Search, Plus, Edit2, Trash2, Eye, User } from 'lucide-react';
-import {
-  DndContext,
-  DragEndEvent,
-  DragOverlay,
-  DragStartEvent,
-  PointerSensor,
-  useSensor,
-  useSensors,
-  closestCorners,
-  useDroppable,
-} from '@dnd-kit/core';
-import {
-  SortableContext,
-  verticalListSortingStrategy,
-  useSortable,
-} from '@dnd-kit/sortable';
-import { CSS } from '@dnd-kit/utilities';
+import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
 import { DecisionStatus } from '@prisma/client';
 import { DecisionWithUser, AttendanceWithUser, BoardMemberUser } from '@/app/types/meetings';
 import { Textarea } from '@/components/ui/textarea';
@@ -98,14 +82,6 @@ export default function MeetingDetailPage() {
   const deleteDecision = useDeleteDecision();
 
   // All hooks must be called before any conditional returns
-  const sensors = useSensors(
-    useSensor(PointerSensor, {
-      activationConstraint: {
-        distance: 8,
-      },
-    })
-  );
-
   const [qrDialogOpen, setQrDialogOpen] = useState(false);
   const [qrImageUrl, setQrImageUrl] = useState<string | null>(null);
   const [manualCheckInDialogOpen, setManualCheckInDialogOpen] = useState(false);
@@ -117,7 +93,6 @@ export default function MeetingDetailPage() {
   const [createDecisionDialogOpen, setCreateDecisionDialogOpen] = useState(false);
   const [editDecisionDialogOpen, setEditDecisionDialogOpen] = useState(false);
   const [selectedDecision, setSelectedDecision] = useState<any>(null);
-  const [activeDecisionId, setActiveDecisionId] = useState<string | null>(null);
   const [deleteDecisionDialogOpen, setDeleteDecisionDialogOpen] = useState(false);
   const [selectedDecisionId, setSelectedDecisionId] = useState<string | null>(null);
   const [detailDecisionDialogOpen, setDetailDecisionDialogOpen] = useState(false);
@@ -247,24 +222,22 @@ export default function MeetingDetailPage() {
     DONE: decisions?.filter((d) => d.status === 'DONE') || [],
   };
 
-  const handleDecisionDragStart = (event: DragStartEvent) => {
-    setActiveDecisionId(event.active.id as string);
-  };
+  const handleDecisionDragEnd = (result: DropResult) => {
+    const { destination, source, draggableId } = result;
 
-  const handleDecisionDragEnd = (event: DragEndEvent) => {
-    const { active, over } = event;
-    setActiveDecisionId(null);
+    // Dropped outside the list
+    if (!destination) return;
 
-    if (!over || active.id === over.id) return;
+    // Dropped in the same position
+    if (destination.droppableId === source.droppableId && destination.index === source.index) {
+      return;
+    }
 
-    const decisionId = active.id as string;
-    const newStatus = over.id as DecisionStatus;
+    const newStatus = destination.droppableId as DecisionStatus;
+    const decision = decisions?.find((d) => d.id === draggableId);
 
-    if (statusColumns.includes(newStatus)) {
-      const decision = decisions?.find((d) => d.id === decisionId);
-      if (decision && decision.status !== newStatus) {
-        updateStatus.mutate({ id: decisionId, status: newStatus });
-      }
+    if (decision && decision.status !== newStatus) {
+      updateStatus.mutate({ id: draggableId, status: newStatus });
     }
   };
 
@@ -582,12 +555,7 @@ export default function MeetingDetailPage() {
             {decisionsLoading ? (
               <Loading message="Kararlar yükleniyor..." />
             ) : (
-              <DndContext
-                sensors={sensors}
-                collisionDetection={closestCorners}
-                onDragStart={handleDecisionDragStart}
-                onDragEnd={handleDecisionDragEnd}
-              >
+              <DragDropContext onDragEnd={handleDecisionDragEnd}>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                   {statusColumns.map((status) => (
                     <StatusColumn
@@ -607,18 +575,7 @@ export default function MeetingDetailPage() {
                     />
                   ))}
                 </div>
-                <DragOverlay>
-                  {activeDecisionId ? (
-                    <Card className="opacity-50">
-                      <CardHeader>
-                        <CardTitle>
-                          {decisions?.find((d) => d.id === activeDecisionId)?.title}
-                        </CardTitle>
-                      </CardHeader>
-                    </Card>
-                  ) : null}
-                </DragOverlay>
-              </DndContext>
+              </DragDropContext>
             )}
           </CardContent>
         </Card>
@@ -1152,10 +1109,6 @@ function StatusColumn({
   onView: (decision: DecisionWithUser) => void;
   isAdmin: boolean;
 }) {
-  const { setNodeRef, isOver } = useDroppable({
-    id: status,
-  });
-
   const decisionStatusLabels: Record<DecisionStatus, string> = {
     TODO: 'Yapılacak',
     IN_PROGRESS: 'Devam',
@@ -1175,139 +1128,137 @@ function StatusColumn({
           {decisions.length}
         </Badge>
       </div>
-      <div
-        ref={setNodeRef}
-        className={`space-y-3 min-h-[200px] p-2 rounded-lg transition-colors ${isOver ? 'bg-indigo-50 border-2 border-indigo-300 border-dashed' : 'bg-gray-50'
-          }`}
-      >
-        <SortableContext
-          items={decisions.map((d) => d.id)}
-          strategy={verticalListSortingStrategy}
-        >
-          {decisions.map((decision) => (
-            <DecisionCard
-              key={decision.id}
-              decision={decision}
-              onEdit={() => onEdit(decision)}
-              onDelete={() => onDelete(decision.id)}
-              onView={() => onView(decision)}
-              isAdmin={isAdmin}
-            />
-          ))}
-        </SortableContext>
-        {decisions.length === 0 && (
-          <div className="text-center text-gray-400 text-sm py-8">
-            Bu kolonda karar yok
+      <Droppable droppableId={status}>
+        {(provided, snapshot) => (
+          <div
+            ref={provided.innerRef}
+            {...provided.droppableProps}
+            className={`space-y-3 min-h-[200px] p-2 rounded-lg transition-colors ${snapshot.isDraggingOver ? 'bg-indigo-50 border-2 border-indigo-300 border-dashed' : 'bg-gray-50'
+              }`}
+          >
+            {decisions.map((decision, index) => (
+              <DecisionCard
+                key={decision.id}
+                decision={decision}
+                index={index}
+                onEdit={() => onEdit(decision)}
+                onDelete={() => onDelete(decision.id)}
+                onView={() => onView(decision)}
+                isAdmin={isAdmin}
+              />
+            ))}
+            {provided.placeholder}
+            {decisions.length === 0 && (
+              <div className="text-center text-gray-400 text-sm py-8">
+                Bu kolonda karar yok
+              </div>
+            )}
           </div>
         )}
-      </div>
+      </Droppable>
     </div>
   );
 }
 
 function DecisionCard({
   decision,
+  index,
   onEdit,
   onDelete,
   onView,
   isAdmin,
 }: {
   decision: DecisionWithUser;
+  index: number;
   onEdit: () => void;
   onDelete: () => void;
   onView: () => void;
   isAdmin: boolean;
 }) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
-    id: decision.id,
-  });
-
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-    opacity: isDragging ? 0.5 : 1,
-  };
-
   return (
-    <Card
-      ref={setNodeRef}
-      style={style}
-      {...attributes}
-      {...listeners}
-      className="cursor-move hover:shadow-md transition-shadow"
-    >
-      <CardHeader>
-        <div className="flex items-start justify-between">
-          <CardTitle className="text-lg">{decision.title}</CardTitle>
-          <div className="flex space-x-2">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={(e) => {
-                e.stopPropagation();
-                onView();
-              }}
-              className="text-gray-600 hover:text-gray-700"
-            >
-              <Eye className="h-4 w-4" />
-            </Button>
-            {isAdmin && (
-              <>
+    <Draggable draggableId={decision.id} index={index}>
+      {(provided, snapshot) => (
+        <Card
+          ref={provided.innerRef}
+          {...provided.draggableProps}
+          {...provided.dragHandleProps}
+          className={`cursor-move hover:shadow-md transition-shadow ${snapshot.isDragging ? 'opacity-50 shadow-xl' : ''
+            }`}
+        >
+          <CardHeader>
+            <div className="flex items-start justify-between">
+              <CardTitle className="text-lg">{decision.title}</CardTitle>
+              <div className="flex space-x-2">
                 <Button
                   variant="ghost"
                   size="sm"
                   onClick={(e) => {
                     e.stopPropagation();
-                    onEdit();
+                    onView();
                   }}
+                  className="text-gray-600 hover:text-gray-700"
                 >
-                  <Edit2 className="h-4 w-4" />
+                  <Eye className="h-4 w-4" />
                 </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onDelete();
-                  }}
-                  className="text-red-600 hover:text-red-700"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-              </>
-            )}
-          </div>
-        </div>
-        {decision.description && (
-          <CardDescription>{decision.description}</CardDescription>
-        )}
-      </CardHeader>
-      <CardContent>
-        <div className="space-y-2">
-          {decision.responsibleUsers && decision.responsibleUsers.length > 0 && (
-            <div className="space-y-1">
-              <div className="flex items-center text-sm text-gray-600 mb-1">
-                <Users className="h-4 w-4 mr-2" />
-                <span className="font-medium">Sorumlu Üyeler:</span>
+                {isAdmin && (
+                  <>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onEdit();
+                      }}
+                    >
+                      <Edit2 className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onDelete();
+                      }}
+                      className="text-red-600 hover:text-red-700"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </>
+                )}
               </div>
-              {decision.responsibleUsers.map((user) => (
-                <div key={user.id} className="text-sm text-gray-600 ml-6">
-                  {user.firstName && user.lastName
-                    ? `${user.firstName} ${user.lastName}`
-                    : user.username}
+            </div>
+            {decision.description && (
+              <CardDescription>{decision.description}</CardDescription>
+            )}
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              {decision.responsibleUsers && decision.responsibleUsers.length > 0 && (
+                <div className="space-y-1">
+                  <div className="flex items-center text-sm text-gray-600 mb-1">
+                    <Users className="h-4 w-4 mr-2" />
+                    <span className="font-medium">Sorumlu Üyeler:</span>
+                  </div>
+                  {decision.responsibleUsers.map((user) => (
+                    <div key={user.id} className="text-sm text-gray-600 ml-6">
+                      {user.firstName && user.lastName
+                        ? `${user.firstName} ${user.lastName}`
+                        : user.username}
+                    </div>
+                  ))}
                 </div>
-              ))}
+              )}
+              {decision.targetDate && (
+                <div className="flex items-center text-sm text-gray-600">
+                  <Calendar className="h-4 w-4 mr-2" />
+                  {format(new Date(decision.targetDate as string), 'dd MMMM yyyy', { locale: tr })}
+                </div>
+              )}
             </div>
-          )}
-          {decision.targetDate && (
-            <div className="flex items-center text-sm text-gray-600">
-              <Calendar className="h-4 w-4 mr-2" />
-              {format(new Date(decision.targetDate as string), 'dd MMMM yyyy', { locale: tr })}
-            </div>
-          )}
-        </div>
-      </CardContent>
-    </Card>
+          </CardContent>
+        </Card>
+      )}
+    </Draggable>
   );
 }
 

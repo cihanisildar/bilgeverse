@@ -47,7 +47,7 @@ import {
   PointerSensor,
   useSensor,
   useSensors,
-  closestCorners,
+  closestCenter,
   useDroppable,
 } from '@dnd-kit/core';
 import {
@@ -90,6 +90,11 @@ function StatusColumn({
 }) {
   const { setNodeRef, isOver } = useDroppable({
     id: status,
+    data: {
+      type: 'column',
+      status,
+      accepts: ['TODO', 'IN_PROGRESS', 'DONE'], // Accept items from any status
+    },
   });
 
   return (
@@ -102,24 +107,23 @@ function StatusColumn({
       </div>
       <div
         ref={setNodeRef}
-        className={`space-y-3 min-h-[200px] p-2 rounded-lg transition-colors ${
-          isOver ? 'bg-indigo-50 border-2 border-indigo-300 border-dashed' : 'bg-gray-50'
-        }`}
+        className={`space-y-3 min-h-[200px] p-2 rounded-lg transition-colors ${isOver ? 'bg-indigo-50 border-2 border-indigo-300 border-dashed' : 'bg-gray-50'
+          }`}
       >
         <SortableContext
           items={decisions.map((d) => d.id)}
           strategy={verticalListSortingStrategy}
         >
-            {decisions.map((decision) => (
-              <DecisionCard
-                key={decision.id}
-                decision={decision}
-                onEdit={() => onEdit(decision)}
-                onDelete={() => onDelete(decision.id)}
-                onView={() => onView(decision)}
-                isAdmin={isAdmin}
-              />
-            ))}
+          {decisions.map((decision) => (
+            <DecisionCard
+              key={decision.id}
+              decision={decision}
+              onEdit={() => onEdit(decision)}
+              onDelete={() => onDelete(decision.id)}
+              onView={() => onView(decision)}
+              isAdmin={isAdmin}
+            />
+          ))}
         </SortableContext>
         {decisions.length === 0 && (
           <div className="text-center text-gray-400 text-sm py-8">
@@ -146,6 +150,10 @@ function DecisionCard({
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: decision.id,
+    data: {
+      type: 'decision',
+      status: decision.status,
+    },
   });
 
   const style = {
@@ -321,10 +329,10 @@ export default function DecisionsPage() {
 
   const handleDeleteConfirm = () => {
     if (!selectedDecisionId) return;
-    
+
     // Ensure we pass a plain string
     const decisionId = String(selectedDecisionId);
-    
+
     // Use mutate instead of mutateAsync to avoid serialization issues
     deleteDecision.mutate(decisionId, {
       onSuccess: (result) => {
@@ -372,7 +380,7 @@ export default function DecisionsPage() {
 
         <DndContext
           sensors={sensors}
-          collisionDetection={closestCorners}
+          collisionDetection={closestCenter}
           onDragStart={handleDragStart}
           onDragEnd={handleDragEnd}
         >
@@ -438,7 +446,7 @@ export default function DecisionsPage() {
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
-              <AlertDialogCancel 
+              <AlertDialogCancel
                 disabled={deleteDecision.isPending}
                 onClick={() => {
                   setDeleteDialogOpen(false);
@@ -586,7 +594,7 @@ function CreateDecisionDialog({
                 : 'Üye seçin...'}
               <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
             </Button>
-            
+
             {comboboxOpen && (
               <div className="absolute z-[100] w-full mt-1 bg-popover border rounded-md shadow-md">
                 {/* Search Input */}
@@ -600,7 +608,7 @@ function CreateDecisionDialog({
                     autoFocus
                   />
                 </div>
-                
+
                 {/* User List */}
                 <div className="max-h-[300px] overflow-y-auto p-1">
                   {loadingUsers ? (
@@ -608,12 +616,12 @@ function CreateDecisionDialog({
                       Yükleniyor...
                     </div>
                   ) : adminUsers.filter((user) => {
-                      if (!searchQuery) return true;
-                      const displayName = user.firstName && user.lastName
-                        ? `${user.firstName} ${user.lastName}`
-                        : user.username;
-                      return displayName.toLowerCase().includes(searchQuery.toLowerCase());
-                    }).length === 0 ? (
+                    if (!searchQuery) return true;
+                    const displayName = user.firstName && user.lastName
+                      ? `${user.firstName} ${user.lastName}`
+                      : user.username;
+                    return displayName.toLowerCase().includes(searchQuery.toLowerCase());
+                  }).length === 0 ? (
                     <div className="py-6 text-center text-sm text-muted-foreground">
                       Üye bulunamadı.
                     </div>
@@ -657,7 +665,7 @@ function CreateDecisionDialog({
                 </div>
               </div>
             )}
-            
+
             {/* Click outside to close */}
             {comboboxOpen && (
               <div
@@ -829,7 +837,7 @@ function EditDecisionDialog({
                 : 'Üye seçin...'}
               <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
             </Button>
-            
+
             {comboboxOpen && (
               <div className="absolute z-[100] w-full mt-1 bg-popover border rounded-md shadow-md">
                 {/* Search Input */}
@@ -843,7 +851,7 @@ function EditDecisionDialog({
                     autoFocus
                   />
                 </div>
-                
+
                 {/* User List */}
                 <div className="max-h-[300px] overflow-y-auto p-1">
                   {loadingUsers ? (
@@ -851,12 +859,12 @@ function EditDecisionDialog({
                       Yükleniyor...
                     </div>
                   ) : adminUsers.filter((user) => {
-                      if (!searchQuery) return true;
-                      const displayName = user.firstName && user.lastName
-                        ? `${user.firstName} ${user.lastName}`
-                        : user.username;
-                      return displayName.toLowerCase().includes(searchQuery.toLowerCase());
-                    }).length === 0 ? (
+                    if (!searchQuery) return true;
+                    const displayName = user.firstName && user.lastName
+                      ? `${user.firstName} ${user.lastName}`
+                      : user.username;
+                    return displayName.toLowerCase().includes(searchQuery.toLowerCase());
+                  }).length === 0 ? (
                     <div className="py-6 text-center text-sm text-muted-foreground">
                       Üye bulunamadı.
                     </div>
@@ -900,7 +908,7 @@ function EditDecisionDialog({
                 </div>
               </div>
             )}
-            
+
             {/* Click outside to close */}
             {comboboxOpen && (
               <div
@@ -942,8 +950,8 @@ function EditDecisionDialog({
             )}
           </div>
           <div className="flex justify-end space-x-2">
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               onClick={() => onOpenChange(false)}
               disabled={isPending}
             >
@@ -972,7 +980,7 @@ function DecisionDetailDialog({
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  decision: DecisionWithUser | { status: DecisionStatus; [key: string]: any };
+  decision: DecisionWithUser | { status: DecisionStatus;[key: string]: any };
   onEdit: () => void;
   isAdmin: boolean;
 }) {
@@ -1002,7 +1010,7 @@ function DecisionDetailDialog({
             )}
           </div>
         </DialogHeader>
-        
+
         <div className="space-y-6 mt-4">
           {/* Description */}
           {decision.description && (
