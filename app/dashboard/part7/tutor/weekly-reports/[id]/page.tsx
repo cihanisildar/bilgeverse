@@ -5,11 +5,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useState, useEffect } from "react";
+import { useMemo } from "react";
 import { ArrowLeft, Calendar, User, Clock, CheckCircle, XCircle, MinusCircle, Edit, Award } from "lucide-react";
 import Link from "next/link";
-import { useRouter, useParams } from "next/navigation";
-import toast from "react-hot-toast";
+import { useParams } from "next/navigation";
+import { useWeeklyReport } from "@/app/hooks/use-weekly-reports";
 
 interface WeeklyReportDetail {
   id: string;
@@ -44,50 +44,15 @@ interface WeeklyReportDetail {
 }
 
 export default function WeeklyReportDetailPage() {
-  const { user, isAuthenticated } = useAuth();
-  const router = useRouter();
+  const { user } = useAuth();
   const params = useParams();
   const reportId = params.id as string;
 
-  const [report, setReport] = useState<WeeklyReportDetail | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState("");
+  // ✨ ONE LINE replaces all the useState + useEffect + fetch logic!
+  const { data: report, isLoading, error } = useWeeklyReport(reportId);
 
   const isTutor = user?.role === "TUTOR";
   const isAsistan = user?.role === "ASISTAN";
-
-  useEffect(() => {
-    if (!isAuthenticated || (!isTutor && !isAsistan)) {
-      router.push("/login");
-      return;
-    }
-
-    if (reportId) {
-      fetchReport();
-    }
-  }, [isAuthenticated, isTutor, isAsistan, router, reportId]);
-
-  const fetchReport = async () => {
-    try {
-      setIsLoading(true);
-      const response = await fetch(`/api/tutor/weekly-reports/${reportId}`);
-
-      if (response.ok) {
-        const data = await response.json();
-        setReport(data);
-      } else if (response.status === 404) {
-        setError("Rapor bulunamadı.");
-      } else {
-        throw new Error("Failed to fetch report");
-      }
-    } catch (error) {
-      console.error("Error fetching report:", error);
-      setError("Rapor yüklenirken bir hata oluştu.");
-      toast.error("Rapor yüklenirken bir hata oluştu.");
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
   const getStatusBadge = (status: string) => {
     const variants = {
@@ -171,14 +136,14 @@ export default function WeeklyReportDetailPage() {
 
     // Count fixed criteria
     if (report.fixedCriteria) {
-      const fixedValues = Object.values(report.fixedCriteria).filter(v => v);
+      const fixedValues = Object.values(report.fixedCriteria as Record<string, string>).filter(v => v);
       totalCriteria += fixedValues.length;
       completedCriteria += fixedValues.filter(v => v === "YAPILDI").length;
     }
 
     // Count variable criteria
     if (report.variableCriteria) {
-      const variableValues = Object.values(report.variableCriteria).filter(v => v);
+      const variableValues = Object.values(report.variableCriteria as Record<string, string>).filter(v => v);
       totalCriteria += variableValues.length;
       completedCriteria += variableValues.filter(v => v === "YAPILDI").length;
     }
@@ -235,7 +200,7 @@ export default function WeeklyReportDetailPage() {
             </Link>
           </div>
           <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg shadow-sm">
-            {error}
+            {error?.message || "Rapor yüklenirken bir hata oluştu"}
           </div>
         </div>
       </div>
@@ -257,7 +222,7 @@ export default function WeeklyReportDetailPage() {
             <div className="absolute inset-0 bg-gradient-to-br from-indigo-50/30 via-purple-50/20 to-pink-50/30"></div>
             <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-indigo-100/40 to-purple-100/40 rounded-full -translate-y-16 translate-x-16"></div>
             <div className="absolute bottom-0 left-0 w-24 h-24 bg-gradient-to-tr from-purple-100/40 to-pink-100/40 rounded-full translate-y-12 -translate-x-12"></div>
-            
+
             <div className="relative z-10">
               <div className="flex items-start justify-between mb-6">
                 <div className="flex-1">
@@ -278,7 +243,7 @@ export default function WeeklyReportDetailPage() {
                     <span className="text-sm">Rapor Detayı</span>
                   </div>
                 </div>
-                
+
                 {/* Status Badge */}
                 <div className="flex flex-col items-end gap-2">
                   {getStatusBadge(report.status)}
@@ -293,9 +258,9 @@ export default function WeeklyReportDetailPage() {
               {/* Action Buttons */}
               <div className="flex items-center gap-3">
                 <Link href="/dashboard/part7/tutor/weekly-reports">
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
+                  <Button
+                    variant="outline"
+                    size="sm"
                     className="group hover:bg-gray-50 hover:border-gray-300 transition-all duration-200"
                   >
                     <ArrowLeft className="h-4 w-4 mr-2 group-hover:-translate-x-1 transition-transform duration-200" />
@@ -304,7 +269,7 @@ export default function WeeklyReportDetailPage() {
                 </Link>
                 {(report.status === "DRAFT" || report.status === "SUBMITTED" || report.status === "REJECTED") && isOwner && (
                   <Link href={`/dashboard/part7/tutor/weekly-reports/${report.id}/edit`}>
-                    <Button 
+                    <Button
                       className="bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105"
                       size="sm"
                     >
@@ -395,7 +360,7 @@ export default function WeeklyReportDetailPage() {
             <CardContent>
               <div className="space-y-4">
                 {fixedCriteria.map((criterion) => {
-                  const value = report.fixedCriteria?.[criterion.key];
+                  const value = (report.fixedCriteria as Record<string, string>)?.[criterion.key];
                   return (
                     <div key={criterion.key} className="p-4 bg-gray-50 rounded-lg">
                       <div className="flex items-start justify-between">
@@ -404,11 +369,10 @@ export default function WeeklyReportDetailPage() {
                         </p>
                         <div className="flex items-center space-x-2 ml-4">
                           {value && getAttendanceIcon(value)}
-                          <span className={`text-sm font-medium ${
-                            value === "YAPILDI" ? "text-green-600" :
+                          <span className={`text-sm font-medium ${value === "YAPILDI" ? "text-green-600" :
                             value === "YAPILMADI" ? "text-red-600" :
-                            "text-gray-600"
-                          }`}>
+                              "text-gray-600"
+                            }`}>
                             {value ? getAttendanceLabel(value) : "Cevaplanmamış"}
                           </span>
                         </div>
@@ -428,7 +392,7 @@ export default function WeeklyReportDetailPage() {
             <CardContent>
               <div className="space-y-4">
                 {filteredVariableCriteria.map((criterion) => {
-                  const value = report.variableCriteria?.[criterion.key];
+                  const value = (report.variableCriteria as Record<string, string>)?.[criterion.key];
                   return (
                     <div key={criterion.key} className="p-4 bg-gray-50 rounded-lg">
                       <div className="flex items-start justify-between">
@@ -437,11 +401,10 @@ export default function WeeklyReportDetailPage() {
                         </p>
                         <div className="flex items-center space-x-2 ml-4">
                           {value && getAttendanceIcon(value)}
-                          <span className={`text-sm font-medium ${
-                            value === "YAPILDI" ? "text-green-600" :
+                          <span className={`text-sm font-medium ${value === "YAPILDI" ? "text-green-600" :
                             value === "YAPILMADI" ? "text-red-600" :
-                            "text-gray-600"
-                          }`}>
+                              "text-gray-600"
+                            }`}>
                             {value ? getAttendanceLabel(value) : "Cevaplanmamış"}
                           </span>
                         </div>
@@ -476,11 +439,10 @@ export default function WeeklyReportDetailPage() {
                 <CardTitle>İnceleme Notları</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className={`p-4 rounded-lg ${
-                  report.status === "APPROVED" ? "bg-green-50 border border-green-200" :
+                <div className={`p-4 rounded-lg ${report.status === "APPROVED" ? "bg-green-50 border border-green-200" :
                   report.status === "REJECTED" ? "bg-red-50 border border-red-200" :
-                  "bg-gray-50"
-                }`}>
+                    "bg-gray-50"
+                  }`}>
                   <p className="text-gray-900 whitespace-pre-wrap leading-relaxed">
                     {report.reviewNotes}
                   </p>

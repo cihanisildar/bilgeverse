@@ -102,7 +102,7 @@ export default function DashboardPage() {
                 {/* Belgeler Link */}
                 {isAdmin && (
                   <div
-                    onClick={() => router.push('/dashboard/belgeler')}
+                    onClick={() => router.push('/dashboard/pdfs')}
                     className="p-4 rounded-lg cursor-pointer transition-all duration-200 hover:bg-gray-50 hover:shadow-md border border-transparent hover:border-gray-200 group"
                   >
                     <div className="flex items-center space-x-3">

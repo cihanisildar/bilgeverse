@@ -75,17 +75,10 @@ export default function PdfsPage() {
     isActive: true,
   });
 
+  // Middleware already handles authentication - just fetch data on mount
   useEffect(() => {
-    if (!authLoading && !user) {
-      router.push('/login');
-    }
-  }, [authLoading, user, router]);
-
-  useEffect(() => {
-    if (user) {
-      fetchPdfs();
-    }
-  }, [user]);
+    fetchPdfs();
+  }, []);
 
   const fetchPdfs = async () => {
     try {
@@ -158,7 +151,7 @@ export default function PdfsPage() {
       // Set selected part to the part where the document was added
       setSelectedPart(uploadForm.partId);
       setUploadForm({
-        partId: selectedPart,
+        partId: uploadForm.partId,
         title: '',
         description: '',
         driveLink: '',
@@ -329,8 +322,8 @@ export default function PdfsPage() {
                   <button
                     onClick={() => setSelectedPart(0)}
                     className={`w-full text-left px-4 py-3 rounded-xl transition-all duration-200 flex items-center gap-3 ${selectedPart === 0
-                        ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-md'
-                        : 'text-gray-700 hover:bg-gray-100'
+                      ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-md'
+                      : 'text-gray-700 hover:bg-gray-100'
                       }`}
                   >
                     <div className={`w-2 h-2 rounded-full ${selectedPart === 0 ? 'bg-white' : 'bg-indigo-400'
@@ -342,8 +335,8 @@ export default function PdfsPage() {
                       key={part.id}
                       onClick={() => setSelectedPart(part.id)}
                       className={`w-full text-left px-4 py-3 rounded-xl transition-all duration-200 flex items-center gap-3 ${selectedPart === part.id
-                          ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-md'
-                          : 'text-gray-700 hover:bg-gray-100'
+                        ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-md'
+                        : 'text-gray-700 hover:bg-gray-100'
                         }`}
                     >
                       <div className={`w-2 h-2 rounded-full ${selectedPart === part.id ? 'bg-white' : 'bg-indigo-400'
@@ -365,8 +358,8 @@ export default function PdfsPage() {
                   <button
                     onClick={() => setSelectedPart(0)}
                     className={`px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-all duration-200 ${selectedPart === 0
-                        ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white'
-                        : 'text-gray-700 hover:bg-gray-100'
+                      ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white'
+                      : 'text-gray-700 hover:bg-gray-100'
                       }`}
                   >
                     Yönetim Kurulu
@@ -376,8 +369,8 @@ export default function PdfsPage() {
                       key={part.id}
                       onClick={() => setSelectedPart(part.id)}
                       className={`px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-all duration-200 ${selectedPart === part.id
-                          ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white'
-                          : 'text-gray-700 hover:bg-gray-100'
+                        ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white'
+                        : 'text-gray-700 hover:bg-gray-100'
                         }`}
                     >
                       {part.name}
@@ -428,8 +421,8 @@ export default function PdfsPage() {
 
                           <div className="flex items-center gap-2 mb-4">
                             <span className={`inline-flex items-center px-3 py-1.5 rounded-full text-xs font-semibold shadow-sm ${pdf.isActive
-                                ? 'bg-gradient-to-r from-green-400 to-emerald-500 text-white'
-                                : 'bg-gray-100 text-gray-600'
+                              ? 'bg-gradient-to-r from-green-400 to-emerald-500 text-white'
+                              : 'bg-gray-100 text-gray-600'
                               }`}>
                               <Power className={`h-3 w-3 mr-1.5 ${pdf.isActive ? 'text-white' : 'text-gray-500'}`} />
                               {pdf.isActive ? 'Aktif' : 'Pasif'}
@@ -545,8 +538,8 @@ export default function PdfsPage() {
 
                               <div className="flex items-center gap-2 mb-4">
                                 <span className={`inline-flex items-center px-3 py-1.5 rounded-full text-xs font-semibold shadow-sm ${pdf.isActive
-                                    ? 'bg-gradient-to-r from-green-400 to-emerald-500 text-white'
-                                    : 'bg-gray-100 text-gray-600'
+                                  ? 'bg-gradient-to-r from-green-400 to-emerald-500 text-white'
+                                  : 'bg-gray-100 text-gray-600'
                                   }`}>
                                   <Power className={`h-3 w-3 mr-1.5 ${pdf.isActive ? 'text-white' : 'text-gray-500'}`} />
                                   {pdf.isActive ? 'Aktif' : 'Pasif'}

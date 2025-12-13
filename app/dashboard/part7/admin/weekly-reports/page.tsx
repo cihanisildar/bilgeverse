@@ -11,7 +11,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useState, useEffect } from "react";
+import { useState, useMemo } from "react";
+import { useWeeklyReports, useActivePeriod, useUpdateWeeklyReport } from "@/app/hooks/use-weekly-reports";
 import {
   Filter,
   Eye,
@@ -37,8 +38,8 @@ interface WeeklyReport {
   id: string;
   weekNumber: number;
   status: "DRAFT" | "SUBMITTED" | "APPROVED" | "REJECTED";
-  submissionDate: string | null;
-  reviewDate: string | null;
+  submissionDate: Date | null;
+  reviewDate: Date | null;
   reviewNotes: string | null;
   pointsAwarded: number;
   comments: string | null;
@@ -75,21 +76,19 @@ interface ReportStats {
 interface CurrentPeriod {
   id: string;
   name: string;
-  startDate: string;
-  endDate: string | null;
+  startDate: Date;
+  endDate: Date | null;
   totalWeeks: number;
 }
 
 export default function AdminWeeklyReportsPage() {
-  const { user, isAuthenticated } = useAuth();
+  const { user } = useAuth();
   const router = useRouter();
 
-  const [reports, setReports] = useState<WeeklyReport[]>([]);
-  const [filteredReports, setFilteredReports] = useState<WeeklyReport[]>([]);
-  const [stats, setStats] = useState<ReportStats | null>(null);
-  const [currentPeriod, setCurrentPeriod] = useState<CurrentPeriod | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isReviewing, setIsReviewing] = useState(false);
+  // ✨ TanStack Query hooks - replaces all useEffect + fetch logic!
+  const { data: reports = [], isLoading, error, refetch } = useWeeklyReports();
+  const { data: currentPeriod } = useActivePeriod();
+  const updateReport = useUpdateWeeklyReport();
 
   // Filters
   const [statusFilter, setStatusFilter] = useState("");
@@ -107,68 +106,71 @@ export default function AdminWeeklyReportsPage() {
   // Period settings
   const [isPeriodDialogOpen, setIsPeriodDialogOpen] = useState(false);
   const [periodTotalWeeks, setPeriodTotalWeeks] = useState(8);
-  const [isUpdatingPeriod, setIsUpdatingPeriod] = useState(false);
 
   const isAdmin = user?.role === "ADMIN";
 
-  useEffect(() => {
-    if (!isAuthenticated || !isAdmin) {
-      router.push("/login");
-      return;
+  // ✨ Calculate stats from reports (derived state, not fetched separately)
+  const stats = useMemo(() => {
+    if (!reports || reports.length === 0) return null;
+
+    const stats: ReportStats = {
+      total: reports.length,
+      byStatus: {
+        DRAFT: 0,
+        SUBMITTED: 0,
+        APPROVED: 0,
+        REJECTED: 0,
+      },
+      byRole: {
+        TUTOR: 0,
+        ASISTAN: 0,
+      },
+      totalPointsAwarded: 0,
+    };
+
+    reports.forEach((report: any) => {
+      stats.byStatus[report.status as keyof typeof stats.byStatus]++;
+      if (report.user.role === 'TUTOR') stats.byRole.TUTOR++;
+      if (report.user.role === 'ASISTAN') stats.byRole.ASISTAN++;
+      stats.totalPointsAwarded += report.pointsAwarded || 0;
+    });
+
+    return stats;
+  }, [reports]);
+
+  // ✨ Apply filters (derived state using useMemo for performance)
+  const filteredReports = useMemo(() => {
+    let filtered = reports || [];
+
+    if (statusFilter && statusFilter !== "all") {
+      filtered = filtered.filter((r: any) => r.status === statusFilter);
     }
 
-    fetchReports();
-  }, [isAuthenticated, isAdmin, router]);
-
-  useEffect(() => {
-    applyFilters();
-  }, [reports, statusFilter, roleFilter, weekFilter, searchTerm]);
-
-  const fetchReports = async () => {
-    try {
-      setIsLoading(true);
-
-      const queryParams = new URLSearchParams();
-      if (statusFilter && statusFilter !== "all") queryParams.append("status", statusFilter);
-      if (roleFilter && roleFilter !== "all") queryParams.append("role", roleFilter);
-      if (weekFilter && weekFilter !== "all") queryParams.append("week", weekFilter);
-
-      const response = await fetch(`/api/admin/weekly-reports?${queryParams}`);
-
-      if (response.ok) {
-        const data = await response.json();
-        setReports(data.reports || []);
-        setStats(data.stats);
-        setCurrentPeriod(data.period);
-        if (data.period) {
-          setPeriodTotalWeeks(data.period.totalWeeks || 8);
-        }
-      } else {
-        throw new Error("Failed to fetch reports");
-      }
-    } catch (error) {
-      console.error("Error fetching reports:", error);
-      toast.error("Raporlar yüklenirken bir hata oluştu.");
-    } finally {
-      setIsLoading(false);
+    if (roleFilter && roleFilter !== "all") {
+      filtered = filtered.filter((r: any) => r.user.role === roleFilter);
     }
-  };
 
-  const applyFilters = () => {
-    let filtered = [...reports];
+    if (weekFilter && weekFilter !== "all") {
+      filtered = filtered.filter((r: any) => r.weekNumber === parseInt(weekFilter));
+    }
 
     if (searchTerm) {
       const term = searchTerm.toLowerCase();
-      filtered = filtered.filter(report =>
-        report.user.firstName?.toLowerCase().includes(term) ||
-        report.user.lastName?.toLowerCase().includes(term) ||
-        report.user.username.toLowerCase().includes(term) ||
-        report.comments?.toLowerCase().includes(term)
+      filtered = filtered.filter((r: any) =>
+        r.user.username?.toLowerCase().includes(term) ||
+        r.user.firstName?.toLowerCase().includes(term) ||
+        r.user.lastName?.toLowerCase().includes(term)
       );
     }
 
-    setFilteredReports(filtered);
-  };
+    return filtered;
+  }, [reports, statusFilter, roleFilter, weekFilter, searchTerm]);
+
+  // ✨ No more fetchReports or applyFilters functions needed!
+
+  // Loading states for mutations
+  const [isReviewing, setIsReviewing] = useState(false);
+  const [isUpdatingPeriod, setIsUpdatingPeriod] = useState(false);
 
   const getStatusBadge = (status: string) => {
     const variants: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
@@ -219,7 +221,7 @@ export default function AdminWeeklyReportsPage() {
         toast.success(data.message);
         setSelectedReports([]);
         setBulkReviewNotes("");
-        fetchReports(); // Refresh the data
+        refetch(); // Refresh the data with TanStack Query
       } else {
         const error = await response.json();
         throw new Error(error.message);
@@ -263,8 +265,6 @@ export default function AdminWeeklyReportsPage() {
     }
 
     try {
-      setIsUpdatingPeriod(true);
-
       const response = await fetch(`/api/admin/periods/${currentPeriod.id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
@@ -274,7 +274,7 @@ export default function AdminWeeklyReportsPage() {
       if (response.ok) {
         toast.success("Dönem ayarları güncellendi.");
         setIsPeriodDialogOpen(false);
-        fetchReports(); // Refresh data
+        refetch(); // Refresh data with TanStack Query
       } else {
         const error = await response.json();
         throw new Error(error.message);
@@ -282,8 +282,6 @@ export default function AdminWeeklyReportsPage() {
     } catch (error: any) {
       console.error("Error updating period:", error);
       toast.error(error.message || "Dönem güncellenirken hata oluştu.");
-    } finally {
-      setIsUpdatingPeriod(false);
     }
   };
 
@@ -408,7 +406,7 @@ export default function AdminWeeklyReportsPage() {
                 Performans Raporu
               </Button>
             </Link>
-            <Button onClick={fetchReports} variant="outline">
+            <Button onClick={() => refetch()} variant="outline">
               <RefreshCw className="h-4 w-4 mr-2" />
               Yenile
             </Button>

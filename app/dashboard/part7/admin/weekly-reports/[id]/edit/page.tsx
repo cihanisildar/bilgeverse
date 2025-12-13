@@ -71,16 +71,12 @@ export default function AdminEditWeeklyReportPage() {
 
   const isAdmin = user?.role === "ADMIN";
 
+  // Middleware already handles admin authentication and role-based access
   useEffect(() => {
-    if (!isAuthenticated || !isAdmin) {
-      router.push("/login");
-      return;
-    }
-
     if (reportId) {
       fetchReport();
     }
-  }, [isAuthenticated, isAdmin, router, reportId]);
+  }, [reportId]);
 
   const fetchReport = async () => {
     try {

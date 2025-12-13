@@ -24,7 +24,7 @@ export async function middleware(request: NextRequest) {
   console.log('Middleware - Cookies:', request.cookies.toString());
 
   // Skip middleware for public assets and auth API routes
-  if (pathname.startsWith('/_next/') || 
+  if (pathname.startsWith('/_next/') ||
       pathname.startsWith('/api/auth/') ||
       pathname === '/api/register' ||
       pathname === '/favicon.ico') {
@@ -35,6 +35,12 @@ export async function middleware(request: NextRequest) {
   // Allow public paths
   if (pathname === '/' || pathname === '/login' || pathname === '/register') {
     console.log('Public path accessed:', pathname);
+    return NextResponse.next();
+  }
+
+  // Allow public syllabus feedback pages (no auth required)
+  if (pathname.startsWith('/syllabus/')) {
+    console.log('Public syllabus page accessed:', pathname);
     return NextResponse.next();
   }
 
@@ -70,14 +76,31 @@ export async function middleware(request: NextRequest) {
 
     // Allow check-in pages and meeting detail pages for all authenticated users
     // (students, tutors, etc. can check in as guests and view meetings they're attending)
-    const isCheckInPage = pathname.includes('/meetings/') && pathname.includes('/check-in');
+    const isCheckInPage = (pathname.includes('/meetings/') || pathname.includes('/attendance/')) && pathname.includes('/check-in');
     const isMeetingDetailPage = pathname.match(/\/dashboard\/part1\/meetings\/[^\/]+$/);
-    
-    // Redirect non-admin users away from parts 1-6 and 8-9 to part 7 (except check-in and meeting detail pages)
-    if (pathname.startsWith('/dashboard/part') && !pathname.startsWith('/dashboard/part7') && !isCheckInPage && !isMeetingDetailPage) {
+    const isAttendanceDetailPage = pathname.match(/\/dashboard\/part2\/attendance\/[^\/]+$/);
+
+    // Part2 is accessible by ADMIN and TUTOR
+    if (pathname.startsWith('/dashboard/part2')) {
+      if (token.role !== UserRole.ADMIN && token.role !== UserRole.TUTOR && token.role !== UserRole.ASISTAN) {
+        // Students can access check-in pages
+        if (!isCheckInPage) {
+          console.log('Non-tutor user attempting to access part2, redirecting');
+          const roleBasedPath = '/dashboard/part7/student';
+          return NextResponse.redirect(new URL(roleBasedPath, request.url));
+        }
+      }
+    }
+
+    // Redirect non-admin users away from parts 1, 3-6 and 8-9 to part 7 (except check-in and detail pages)
+    if (pathname.startsWith('/dashboard/part') &&
+        !pathname.startsWith('/dashboard/part7') &&
+        !pathname.startsWith('/dashboard/part2') &&
+        !isCheckInPage &&
+        !isMeetingDetailPage) {
       if (token.role !== UserRole.ADMIN) {
         console.log('Non-admin user attempting to access restricted part, redirecting to part 7');
-        const roleBasedPath = token.role === UserRole.STUDENT 
+        const roleBasedPath = token.role === UserRole.STUDENT
           ? '/dashboard/part7/student'
           : token.role === UserRole.TUTOR || token.role === UserRole.ASISTAN
           ? '/dashboard/part7/tutor'

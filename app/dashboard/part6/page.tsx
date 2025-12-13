@@ -4,7 +4,7 @@ import { ArrowLeft, FileText } from 'lucide-react';
 import { PARTS } from '@/app/lib/parts';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
-import { getServerSession } from 'next-auth';
+import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/app/api/auth/[...nextauth]/auth.config';
 import PartDocuments from '@/app/components/PartDocuments';
 
@@ -42,7 +42,7 @@ export default async function Part6Page() {
               <h2 className="text-2xl font-bold text-gray-800 mb-1">Belgeler</h2>
               <p className="text-gray-600">Bu bölüm için paylaşılan belgeler</p>
             </div>
-            <Link href="/dashboard/belgeler">
+            <Link href="/dashboard/pdfs">
               <Button variant="outline" className="border-teal-200 text-teal-600 hover:bg-teal-50">
                 <FileText className="h-4 w-4 mr-2" />
                 Tüm Belgeleri Görüntüle

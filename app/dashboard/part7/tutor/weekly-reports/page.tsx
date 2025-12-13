@@ -1,89 +1,55 @@
 "use client";
 
 import { useAuth } from "@/app/contexts/AuthContext";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Skeleton } from "@/components/ui/skeleton";
-import { useState, useEffect } from "react";
-import { Plus, Calendar, Clock, CheckCircle, XCircle, Edit, Eye, FileText } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import toast from "react-hot-toast";
+import { useActivePeriod, useWeeklyReports } from "@/app/hooks/use-weekly-reports";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Calendar, CheckCircle, Clock, Edit, Eye, FileText, Plus, XCircle } from "lucide-react";
 
 interface WeeklyReport {
   id: string;
   weekNumber: number;
   status: "DRAFT" | "SUBMITTED" | "APPROVED" | "REJECTED";
-  submissionDate: string | null;
-  reviewDate: string | null;
+  submissionDate: Date | null;
+  reviewDate: Date | null;
   reviewNotes: string | null;
   pointsAwarded: number;
-  createdAt: string;
-  updatedAt: string;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 interface CurrentPeriod {
   id: string;
   name: string;
-  startDate: string;
-  endDate: string | null;
+  startDate: Date;
+  endDate: Date | null;
   totalWeeks: number;
 }
 
+type ReportOrPlaceholder = WeeklyReport | {
+  weekNumber: number;
+  status: null;
+  id: null;
+};
+
 export default function WeeklyReportsPage() {
-  const { user, loading } = useAuth();
+  const { user } = useAuth();
   const router = useRouter();
-  const [reports, setReports] = useState<WeeklyReport[]>([]);
-  const [currentPeriod, setCurrentPeriod] = useState<CurrentPeriod | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState("");
+
+  // ✨ TanStack Query hooks - replaces all useEffect + fetch logic!
+  const { data: reports = [], isLoading, error } = useWeeklyReports();
+  const { data: currentPeriod, isLoading: isLoadingPeriod, error: errorPeriod } = useActivePeriod();
 
   const isTutor = user?.role === "TUTOR";
   const isAsistan = user?.role === "ASISTAN";
-  const isAuthenticated = user && !loading;
+  const isAuthenticated = user; // Simplified as loading is handled by useAuth
 
-  useEffect(() => {
-    if (!isAuthenticated || (!isTutor && !isAsistan)) {
-      router.push("/login");
-      return;
-    }
-
-    fetchReports();
-  }, [isAuthenticated, isTutor, isAsistan, router]);
-
-  const fetchReports = async () => {
-    try {
-      setIsLoading(true);
-
-      // Fetch current period
-      const periodResponse = await fetch("/api/periods/current");
-      if (periodResponse.ok) {
-        const periodData = await periodResponse.json();
-        setCurrentPeriod(periodData);
-      }
-
-      // Fetch weekly reports
-      const reportsResponse = await fetch("/api/tutor/weekly-reports", {
-        credentials: 'include',
-        headers: {
-          'Cache-Control': 'no-cache'
-        }
-      });
-      if (reportsResponse.ok) {
-        const reportsData = await reportsResponse.json();
-        setReports(reportsData.reports || []);
-      } else {
-        throw new Error("Failed to fetch reports");
-      }
-    } catch (error) {
-      console.error("Error fetching reports:", error);
-      setError("Haftalık raporlar yüklenirken bir hata oluştu.");
-      toast.error("Haftalık raporlar yüklenirken bir hata oluştu.");
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  // Middleware already handles tutor/asistan authentication and role-based access
+  // useEffect and fetchReports are removed as data is now fetched by TanStack Query hooks
 
   const getStatusIcon = (status: string) => {
     switch (status) {
@@ -120,9 +86,9 @@ export default function WeeklyReportsPage() {
     );
   };
 
-  const getWeeklyReportsByWeek = () => {
+  const getWeeklyReportsByWeek = (): ReportOrPlaceholder[] => {
     const weeklyReportsMap = new Map<number, WeeklyReport>();
-    reports.forEach(report => {
+    reports?.forEach(report => {
       weeklyReportsMap.set(report.weekNumber, report);
     });
 
@@ -173,7 +139,7 @@ export default function WeeklyReportsPage() {
       <div className="min-h-screen bg-gradient-to-b from-indigo-50/50 to-white">
         <div className="px-4 py-8">
           <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg shadow-sm">
-            {error}
+            {(error as Error)?.message || "Raporlar yüklenirken bir hata oluştu"}
           </div>
         </div>
       </div>
@@ -213,12 +179,11 @@ export default function WeeklyReportsPage() {
             {weeklyReports.map((report) => (
               <Card
                 key={report.weekNumber}
-                className={`border-0 shadow-md hover:shadow-lg transition-all ${
-                  report.status === "APPROVED" ? "border-t-4 border-t-green-500" :
+                className={`border-0 shadow-md hover:shadow-lg transition-all ${report.status === "APPROVED" ? "border-t-4 border-t-green-500" :
                   report.status === "REJECTED" ? "border-t-4 border-t-red-500" :
-                  report.status === "SUBMITTED" ? "border-t-4 border-t-yellow-500" :
-                  report.id ? "border-t-4 border-t-gray-500" : ""
-                }`}
+                    report.status === "SUBMITTED" ? "border-t-4 border-t-yellow-500" :
+                      report.id ? "border-t-4 border-t-gray-500" : ""
+                  }`}
               >
                 <CardHeader className="pb-3">
                   <CardTitle className="flex items-center justify-between text-lg">

@@ -328,7 +328,7 @@ export default function Part1Page() {
                 </div>
                 {isAdmin && (
                   <Button
-                    onClick={() => router.push('/dashboard/belgeler')}
+                    onClick={() => router.push('/dashboard/pdfs')}
                     variant="outline"
                     className="border-indigo-200 text-indigo-600 hover:bg-indigo-50"
                   >
@@ -411,7 +411,7 @@ export default function Part1Page() {
                     </p>
                     {isAdmin && (
                       <Button
-                        onClick={() => router.push('/dashboard/belgeler')}
+                        onClick={() => router.push('/dashboard/pdfs')}
                         className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white shadow-lg shadow-indigo-500/50"
                       >
                         <FileText className="h-4 w-4 mr-2" />

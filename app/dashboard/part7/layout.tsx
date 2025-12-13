@@ -23,16 +23,11 @@ export default function AuthenticatedLayout({
   children: ReactNode;
 }) {
   const { user, loading, isAdmin, isTutor, isStudent, logout } = useAuth();
-  const router = useRouter();
   const pathname = usePathname();
   const [isExpanded, setIsExpanded] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
-  useEffect(() => {
-    if (!loading && !user) {
-      router.push('/login');
-    }
-  }, [loading, user, router]);
+  // Middleware already handles authentication and redirects - no client-side check needed
 
   // Function to check if a link is active - fix the issue with exact comparison
   const isActive = (path: string) => {
@@ -93,7 +88,7 @@ export default function AuthenticatedLayout({
 
   // Determine which set of links to show based on user role AND path
   let navLinks: NavLink[] = [];
-  
+
   if (isAdmin && pathname?.startsWith('/dashboard/part7/admin')) {
     navLinks = adminLinks;
   } else if (isTutor && pathname?.startsWith('/dashboard/part7/tutor')) {
@@ -124,7 +119,7 @@ export default function AuthenticatedLayout({
   let sidebarTitle = "";
   let activeLinkColor = "";
   let activeIconBg = "";
-  
+
   if (pathname?.startsWith('/dashboard/part7/admin')) {
     sidebarTitle = "Yönetici Paneli";
     activeLinkColor = "text-indigo-600";
@@ -147,13 +142,12 @@ export default function AuthenticatedLayout({
     <ul className="space-y-2">
       {isAdmin && (
         <li>
-          <Link 
-            href="/dashboard" 
-            className={`flex items-center justify-start px-4 py-2 rounded-lg transition-all duration-200 ${
-              pathname === '/dashboard'
-                ? `${activeIconBg} ${activeLinkColor} font-medium` 
+          <Link
+            href="/dashboard"
+            className={`flex items-center justify-start px-4 py-2 rounded-lg transition-all duration-200 ${pathname === '/dashboard'
+                ? `${activeIconBg} ${activeLinkColor} font-medium`
                 : 'text-gray-500 hover:bg-gray-50 hover:text-gray-800'
-            }`}
+              }`}
             onClick={() => setIsMobileMenuOpen(false)}
           >
             <div className="flex-shrink-0 mr-3">
@@ -165,13 +159,12 @@ export default function AuthenticatedLayout({
       )}
       {navLinks.map((link) => (
         <li key={link.href}>
-          <Link 
-            href={link.href} 
-            className={`flex items-center justify-start px-4 py-2 rounded-lg transition-all duration-200 ${
-              isActive(link.href) 
-                ? `${activeIconBg} ${activeLinkColor} font-medium` 
+          <Link
+            href={link.href}
+            className={`flex items-center justify-start px-4 py-2 rounded-lg transition-all duration-200 ${isActive(link.href)
+                ? `${activeIconBg} ${activeLinkColor} font-medium`
                 : 'text-gray-500 hover:bg-gray-50 hover:text-gray-800'
-            }`}
+              }`}
             onClick={() => setIsMobileMenuOpen(false)}
           >
             <div className="flex-shrink-0 mr-3">
@@ -191,7 +184,7 @@ export default function AuthenticatedLayout({
           {user?.username?.charAt(0).toUpperCase()}
         </AvatarFallback>
       </Avatar>
-      
+
       {expanded && (
         <>
           <div className="ml-3 overflow-hidden">
@@ -273,7 +266,7 @@ export default function AuthenticatedLayout({
       </div>
 
       {/* Desktop Sidebar */}
-      <div 
+      <div
         className={`hidden lg:block fixed top-0 left-0 bottom-0 ${isExpanded ? 'w-[240px]' : 'w-[60px]'} h-full bg-white border-r border-gray-100 shadow-sm z-10 transition-all duration-300 ease-in-out`}
         onMouseEnter={() => setIsExpanded(true)}
         onMouseLeave={() => setIsExpanded(false)}

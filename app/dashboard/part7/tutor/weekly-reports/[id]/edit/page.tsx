@@ -11,7 +11,7 @@ import { useState, useEffect } from "react";
 import { Save, Send, ArrowLeft, CheckCircle, XCircle, MinusCircle } from "lucide-react";
 import Link from "next/link";
 import { useRouter, useParams } from "next/navigation";
-import toast from "react-hot-toast";
+import { useWeeklyReport, useUpdateWeeklyReport } from "@/app/hooks/use-weekly-reports";
 
 interface WeeklyReportDetail {
   id: string;
@@ -36,15 +36,14 @@ interface FormData {
 }
 
 export default function EditWeeklyReportPage() {
-  const { user, isAuthenticated } = useAuth();
+  const { user } = useAuth();
   const router = useRouter();
   const params = useParams();
   const reportId = params.id as string;
 
-  const [report, setReport] = useState<WeeklyReportDetail | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isSaving, setIsSaving] = useState(false);
-  const [error, setError] = useState("");
+  // ✨ TanStack Query hooks replace useState + useEffect!
+  const { data: report, isLoading, error } = useWeeklyReport(reportId);
+  const updateReport = useUpdateWeeklyReport();
 
   const [formData, setFormData] = useState<FormData>({
     fixedCriteria: {},
@@ -55,45 +54,16 @@ export default function EditWeeklyReportPage() {
   const isTutor = user?.role === "TUTOR";
   const isAsistan = user?.role === "ASISTAN";
 
+  // Initialize form when report loads
   useEffect(() => {
-    if (!isAuthenticated || (!isTutor && !isAsistan)) {
-      router.push("/login");
-      return;
+    if (report) {
+      setFormData({
+        fixedCriteria: (report.fixedCriteria as Record<string, string>) || {},
+        variableCriteria: (report.variableCriteria as Record<string, string>) || {},
+        comments: report.comments || ""
+      });
     }
-
-    if (reportId) {
-      fetchReport();
-    }
-  }, [isAuthenticated, isTutor, isAsistan, router, reportId]);
-
-  const fetchReport = async () => {
-    try {
-      setIsLoading(true);
-      const response = await fetch(`/api/tutor/weekly-reports/${reportId}`);
-
-      if (response.ok) {
-        const data = await response.json();
-        setReport(data);
-
-        // Initialize form data
-        setFormData({
-          fixedCriteria: data.fixedCriteria || {},
-          variableCriteria: data.variableCriteria || {},
-          comments: data.comments || ""
-        });
-      } else if (response.status === 404) {
-        setError("Rapor bulunamadı.");
-      } else {
-        throw new Error("Failed to fetch report");
-      }
-    } catch (error) {
-      console.error("Error fetching report:", error);
-      setError("Rapor yüklenirken bir hata oluştu.");
-      toast.error("Rapor yüklenirken bir hata oluştu.");
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  }, [report]);
 
   const tutorFixedCriteria = [
     { key: "weeklyMeeting", label: "Haftalık sohbetinize katıldınız mı? (Kendi haftalık sohbetiniz)" },
@@ -144,33 +114,21 @@ export default function EditWeeklyReportPage() {
   const handleSubmit = async (isDraft: boolean = false) => {
     if (!report) return;
 
-    try {
-      setIsSaving(true);
-
-      const payload = {
-        ...formData,
-        status: isDraft ? "DRAFT" : "SUBMITTED"
-      };
-
-      const response = await fetch(`/api/tutor/weekly-reports/${reportId}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload)
-      });
-
-      if (response.ok) {
-        toast.success(isDraft ? "Rapor taslak olarak kaydedildi." : "Rapor başarıyla gönderildi.");
-        router.push("/dashboard/part7/tutor/weekly-reports");
-      } else {
-        const error = await response.json();
-        throw new Error(error.message || "Rapor kaydedilirken hata oluştu.");
+    // ✨ Use TanStack Query mutation instead of manual fetch!
+    updateReport.mutate(
+      {
+        id: reportId,
+        data: {
+          ...formData,
+          status: isDraft ? "DRAFT" : "SUBMITTED"
+        }
+      },
+      {
+        onSuccess: () => {
+          router.push("/dashboard/part7/tutor/weekly-reports");
+        }
       }
-    } catch (error: any) {
-      console.error("Error saving report:", error);
-      toast.error(error.message || "Rapor kaydedilirken hata oluştu.");
-    } finally {
-      setIsSaving(false);
-    }
+    );
   };
 
   if (isLoading) {
@@ -222,7 +180,7 @@ export default function EditWeeklyReportPage() {
             </Link>
           </div>
           <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg shadow-sm">
-            {error}
+            {error?.message || "Rapor yüklenirken bir hata oluştu"}
           </div>
         </div>
       </div>
@@ -372,7 +330,7 @@ export default function EditWeeklyReportPage() {
             <Button
               variant="outline"
               onClick={() => handleSubmit(true)}
-              disabled={isSaving}
+              disabled={updateReport.isPending}
               className="flex items-center"
             >
               <Save className="h-4 w-4 mr-2" />
@@ -380,7 +338,7 @@ export default function EditWeeklyReportPage() {
             </Button>
             <Button
               onClick={() => handleSubmit(false)}
-              disabled={isSaving}
+              disabled={updateReport.isPending}
               className="bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 flex items-center"
             >
               <Send className="h-4 w-4 mr-2" />

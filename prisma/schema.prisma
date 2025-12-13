@@ -182,6 +182,14 @@ model User {
   // Board member relation
   boardMember BoardMember? @relation("BoardMemberUser")
 
+  // Part 2 - Attendance and Syllabus relations
+  createdSessions          AttendanceSession[]     @relation("SessionCreator")
+  studentAttendances       StudentAttendance[]     @relation("StudentAttendances")
+  absenceNotificationsAsStudent AbsenceNotification[] @relation("StudentAbsenceNotifications")
+  absenceNotificationsAsTutor   AbsenceNotification[] @relation("TutorAbsenceNotifications")
+  createdSyllabi           Syllabus[]              @relation("TutorSyllabi")
+  notifications            Notification[]          @relation("UserNotifications")
+
   @@index([tutorId])
 }
 
@@ -738,5 +746,167 @@ model BoardMember {
 
   @@index([isActive])
   @@index([userId])
+}
+
+// Part 2 - Character Education Groups Management
+enum AttendanceSessionStatus {
+  PLANNED
+  ACTIVE
+  COMPLETED
+  CANCELLED
+}
+
+// Weekly attendance session created by tutors
+model AttendanceSession {
+  id                String                 @id @default(uuid())
+  title             String                 // e.g., "Week 1 - January 2025"
+  description       String?                @db.Text
+  sessionDate       DateTime               // Date of the session
+  qrCodeToken       String?                @unique // QR code for check-in
+  qrCodeExpiresAt   DateTime?              // QR code expiration
+  status            AttendanceSessionStatus @default(PLANNED)
+  createdAt         DateTime               @default(now())
+  updatedAt         DateTime               @updatedAt
+
+  // Relations
+  createdBy         User                   @relation("SessionCreator", fields: [createdById], references: [id])
+  createdById       String
+  attendances       StudentAttendance[]    @relation("SessionAttendances")
+
+  @@index([createdById])
+  @@index([sessionDate])
+  @@index([status])
+}
+
+// Individual student attendance record
+model StudentAttendance {
+  id              String           @id @default(uuid())
+  checkInMethod   CheckInMethod    // QR or MANUAL
+  checkInTime     DateTime         @default(now())
+  notes           String?          // Optional notes from tutor
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+
+  // Relations
+  session         AttendanceSession @relation("SessionAttendances", fields: [sessionId], references: [id], onDelete: Cascade)
+  sessionId       String
+  student         User             @relation("StudentAttendances", fields: [studentId], references: [id], onDelete: Cascade)
+  studentId       String
+
+  @@unique([sessionId, studentId])
+  @@index([sessionId])
+  @@index([studentId])
+}
+
+// Absence notification tracking
+model AbsenceNotification {
+  id              String   @id @default(uuid())
+  weeksMissed     Int      // Number of consecutive weeks missed
+  notificationSent DateTime @default(now())
+  createdAt       DateTime @default(now())
+
+  // Relations
+  student         User     @relation("StudentAbsenceNotifications", fields: [studentId], references: [id], onDelete: Cascade)
+  studentId       String
+  tutor           User     @relation("TutorAbsenceNotifications", fields: [tutorId], references: [id])
+  tutorId         String
+
+  @@index([studentId])
+  @@index([tutorId])
+  @@index([notificationSent])
+}
+
+// Syllabus/Curriculum created by tutors
+model Syllabus {
+  id              String           @id @default(uuid())
+  title           String           // e.g., "Karakter Eğitimi Müfredatı - Ocak 2025"
+  description     String?          @db.Text
+  shareToken      String?          @unique // Token for shareable link
+  isPublished     Boolean          @default(false)
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+
+  // Relations
+  createdBy       User             @relation("TutorSyllabi", fields: [createdById], references: [id])
+  createdById     String
+  lessons         SyllabusLesson[] @relation("SyllabusLessons")
+  feedbackForms   ParentFeedback[] @relation("SyllabusFeedback")
+
+  @@index([createdById])
+  @@index([shareToken])
+}
+
+// Individual lesson in the syllabus
+model SyllabusLesson {
+  id              String    @id @default(uuid())
+  orderIndex      Int       // Order in the syllabus
+  title           String    // Lesson title
+  description     String?   @db.Text
+  isTaught        Boolean   @default(false) // Whether the lesson has been taught
+  taughtDate      DateTime? // When the lesson was taught
+  notes           String?   @db.Text // Tutor's notes about the lesson
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  // Relations
+  syllabus        Syllabus  @relation("SyllabusLessons", fields: [syllabusId], references: [id], onDelete: Cascade)
+  syllabusId      String
+
+  @@index([syllabusId])
+  @@index([orderIndex])
+}
+
+enum FeedbackRating {
+  VERY_POOR     // 1 - Çok Kötü
+  POOR          // 2 - Kötü
+  AVERAGE       // 3 - Orta
+  GOOD          // 4 - İyi
+  EXCELLENT     // 5 - Mükemmel
+}
+
+// Parent feedback on syllabus (no account required, accessed via shareable link)
+model ParentFeedback {
+  id              String          @id @default(uuid())
+  parentName      String?         // Optional parent name
+  parentEmail     String?         // Optional parent email
+
+  // Structured feedback questions (clickable)
+  overallRating   FeedbackRating? // Overall satisfaction
+  contentQuality  FeedbackRating? // Quality of content
+  effectiveness   FeedbackRating? // Effectiveness of teaching
+  engagement      FeedbackRating? // Student engagement
+
+  createdAt       DateTime        @default(now())
+
+  // Relations
+  syllabus        Syllabus        @relation("SyllabusFeedback", fields: [syllabusId], references: [id], onDelete: Cascade)
+  syllabusId      String
+
+  @@index([syllabusId])
+  @@index([createdAt])
+}
+
+// In-app notification model
+enum NotificationType {
+  ABSENCE_ALERT
+  SYLLABUS_FEEDBACK
+  GENERAL
+}
+
+model Notification {
+  id              String           @id @default(uuid())
+  type            NotificationType
+  title           String
+  message         String           @db.Text
+  isRead          Boolean          @default(false)
+  createdAt       DateTime         @default(now())
+
+  // Relations
+  user            User             @relation("UserNotifications", fields: [userId], references: [id], onDelete: Cascade)
+  userId          String
+
+  @@index([userId])
+  @@index([isRead])
+  @@index([createdAt])
 }
 
