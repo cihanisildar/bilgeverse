@@ -106,6 +106,7 @@ model User {
   weeklyReports                 WeeklyReport[]            @relation("UserWeeklyReports")
   createdQuestions              WeeklyReportQuestion[]    @relation("AdminQuestions")
   wishes                        Wish[]                    @relation("StudentWishes")
+  meslekkocuId                  String?
 
   @@index([tutorId])
 }

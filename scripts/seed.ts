@@ -66,26 +66,31 @@ async function seedUsers() {
       });
 
       if (existingUser) {
-        console.log(`${userData.role} user found, updating...`);
-        
-        const updatedUser = await prisma.user.update({
-          where: { id: existingUser.id },
-          data: {
-            username: userData.username,
-            firstName: userData.firstName,
-            lastName: userData.lastName,
-            specialization: (userData as any).specialization,
-            bio: userData.bio,
-            phone: (userData as any).phone,
-            points: (userData as any).points || existingUser.points,
-            experience: (userData as any).experience || existingUser.experience,
-            // Only update password if explicitly requested
-            ...(process.env.RESET_PASSWORD === 'true' ? { password: hashedPassword } : {}),
-          },
-        });
-        
-        createdUsers.push(updatedUser);
-        console.log(`${userData.role} user updated successfully: ${updatedUser.username}`);
+        if (process.env.FORCE_SEED === 'true') {
+          console.log(`${userData.role} user found, updating (FORCE_SEED=true)...`);
+
+          const updatedUser = await prisma.user.update({
+            where: { id: existingUser.id },
+            data: {
+              username: userData.username,
+              firstName: userData.firstName,
+              lastName: userData.lastName,
+              specialization: (userData as any).specialization,
+              bio: userData.bio,
+              phone: (userData as any).phone,
+              points: (userData as any).points || existingUser.points,
+              experience: (userData as any).experience || existingUser.experience,
+              // Only update password if explicitly requested
+              ...(process.env.RESET_PASSWORD === 'true' ? { password: hashedPassword } : {}),
+            },
+          });
+
+          createdUsers.push(updatedUser);
+          console.log(`${userData.role} user updated successfully: ${updatedUser.username}`);
+        } else {
+          console.log(`${userData.role} user found, skipping update (set FORCE_SEED=true to update)...`);
+          createdUsers.push(existingUser);
+        }
       } else {
         // Create new user
         const newUser = await prisma.user.create({
@@ -103,7 +108,7 @@ async function seedUsers() {
             experience: (userData as any).experience || 0,
           },
         });
-        
+
         createdUsers.push(newUser);
         console.log(`${userData.role} user created successfully: ${newUser.username}`);
       }

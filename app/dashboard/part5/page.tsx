@@ -15,7 +15,32 @@ export default async function Part5Page() {
     redirect('/login');
   }
 
+  // Fetch students - using a dynamic import or checking if we can reuse an existing action or direct prisma call
+  // Since we are in a server component, we can use Prisma directly
+  const prisma = (await import('@/lib/prisma')).default;
+
+  const students = await prisma.user.findMany({
+    where: {
+      role: 'STUDENT',
+      isActive: true,
+    },
+    select: {
+      id: true,
+      firstName: true,
+      lastName: true,
+      email: true,
+      phone: true,
+      meslekkocuId: true,
+    },
+    orderBy: {
+      createdAt: 'desc',
+    },
+  });
+
   const part = PARTS.find(p => p.id === 5);
+
+  // Need to import the client component dynamically or strictly
+  const StudentIntegrationList = (await import('./StudentIntegrationList')).default;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-red-50 via-white to-pink-50 p-6 lg:p-8">
@@ -37,6 +62,11 @@ export default async function Part5Page() {
         </div>
 
         <div className="mb-8">
+          <h2 className="text-2xl font-bold text-gray-800 mb-4">Meslek Koçu Entegrasyonu</h2>
+          <StudentIntegrationList students={students} />
+        </div>
+
+        <div className="mb-8">
           <div className="flex items-center justify-between mb-6">
             <div>
               <h2 className="text-2xl font-bold text-gray-800 mb-1">Belgeler</h2>
@@ -51,23 +81,6 @@ export default async function Part5Page() {
           </div>
           <PartDocuments partId={5} gradientFrom="from-red-600" gradientTo="to-pink-600" />
         </div>
-
-        <Card className="border-0 shadow-lg rounded-2xl overflow-hidden">
-          <div className="h-2 bg-gradient-to-r from-red-500 to-pink-500"></div>
-          <CardHeader>
-            <CardTitle className="text-2xl">Geliştirme Aşamasında</CardTitle>
-            <CardDescription>Bu bölüm yakında kullanıma açılacaktır</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="text-center py-12">
-              <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-gradient-to-br from-red-100 to-pink-100 mb-6">
-                <FileText className="h-10 w-10 text-red-600" />
-              </div>
-              <p className="text-gray-600 mb-4">Koçluk ve danışmanlık yönetim sistemi üzerinde çalışıyoruz.</p>
-              <p className="text-sm text-gray-500">Bu bölüm tamamlandığında seans planlaması, danışan takibi ve ilerleme raporları özellikleri sunacaktır.</p>
-            </div>
-          </CardContent>
-        </Card>
       </div>
     </div>
   );
