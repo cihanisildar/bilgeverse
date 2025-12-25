@@ -61,7 +61,7 @@ export default function StudentAttendanceList({ sessionId, attendances }: Studen
             if (result.error) {
                 toast.error(result.error);
             } else {
-                toast.success('Öğrenci başarıyla işaretlendi');
+                toast.success('Öğrenci başarıyla işaretlendi ve 30 puan eklendi');
                 // Invalidate React Query cache
                 queryClient.invalidateQueries({ queryKey: ['attendanceSession', sessionId] });
                 // Force router to refresh server data
@@ -108,7 +108,7 @@ export default function StudentAttendanceList({ sessionId, attendances }: Studen
         setSelectedStudents(new Set());
 
         if (successCount > 0) {
-            toast.success(`${successCount} öğrenci başarıyla işaretlendi`);
+            toast.success(`${successCount} öğrenci başarıyla işaretlendi ve ${successCount * 30} puan eklendi`);
             window.location.reload();
         }
         if (errorCount > 0) {

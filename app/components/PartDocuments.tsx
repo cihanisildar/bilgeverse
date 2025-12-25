@@ -26,29 +26,37 @@ interface PartDocumentsProps {
     gradientTo: string;
 }
 
-async function fetchPartDocuments(partId: number): Promise<PartPdf[]> {
+import prisma from '@/lib/prisma';
+
+// Helper to fetch documents directly from DB
+async function getPartDocuments(partId: number) {
     try {
-        const response = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/admin/pdfs?partId=${partId}`, {
-            cache: 'no-store',
-            headers: {
-                'Content-Type': 'application/json',
+        const documents = await prisma.partPdf.findMany({
+            where: {
+                partId: partId,
+            },
+            include: {
+                uploadedBy: {
+                    select: {
+                        id: true,
+                        username: true,
+                        firstName: true,
+                        lastName: true,
+                    },
+                },
+            },
+            orderBy: {
+                createdAt: 'desc',
             },
         });
-
-        if (!response.ok) {
-            console.error('Failed to fetch documents');
-            return [];
-        }
-
-        const data: PartPdf[] = await response.json();
-        return data;
+        return documents;
     } catch (error) {
         console.error('Error fetching documents:', error);
         return [];
     }
 }
 
-function formatDate(dateString: string): string {
+function formatDate(dateString: Date): string {
     return new Date(dateString).toLocaleDateString('tr-TR', {
         year: 'numeric',
         month: 'long',
@@ -57,7 +65,7 @@ function formatDate(dateString: string): string {
 }
 
 export default async function PartDocuments({ partId, gradientFrom, gradientTo }: PartDocumentsProps) {
-    const pdfs = await fetchPartDocuments(partId);
+    const pdfs = await getPartDocuments(partId);
 
     if (pdfs.length === 0) {
         return (
