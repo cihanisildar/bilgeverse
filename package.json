@@ -10,6 +10,7 @@
     "start": "next start",
     "lint": "next lint",
     "seed": "tsx scripts/seed.ts",
+    "migrate:data": "tsx scripts/migrate-data.ts",
     "analyze": "node scripts/analyze-bundle.js",
     "perf": "npm run build:analyze",
     "prisma:generate": "prisma generate",

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { toast } from 'react-hot-toast';
+import { useToast } from '@/app/hooks/use-toast';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
@@ -14,6 +14,7 @@ interface PointsManagerProps {
 }
 
 export default function PointsManager({ userId, currentPoints, onPointsUpdated }: PointsManagerProps) {
+  const toast = useToast();
   const [points, setPoints] = useState<number>(0);
   const [action, setAction] = useState<'add' | 'subtract' | 'set'>('add');
   const [reason, setReason] = useState<string>('');
@@ -21,7 +22,7 @@ export default function PointsManager({ userId, currentPoints, onPointsUpdated }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (points < 0) {
       toast.error('Puanlar negatif olamaz');
       return;
@@ -29,7 +30,7 @@ export default function PointsManager({ userId, currentPoints, onPointsUpdated }
 
     try {
       setLoading(true);
-      
+
       const response = await fetch(`/api/users/${userId}/points`, {
         method: 'POST',
         headers: {
@@ -41,20 +42,20 @@ export default function PointsManager({ userId, currentPoints, onPointsUpdated }
           reason
         }),
       });
-      
+
       if (!response.ok) {
         const data = await response.json();
         throw new Error(data.error || 'Puanlar güncellenemedi');
       }
-      
+
       const data = await response.json();
-      
+
       toast.success('Puanlar başarıyla güncellendi');
-      
+
       // Reset the form
       setPoints(0);
       setReason('');
-      
+
       // Notify parent component about the update
       if (onPointsUpdated) {
         onPointsUpdated(data.user.points);
@@ -93,7 +94,7 @@ export default function PointsManager({ userId, currentPoints, onPointsUpdated }
                 </SelectContent>
               </Select>
             </div>
-            
+
             <div className="flex-1">
               <Input
                 type="number"
@@ -104,7 +105,7 @@ export default function PointsManager({ userId, currentPoints, onPointsUpdated }
               />
             </div>
           </div>
-          
+
           <div>
             <Input
               type="text"
@@ -116,8 +117,8 @@ export default function PointsManager({ userId, currentPoints, onPointsUpdated }
         </form>
       </CardContent>
       <CardFooter className="flex justify-end">
-        <Button 
-          type="submit" 
+        <Button
+          type="submit"
           onClick={handleSubmit}
           disabled={loading || points <= 0}
           className="w-full sm:w-auto"

@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/app/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
-import toast from 'react-hot-toast';
+import { useToast } from '@/app/hooks/use-toast';
 import Link from 'next/link';
 
 type Wish = {
@@ -24,6 +24,7 @@ type Wish = {
 };
 
 export default function WishDetail({ params }: { params: { id: string } }) {
+  const toast = useToast();
   const router = useRouter();
   const { isAdmin } = useAuth();
   const [wish, setWish] = useState<Wish | null>(null);

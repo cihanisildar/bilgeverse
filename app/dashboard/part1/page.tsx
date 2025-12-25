@@ -11,7 +11,7 @@ import { useEffect, useState } from 'react';
 import { usePathname } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import Loading from '@/app/components/Loading';
-import toast from 'react-hot-toast';
+import { useToast } from '@/app/hooks/use-toast';
 import { getDecisionStatistics } from '@/app/actions/meetings/decisions';
 
 type PartPdf = {
@@ -32,6 +32,7 @@ type PartPdf = {
 };
 
 export default function Part1Page() {
+  const toast = useToast();
   const router = useRouter();
   const pathname = usePathname();
   const { user, loading, isAdmin } = useAuth();

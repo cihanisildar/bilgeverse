@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { ArrowRight } from 'lucide-react';
 import { PARTS } from '@/app/lib/parts';
 import { getRoleBasedPath } from '@/app/lib/navigation';
+import { getAllowedParts } from '@/app/lib/permissions';
 import { useEffect } from 'react';
 import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
@@ -13,7 +14,7 @@ import { cn } from '@/lib/utils';
 export default function DashboardPage() {
   const router = useRouter();
   const pathname = usePathname();
-  const { user, loading, isAdmin } = useAuth();
+  const { user, loading, isAdmin, isStudent } = useAuth();
 
   useEffect(() => {
     if (!loading && !user) {
@@ -21,12 +22,12 @@ export default function DashboardPage() {
     }
   }, [loading, user, router]);
 
-  // Redirect non-admin users to part 7
+  // Redirect students to their part7 area (only tutors and admins can access dashboard page)
   useEffect(() => {
-    if (!loading && user && !isAdmin) {
+    if (!loading && user && isStudent) {
       router.replace(getRoleBasedPath(user.role));
     }
-  }, [loading, user, isAdmin, router]);
+  }, [loading, user, isStudent, router]);
 
   if (loading) {
     return (
@@ -50,18 +51,13 @@ export default function DashboardPage() {
       // For Part 7 (Bilgeverse), redirect based on role
       router.push(getRoleBasedPath(user.role));
     } else {
-      // For other parts, only allow admin users
-      if (isAdmin) {
-        router.push(partPath);
-      } else {
-        // Non-admin users should be redirected to part 7
-        router.push(getRoleBasedPath(user.role));
-      }
+      router.push(partPath);
     }
   };
 
-  // Filter parts to only show part 7 for non-admin users
-  const visibleParts = isAdmin ? PARTS : PARTS.filter(part => part.id === 7);
+  // Filter parts based on user's role permissions
+  const allowedPartIds = getAllowedParts(user.role);
+  const visibleParts = PARTS.filter(part => allowedPartIds.includes(part.id));
 
   // Only show sidebar on dashboard page
   const isDashboardPage = pathname === '/dashboard';

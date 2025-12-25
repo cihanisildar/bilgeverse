@@ -161,6 +161,14 @@ export async function getMeetingById(id: string) {
             lastName: true,
           },
         },
+        attendees: {
+          select: {
+            id: true,
+            userId: true,
+            checkInTime: true,
+            checkInMethod: true,
+          },
+        },
         _count: {
           select: {
             attendees: true,
@@ -194,6 +202,12 @@ export async function getMeetingById(id: string) {
           firstName: meeting.createdBy.firstName,
           lastName: meeting.createdBy.lastName,
         },
+        attendances: meeting.attendees.map((att) => ({
+          id: att.id,
+          userId: att.userId,
+          checkInTime: att.checkInTime.toISOString(),
+          checkInMethod: att.checkInMethod,
+        })),
         _count: {
           attendees: meeting._count.attendees,
           decisions: meeting._count.decisions,

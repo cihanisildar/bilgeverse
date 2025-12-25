@@ -3,20 +3,26 @@
 import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Plus, BookOpen, Share2, MessageSquare } from 'lucide-react';
+import { Plus, BookOpen, Share2, MessageSquare, Globe } from 'lucide-react';
 
 type Syllabus = {
   id: string;
   title: string;
   description: string | null;
   isPublished: boolean;
+  isGlobal: boolean;
   shareToken: string | null;
   createdAt: string;
   lessons: any[];
   feedbackForms: any[];
+  createdBy?: {
+    firstName: string | null;
+    lastName: string | null;
+    username: string;
+  };
 };
 
-export default function SyllabusList({ syllabi }: { syllabi: Syllabus[] }) {
+export default function SyllabusList({ syllabi, isAdmin }: { syllabi: Syllabus[]; isAdmin: boolean }) {
   const router = useRouter();
 
   const formatDate = (dateString: string) => {
@@ -33,7 +39,6 @@ export default function SyllabusList({ syllabi }: { syllabi: Syllabus[] }) {
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
           {syllabi.map((syllabus) => {
             const totalLessons = syllabus.lessons?.length || 0;
-            const taughtLessons = syllabus.lessons?.filter((l: any) => l.isTaught).length || 0;
             const feedbackCount = syllabus.feedbackForms?.length || 0;
 
             return (
@@ -58,7 +63,13 @@ export default function SyllabusList({ syllabi }: { syllabi: Syllabus[] }) {
                   </div>
                 </CardHeader>
                 <CardContent className="pt-0">
-                  <div className="flex items-center gap-2 mb-4">
+                  <div className="flex items-center gap-2 mb-4 flex-wrap">
+                    {syllabus.isGlobal && (
+                      <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-purple-100 text-purple-700 border border-purple-200">
+                        <Globe className="h-3 w-3 mr-1" />
+                        Global Müfredat
+                      </span>
+                    )}
                     {syllabus.isPublished && syllabus.shareToken ? (
                       <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-700 border border-green-200">
                         <Share2 className="h-3 w-3 mr-1" />
@@ -82,16 +93,12 @@ export default function SyllabusList({ syllabi }: { syllabi: Syllabus[] }) {
                       <span className="text-gray-600">Toplam Ders</span>
                       <span className="font-semibold text-gray-800">{totalLessons}</span>
                     </div>
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="text-gray-600">İşlenen Ders</span>
-                      <span className="font-semibold text-green-600">{taughtLessons}</span>
-                    </div>
-                    {totalLessons > 0 && (
-                      <div className="w-full bg-gray-200 rounded-full h-2">
-                        <div
-                          className="bg-gradient-to-r from-cyan-500 to-teal-500 h-2 rounded-full transition-all duration-300"
-                          style={{ width: `${(taughtLessons / totalLessons) * 100}%` }}
-                        ></div>
+                    {syllabus.isGlobal && syllabus.createdBy && (
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-gray-600">Oluşturan</span>
+                        <span className="font-semibold text-purple-600">
+                          {syllabus.createdBy.firstName || syllabus.createdBy.username}
+                        </span>
                       </div>
                     )}
                   </div>
@@ -110,17 +117,23 @@ export default function SyllabusList({ syllabi }: { syllabi: Syllabus[] }) {
             <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-gradient-to-br from-cyan-100 to-teal-100 mb-6">
               <BookOpen className="h-10 w-10 text-cyan-600" />
             </div>
-            <h3 className="text-xl font-semibold text-gray-800 mb-2">Henüz müfredat oluşturulmamış</h3>
+            <h3 className="text-xl font-semibold text-gray-800 mb-2">
+              {isAdmin ? 'Henüz müfredat oluşturulmamış' : 'Henüz müfredat yok'}
+            </h3>
             <p className="text-sm text-gray-500 mb-6 max-w-md mx-auto">
-              Öğrencileriniz için bir müfredat oluşturun ve velilerle paylaşın.
+              {isAdmin
+                ? 'Öğretmenler için global bir müfredat oluşturun'
+                : 'Yönetici henüz müfredat oluşturmamış. Müfredat oluşturulduğunda burada görünecek.'}
             </p>
-            <Button
-              onClick={() => router.push('/dashboard/part2/syllabus/new')}
-              className="bg-gradient-to-r from-cyan-600 to-teal-600 hover:from-cyan-700 hover:to-teal-700 text-white shadow-lg shadow-cyan-500/50"
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              İlk Müfredatı Oluştur
-            </Button>
+            {isAdmin && (
+              <Button
+                onClick={() => router.push('/dashboard/part2/syllabus/new')}
+                className="bg-gradient-to-r from-cyan-600 to-teal-600 hover:from-cyan-700 hover:to-teal-700 text-white shadow-lg shadow-cyan-500/50"
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                İlk Müfredatı Oluştur
+              </Button>
+            )}
           </CardContent>
         </Card>
       )}

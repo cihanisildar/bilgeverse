@@ -5,7 +5,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Edit2, Trash2, Plus } from 'lucide-react';
-import toast from 'react-hot-toast';
+import { useToast } from '@/app/hooks/use-toast';
 
 type Note = {
   id: string;
@@ -25,6 +25,7 @@ type NotesManagerProps = {
 };
 
 export default function NotesManager({ studentId }: NotesManagerProps) {
+  const toast = useToast();
   const [notes, setNotes] = useState<Note[]>([]);
   const [loading, setLoading] = useState(true);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
@@ -60,12 +61,12 @@ export default function NotesManager({ studentId }: NotesManagerProps) {
       });
 
       if (!response.ok) throw new Error('Failed to create note');
-      
+
       const data = await response.json();
       setNotes([data.note, ...notes]);
       setIsCreateDialogOpen(false);
       setNoteContent('');
-      
+
       toast.success('Note created successfully');
     } catch (error) {
       toast.error('Failed to create note. Please try again.');
@@ -83,13 +84,13 @@ export default function NotesManager({ studentId }: NotesManagerProps) {
       });
 
       if (!response.ok) throw new Error('Failed to update note');
-      
+
       const data = await response.json();
       setNotes(notes.map(note => note.id === selectedNote.id ? data.note : note));
       setIsEditDialogOpen(false);
       setSelectedNote(null);
       setNoteContent('');
-      
+
       toast.success('Note updated successfully');
     } catch (error) {
       toast.error('Failed to update note. Please try again.');
@@ -110,9 +111,9 @@ export default function NotesManager({ studentId }: NotesManagerProps) {
       });
 
       if (!response.ok) throw new Error('Failed to delete note');
-      
+
       setNotes(notes.filter(note => note.id !== noteToDelete));
-      
+
       toast.success('Note deleted successfully');
     } catch (error) {
       toast.error('Failed to delete note. Please try again.');

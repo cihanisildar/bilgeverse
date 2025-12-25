@@ -12,13 +12,13 @@ import {
   ChevronRight,
   MessageCircle,
   Palette,
-Star,
+  Star,
   Target,
   Trophy,
   Users
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import toast from 'react-hot-toast';
+import { useToast } from '@/app/hooks/use-toast';
 import { Cell, Legend, Pie, PieChart, ResponsiveContainer, Tooltip } from 'recharts';
 
 type OverallStatsReportProps = {
@@ -78,7 +78,7 @@ const DEFAULT_STATS_DATA: OverallStatsData = {
 };
 
 const COLORS = [
-  '#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8', 
+  '#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8',
   '#82CA9D', '#FFC658', '#FF7C7C', '#8DD1E1', '#D084D0',
   '#87CEEB', '#DDA0DD', '#F0E68C', '#FF6347', '#40E0D0'
 ];
@@ -87,11 +87,11 @@ const COLORS = [
 // This handles both old and new API response formats
 const getSafeStatsData = (data: any): OverallStatsData => {
   if (!data) return DEFAULT_STATS_DATA;
-  
+
   // Handle backward compatibility - check if summary exists
   const hasSummary = data.summary && typeof data.summary === 'object';
   console.log('Processing data:', { hasSummary, summary: data.summary }); // Debug log
-  
+
   return {
     totalStudents: data.totalStudents ?? 0,
     totalPoints: data.totalPoints ?? 0,
@@ -112,6 +112,7 @@ const getSafeStatsData = (data: any): OverallStatsData => {
 };
 
 export default function OverallStatsReport({ userRole }: OverallStatsReportProps) {
+  const toast = useToast();
   const [statsData, setStatsData] = useState<OverallStatsData | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('overview');
@@ -127,7 +128,7 @@ export default function OverallStatsReport({ userRole }: OverallStatsReportProps
       setLoading(true);
       const response = await fetch('/api/student/reports/overall-stats');
       if (!response.ok) throw new Error('Failed to fetch overall stats');
-      
+
       const data = await response.json();
       console.log('Received API data:', data); // Debug log
       setStatsData(data);
@@ -172,7 +173,7 @@ export default function OverallStatsReport({ userRole }: OverallStatsReportProps
   // Pagination logic for activities
   const getPaginatedActivities = () => {
     if (!statsData?.activityDistribution || !Array.isArray(statsData.activityDistribution)) return [];
-    
+
     const startIndex = (currentPage - 1) * itemsPerPage;
     const endIndex = startIndex + itemsPerPage;
     return statsData.activityDistribution.slice(startIndex, endIndex);
@@ -198,27 +199,27 @@ export default function OverallStatsReport({ userRole }: OverallStatsReportProps
   // Prepare data for pie chart with better organization
   const getChartData = () => {
     if (!statsData?.activityDistribution || !Array.isArray(statsData.activityDistribution)) return [];
-    
+
     // Sort by percentage descending
     const sortedData = [...statsData.activityDistribution].sort((a, b) => b.percentage - a.percentage);
-    
+
     // Group small activities (less than 3%) into "Diğer Aktiviteler"
     const threshold = 3; // 3% threshold
     const mainActivities = sortedData.filter(activity => activity.percentage >= threshold);
     const smallActivities = sortedData.filter(activity => activity.percentage < threshold);
-    
+
     let chartData = mainActivities.map((activity, index) => ({
       ...activity,
       shortName: activity.name.length > 20 ? activity.name.substring(0, 20) + '...' : activity.name,
       color: COLORS[index % COLORS.length]
     }));
-    
+
     // Add "Other Activities" if there are small activities
     if (smallActivities.length > 0) {
       const otherTotal = smallActivities.reduce((sum, activity) => sum + activity.percentage, 0);
       const otherValue = smallActivities.reduce((sum, activity) => sum + activity.value, 0);
       const otherCount = smallActivities.reduce((sum, activity) => sum + activity.count, 0);
-      
+
       chartData.push({
         name: 'Diğer Aktiviteler',
         shortName: 'Diğer Aktiviteler',
@@ -228,7 +229,7 @@ export default function OverallStatsReport({ userRole }: OverallStatsReportProps
         color: '#94A3B8' // Gray color for "Other"
       });
     }
-    
+
     return chartData;
   };
 
@@ -260,21 +261,21 @@ export default function OverallStatsReport({ userRole }: OverallStatsReportProps
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
         <div className="flex justify-center">
           <TabsList className="grid w-full max-w-xl grid-cols-3 h-12 bg-white/70 backdrop-blur-sm border border-white/20 shadow-lg rounded-xl p-1">
-            <TabsTrigger 
+            <TabsTrigger
               value="overview"
               className="flex items-center gap-2 rounded-lg text-sm font-medium data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-500 data-[state=active]:to-indigo-500 data-[state=active]:text-white data-[state=active]:shadow-lg"
             >
               <Activity className="h-4 w-4" />
               Genel Bakış
             </TabsTrigger>
-            <TabsTrigger 
+            <TabsTrigger
               value="distribution"
               className="flex items-center gap-2 rounded-lg text-sm font-medium data-[state=active]:bg-gradient-to-r data-[state=active]:from-green-500 data-[state=active]:to-emerald-500 data-[state=active]:text-white data-[state=active]:shadow-lg"
             >
               <Target className="h-4 w-4" />
               Dağılım
             </TabsTrigger>
-            <TabsTrigger 
+            <TabsTrigger
               value="leaderboard"
               className="flex items-center gap-2 rounded-lg text-sm font-medium data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-500 data-[state=active]:to-violet-500 data-[state=active]:text-white data-[state=active]:shadow-lg"
             >
@@ -310,7 +311,7 @@ export default function OverallStatsReport({ userRole }: OverallStatsReportProps
                       {chartData.map((activity, index) => {
                         const maxPercentage = Math.max(...chartData.map(d => d.percentage));
                         const barWidth = (activity.percentage / maxPercentage) * 100;
-                        
+
                         return (
                           <div key={activity.name} className="space-y-2">
                             <div className="flex items-center justify-between text-sm">
@@ -323,11 +324,11 @@ export default function OverallStatsReport({ userRole }: OverallStatsReportProps
                               </div>
                             </div>
                             <div className="w-full bg-gray-100 rounded-full h-3 overflow-hidden">
-                              <div 
+                              <div
                                 className="h-full rounded-full transition-all duration-1000 ease-out"
-                                style={{ 
+                                style={{
                                   width: `${barWidth}%`,
-                                  backgroundColor: activity.color 
+                                  backgroundColor: activity.color
                                 }}
                               />
                             </div>
@@ -335,7 +336,7 @@ export default function OverallStatsReport({ userRole }: OverallStatsReportProps
                         );
                       })}
                     </div>
-                    
+
                     {/* Summary Stats */}
                     <div className="mt-6 pt-4 border-t border-gray-200">
                       <div className="grid grid-cols-2 gap-4 text-sm">
@@ -388,21 +389,21 @@ export default function OverallStatsReport({ userRole }: OverallStatsReportProps
                       <p className="text-sm text-blue-600">Aktif Öğrenci</p>
                     </CardContent>
                   </Card>
-                  
+
                   <Card className="bg-gradient-to-br from-green-50 to-green-100 border-green-200">
                     <CardContent className="p-4 text-center">
                       <div className="text-2xl font-bold text-green-700">{safeStatsData.summary.eventsParticipated}</div>
                       <p className="text-sm text-green-600">Etkinlik Katılımı</p>
                     </CardContent>
                   </Card>
-                  
+
                   <Card className="bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200">
                     <CardContent className="p-4 text-center">
                       <div className="text-2xl font-bold text-purple-700">{safeStatsData.averagePointsPerStudent}</div>
                       <p className="text-sm text-purple-600">Ortalama Puan</p>
                     </CardContent>
                   </Card>
-                  
+
                   <Card className="bg-gradient-to-br from-orange-50 to-orange-100 border-orange-200">
                     <CardContent className="p-4 text-center">
                       <div className="text-2xl font-bold text-orange-700">{safeStatsData.summary.totalTransactions}</div>
@@ -441,7 +442,7 @@ export default function OverallStatsReport({ userRole }: OverallStatsReportProps
                       </div>
                     )}
                   </div>
-                  
+
                   <div className="space-y-2">
                     {paginatedActivities.map((activity, index) => (
                       <div key={activity.name} className="flex items-center justify-between p-3 bg-gradient-to-r from-gray-50 to-gray-100 rounded-lg border border-gray-200 hover:shadow-md transition-all duration-200">
@@ -463,7 +464,7 @@ export default function OverallStatsReport({ userRole }: OverallStatsReportProps
                       </div>
                     ))}
                   </div>
-                  
+
                   {(!statsData.activityDistribution || !Array.isArray(statsData.activityDistribution) || statsData.activityDistribution.length === 0) && (
                     <div className="text-center py-8 text-gray-500">
                       <Activity className="h-12 w-12 text-gray-300 mx-auto mb-2" />
@@ -520,9 +521,9 @@ export default function OverallStatsReport({ userRole }: OverallStatsReportProps
                             <Cell key={`cell-${index}`} fill={entry.color} />
                           ))}
                         </Pie>
-                        <Tooltip 
+                        <Tooltip
                           formatter={(value, name, props) => [
-                            `${value}% (${props.payload.value} puan)`, 
+                            `${value}% (${props.payload.value} puan)`,
                             props.payload.name
                           ]}
                           contentStyle={{
@@ -532,8 +533,8 @@ export default function OverallStatsReport({ userRole }: OverallStatsReportProps
                             backdropFilter: 'blur(8px)'
                           }}
                         />
-                        <Legend 
-                          verticalAlign="bottom" 
+                        <Legend
+                          verticalAlign="bottom"
                           height={80}
                           layout="horizontal"
                           wrapperStyle={{
@@ -552,7 +553,7 @@ export default function OverallStatsReport({ userRole }: OverallStatsReportProps
                       </PieChart>
                     </ResponsiveContainer>
                   </div>
-                  
+
                   {/* Detailed Activity Breakdown */}
                   <div className="mt-6 pt-4 border-t border-gray-200">
                     <div className="flex items-center justify-between mb-4">
@@ -567,7 +568,7 @@ export default function OverallStatsReport({ userRole }: OverallStatsReportProps
                         .map((activity, index) => (
                           <div key={activity.name} className="flex items-center justify-between p-2 bg-gray-50 rounded-lg text-xs">
                             <div className="flex items-center gap-2 flex-1 min-w-0">
-                              <div 
+                              <div
                                 className="w-3 h-3 rounded-full flex-shrink-0"
                                 style={{ backgroundColor: COLORS[index % COLORS.length] }}
                               />

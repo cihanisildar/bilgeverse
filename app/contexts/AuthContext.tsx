@@ -126,22 +126,35 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     try {
       setLoading(true);
       console.log('Login attempt started for user:', username);
-      
+
       const result = await signIn('credentials', {
         username,
         password,
         redirect: false,
       });
 
-      console.log('SignIn result:', { error: result?.error, ok: result?.ok });
+      console.log('SignIn result:', result);
 
       if (result?.error) {
-        toast.error(result.error || "Giriş başarısız. Lütfen tekrar deneyin.");
+        // Show specific error message
+        const errorMessage = result.error === 'CredentialsSignin'
+          ? 'Kullanıcı adı veya şifre hatalı'
+          : result.error === 'Missing credentials'
+          ? 'Kullanıcı adı ve şifre gereklidir'
+          : result.error === 'Invalid username or password'
+          ? 'Kullanıcı adı veya şifre hatalı'
+          : result.error;
+
+        console.error('Login error:', errorMessage);
+        toast.error(errorMessage);
+        setLoading(false);
         return;
       }
 
       if (!result?.ok) {
-        toast.error("Giriş işlemi başarısız oldu.");
+        console.error('Login failed - result not ok');
+        toast.error("Giriş işlemi başarısız oldu. Lütfen bilgilerinizi kontrol edin.");
+        setLoading(false);
         return;
       }
 
@@ -154,11 +167,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       // Redirect to callbackUrl if provided, otherwise to dashboard
       const redirectUrl = callbackUrl || '/dashboard';
       await router.replace(redirectUrl);
-      
+
     } catch (error) {
       console.error("Login error:", error);
       toast.error("Giriş başarısız. Lütfen tekrar deneyin.");
-    } finally {
       setLoading(false);
     }
   };

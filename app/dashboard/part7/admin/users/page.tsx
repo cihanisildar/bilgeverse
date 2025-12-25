@@ -1,9 +1,9 @@
-'use client';
+﻿'use client';
 
 import React, { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import toast from 'react-hot-toast';
+import { useToast } from '@/app/hooks/use-toast';
 import {
   Dialog,
   DialogContent,
@@ -36,6 +36,7 @@ type User = {
 };
 
 export default function AdminUsersPage() {
+  const toast = useToast();
   const router = useRouter();
   const [users, setUsers] = useState<User[]>([]);
   const [filteredUsers, setFilteredUsers] = useState<User[]>([]);

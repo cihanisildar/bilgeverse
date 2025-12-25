@@ -2,7 +2,6 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { getToken } from 'next-auth/jwt';
 import { UserRole } from '@prisma/client';
-import { withAuth } from "next-auth/middleware";
 
 // Export config first
 export const config = {
@@ -13,6 +12,7 @@ export const config = {
     "/api/student/:path*",
     // Protected pages
     "/dashboard/:path*",
+    "/check-in/:path*", // Check-in pages require authentication
   ]
 };
 
@@ -25,9 +25,9 @@ export async function middleware(request: NextRequest) {
 
   // Skip middleware for public assets and auth API routes
   if (pathname.startsWith('/_next/') ||
-      pathname.startsWith('/api/auth/') ||
-      pathname === '/api/register' ||
-      pathname === '/favicon.ico') {
+    pathname.startsWith('/api/auth/') ||
+    pathname === '/api/register' ||
+    pathname === '/favicon.ico') {
     console.log('Skipping middleware for:', pathname);
     return NextResponse.next();
   }
@@ -46,13 +46,13 @@ export async function middleware(request: NextRequest) {
 
   try {
     console.log('Checking auth for path:', pathname);
-    
-    const token = await getToken({ 
+
+    const token = await getToken({
       req: request,
       secret: process.env.NEXT_AUTH_SECRET,
     });
-    
-    console.log('Token check result:', { 
+
+    console.log('Token check result:', {
       hasToken: !!token,
       role: token?.role,
       path: pathname,
@@ -64,7 +64,7 @@ export async function middleware(request: NextRequest) {
       console.log('No token found - redirecting to login');
       const loginUrl = new URL('/login', request.url);
       loginUrl.searchParams.set('callbackUrl', pathname);
-      return isApiRoute 
+      return isApiRoute
         ? NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
         : NextResponse.redirect(loginUrl);
     }
@@ -75,8 +75,10 @@ export async function middleware(request: NextRequest) {
     };
 
     // Allow check-in pages and meeting detail pages for all authenticated users
+    // Unified check-in route at /check-in/* is accessible to all authenticated users
     // (students, tutors, etc. can check in as guests and view meetings they're attending)
-    const isCheckInPage = (pathname.includes('/meetings/') || pathname.includes('/attendance/')) && pathname.includes('/check-in');
+    const isCheckInPage = pathname.startsWith('/check-in/') ||
+      ((pathname.includes('/meetings/') || pathname.includes('/attendance/')) && pathname.includes('/check-in'));
     const isMeetingDetailPage = pathname.match(/\/dashboard\/part1\/meetings\/[^\/]+$/);
     const isAttendanceDetailPage = pathname.match(/\/dashboard\/part2\/attendance\/[^\/]+$/);
 
@@ -94,30 +96,25 @@ export async function middleware(request: NextRequest) {
 
     // Redirect non-admin users away from parts 1, 3-6 and 8-9 to part 7 (except check-in and detail pages)
     if (pathname.startsWith('/dashboard/part') &&
-        !pathname.startsWith('/dashboard/part7') &&
-        !pathname.startsWith('/dashboard/part2') &&
-        !isCheckInPage &&
-        !isMeetingDetailPage) {
+      !pathname.startsWith('/dashboard/part7') &&
+      !pathname.startsWith('/dashboard/part2') &&
+      !isCheckInPage &&
+      !isMeetingDetailPage) {
       if (token.role !== UserRole.ADMIN) {
         console.log('Non-admin user attempting to access restricted part, redirecting to part 7');
         const roleBasedPath = token.role === UserRole.STUDENT
           ? '/dashboard/part7/student'
           : token.role === UserRole.TUTOR || token.role === UserRole.ASISTAN
-          ? '/dashboard/part7/tutor'
-          : '/dashboard/part7/student';
+            ? '/dashboard/part7/tutor'
+            : '/dashboard/part7/student';
         return NextResponse.redirect(new URL(roleBasedPath, request.url));
       }
     }
 
-    // Redirect non-admin users from /dashboard to part 7
-    if (pathname === '/dashboard' && token.role !== UserRole.ADMIN) {
-      console.log('Non-admin user accessing dashboard, redirecting to part 7');
-      const roleBasedPath = token.role === UserRole.STUDENT 
-        ? '/dashboard/part7/student'
-        : token.role === UserRole.TUTOR || token.role === UserRole.ASISTAN
-        ? '/dashboard/part7/tutor'
-        : '/dashboard/part7/student';
-      return NextResponse.redirect(new URL(roleBasedPath, request.url));
+    // Redirect students from /dashboard to part 7 (tutors and admins can access dashboard)
+    if (pathname === '/dashboard' && token.role === UserRole.STUDENT) {
+      console.log('Student user accessing dashboard, redirecting to part 7');
+      return NextResponse.redirect(new URL('/dashboard/part7/student', request.url));
     }
 
     // Check route permissions
@@ -137,7 +134,7 @@ export async function middleware(request: NextRequest) {
           : NextResponse.redirect(new URL('/', request.url));
       }
     }
-    
+
     if (pathname.startsWith('/dashboard/part7/tutor') || pathname.startsWith('/api/tutor')) {
       if (token.role !== UserRole.TUTOR && token.role !== UserRole.ASISTAN) {
         console.log('Non-tutor/asistan user attempting to access tutor route');
@@ -146,7 +143,7 @@ export async function middleware(request: NextRequest) {
           : NextResponse.redirect(new URL('/', request.url));
       }
     }
-    
+
     if (pathname.startsWith('/api/student/reports')) {
       // Allow ADMIN, TUTOR, and STUDENT for /api/student/reports endpoints
       if (![UserRole.ADMIN, UserRole.TUTOR, UserRole.ASISTAN, UserRole.STUDENT].includes(token.role as UserRole)) {
@@ -165,13 +162,13 @@ export async function middleware(request: NextRequest) {
     }
 
     const response = NextResponse.next();
-    
+
     // Add user info to headers for debugging
     response.headers.set('x-user-role', token.role as string);
     response.headers.set('x-user-id', token.sub as string);
     response.headers.set('x-middleware-cache', 'no-cache');
     response.headers.set('Cache-Control', 'no-store, must-revalidate');
-    
+
     console.log('Auth check passed, proceeding with request');
     return response;
   } catch (error) {
@@ -201,8 +198,4 @@ export function corsMiddleware(request: NextRequest) {
   }
 }
 
-export default withAuth({
-  callbacks: {
-    authorized: ({ token }) => !!token,
-  },
-}); 
+export default middleware;

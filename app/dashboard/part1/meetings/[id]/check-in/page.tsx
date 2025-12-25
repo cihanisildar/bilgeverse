@@ -41,11 +41,11 @@ export default function CheckInPage() {
       router.push(`/login?callbackUrl=${encodeURIComponent(callbackUrl)}`);
       return;
     }
-    
+
     try {
       setError(null);
       const result = await checkIn.mutateAsync({ meetingId });
-      
+
       if (result.error) {
         setError(result.error);
         setIsCheckingIn(false);
@@ -69,7 +69,7 @@ export default function CheckInPage() {
       // Set scanner active first to render the element
       setScannerActive(true);
       setError(null);
-      
+
       // Wait for the element to be in the DOM
       await new Promise<void>((resolve) => {
         const checkElement = () => {
@@ -95,9 +95,9 @@ export default function CheckInPage() {
         },
         (decodedText) => {
           console.log('QR Code scanned:', decodedText);
-          
+
           let scannedMeetingId: string | null = null;
-          
+
           // Extract meeting ID from URL
           try {
             // Parse URL to get meeting ID
@@ -113,12 +113,12 @@ export default function CheckInPage() {
             setError('QR kod okunamadı. Lütfen geçerli bir QR kod tarayın.');
             return;
           }
-          
+
           if (!scannedMeetingId) {
             setError('QR kodda toplantı bilgisi bulunamadı. Lütfen geçerli bir QR kod tarayın.');
             return;
           }
-          
+
           // If scanned meeting ID matches current meeting, proceed with check-in
           if (scannedMeetingId === meetingId) {
             console.log('Scanned meeting ID matches, proceeding with check-in');
@@ -131,7 +131,7 @@ export default function CheckInPage() {
             // Redirect to the scanned meeting's check-in page
             scanner.stop().catch(console.error);
             setScannerActive(false);
-            router.push(`/dashboard/part1/meetings/${scannedMeetingId}/check-in`);
+            router.push(`/check-in/meeting/${scannedMeetingId}`);
           }
         },
         (errorMessage) => {
@@ -206,7 +206,7 @@ export default function CheckInPage() {
 
   // Check if QR code is generated
   const hasQRCode = !!meeting.qrCodeToken;
-  const isQRCodeExpired = meeting.qrCodeExpiresAt 
+  const isQRCodeExpired = meeting.qrCodeExpiresAt
     ? new Date(meeting.qrCodeExpiresAt) < new Date()
     : false;
 

@@ -4,16 +4,28 @@ import { useRouter, useParams } from 'next/navigation';
 import { useAuth } from '@/app/contexts/AuthContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
-import { ArrowLeft, Share2, CheckCircle2, Circle, Plus, Copy, MessageSquare, Star } from 'lucide-react';
+import { ArrowLeft, Share2, CheckCircle2, Circle, Plus, Copy, MessageSquare, Star, Pencil, Trash2, ExternalLink } from 'lucide-react';
 import { useSyllabus, useUpdateSyllabusLesson, useAddLessonToSyllabus, useGenerateShareToken } from '@/app/hooks/use-syllabus';
 import { useState, useEffect } from 'react';
-import toast from 'react-hot-toast';
+import { useToast } from '@/app/hooks/use-toast';
 
 export default function SyllabusDetailPage() {
+  const toast = useToast();
   const router = useRouter();
   const params = useParams();
   const syllabusId = params.id as string;
@@ -23,9 +35,12 @@ export default function SyllabusDetailPage() {
   const addLesson = useAddLessonToSyllabus();
   const generateShareToken = useGenerateShareToken();
   const [editingLesson, setEditingLesson] = useState<string | null>(null);
+  const [updatingLesson, setUpdatingLesson] = useState<string | null>(null);
   const [lessonNotes, setLessonNotes] = useState<{ [key: string]: string }>({});
   const [newLesson, setNewLesson] = useState({ title: '', description: '' });
   const [showAddLesson, setShowAddLesson] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   const canManage = isAdmin || isTutor;
 
@@ -41,16 +56,23 @@ export default function SyllabusDetailPage() {
   }, [syllabus]);
 
   const handleToggleTaught = async (lessonId: string, currentStatus: boolean) => {
-    await updateLesson.mutateAsync({
-      lessonId,
-      data: { isTaught: !currentStatus },
-    });
+    setUpdatingLesson(lessonId);
+    try {
+      await updateLesson.mutateAsync({
+        lessonId,
+        data: { isTaught: !currentStatus },
+        syllabusId,
+      });
+    } finally {
+      setUpdatingLesson(null);
+    }
   };
 
   const handleUpdateNotes = async (lessonId: string) => {
     await updateLesson.mutateAsync({
       lessonId,
       data: { notes: lessonNotes[lessonId] },
+      syllabusId,
     });
     setEditingLesson(null);
   };
@@ -74,6 +96,26 @@ export default function SyllabusDetailPage() {
     if (!result.error && result.data) {
       navigator.clipboard.writeText(result.data.shareUrl || '');
       toast.success('Paylaşım linki kopyalandı!');
+    }
+  };
+
+  const handleDeleteSyllabus = async () => {
+    setDeleting(true);
+    try {
+      const response = await fetch(`/api/syllabus/${syllabusId}`, {
+        method: 'DELETE',
+      });
+      if (response.ok) {
+        toast.success('Müfredat silindi');
+        router.push('/dashboard/part2/syllabus');
+      } else {
+        toast.error('Müfredat silinemedi');
+      }
+    } catch (error) {
+      toast.error('Bir hata oluştu');
+    } finally {
+      setDeleting(false);
+      setShowDeleteDialog(false);
     }
   };
 
@@ -145,24 +187,104 @@ export default function SyllabusDetailPage() {
               {syllabus.description && (
                 <p className="text-gray-600">{syllabus.description}</p>
               )}
+              {syllabus.driveLink && (
+                <a
+                  href={syllabus.driveLink}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1 text-sm text-cyan-600 hover:text-cyan-700 mt-2"
+                >
+                  <ExternalLink className="h-4 w-4" />
+                  Google Drive'da Aç
+                </a>
+              )}
             </div>
-            <Button
-              onClick={handleGenerateShareLink}
-              disabled={generateShareToken.isPending}
-              className="bg-gradient-to-r from-cyan-600 to-teal-600 hover:from-cyan-700 hover:to-teal-700 text-white"
-            >
-              {syllabus.isPublished && syllabus.shareToken ? (
+            <div className="flex gap-2">
+              {isAdmin && (
                 <>
-                  <Copy className="h-4 w-4 mr-2" />
-                  Linki Kopyala
-                </>
-              ) : (
-                <>
-                  <Share2 className="h-4 w-4 mr-2" />
-                  Paylaşım Linki Oluştur
+                  <Button
+                    onClick={() => router.push(`/dashboard/part2/syllabus/${syllabusId}/edit`)}
+                    variant="outline"
+                    className="border-gray-300 text-gray-700 hover:bg-gray-50"
+                  >
+                    <Pencil className="h-4 w-4 mr-2" />
+                    Düzenle
+                  </Button>
+
+                  <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+                    <AlertDialogTrigger asChild>
+                      <Button
+                        variant="outline"
+                        className="border-red-300 text-red-600 hover:bg-red-50"
+                      >
+                        <Trash2 className="h-4 w-4 mr-2" />
+                        Sil
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent className="border-0 shadow-2xl">
+                      <AlertDialogHeader>
+                        <AlertDialogTitle className="flex items-center gap-2 text-red-600">
+                          <Trash2 className="h-5 w-5" />
+                          Müfredatı Sil
+                        </AlertDialogTitle>
+                        <AlertDialogDescription className="text-base pt-2">
+                          <span className="font-semibold text-gray-800">{syllabus.title}</span> adlı müfredatı silmek üzeresiniz.
+                          <br />
+                          <br />
+                          Bu işlem <span className="font-semibold text-red-600">geri alınamaz</span> ve şunları silecektir:
+                          <ul className="list-disc list-inside mt-2 space-y-1 text-gray-600">
+                            <li>Tüm dersler ve ders notları</li>
+                            <li>Veli geri bildirimleri</li>
+                            <li>Sınıf ilerleme kayıtları</li>
+                            <li>Paylaşım bağlantıları</li>
+                          </ul>
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel disabled={deleting}>İptal</AlertDialogCancel>
+                        <AlertDialogAction
+                          onClick={(e) => {
+                            e.preventDefault();
+                            handleDeleteSyllabus();
+                          }}
+                          disabled={deleting}
+                          className="bg-red-600 hover:bg-red-700 text-white"
+                        >
+                          {deleting ? (
+                            <>
+                              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                              Siliniyor...
+                            </>
+                          ) : (
+                            <>
+                              <Trash2 className="h-4 w-4 mr-2" />
+                              Evet, Sil
+                            </>
+                          )}
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
                 </>
               )}
-            </Button>
+              <Button
+                onClick={handleGenerateShareLink}
+                disabled={generateShareToken.isPending}
+                className="bg-gradient-to-r from-cyan-600 to-teal-600 hover:from-cyan-700 hover:to-teal-700 text-white"
+              >
+                {syllabus.isPublished && syllabus.shareToken ? (
+                  <>
+                    <Copy className="h-4 w-4 mr-2" />
+                    Linki Kopyala
+                  </>
+                ) : (
+                  <>
+                    <Share2 className="h-4 w-4 mr-2" />
+                    Paylaşım Linki Oluştur
+                  </>
+                )}
+              </Button>
+            </div>
           </div>
 
           {/* Progress */}
@@ -250,9 +372,13 @@ export default function SyllabusDetailPage() {
                         <div className="flex-shrink-0">
                           <button
                             onClick={() => handleToggleTaught(lesson.id, lesson.isTaught)}
-                            className="w-6 h-6 rounded-full flex items-center justify-center transition-colors"
+                            disabled={updatingLesson === lesson.id}
+                            className={`w-6 h-6 rounded-full flex items-center justify-center transition-colors ${updatingLesson === lesson.id ? 'opacity-50 cursor-not-allowed' : ''
+                              }`}
                           >
-                            {lesson.isTaught ? (
+                            {updatingLesson === lesson.id ? (
+                              <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-cyan-600"></div>
+                            ) : lesson.isTaught ? (
                               <CheckCircle2 className="h-6 w-6 text-green-600" />
                             ) : (
                               <Circle className="h-6 w-6 text-gray-400 hover:text-cyan-600" />
@@ -267,6 +393,17 @@ export default function SyllabusDetailPage() {
                               </h3>
                               {lesson.description && (
                                 <p className="text-sm text-gray-600 mt-1">{lesson.description}</p>
+                              )}
+                              {lesson.driveLink && (
+                                <a
+                                  href={lesson.driveLink}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="inline-flex items-center gap-1 text-xs text-cyan-600 hover:text-cyan-700 mt-2"
+                                >
+                                  <ExternalLink className="h-3 w-3" />
+                                  Drive Materyali
+                                </a>
                               )}
                               {lesson.taughtDate && (
                                 <p className="text-xs text-green-600 mt-2">

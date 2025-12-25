@@ -61,7 +61,14 @@ export function useCreateSyllabus() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: createSyllabus,
+    mutationFn: (data: {
+      title: string;
+      description?: string;
+      lessons: Array<{
+        title: string;
+        description?: string;
+      }>;
+    }) => createSyllabus(data),
     onSuccess: (result) => {
       if (result.error) {
         toast.error(result.error);
@@ -101,7 +108,7 @@ export function useDeleteSyllabus() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: deleteSyllabus,
+    mutationFn: (syllabusId: string) => deleteSyllabus(syllabusId),
     onSuccess: (result) => {
       if (result.error) {
         toast.error(result.error);
@@ -120,7 +127,7 @@ export function useGenerateShareToken() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: generateShareTokenForSyllabus,
+    mutationFn: (syllabusId: string) => generateShareTokenForSyllabus(syllabusId),
     onSuccess: (result, syllabusId) => {
       if (result.error) {
         toast.error(result.error);
@@ -140,13 +147,16 @@ export function useUpdateSyllabusLesson() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ lessonId, data }: { lessonId: string; data: any }) =>
+    mutationFn: ({ lessonId, data }: { lessonId: string; data: any; syllabusId?: string }) =>
       updateSyllabusLesson(lessonId, data),
-    onSuccess: (result) => {
+    onSuccess: (result, variables) => {
       if (result.error) {
         toast.error(result.error);
       } else {
         queryClient.invalidateQueries({ queryKey: ['syllabi'] });
+        if (variables.syllabusId) {
+          queryClient.invalidateQueries({ queryKey: ['syllabi', variables.syllabusId] });
+        }
         toast.success('Ders başarıyla güncellendi');
       }
     },
@@ -181,7 +191,7 @@ export function useDeleteSyllabusLesson() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: deleteSyllabusLesson,
+    mutationFn: (lessonId: string) => deleteSyllabusLesson(lessonId),
     onSuccess: (result) => {
       if (result.error) {
         toast.error(result.error);
@@ -198,7 +208,15 @@ export function useDeleteSyllabusLesson() {
 
 export function useSubmitParentFeedback() {
   return useMutation({
-    mutationFn: submitParentFeedback,
+    mutationFn: (data: {
+      syllabusId: string;
+      parentName?: string;
+      parentEmail?: string;
+      overallRating?: any;
+      contentQuality?: any;
+      effectiveness?: any;
+      engagement?: any;
+    }) => submitParentFeedback(data),
     onSuccess: (result) => {
       if (result.error) {
         toast.error(result.error);

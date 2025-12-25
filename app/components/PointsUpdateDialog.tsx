@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { toast } from 'react-hot-toast'
+import { useToast } from '@/app/hooks/use-toast'
 import { useAuth } from '@/app/contexts/AuthContext'
 import {
   Dialog,
@@ -24,13 +24,14 @@ interface PointsUpdateDialogProps {
   triggerComponent?: React.ReactNode
 }
 
-export default function PointsUpdateDialog({ 
-  userId, 
-  currentPoints, 
+export default function PointsUpdateDialog({
+  userId,
+  currentPoints,
   onPointsUpdated,
-  triggerComponent 
+  triggerComponent
 }: PointsUpdateDialogProps) {
   const { checkAuth } = useAuth()
+  const toast = useToast()
   const [open, setOpen] = useState(false)
   // Use string type for the input to allow clearing the field
   const [pointsInput, setPointsInput] = useState<string>('')
@@ -40,7 +41,7 @@ export default function PointsUpdateDialog({
 
   const handleSubmit = async () => {
     const points = parseInt(pointsInput) || 0;
-    
+
     if (points <= 0) {
       toast.error('Puanlar sıfırdan büyük olmalıdır')
       return
@@ -48,7 +49,7 @@ export default function PointsUpdateDialog({
 
     try {
       setLoading(true)
-      
+
       const response = await fetch(`/api/users/${userId}/points`, {
         method: 'POST',
         headers: {
@@ -60,19 +61,19 @@ export default function PointsUpdateDialog({
           reason
         }),
       })
-      
+
       const data = await response.json()
-      
+
       if (!response.ok) {
         throw new Error(data.error || 'Puanlar güncellenemedi')
       }
-      
+
       toast.success('Puanlar başarıyla güncellendi')
-      
+
       // Reset the form
       resetForm()
       setOpen(false)
-      
+
       // Notify parent component about the update
       if (onPointsUpdated) {
         onPointsUpdated(data.user.points)
@@ -101,7 +102,7 @@ export default function PointsUpdateDialog({
     }}>
       <DialogTrigger asChild>
         {triggerComponent || (
-          <Button 
+          <Button
             variant="outline"
             size="sm"
             className="ml-2"
@@ -112,13 +113,13 @@ export default function PointsUpdateDialog({
       </DialogTrigger>
       <DialogContent className="sm:max-w-md max-w-[90vw] p-0 gap-0 overflow-hidden bg-white">
         <div className="px-6 py-4 border-b border-gray-200 relative">
-          <button 
+          <button
             type="button"
             onClick={() => setOpen(false)}
             className="absolute right-4 top-4 text-gray-400 hover:text-gray-600"
             aria-label="Close dialog"
           >
-        
+
           </button>
           <DialogTitle className="text-xl font-medium">Puan Güncelle</DialogTitle>
           <DialogDescription className="pt-1 text-gray-500">
@@ -165,8 +166,8 @@ export default function PointsUpdateDialog({
           </div>
         </div>
         <div className="px-6 py-4 border-t border-gray-200">
-          <button 
-            type="button" 
+          <button
+            type="button"
             onClick={handleSubmit}
             disabled={loading || !pointsInput || parseInt(pointsInput) <= 0}
             className="w-full h-10 bg-blue-500 hover:bg-blue-600 text-white font-medium rounded-md disabled:opacity-70 disabled:cursor-not-allowed"

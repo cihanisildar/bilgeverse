@@ -73,30 +73,30 @@ export default function PublicSyllabusPage() {
 
     return (
       <div className="space-y-2">
-        <Label className="text-sm font-medium text-gray-700">{label}</Label>
-        <div className="flex gap-2">
-          {ratings.map((rating, index) => (
+        <div className="flex items-center justify-between">
+          <Label className="text-sm font-medium text-gray-700">{label}</Label>
+          {currentValue > 0 && (
+            <span className="text-xs text-cyan-600 font-medium">
+              {currentValue}/5
+            </span>
+          )}
+        </div>
+        <div className="flex items-center gap-1">
+          {[1, 2, 3, 4, 5].map((star) => (
             <button
-              key={rating}
+              key={star}
               type="button"
-              onClick={() => onChange(rating)}
-              className="flex-1 p-3 rounded-lg border-2 transition-all hover:border-cyan-300"
-              style={{
-                borderColor: currentValue === index + 1 ? '#06b6d4' : '#e5e7eb',
-                backgroundColor: currentValue === index + 1 ? '#ecfeff' : 'white',
-              }}
+              onClick={() => onChange(ratings[star - 1])}
+              className="p-1 transition-transform hover:scale-110 active:scale-95"
             >
               <Star
-                className={`h-6 w-6 mx-auto ${
-                  currentValue === index + 1 ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300'
-                }`}
+                className={`h-8 w-8 transition-colors ${currentValue >= star
+                    ? 'fill-yellow-400 text-yellow-400'
+                    : 'text-gray-300 hover:text-gray-400'
+                  }`}
               />
             </button>
           ))}
-        </div>
-        <div className="flex justify-between text-xs text-gray-500">
-          <span>Çok Kötü</span>
-          <span>Mükemmel</span>
         </div>
       </div>
     );
@@ -198,9 +198,8 @@ export default function PublicSyllabusPage() {
                     {syllabus.lessons.map((lesson: any, index: number) => (
                       <div
                         key={lesson.id}
-                        className={`p-4 rounded-lg border ${
-                          lesson.isTaught ? 'bg-green-50 border-green-200' : 'bg-white border-gray-200'
-                        }`}
+                        className={`p-4 rounded-lg border ${lesson.isTaught ? 'bg-green-50 border-green-200' : 'bg-white border-gray-200'
+                          }`}
                       >
                         <div className="flex items-start gap-3">
                           <div className="flex-shrink-0">

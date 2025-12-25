@@ -3,6 +3,7 @@ import { Quicksand } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "react-hot-toast";
 import Providers from "./components/Providers";
+import ServiceWorkerManager from "./components/ServiceWorkerManager";
 
 // Optimize font loading for better LCP
 const quicksand = Quicksand({
@@ -55,10 +56,11 @@ export default function RootLayout({
         <link rel="dns-prefetch" href="//cdn.dsmcdn.com" />
       </head>
       <body className={`${quicksand.className} min-h-screen bg-background antialiased`}>
+        <ServiceWorkerManager />
         <Providers>
           <main className="min-h-screen">{children}</main>
         </Providers>
-        <Toaster 
+        <Toaster
           position="top-center"
           toastOptions={{
             duration: 4000,

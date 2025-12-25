@@ -1,11 +1,11 @@
-'use client';
+﻿'use client';
 
 import { HeaderSkeleton, SearchFilterSkeleton, StoreItemCardSkeleton } from '@/app/components/ui/skeleton-shimmer';
 import { useAuth } from '@/app/contexts/AuthContext';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useCallback, useEffect, useState, useRef } from 'react';
-import toast from 'react-hot-toast';
+import { useToast } from '@/app/hooks/use-toast';
 
 type StoreItem = {
   id: string;
@@ -85,6 +85,7 @@ type TopBuyer = {
 };
 
 export default function AdminStore() {
+  const toast = useToast();
   const { isAdmin } = useAuth();
   const [items, setItems] = useState<StoreItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -111,7 +112,7 @@ export default function AdminStore() {
     height: 100,
     scale: 1
   });
-  
+
   // Edit dialog states
   const [showEditModal, setShowEditModal] = useState(false);
   const [editItem, setEditItem] = useState<StoreItem | null>(null);
@@ -135,7 +136,7 @@ export default function AdminStore() {
     const fetchStoreItems = async () => {
       try {
         setLoading(true);
-        
+
         const res = await fetch('/api/admin/store', {
           method: 'GET',
           credentials: 'include',
@@ -144,7 +145,7 @@ export default function AdminStore() {
             'Content-Type': 'application/json'
           }
         });
-        
+
         if (!res.ok) {
           if (res.status === 403) {
             toast.error('Yetkiniz yok');
@@ -153,7 +154,7 @@ export default function AdminStore() {
           const errorData = await res.json();
           throw new Error(errorData.error || 'Mağaza ürünleri yüklenemedi');
         }
-        
+
         const data = await res.json();
         setItems(data.items);
       } catch (err) {
@@ -173,7 +174,7 @@ export default function AdminStore() {
   const fetchSalesData = async () => {
     try {
       setSalesLoading(true);
-      
+
       const res = await fetch('/api/admin/store/sales', {
         method: 'GET',
         credentials: 'include',
@@ -182,7 +183,7 @@ export default function AdminStore() {
           'Content-Type': 'application/json'
         }
       });
-      
+
       if (!res.ok) {
         if (res.status === 403) {
           toast.error('Yetkiniz yok');
@@ -191,7 +192,7 @@ export default function AdminStore() {
         const errorData = await res.json();
         throw new Error(errorData.error || 'Satış verileri yüklenemedi');
       }
-      
+
       const data = await res.json();
       setSalesData(data.sales);
       setSalesStats(data.statistics);
@@ -267,7 +268,7 @@ export default function AdminStore() {
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
-    
+
     if (name === 'imageUrl') {
       // Validate URL format
       const isValidUrl = !value.trim() || value.trim().startsWith('http://') || value.trim().startsWith('https://');
@@ -285,7 +286,7 @@ export default function AdminStore() {
         });
         return;
       }
-      
+
       // Only set loading state if there's actually a valid URL
       if (value.trim()) {
         setIsImageLoading(true);
@@ -295,7 +296,7 @@ export default function AdminStore() {
         setImageError(false);
       }
     }
-    
+
     // Convert numeric fields
     if (name === 'pointsRequired') {
       setNewItem({
@@ -339,7 +340,7 @@ export default function AdminStore() {
 
       setSelectedFile(file);
       setImageError(false);
-      
+
       // Create preview URL and open image editor
       const previewUrl = URL.createObjectURL(file);
       setOriginalImage(previewUrl);
@@ -352,13 +353,13 @@ export default function AdminStore() {
     const editedFile = new File([editedImageBlob], selectedFile?.name || 'edited-image.png', {
       type: editedImageBlob.type
     });
-    
+
     setSelectedFile(editedFile);
-    
+
     // Create new preview URL
     const previewUrl = URL.createObjectURL(editedImageBlob);
     setNewItem(prev => ({ ...prev, imageUrl: previewUrl }));
-    
+
     setShowImageEditor(false);
   };
 
@@ -408,23 +409,23 @@ export default function AdminStore() {
 
   const handleAddItem = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     try {
       setAddingItem(true);
-      
+
       // Validate inputs
       if (!newItem.name.trim()) {
         throw new Error('Ürün adı zorunludur');
       }
-      
+
       if (!newItem.description.trim()) {
         throw new Error('Ürün açıklaması zorunludur');
       }
-      
+
       if (newItem.pointsRequired <= 0) {
         throw new Error('Gerekli puan sıfırdan büyük olmalıdır');
       }
-      
+
 
       // Upload image if a file is selected
       let finalImageUrl = '';
@@ -438,7 +439,7 @@ export default function AdminStore() {
       }
 
 
-      
+
       const res = await fetch('/api/admin/store', {
         method: 'POST',
         headers: {
@@ -449,23 +450,23 @@ export default function AdminStore() {
           imageUrl: finalImageUrl || undefined
         }),
       });
-      
+
       if (!res.ok) {
         const errorData = await res.json();
         throw new Error(errorData.error || 'Ürün eklenemedi');
       }
-      
+
       const data = await res.json();
-      
+
       // Add new item to the list
       setItems([...items, data.item]);
-      
+
       // Show success message
       toast.success(`${data.item.name} mağazaya eklendi!`);
-      
+
       // Clear form and close modal
       closeModal();
-      
+
     } catch (err: any) {
       console.error('Ürün ekleme hatası:', err);
       toast.error(err.message || 'Ürün eklenemedi. Lütfen tekrar deneyin.');
@@ -481,9 +482,9 @@ export default function AdminStore() {
 
   const handleDeleteConfirm = async () => {
     if (!itemToDelete) return;
-    
+
     const toastId = toast.loading('Ürün siliniyor...');
-    
+
     try {
       const res = await fetch(`/api/admin/store/${itemToDelete}`, {
         method: 'DELETE',
@@ -500,13 +501,15 @@ export default function AdminStore() {
 
       // Remove item from the list
       setItems(items.filter(item => item.id !== itemToDelete));
-      toast.success('Ürün başarıyla silindi', { id: toastId });
+      toast.dismiss(toastId);
+      toast.success('Ürün başarıyla silindi');
       setShowDeleteDialog(false);
       setItemToDelete(null);
 
     } catch (err: any) {
       console.error('Ürün silme hatası:', err);
-      toast.error(err.message || 'Ürün silinemedi. Lütfen tekrar deneyin.', { id: toastId });
+      toast.dismiss(toastId);
+      toast.error(err.message || 'Ürün silinemedi. Lütfen tekrar deneyin.');
     }
   };
 
@@ -519,7 +522,7 @@ export default function AdminStore() {
   const handleEditClick = async (itemId: string) => {
     try {
       const res = await fetch(`/api/admin/store/${itemId}`);
-      
+
       if (!res.ok) {
         if (res.status === 403) {
           toast.error('Yetkiniz yok');
@@ -528,7 +531,7 @@ export default function AdminStore() {
         const errorData = await res.json();
         throw new Error(errorData.error || 'Ürün yüklenemedi');
       }
-      
+
       const data = await res.json();
       setEditItem(data.item);
       setEditSelectedFile(null);
@@ -555,14 +558,14 @@ export default function AdminStore() {
 
   const handleEditInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     if (!editItem) return;
-    
+
     const { name, value } = e.target;
-    
+
     if (name === 'imageUrl') {
       setEditImageError(false);
       setEditIsImageLoading(true);
     }
-    
+
     setEditItem({
       ...editItem,
       [name]: name === 'pointsRequired'
@@ -590,10 +593,10 @@ export default function AdminStore() {
 
       setEditSelectedFile(file);
       setEditImageError(false);
-      
+
       // Create preview URL
       const previewUrl = URL.createObjectURL(file);
-      
+
       if (editItem) {
         setEditItem({ ...editItem, imageUrl: previewUrl });
       }
@@ -633,21 +636,21 @@ export default function AdminStore() {
   const handleEditSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editItem) return;
-    
+
     const toastId = toast.loading('Değişiklikler kaydediliyor...');
-    
+
     try {
       setEditingItem(true);
-      
+
       // Validate inputs
       if (!editItem.name.trim()) {
         throw new Error('Ürün adı zorunludur');
       }
-      
+
       if (!editItem.description.trim()) {
         throw new Error('Ürün açıklaması zorunludur');
       }
-      
+
       if (editItem.pointsRequired <= 0) {
         throw new Error('Gerekli puan sıfırdan büyük olmalıdır');
       }
@@ -664,7 +667,7 @@ export default function AdminStore() {
           return;
         }
       }
-      
+
       const res = await fetch(`/api/admin/store/${editItem.id}`, {
         method: 'PUT',
         headers: {
@@ -677,7 +680,7 @@ export default function AdminStore() {
           imageUrl: finalImageUrl
         }),
       });
-      
+
       if (!res.ok) {
         const errorData = await res.json();
         if (res.status === 409) {
@@ -685,22 +688,22 @@ export default function AdminStore() {
         }
         throw new Error(errorData.error || 'Ürün güncellenemedi');
       }
-      
+
       const data = await res.json();
-      
+
       // Update the items list
-      setItems(prevItems => 
-        prevItems.map(item => 
-          item.id === editItem.id 
+      setItems(prevItems =>
+        prevItems.map(item =>
+          item.id === editItem.id
             ? { ...data.item, imageUrl: finalImageUrl }
             : item
         )
       );
-      
+
       toast.dismiss(toastId);
       toast.success('Ürün başarıyla güncellendi!');
       closeEditModal();
-      
+
     } catch (error: any) {
       toast.dismiss(toastId);
       toast.error(error.message || 'Bir hata oluştu');
@@ -725,7 +728,7 @@ export default function AdminStore() {
         <div className="px-4 sm:px-6 lg:px-8 py-8">
           <HeaderSkeleton />
           <SearchFilterSkeleton />
-          
+
           {/* Store Items Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 mt-8">
             {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
@@ -758,17 +761,16 @@ export default function AdminStore() {
                     <p className="text-blue-100 mt-1">Mağaza ürünlerini yönetin ve satış raporlarını görüntüleyin</p>
                   </div>
                 </div>
-                
+
                 <div className="flex items-center space-x-4">
                   {/* Tabs */}
                   <div className="flex space-x-1 bg-white/10 backdrop-blur-sm rounded-xl p-1">
                     <button
                       onClick={() => setActiveTab('items')}
-                      className={`px-6 py-3 rounded-lg font-semibold transition-all ${
-                        activeTab === 'items'
+                      className={`px-6 py-3 rounded-lg font-semibold transition-all ${activeTab === 'items'
                           ? 'bg-white text-indigo-600 shadow-lg'
                           : 'text-white/80 hover:text-white hover:bg-white/10'
-                      }`}
+                        }`}
                     >
                       <div className="flex items-center space-x-2">
                         <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -779,11 +781,10 @@ export default function AdminStore() {
                     </button>
                     <button
                       onClick={() => setActiveTab('sales')}
-                      className={`px-6 py-3 rounded-lg font-semibold transition-all ${
-                        activeTab === 'sales'
+                      className={`px-6 py-3 rounded-lg font-semibold transition-all ${activeTab === 'sales'
                           ? 'bg-white text-indigo-600 shadow-lg'
                           : 'text-white/80 hover:text-white hover:bg-white/10'
-                      }`}
+                        }`}
                     >
                       <div className="flex items-center space-x-2">
                         <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -793,7 +794,7 @@ export default function AdminStore() {
                       </div>
                     </button>
                   </div>
-                  
+
                   {/* Controls */}
                   {activeTab === 'items' && (
                     <button
@@ -811,7 +812,7 @@ export default function AdminStore() {
             </div>
           </div>
         </div>
-        
+
         {/* Content */}
         <div className="pb-8">
           {activeTab === 'items' ? (
@@ -870,7 +871,7 @@ export default function AdminStore() {
                           )}
                         </div>
                       </div>
-                      
+
                       {/* Action Buttons */}
                       <div className="absolute top-3 right-3 flex space-x-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
                         <button
@@ -891,7 +892,7 @@ export default function AdminStore() {
                         </button>
                       </div>
                     </div>
-                    
+
                     {/* Content */}
                     <div className="p-6">
                       <div className="flex items-start justify-between mb-3">
@@ -904,7 +905,7 @@ export default function AdminStore() {
                           </span>
                         </div>
                       </div>
-                      
+
                       <p className="text-gray-600 text-sm line-clamp-2 mb-4">
                         {item.description}
                       </p>
@@ -915,7 +916,7 @@ export default function AdminStore() {
             )
           ) : (
             // Sales Tab Content
-            <SalesReportContent 
+            <SalesReportContent
               salesData={salesData}
               salesStats={salesStats}
               salesByItem={salesByItem}
@@ -925,7 +926,7 @@ export default function AdminStore() {
             />
           )}
         </div>
-        
+
         {/* Delete Confirmation Dialog */}
         {showDeleteDialog && (
           <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
@@ -956,7 +957,7 @@ export default function AdminStore() {
             </div>
           </div>
         )}
-        
+
         {/* Add Item Modal */}
         {showAddModal && (
           <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-40 p-4">
@@ -975,10 +976,10 @@ export default function AdminStore() {
                   </svg>
                 </button>
               </div>
-              
+
               <div className="overflow-y-auto flex-1 p-8">
                 <form id="addItemForm" onSubmit={handleAddItem} className="space-y-6">
-                  
+
                   <div>
                     <label htmlFor="name" className="block text-sm font-semibold text-gray-900 mb-3">
                       Ürün Adı *
@@ -1001,7 +1002,7 @@ export default function AdminStore() {
                       />
                     </div>
                   </div>
-                  
+
                   <div>
                     <label htmlFor="description" className="block text-sm font-semibold text-gray-900 mb-3">
                       Açıklama *
@@ -1017,7 +1018,7 @@ export default function AdminStore() {
                       required
                     />
                   </div>
-                  
+
                   <div>
                     <label htmlFor="pointsRequired" className="block text-sm font-semibold text-gray-900 mb-3">
                       Gerekli Puan *
@@ -1041,7 +1042,7 @@ export default function AdminStore() {
                       />
                     </div>
                   </div>
-                  
+
                   <div>
                     <label htmlFor="imageFile" className="block text-sm font-semibold text-gray-900 mb-3">
                       Ürün Görseli (İsteğe Bağlı)
@@ -1073,7 +1074,7 @@ export default function AdminStore() {
                           </div>
                         </label>
                       </div>
-                      
+
                       {/* Image Preview */}
                       {selectedFile && (
                         <div className="relative rounded-xl overflow-hidden border-2 border-gray-200 bg-white">
@@ -1127,7 +1128,7 @@ export default function AdminStore() {
                           </div>
                         </div>
                       )}
-                      
+
                       {/* Helpful tips */}
                       <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-sm">
                         <div className="flex items-start space-x-2">
@@ -1150,7 +1151,7 @@ export default function AdminStore() {
                   </div>
                 </form>
               </div>
-              
+
               <div className="border-t border-slate-200 p-8 bg-slate-50 rounded-b-3xl">
                 <div className="flex justify-end space-x-4">
                   <button
@@ -1189,7 +1190,7 @@ export default function AdminStore() {
             </div>
           </div>
         )}
-        
+
         {/* Edit Item Modal */}
         {showEditModal && editItem && (
           <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-40 p-4">
@@ -1208,10 +1209,10 @@ export default function AdminStore() {
                   </svg>
                 </button>
               </div>
-              
+
               <div className="overflow-y-auto flex-1 p-8">
                 <form id="editItemForm" onSubmit={handleEditSubmit} className="space-y-6">
-                  
+
                   <div>
                     <label htmlFor="edit-name" className="block text-sm font-semibold text-gray-900 mb-3">
                       Ürün Adı *
@@ -1234,7 +1235,7 @@ export default function AdminStore() {
                       />
                     </div>
                   </div>
-                  
+
                   <div>
                     <label htmlFor="edit-description" className="block text-sm font-semibold text-gray-900 mb-3">
                       Açıklama *
@@ -1250,7 +1251,7 @@ export default function AdminStore() {
                       required
                     />
                   </div>
-                  
+
                   <div>
                     <label htmlFor="edit-pointsRequired" className="block text-sm font-semibold text-gray-900 mb-3">
                       Gerekli Puan *
@@ -1274,7 +1275,7 @@ export default function AdminStore() {
                       />
                     </div>
                   </div>
-                  
+
                   <div>
                     <label htmlFor="edit-imageFile" className="block text-sm font-semibold text-gray-900 mb-3">
                       Ürün Görseli (İsteğe Bağlı)
@@ -1308,7 +1309,7 @@ export default function AdminStore() {
                           </div>
                         </label>
                       </div>
-                      
+
                       {/* Current Image Preview */}
                       {(editItem.imageUrl || editSelectedFile) && (
                         <div className="relative rounded-xl overflow-hidden border-2 border-gray-200 bg-white">
@@ -1323,7 +1324,7 @@ export default function AdminStore() {
                               onError={handleEditImageError}
                               onLoad={handleEditImageLoad}
                             />
-                            
+
                             {editSelectedFile && (
                               <button
                                 type="button"
@@ -1344,7 +1345,7 @@ export default function AdminStore() {
                               </button>
                             )}
                           </div>
-                          
+
                           {editSelectedFile && (
                             <div className="p-4 bg-white border-t border-gray-200">
                               <div className="flex items-center justify-between">
@@ -1365,7 +1366,7 @@ export default function AdminStore() {
                   </div>
                 </form>
               </div>
-              
+
               <div className="border-t border-slate-200 p-8 bg-slate-50 rounded-b-3xl">
                 <div className="flex justify-end space-x-4">
                   <button
@@ -1406,7 +1407,7 @@ export default function AdminStore() {
             </div>
           </div>
         )}
-        
+
         {/* Image Editor Modal */}
         {showImageEditor && originalImage && (
           <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
@@ -1425,7 +1426,7 @@ export default function AdminStore() {
                   </svg>
                 </button>
               </div>
-              
+
               <div className="flex-1 overflow-hidden">
                 <ImageEditor
                   imageSrc={originalImage}
@@ -1442,13 +1443,13 @@ export default function AdminStore() {
 }
 
 // Sales Report Content Component
-const SalesReportContent = ({ 
-  salesData, 
-  salesStats, 
-  salesByItem, 
-  topBuyers, 
-  loading, 
-  onRefresh 
+const SalesReportContent = ({
+  salesData,
+  salesStats,
+  salesByItem,
+  topBuyers,
+  loading,
+  onRefresh
 }: {
   salesData: SalesData[];
   salesStats: SalesStatistics | null;
@@ -1545,7 +1546,7 @@ const SalesReportContent = ({
             Yenile
           </button>
         </div>
-        
+
         {salesByItem.length === 0 ? (
           <div className="text-center py-8">
             <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -1581,7 +1582,7 @@ const SalesReportContent = ({
       {/* Top Buyers */}
       <div className="bg-white rounded-2xl shadow-lg border border-slate-200/60 p-6">
         <h3 className="text-xl font-bold text-gray-900 mb-6">En Çok Alışveriş Yapan Öğrenciler</h3>
-        
+
         {topBuyers.length === 0 ? (
           <div className="text-center py-8">
             <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -1601,7 +1602,7 @@ const SalesReportContent = ({
                   </div>
                   <div>
                     <h4 className="font-semibold text-gray-900">
-                      {buyer.student?.firstName && buyer.student?.lastName 
+                      {buyer.student?.firstName && buyer.student?.lastName
                         ? `${buyer.student.firstName} ${buyer.student.lastName}`
                         : buyer.student?.username || 'Bilinmeyen Öğrenci'
                       }
@@ -1622,7 +1623,7 @@ const SalesReportContent = ({
       {/* Recent Sales */}
       <div className="bg-white rounded-2xl shadow-lg border border-slate-200/60 p-6">
         <h3 className="text-xl font-bold text-gray-900 mb-6">Son Satışlar</h3>
-        
+
         {salesData.length === 0 ? (
           <div className="text-center py-8">
             <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -1650,7 +1651,7 @@ const SalesReportContent = ({
                     <td className="py-3 px-4">
                       <div>
                         <p className="font-medium text-gray-900">
-                          {sale.student.firstName && sale.student.lastName 
+                          {sale.student.firstName && sale.student.lastName
                             ? `${sale.student.firstName} ${sale.student.lastName}`
                             : sale.student.username
                           }
@@ -1661,8 +1662,8 @@ const SalesReportContent = ({
                     <td className="py-3 px-4">
                       <div className="flex items-center space-x-3">
                         {sale.item.imageUrl && (
-                          <img 
-                            src={sale.item.imageUrl} 
+                          <img
+                            src={sale.item.imageUrl}
                             alt={sale.item.name}
                             className="w-10 h-10 rounded-lg object-cover"
                           />
@@ -1674,15 +1675,14 @@ const SalesReportContent = ({
                       </div>
                     </td>
                     <td className="py-3 px-4">
-                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                        sale.status === 'APPROVED' 
+                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${sale.status === 'APPROVED'
                           ? 'bg-green-100 text-green-800'
                           : sale.status === 'PENDING'
-                          ? 'bg-yellow-100 text-yellow-800'
-                          : 'bg-red-100 text-red-800'
-                      }`}>
-                        {sale.status === 'APPROVED' ? 'Onaylandı' : 
-                         sale.status === 'PENDING' ? 'Beklemede' : 'Reddedildi'}
+                            ? 'bg-yellow-100 text-yellow-800'
+                            : 'bg-red-100 text-red-800'
+                        }`}>
+                        {sale.status === 'APPROVED' ? 'Onaylandı' :
+                          sale.status === 'PENDING' ? 'Beklemede' : 'Reddedildi'}
                       </span>
                     </td>
                     <td className="py-3 px-4 font-medium text-gray-900">
@@ -1729,10 +1729,10 @@ const ImageEditor = ({ imageSrc, onSave, onCancel }: {
     const maxWidth = 500;
     const maxHeight = 400;
     const aspectRatio = img.width / img.height;
-    
+
     let canvasWidth = maxWidth;
     let canvasHeight = maxWidth / aspectRatio;
-    
+
     if (canvasHeight > maxHeight) {
       canvasHeight = maxHeight;
       canvasWidth = maxHeight * aspectRatio;
@@ -1811,7 +1811,7 @@ const ImageEditor = ({ imageSrc, onSave, onCancel }: {
             className="max-w-full max-h-96 border border-gray-200 rounded"
           />
         </div>
-        
+
         {/* Action Buttons */}
         <div className="flex space-x-4">
           <button

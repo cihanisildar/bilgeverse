@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -9,7 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import toast from 'react-hot-toast';
+import { useToast } from '@/app/hooks/use-toast';
 import { ArrowLeft, Clock, Download, Filter, Search } from 'lucide-react';
 
 // Types
@@ -41,6 +41,7 @@ type Student = {
 };
 
 export default function PointsHistoryPage() {
+  const toast = useToast();
   const router = useRouter();
   
   const [transactions, setTransactions] = useState<Transaction[]>([]);

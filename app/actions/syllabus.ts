@@ -14,9 +14,15 @@ export async function getSyllabi() {
       return { error: 'Yetkisiz erişim', data: null };
     }
 
-    // For tutors, only show their syllabi
+    // For tutors: show global syllabi + their own
+    // For admins: show all
     const where = session.user.role === UserRole.TUTOR
-      ? { createdById: session.user.id }
+      ? {
+        OR: [
+          { createdById: session.user.id },
+          { isGlobal: true },
+        ],
+      }
       : {}; // Admins can see all
 
     const syllabi = await prisma.syllabus.findMany({
@@ -54,7 +60,6 @@ export async function getSyllabi() {
         updatedAt: s.updatedAt.toISOString(),
         lessons: s.lessons.map((l) => ({
           ...l,
-          taughtDate: l.taughtDate ? l.taughtDate.toISOString() : null,
           createdAt: l.createdAt.toISOString(),
           updatedAt: l.updatedAt.toISOString(),
         })),
@@ -72,6 +77,8 @@ export async function getSyllabi() {
 
 export async function getSyllabus(syllabusId: string) {
   try {
+    const session = await getServerSession(authOptions);
+
     const syllabus = await prisma.syllabus.findUnique({
       where: { id: syllabusId },
       include: {
@@ -100,18 +107,45 @@ export async function getSyllabus(syllabusId: string) {
       return { error: 'Müfredat bulunamadı', data: null };
     }
 
+    // Get classroom progress if user is a tutor
+    let progressMap: { [lessonId: string]: any } = {};
+    if (session?.user) {
+      const userWithClassroom = await prisma.user.findUnique({
+        where: { id: session.user.id },
+        include: { classroom: true },
+      });
+
+      if (userWithClassroom?.classroom) {
+        const progress = await prisma.classroomLessonProgress.findMany({
+          where: {
+            classroomId: userWithClassroom.classroom.id,
+            syllabusId: syllabusId,
+          },
+        });
+
+        progress.forEach((p) => {
+          progressMap[p.lessonId] = p;
+        });
+      }
+    }
+
     return {
       error: null,
       data: {
         ...syllabus,
         createdAt: syllabus.createdAt.toISOString(),
         updatedAt: syllabus.updatedAt.toISOString(),
-        lessons: syllabus.lessons.map((l) => ({
-          ...l,
-          taughtDate: l.taughtDate ? l.taughtDate.toISOString() : null,
-          createdAt: l.createdAt.toISOString(),
-          updatedAt: l.updatedAt.toISOString(),
-        })),
+        lessons: syllabus.lessons.map((l) => {
+          const progress = progressMap[l.id];
+          return {
+            ...l,
+            isTaught: progress?.isTaught || false,
+            taughtDate: progress?.taughtDate ? progress.taughtDate.toISOString() : null,
+            notes: progress?.notes || null,
+            createdAt: l.createdAt.toISOString(),
+            updatedAt: l.updatedAt.toISOString(),
+          };
+        }),
         feedbackForms: syllabus.feedbackForms.map((f) => ({
           ...f,
           createdAt: f.createdAt.toISOString(),
@@ -162,7 +196,6 @@ export async function getSyllabusByShareToken(shareToken: string) {
         updatedAt: syllabus.updatedAt.toISOString(),
         lessons: syllabus.lessons.map((l) => ({
           ...l,
-          taughtDate: l.taughtDate ? l.taughtDate.toISOString() : null,
           createdAt: l.createdAt.toISOString(),
           updatedAt: l.updatedAt.toISOString(),
         })),
@@ -181,27 +214,33 @@ export async function getSyllabusByShareToken(shareToken: string) {
 export async function createSyllabus(data: {
   title: string;
   description?: string;
+  driveLink?: string;
+  isGlobal?: boolean;
   lessons: Array<{
     title: string;
     description?: string;
+    driveLink?: string;
   }>;
 }) {
   try {
     const session = await getServerSession(authOptions);
 
-    if (!session?.user || (session.user.role !== UserRole.ADMIN && session.user.role !== UserRole.TUTOR)) {
-      return { error: 'Yetkisiz erişim: Sadece öğretmenler ve yöneticiler müfredat oluşturabilir', data: null };
+    if (!session?.user || session.user.role !== UserRole.ADMIN) {
+      return { error: 'Yetkisiz erişim: Sadece yöneticiler müfredat oluşturabilir', data: null };
     }
 
     const syllabus = await prisma.syllabus.create({
       data: {
         title: data.title,
         description: data.description,
+        driveLink: data.driveLink,
+        isGlobal: session.user.role === UserRole.ADMIN ? (data.isGlobal ?? false) : false,
         createdById: session.user.id,
         lessons: {
           create: data.lessons.map((lesson, index) => ({
             title: lesson.title,
             description: lesson.description,
+            driveLink: lesson.driveLink,
             orderIndex: index,
           })),
         },
@@ -231,7 +270,6 @@ export async function createSyllabus(data: {
         updatedAt: syllabus.updatedAt.toISOString(),
         lessons: syllabus.lessons.map((l) => ({
           ...l,
-          taughtDate: l.taughtDate ? l.taughtDate.toISOString() : null,
           createdAt: l.createdAt.toISOString(),
           updatedAt: l.updatedAt.toISOString(),
         })),
@@ -283,7 +321,6 @@ export async function updateSyllabus(syllabusId: string, data: {
         updatedAt: syllabus.updatedAt.toISOString(),
         lessons: syllabus.lessons.map((l) => ({
           ...l,
-          taughtDate: l.taughtDate ? l.taughtDate.toISOString() : null,
           createdAt: l.createdAt.toISOString(),
           updatedAt: l.updatedAt.toISOString(),
         })),
@@ -339,29 +376,84 @@ export async function updateSyllabusLesson(lessonId: string, data: {
       return { error: 'Yetkisiz erişim', data: null };
     }
 
-    const updateData: any = { ...data };
+    // For lesson metadata (title, description), update the lesson directly
+    if (data.title !== undefined || data.description !== undefined) {
+      const lesson = await prisma.syllabusLesson.update({
+        where: { id: lessonId },
+        data: {
+          title: data.title,
+          description: data.description,
+        },
+      });
 
-    // If marking as taught, set the taught date
-    if (data.isTaught !== undefined && data.isTaught) {
-      updateData.taughtDate = new Date();
-    } else if (data.isTaught === false) {
-      updateData.taughtDate = null;
+      return {
+        error: null,
+        data: {
+          ...lesson,
+          createdAt: lesson.createdAt.toISOString(),
+          updatedAt: lesson.updatedAt.toISOString(),
+        },
+      };
     }
 
-    const lesson = await prisma.syllabusLesson.update({
-      where: { id: lessonId },
-      data: updateData,
-    });
+    // For progress tracking (isTaught, notes), use classroom-based progress
+    if (data.isTaught !== undefined || data.notes !== undefined) {
+      // Get the user's classroom
+      const userWithClassroom = await prisma.user.findUnique({
+        where: { id: session.user.id },
+        include: { classroom: true },
+      });
 
-    return {
-      error: null,
-      data: {
-        ...lesson,
-        taughtDate: lesson.taughtDate ? lesson.taughtDate.toISOString() : null,
-        createdAt: lesson.createdAt.toISOString(),
-        updatedAt: lesson.updatedAt.toISOString(),
-      },
-    };
+      if (!userWithClassroom?.classroom) {
+        return { error: 'Sınıf bulunamadı', data: null };
+      }
+
+      // Get the lesson to find syllabusId
+      const lesson = await prisma.syllabusLesson.findUnique({
+        where: { id: lessonId },
+      });
+
+      if (!lesson) {
+        return { error: 'Ders bulunamadı', data: null };
+      }
+
+      // Update classroom progress
+      const progress = await prisma.classroomLessonProgress.upsert({
+        where: {
+          classroomId_lessonId: {
+            classroomId: userWithClassroom.classroom.id,
+            lessonId: lessonId,
+          },
+        },
+        update: {
+          isTaught: data.isTaught ?? undefined,
+          taughtDate: data.isTaught ? new Date() : data.isTaught === false ? null : undefined,
+          notes: data.notes,
+        },
+        create: {
+          classroomId: userWithClassroom.classroom.id,
+          syllabusId: lesson.syllabusId,
+          lessonId: lessonId,
+          isTaught: data.isTaught ?? false,
+          taughtDate: data.isTaught ? new Date() : null,
+          notes: data.notes,
+        },
+      });
+
+      return {
+        error: null,
+        data: {
+          ...lesson,
+          isTaught: progress.isTaught,
+          taughtDate: progress.taughtDate ? progress.taughtDate.toISOString() : null,
+          notes: progress.notes,
+          createdAt: lesson.createdAt.toISOString(),
+          updatedAt: lesson.updatedAt.toISOString(),
+        },
+      };
+    }
+
+    return { error: 'Güncellenecek veri yok', data: null };
   } catch (error) {
     console.error('Error updating lesson:', error);
     return { error: 'Ders güncellenirken bir hata oluştu', data: null };
@@ -371,6 +463,7 @@ export async function updateSyllabusLesson(lessonId: string, data: {
 export async function addLessonToSyllabus(syllabusId: string, data: {
   title: string;
   description?: string;
+  driveLink?: string;
 }) {
   try {
     const session = await getServerSession(authOptions);
@@ -392,6 +485,7 @@ export async function addLessonToSyllabus(syllabusId: string, data: {
         syllabusId,
         title: data.title,
         description: data.description,
+        driveLink: data.driveLink,
         orderIndex,
       },
     });
@@ -400,7 +494,6 @@ export async function addLessonToSyllabus(syllabusId: string, data: {
       error: null,
       data: {
         ...lesson,
-        taughtDate: lesson.taughtDate ? lesson.taughtDate.toISOString() : null,
         createdAt: lesson.createdAt.toISOString(),
         updatedAt: lesson.updatedAt.toISOString(),
       },
@@ -494,5 +587,144 @@ export async function submitParentFeedback(data: {
   } catch (error) {
     console.error('Error submitting feedback:', error);
     return { error: 'Geri bildirim gönderilirken bir hata oluştu', data: null };
+  }
+}
+
+// ===== CLASSROOM LESSON PROGRESS (NEW) =====
+
+export async function getClassroomLessonProgress(classroomId: string, syllabusId: string) {
+  try {
+    const session = await getServerSession(authOptions);
+
+    if (!session?.user || (session.user.role !== UserRole.ADMIN && session.user.role !== UserRole.TUTOR)) {
+      return { error: 'Yetkisiz erişim', data: null };
+    }
+
+    const progress = await prisma.classroomLessonProgress.findMany({
+      where: {
+        classroomId,
+        syllabusId,
+      },
+      include: {
+        lesson: true,
+      },
+    });
+
+    return {
+      error: null,
+      data: progress.map(p => ({
+        ...p,
+        taughtDate: p.taughtDate ? p.taughtDate.toISOString() : null,
+        createdAt: p.createdAt.toISOString(),
+        updatedAt: p.updatedAt.toISOString(),
+        lesson: {
+          ...p.lesson,
+          createdAt: p.lesson.createdAt.toISOString(),
+          updatedAt: p.lesson.updatedAt.toISOString(),
+        },
+      })),
+    };
+  } catch (error) {
+    console.error('Error fetching classroom lesson progress:', error);
+    return { error: 'İlerleme verisi yüklenirken bir hata oluştu', data: null };
+  }
+}
+
+export async function updateClassroomLessonProgress(data: {
+  classroomId: string;
+  syllabusId: string;
+  lessonId: string;
+  isTaught: boolean;
+  notes?: string;
+}) {
+  try {
+    const session = await getServerSession(authOptions);
+
+    if (!session?.user || (session.user.role !== UserRole.ADMIN && session.user.role !== UserRole.TUTOR)) {
+      return { error: 'Yetkisiz erişim', data: null };
+    }
+
+    // Verify the user has access to this classroom
+    if (session.user.role === UserRole.TUTOR) {
+      const classroom = await prisma.classroom.findUnique({
+        where: { id: data.classroomId },
+      });
+
+      if (!classroom || classroom.tutorId !== session.user.id) {
+        return { error: 'Bu sınıfa erişim yetkiniz yok', data: null };
+      }
+    }
+
+    const progress = await prisma.classroomLessonProgress.upsert({
+      where: {
+        classroomId_lessonId: {
+          classroomId: data.classroomId,
+          lessonId: data.lessonId,
+        },
+      },
+      update: {
+        isTaught: data.isTaught,
+        taughtDate: data.isTaught ? new Date() : null,
+        notes: data.notes,
+      },
+      create: {
+        classroomId: data.classroomId,
+        syllabusId: data.syllabusId,
+        lessonId: data.lessonId,
+        isTaught: data.isTaught,
+        taughtDate: data.isTaught ? new Date() : null,
+        notes: data.notes,
+      },
+    });
+
+    return {
+      error: null,
+      data: {
+        ...progress,
+        taughtDate: progress.taughtDate ? progress.taughtDate.toISOString() : null,
+        createdAt: progress.createdAt.toISOString(),
+        updatedAt: progress.updatedAt.toISOString(),
+      },
+    };
+  } catch (error) {
+    console.error('Error updating classroom lesson progress:', error);
+    return { error: 'İlerleme güncellenirken bir hata oluştu', data: null };
+  }
+}
+
+export async function toggleGlobalStatus(syllabusId: string) {
+  try {
+    const session = await getServerSession(authOptions);
+
+    if (!session?.user || session.user.role !== UserRole.ADMIN) {
+      return { error: 'Sadece yöneticiler müfredatı global yapabilir', data: null };
+    }
+
+    const currentSyllabus = await prisma.syllabus.findUnique({
+      where: { id: syllabusId },
+    });
+
+    if (!currentSyllabus) {
+      return { error: 'Müfredat bulunamadı', data: null };
+    }
+
+    const updated = await prisma.syllabus.update({
+      where: { id: syllabusId },
+      data: {
+        isGlobal: !currentSyllabus.isGlobal,
+      },
+    });
+
+    return {
+      error: null,
+      data: {
+        ...updated,
+        createdAt: updated.createdAt.toISOString(),
+        updatedAt: updated.updatedAt.toISOString(),
+      },
+    };
+  } catch (error) {
+    console.error('Error toggling global status:', error);
+    return { error: 'Global durum değiştirilirken bir hata oluştu', data: null };
   }
 }

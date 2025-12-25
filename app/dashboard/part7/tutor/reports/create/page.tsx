@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -7,9 +7,10 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { ChevronLeft } from 'lucide-react';
-import toast from 'react-hot-toast';
+import { useToast } from '@/app/hooks/use-toast';
 
 export default function CreateReportPage() {
+  const toast = useToast();
   const router = useRouter();
   const searchParams = useSearchParams();
   const studentId = searchParams.get('studentId');

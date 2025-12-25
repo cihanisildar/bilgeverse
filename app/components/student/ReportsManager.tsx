@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Edit2, FileText, Plus, Trash2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import toast from 'react-hot-toast';
+import { useToast } from '@/app/hooks/use-toast';
 
 type Report = {
   id: string;
@@ -27,6 +27,7 @@ type ReportsManagerProps = {
 };
 
 export default function ReportsManager({ studentId }: ReportsManagerProps) {
+  const toast = useToast();
   const [reports, setReports] = useState<Report[]>([]);
   const [loading, setLoading] = useState(true);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
@@ -63,13 +64,13 @@ export default function ReportsManager({ studentId }: ReportsManagerProps) {
       });
 
       if (!response.ok) throw new Error('Failed to create report');
-      
+
       const data = await response.json();
       setReports([data.report, ...reports]);
       setIsCreateDialogOpen(false);
       setReportTitle('');
       setReportContent('');
-      
+
       toast.success('Report created successfully');
     } catch (error) {
       toast.error('Failed to create report. Please try again.');
@@ -91,14 +92,14 @@ export default function ReportsManager({ studentId }: ReportsManagerProps) {
       });
 
       if (!response.ok) throw new Error('Failed to update report');
-      
+
       const data = await response.json();
       setReports(reports.map(report => report.id === selectedReport.id ? data.report : report));
       setIsEditDialogOpen(false);
       setSelectedReport(null);
       setReportTitle('');
       setReportContent('');
-      
+
       toast.success('Report updated successfully');
     } catch (error) {
       toast.error('Failed to update report. Please try again.');
@@ -119,9 +120,9 @@ export default function ReportsManager({ studentId }: ReportsManagerProps) {
       });
 
       if (!response.ok) throw new Error('Failed to delete report');
-      
+
       setReports(reports.filter(report => report.id !== reportToDelete));
-      
+
       toast.success('Report deleted successfully');
     } catch (error) {
       toast.error('Failed to delete report. Please try again.');

@@ -129,7 +129,7 @@ export default function MeetingDetailPage() {
     const result = await generateQR.mutateAsync(meetingId);
     if (!result.error && result.data) {
       const baseUrl = getBaseUrl();
-      const qrData = `${baseUrl}/dashboard/part1/meetings/${meetingId}/check-in`;
+      const qrData = `${baseUrl}/check-in/meeting/${meetingId}`;
       const url = await QRCode.toDataURL(qrData, {
         errorCorrectionLevel: 'M',
         margin: 1,
@@ -394,7 +394,7 @@ export default function MeetingDetailPage() {
                 {!isCheckedIn && meeting.status !== 'COMPLETED' && meeting.status !== 'CANCELLED' && (
                   <Button
                     className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white shadow-lg shadow-indigo-500/50 transition-all duration-200 hover:shadow-xl"
-                    onClick={() => router.push(`/dashboard/part1/meetings/${meetingId}/check-in`)}
+                    onClick={() => router.push(`/check-in/meeting/${meetingId}`)}
                     disabled={!meeting.qrCodeToken || (meeting.qrCodeExpiresAt ? new Date(meeting.qrCodeExpiresAt) < new Date() : false)}
                     title={!meeting.qrCodeToken ? 'QR kod henüz oluşturulmadı' : (meeting.qrCodeExpiresAt && new Date(meeting.qrCodeExpiresAt) < new Date() ? 'QR kod süresi dolmuş' : '')}
                   >

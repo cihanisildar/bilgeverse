@@ -1,11 +1,11 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useState } from "react";
 import { useAuth } from "@/app/contexts/AuthContext";
 import { useRouter } from "next/navigation";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card } from "@/components/ui/card";
-import toast from 'react-hot-toast';
+import { useToast } from '@/app/hooks/use-toast';
 
 // Types
 interface User {
@@ -45,6 +45,7 @@ type RollbackForm = {
 };
 
 export default function AdminTransactionRollbackPage() {
+  const toast = useToast();
   const { user, isAdmin } = useAuth();
   const router = useRouter();
   const [points, setPoints] = useState<PointTransaction[]>([]);

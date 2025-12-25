@@ -43,17 +43,23 @@ export default async function SyllabusPage() {
                 Müfredat Yönetimi
               </span>
             </h1>
-            <p className="text-gray-600">Müfredat oluşturun, düzenleyin ve velilerle paylaşın</p>
+            <p className="text-gray-600">
+              {isAdmin
+                ? 'Global müfredat oluşturun ve tüm öğretmenlerle paylaşın'
+                : 'Müfredatları görüntüleyin ve sınıfınız için ilerleme kaydedin'}
+            </p>
           </div>
-          <Link href="/dashboard/part2/syllabus/new">
-            <Button className="bg-gradient-to-r from-cyan-600 to-teal-600 hover:from-cyan-700 hover:to-teal-700 text-white">
-              <Plus className="h-4 w-4 mr-2" />
-              Yeni Müfredat Oluştur
-            </Button>
-          </Link>
+          {isAdmin && (
+            <Link href="/dashboard/part2/syllabus/new">
+              <Button className="bg-gradient-to-r from-cyan-600 to-teal-600 hover:from-cyan-700 hover:to-teal-700 text-white">
+                <Plus className="h-4 w-4 mr-2" />
+                Yeni Müfredat Oluştur
+              </Button>
+            </Link>
+          )}
         </div>
 
-        <SyllabusList syllabi={syllabi} />
+        <SyllabusList syllabi={syllabi} isAdmin={isAdmin} />
       </div>
     </div>
   );

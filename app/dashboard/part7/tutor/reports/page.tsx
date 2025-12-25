@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import OverallStatsReport from '@/app/components/OverallStatsReport';
 import { useAuth } from '@/app/contexts/AuthContext';
@@ -25,7 +25,7 @@ import {
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import toast from 'react-hot-toast';
+import { useToast } from '@/app/hooks/use-toast';
 
 type Student = {
   id: string;
@@ -44,6 +44,7 @@ type Classroom = {
 };
 
 export default function TutorReportsPage() {
+  const toast = useToast();
   const { user } = useAuth();
   const router = useRouter();
   const [students, setStudents] = useState<Student[]>([]);

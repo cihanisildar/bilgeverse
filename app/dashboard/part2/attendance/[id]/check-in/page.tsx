@@ -8,9 +8,10 @@ import { ArrowLeft, CheckCircle2, QrCode } from 'lucide-react';
 import { useAttendanceSession, useCheckInToSession } from '@/app/hooks/use-attendance-sessions';
 import QRScanner from '@/app/components/QRScanner';
 import { useState, useEffect } from 'react';
-import toast from 'react-hot-toast';
+import { useToast } from '@/app/hooks/use-toast';
 
 export default function CheckInPage() {
+  const toast = useToast();
   const router = useRouter();
   const params = useParams();
   const sessionId = params.id as string;
@@ -66,7 +67,7 @@ export default function CheckInPage() {
     if (scannedSessionId === sessionId) {
       await handleCheckIn();
     } else {
-      router.push(`/dashboard/part2/attendance/${scannedSessionId}/check-in`);
+      router.push(`/check-in/attendance/${scannedSessionId}`);
     }
   };
 

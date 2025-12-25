@@ -5,7 +5,7 @@ import { PARTS } from '@/app/lib/parts';
 import { FileText, ExternalLink, ArrowLeft, Plus, Edit2, Trash2, Loader2, Link2, Power } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import toast from 'react-hot-toast';
+import { useToast } from '@/app/hooks/use-toast';
 import Loading from '@/app/components/Loading';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -45,6 +45,7 @@ type PartPdf = {
 };
 
 export default function PdfsPage() {
+  const toast = useToast();
   const { user, loading: authLoading, isAdmin } = useAuth();
   const router = useRouter();
   const [pdfs, setPdfs] = useState<Record<number, PartPdf[]>>({});

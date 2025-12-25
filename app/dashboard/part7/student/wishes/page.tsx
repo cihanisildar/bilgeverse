@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '@/app/contexts/AuthContext';
@@ -15,6 +15,7 @@ type Wish = {
 };
 
 export default function StudentWishes() {
+
   const { user } = useAuth();
   const [wishes, setWishes] = useState<Wish[]>([]);
   const [loading, setLoading] = useState(true);
@@ -53,7 +54,7 @@ export default function StudentWishes() {
         );
       });
     }
-    
+
     previousWishesRef.current = wishes;
   }, [wishes]);
 
@@ -148,10 +149,10 @@ export default function StudentWishes() {
             İstek ve Dileklerim
           </h1>
           <p className="text-lg text-gray-600 max-w-2xl mx-auto leading-relaxed">
-            Yöneticilere iletmek istediğiniz istek ve dileklerinizi buradan gönderebilir, 
+            Yöneticilere iletmek istediğiniz istek ve dileklerinizi buradan gönderebilir,
             tüm taleplerinizi kolayca takip edebilirsiniz.
           </p>
-          
+
           {/* Statistics */}
           <div className="flex justify-center gap-6 mt-8">
             <div className="bg-white/80 backdrop-blur-sm rounded-xl border border-white/20 shadow-lg px-6 py-3">
@@ -215,8 +216,8 @@ export default function StudentWishes() {
           ) : (
             <div className="space-y-4">
               {wishes.map((wish, index) => (
-                <div 
-                  key={wish.id} 
+                <div
+                  key={wish.id}
                   className="bg-white/80 backdrop-blur-sm rounded-2xl border border-white/20 shadow-lg hover:shadow-xl transition-all duration-300 p-6 group animate-fade-in"
                   style={{ animationDelay: `${index * 100}ms` }}
                 >
@@ -264,7 +265,7 @@ export default function StudentWishes() {
                   <div className="bg-gray-50 rounded-xl p-4 border-l-4 border-purple-400">
                     <p className="text-gray-700 leading-relaxed">{wish.description}</p>
                   </div>
-                  
+
                   {/* Response Section */}
                   {wish.response && (
                     <div className="mt-4 bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl p-4 border border-green-200">
@@ -323,7 +324,7 @@ export default function StudentWishes() {
                 </svg>
               </button>
             </div>
-            
+
             <form onSubmit={handleSubmit} className="space-y-6">
               <div className="group">
                 <label htmlFor="title" className="block text-sm font-semibold text-gray-700 mb-2 group-focus-within:text-blue-600 transition-colors">
@@ -344,7 +345,7 @@ export default function StudentWishes() {
                   required
                 />
               </div>
-              
+
               <div className="group">
                 <label htmlFor="description" className="block text-sm font-semibold text-gray-700 mb-2 group-focus-within:text-blue-600 transition-colors">
                   <div className="flex items-center gap-2">
@@ -364,7 +365,7 @@ export default function StudentWishes() {
                   required
                 />
               </div>
-              
+
               <div className="flex justify-end space-x-3 pt-4">
                 <button
                   type="button"
@@ -404,7 +405,7 @@ export default function StudentWishes() {
           </div>
         </div>
       )}
-      
+
       <style jsx>{`
         @keyframes fade-in {
           from {

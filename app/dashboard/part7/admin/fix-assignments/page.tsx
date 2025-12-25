@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useAuth } from '@/app/contexts/AuthContext';
 import { Badge } from '@/components/ui/badge';
@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { CheckCircle, RefreshCw, Users, AlertTriangle } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import toast from 'react-hot-toast';
+import { useToast } from '@/app/hooks/use-toast';
 
 type StudentIssue = {
   id: string;
@@ -24,6 +24,7 @@ type StudentIssue = {
 };
 
 export default function FixAssignmentsPage() {
+  const toast = useToast();
   const { user } = useAuth();
   const router = useRouter();
   const [studentsWithIssues, setStudentsWithIssues] = useState<StudentIssue[]>([]);

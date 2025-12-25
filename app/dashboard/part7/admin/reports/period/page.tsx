@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -23,7 +23,7 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
-import toast from 'react-hot-toast';
+import { useToast } from '@/app/hooks/use-toast';
 
 type PeriodReportData = {
   metadata: {
@@ -115,6 +115,7 @@ type PeriodReportData = {
 };
 
 export default function PeriodReportPage() {
+  const toast = useToast();
   const [report, setReport] = useState<PeriodReportData | null>(null);
   const [loading, setLoading] = useState(true);
   const [dateRange, setDateRange] = useState({

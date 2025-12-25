@@ -1,6 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -10,11 +7,741 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+model EventType {
+  id          String   @id @default(uuid())
+  name        String   @unique
+  description String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  events      Event[]  @relation("EventTypeEvents")
+}
+
+model Period {
+  id                     String                  @id @default(uuid())
+  name                   String                  @unique
+  description            String?
+  startDate              DateTime
+  endDate                DateTime?
+  status                 PeriodStatus            @default(INACTIVE)
+  createdAt              DateTime                @default(now())
+  updatedAt              DateTime                @updatedAt
+  totalWeeks             Int                     @default(8)
+  announcements          Announcement[]          @relation("PeriodAnnouncements")
+  events                 Event[]                 @relation("PeriodEvents")
+  experienceTransactions ExperienceTransaction[] @relation("PeriodExperienceTransactions")
+  itemRequests           ItemRequest[]           @relation("PeriodItemRequests")
+  pointsTransactions     PointsTransaction[]     @relation("PeriodPointsTransactions")
+  studentNotes           StudentNote[]           @relation("PeriodStudentNotes")
+  studentReports         StudentReport[]         @relation("PeriodStudentReports")
+  rollbacks              TransactionRollback[]   @relation("PeriodRollbacks")
+  weeklyReports          WeeklyReport[]          @relation("PeriodWeeklyReports")
+  wishes                 Wish[]                  @relation("PeriodWishes")
+
+  @@index([status])
+}
+
+model User {
+  id                            String                    @id @default(cuid())
+  username                      String                    @unique
+  email                         String                    @unique
+  password                      String
+  role                          UserRole
+  points                        Int                       @default(0)
+  firstName                     String?
+  lastName                      String?
+  createdAt                     DateTime                  @default(now())
+  updatedAt                     DateTime                  @updatedAt
+  avatarUrl                     String?
+  experience                    Int                       @default(0)
+  bio                           String?
+  phone                         String?
+  preferences                   Json?
+  specialization                String?
+  tutorId                       String?
+  studentClassroomId            String?
+  assistedTutorId               String?
+  isActive                      Boolean                   @default(true)
+  statusChangedAt               DateTime?
+  statusChangedBy               String?
+  absenceNotificationsAsStudent AbsenceNotification[]     @relation("StudentAbsenceNotifications")
+  absenceNotificationsAsTutor   AbsenceNotification[]     @relation("TutorAbsenceNotifications")
+  createdAnnouncements          Announcement[]            @relation("AdminAnnouncements")
+  createdSessions               AttendanceSession[]       @relation("SessionCreator")
+  boardMember                   BoardMember?              @relation("BoardMemberUser")
+  classroom                     Classroom?                @relation("ClassroomTutor")
+  responsibleDecisions          DecisionResponsibleUser[] @relation("DecisionResponsible")
+  createdEvents                 Event[]                   @relation("EventCreator")
+  eventsForTutor                Event[]                   @relation("TutorEvents")
+  eventParticipations           EventParticipant[]        @relation("UserParticipations")
+  experienceReceived            ExperienceTransaction[]   @relation("StudentExperience")
+  experienceGiven               ExperienceTransaction[]   @relation("TutorExperience")
+  studentRequests               ItemRequest[]             @relation("StudentRequests")
+  tutorApprovals                ItemRequest[]             @relation("TutorApprovals")
+  createdMeetings               ManagerMeeting[]          @relation("MeetingCreator")
+  meetingAttendances            MeetingAttendance[]       @relation("UserAttendances")
+  notifications                 Notification[]            @relation("UserNotifications")
+  createdPart2Events            Part2Event[]              @relation("Part2EventCreator")
+  part2EventParticipations      Part2EventParticipant[]   @relation("Part2EventParticipations")
+  uploadedPdfs                  PartPdf[]                 @relation("UploadedPdfs")
+  createdCards                  PointEarningCard[]        @relation("AdminCards")
+  createdReasons                PointReason[]             @relation("AdminReasons")
+  studentPoints                 PointsTransaction[]       @relation("StudentPoints")
+  tutorPoints                   PointsTransaction[]       @relation("TutorPoints")
+  processedRegistrations        RegistrationRequest[]
+  studentAttendances            StudentAttendance[]       @relation("StudentAttendances")
+  studentNotes                  StudentNote[]             @relation("StudentNotes")
+  tutorNotes                    StudentNote[]             @relation("TutorNotes")
+  studentReports                StudentReport[]           @relation("StudentReports")
+  tutorReports                  StudentReport[]           @relation("TutorReports")
+  createdSyllabi                Syllabus[]                @relation("TutorSyllabi")
+  rollbacksAsAdmin              TransactionRollback[]     @relation("RollbackAdmin")
+  rollbacksAsStudent            TransactionRollback[]     @relation("RollbackStudent")
+  assistedTutor                 User?                     @relation("AsistanTutor", fields: [assistedTutorId], references: [id])
+  asistans                      User[]                    @relation("AsistanTutor")
+  classroomStudents             Classroom?                @relation("ClassroomStudents", fields: [studentClassroomId], references: [id])
+  tutor                         User?                     @relation("TutorStudents", fields: [tutorId], references: [id])
+  students                      User[]                    @relation("TutorStudents")
+  reviewedReports               WeeklyReport[]            @relation("AdminReviewedReports")
+  weeklyReports                 WeeklyReport[]            @relation("UserWeeklyReports")
+  createdQuestions              WeeklyReportQuestion[]    @relation("AdminQuestions")
+  wishes                        Wish[]                    @relation("StudentWishes")
+
+  @@index([tutorId])
+}
+
+model Classroom {
+  id             String                    @id @default(uuid())
+  name           String                    @default("Sınıf")
+  description    String?                   @default("Öğretmen ve öğrencileri")
+  createdAt      DateTime                  @default(now())
+  updatedAt      DateTime                  @updatedAt
+  tutorId        String                    @unique
+  tutor          User                      @relation("ClassroomTutor", fields: [tutorId], references: [id])
+  students       User[]                    @relation("ClassroomStudents")
+  lessonProgress ClassroomLessonProgress[] @relation("ClassroomLessonProgress")
+}
+
+model Event {
+  id                String             @id @default(uuid())
+  title             String
+  description       String
+  startDateTime     DateTime
+  endDateTime       DateTime?
+  location          String             @default("Online")
+  capacity          Int                @default(20)
+  points            Int                @default(0)
+  tags              String[]
+  status            EventStatus        @default(YAKINDA)
+  eventScope        EventScope         @default(GROUP)
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+  createdById       String
+  createdForTutorId String?
+  experience        Int                @default(0)
+  periodId          String
+  customName        String?
+  eventTypeId       String
+  createdBy         User               @relation("EventCreator", fields: [createdById], references: [id])
+  createdForTutor   User?              @relation("TutorEvents", fields: [createdForTutorId], references: [id])
+  eventType         EventType          @relation("EventTypeEvents", fields: [eventTypeId], references: [id])
+  period            Period             @relation("PeriodEvents", fields: [periodId], references: [id])
+  participants      EventParticipant[] @relation("EventParticipations")
+
+  @@index([periodId])
+}
+
+model EventParticipant {
+  id           String            @id @default(uuid())
+  status       ParticipantStatus @default(REGISTERED)
+  registeredAt DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+  eventId      String
+  userId       String
+  event        Event             @relation("EventParticipations", fields: [eventId], references: [id], onDelete: Cascade)
+  user         User              @relation("UserParticipations", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([eventId, userId])
+}
+
+model StoreItem {
+  id             String        @id @default(uuid())
+  name           String        @unique
+  description    String
+  pointsRequired Int
+  imageUrl       String?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+  itemRequests   ItemRequest[]
+}
+
+model RegistrationRequest {
+  id              String        @id @default(uuid())
+  username        String
+  email           String
+  password        String
+  firstName       String?
+  lastName        String?
+  requestedRole   UserRole      @default(STUDENT)
+  status          RequestStatus @default(PENDING)
+  rejectionReason String?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  processedById   String?
+  processedBy     User?         @relation(fields: [processedById], references: [id])
+}
+
+model ItemRequest {
+  id          String        @id @default(uuid())
+  status      RequestStatus @default(PENDING)
+  pointsSpent Int
+  note        String?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  studentId   String
+  tutorId     String
+  itemId      String
+  periodId    String
+  item        StoreItem     @relation(fields: [itemId], references: [id])
+  period      Period        @relation("PeriodItemRequests", fields: [periodId], references: [id])
+  student     User          @relation("StudentRequests", fields: [studentId], references: [id])
+  tutor       User          @relation("TutorApprovals", fields: [tutorId], references: [id])
+
+  @@index([periodId])
+}
+
+model PointsTransaction {
+  id            String          @id @default(uuid())
+  points        Int
+  type          TransactionType
+  reason        String?
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+  studentId     String
+  tutorId       String
+  pointReasonId String?
+  rolledBack    Boolean         @default(false)
+  periodId      String
+  period        Period          @relation("PeriodPointsTransactions", fields: [periodId], references: [id])
+  pointReason   PointReason?    @relation("ReasonTransactions", fields: [pointReasonId], references: [id])
+  student       User            @relation("StudentPoints", fields: [studentId], references: [id])
+  tutor         User            @relation("TutorPoints", fields: [tutorId], references: [id])
+
+  @@index([periodId])
+}
+
+model ExperienceTransaction {
+  id         String   @id @default(uuid())
+  amount     Int
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  studentId  String
+  tutorId    String
+  rolledBack Boolean  @default(false)
+  periodId   String
+  period     Period   @relation("PeriodExperienceTransactions", fields: [periodId], references: [id])
+  student    User     @relation("StudentExperience", fields: [studentId], references: [id])
+  tutor      User     @relation("TutorExperience", fields: [tutorId], references: [id])
+
+  @@index([periodId])
+}
+
+model Wish {
+  id          String    @id @default(uuid())
+  title       String
+  description String
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  studentId   String
+  respondedAt DateTime?
+  respondedBy String?
+  response    String?
+  periodId    String
+  period      Period    @relation("PeriodWishes", fields: [periodId], references: [id])
+  student     User      @relation("StudentWishes", fields: [studentId], references: [id])
+
+  @@index([periodId])
+}
+
+model StudentNote {
+  id        String   @id @default(cuid())
+  content   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  studentId String
+  tutorId   String
+  periodId  String
+  period    Period   @relation("PeriodStudentNotes", fields: [periodId], references: [id])
+  student   User     @relation("StudentNotes", fields: [studentId], references: [id])
+  tutor     User     @relation("TutorNotes", fields: [tutorId], references: [id])
+
+  @@index([studentId])
+  @@index([tutorId])
+  @@index([periodId])
+}
+
+model StudentReport {
+  id        String   @id @default(cuid())
+  title     String
+  content   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  studentId String
+  tutorId   String
+  periodId  String
+  period    Period   @relation("PeriodStudentReports", fields: [periodId], references: [id])
+  student   User     @relation("StudentReports", fields: [studentId], references: [id])
+  tutor     User     @relation("TutorReports", fields: [tutorId], references: [id])
+
+  @@index([studentId])
+  @@index([tutorId])
+  @@index([periodId])
+}
+
+model PointEarningCard {
+  id          String   @id @default(uuid())
+  title       String
+  description String
+  points      Int
+  icon        String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  isActive    Boolean  @default(true)
+  createdById String
+  maxPoints   Int?
+  minPoints   Int?
+  createdBy   User     @relation("AdminCards", fields: [createdById], references: [id])
+}
+
+model PointReason {
+  id           String              @id @default(uuid())
+  name         String              @unique
+  description  String?
+  isActive     Boolean             @default(true)
+  createdAt    DateTime            @default(now())
+  updatedAt    DateTime            @updatedAt
+  createdById  String
+  createdBy    User                @relation("AdminReasons", fields: [createdById], references: [id])
+  transactions PointsTransaction[] @relation("ReasonTransactions")
+}
+
+model Announcement {
+  id          String   @id @default(uuid())
+  title       String
+  content     String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  createdById String
+  periodId    String
+  createdBy   User     @relation("AdminAnnouncements", fields: [createdById], references: [id])
+  period      Period   @relation("PeriodAnnouncements", fields: [periodId], references: [id])
+
+  @@index([periodId])
+}
+
+model TransactionRollback {
+  id              String   @id @default(uuid())
+  transactionId   String
+  transactionType String
+  studentId       String
+  adminId         String
+  reason          String
+  createdAt       DateTime @default(now())
+  periodId        String
+  admin           User     @relation("RollbackAdmin", fields: [adminId], references: [id])
+  period          Period   @relation("PeriodRollbacks", fields: [periodId], references: [id])
+  student         User     @relation("RollbackStudent", fields: [studentId], references: [id])
+
+  @@index([periodId])
+}
+
+model WeeklyReport {
+  id                String                         @id @default(uuid())
+  weekNumber        Int
+  status            WeeklyReportStatus             @default(DRAFT)
+  submissionDate    DateTime?
+  reviewDate        DateTime?
+  reviewNotes       String?
+  createdAt         DateTime                       @default(now())
+  updatedAt         DateTime                       @updatedAt
+  periodId          String
+  userId            String
+  reviewedById      String?
+  comments          String?
+  pointsAwarded     Int                            @default(0)
+  period            Period                         @relation("PeriodWeeklyReports", fields: [periodId], references: [id])
+  reviewedBy        User?                          @relation("AdminReviewedReports", fields: [reviewedById], references: [id])
+  user              User                           @relation("UserWeeklyReports", fields: [userId], references: [id])
+  fixedCriteria     WeeklyReportFixedCriteria?
+  questionResponses WeeklyReportQuestionResponse[]
+  variableCriteria  WeeklyReportVariableCriteria?
+
+  @@unique([userId, periodId, weekNumber])
+  @@index([periodId])
+  @@index([userId])
+  @@index([weekNumber])
+}
+
+model WeeklyReportFixedCriteria {
+  id                         String            @id @default(uuid())
+  reportId                   String            @unique
+  weeklyMeeting              AttendanceStatus?
+  groupMeeting               AttendanceStatus?
+  calledAbsentStudents       AttendanceStatus?
+  curriculumEducation        AttendanceStatus?
+  groupActivity              AttendanceStatus?
+  individualAttention        AttendanceStatus?
+  weeklyMeetingAsistan       AttendanceStatus?
+  groupMeetingAsistan        AttendanceStatus?
+  informationMessages        AttendanceStatus?
+  bilgeverseDataEntry        AttendanceStatus?
+  groupActivityAsistan       AttendanceStatus?
+  individualAttentionAsistan AttendanceStatus?
+  workshopParticipation      AttendanceStatus?
+  report                     WeeklyReport      @relation(fields: [reportId], references: [id], onDelete: Cascade)
+}
+
+model WeeklyReportVariableCriteria {
+  id                      String            @id @default(uuid())
+  reportId                String            @unique
+  internalTraining        AttendanceStatus?
+  jointActivityLeadership AttendanceStatus?
+  originalActivity        AttendanceStatus?
+  parentMeeting           AttendanceStatus?
+  report                  WeeklyReport      @relation(fields: [reportId], references: [id], onDelete: Cascade)
+}
+
+model WeeklyReportQuestion {
+  id          String                         @id @default(uuid())
+  text        String
+  type        QuestionType
+  targetRole  UserRole
+  orderIndex  Int
+  isActive    Boolean                        @default(true)
+  createdAt   DateTime                       @default(now())
+  updatedAt   DateTime                       @updatedAt
+  createdById String
+  createdBy   User                           @relation("AdminQuestions", fields: [createdById], references: [id])
+  responses   WeeklyReportQuestionResponse[]
+
+  @@index([type, targetRole, isActive])
+  @@index([orderIndex])
+}
+
+model WeeklyReportQuestionResponse {
+  id         String               @id @default(uuid())
+  response   AttendanceStatus
+  createdAt  DateTime             @default(now())
+  updatedAt  DateTime             @updatedAt
+  questionId String
+  reportId   String
+  question   WeeklyReportQuestion @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  report     WeeklyReport         @relation(fields: [reportId], references: [id], onDelete: Cascade)
+
+  @@unique([questionId, reportId])
+  @@index([reportId])
+}
+
+model PartPdf {
+  id           String   @id @default(uuid())
+  partId       Int
+  title        String
+  description  String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  uploadedById String
+  driveLink    String
+  isActive     Boolean  @default(true)
+  contentType  String?
+  uploadedBy   User     @relation("UploadedPdfs", fields: [uploadedById], references: [id])
+
+  @@index([partId])
+  @@index([uploadedById])
+}
+
+model ManagerMeeting {
+  id                  String              @id @default(uuid())
+  title               String
+  description         String?
+  meetingDate         DateTime
+  location            String
+  status              MeetingStatus       @default(PLANNED)
+  qrCodeToken         String?             @unique
+  qrCodeExpiresAt     DateTime?
+  createdAt           DateTime            @default(now())
+  updatedAt           DateTime            @updatedAt
+  createdById         String
+  allowGuestAttendees Boolean             @default(false)
+  maxAttendees        Int?
+  createdBy           User                @relation("MeetingCreator", fields: [createdById], references: [id])
+  attendees           MeetingAttendance[] @relation("MeetingAttendances")
+  decisions           MeetingDecision[]   @relation("MeetingDecisions")
+
+  @@index([createdById])
+  @@index([meetingDate])
+  @@index([status])
+}
+
+model MeetingAttendance {
+  id            String         @id @default(uuid())
+  checkInMethod CheckInMethod
+  checkInTime   DateTime       @default(now())
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  meetingId     String
+  userId        String
+  attended      Boolean?
+  markedAt      DateTime?
+  markedBy      String?
+  meeting       ManagerMeeting @relation("MeetingAttendances", fields: [meetingId], references: [id], onDelete: Cascade)
+  user          User           @relation("UserAttendances", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([meetingId, userId])
+  @@index([meetingId])
+  @@index([userId])
+}
+
+model MeetingDecision {
+  id               String                    @id @default(uuid())
+  title            String
+  description      String?
+  targetDate       DateTime?
+  status           DecisionStatus            @default(TODO)
+  createdAt        DateTime                  @default(now())
+  updatedAt        DateTime                  @updatedAt
+  meetingId        String
+  responsibleUsers DecisionResponsibleUser[] @relation("DecisionResponsibleUsers")
+  meeting          ManagerMeeting            @relation("MeetingDecisions", fields: [meetingId], references: [id], onDelete: Cascade)
+
+  @@index([meetingId])
+  @@index([status])
+}
+
+model DecisionResponsibleUser {
+  id         String          @id @default(uuid())
+  decisionId String
+  userId     String
+  decision   MeetingDecision @relation("DecisionResponsibleUsers", fields: [decisionId], references: [id], onDelete: Cascade)
+  user       User            @relation("DecisionResponsible", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([decisionId, userId])
+  @@index([decisionId])
+  @@index([userId])
+}
+
+model BoardMember {
+  id        String   @id @default(uuid())
+  title     String
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  userId    String   @unique
+  user      User     @relation("BoardMemberUser", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([isActive])
+  @@index([userId])
+}
+
+model AttendanceSession {
+  id              String                  @id @default(uuid())
+  title           String
+  description     String?
+  sessionDate     DateTime
+  qrCodeToken     String?                 @unique
+  qrCodeExpiresAt DateTime?
+  status          AttendanceSessionStatus @default(PLANNED)
+  createdAt       DateTime                @default(now())
+  updatedAt       DateTime                @updatedAt
+  createdById     String
+  createdBy       User                    @relation("SessionCreator", fields: [createdById], references: [id])
+  attendances     StudentAttendance[]     @relation("SessionAttendances")
+
+  @@index([createdById])
+  @@index([sessionDate])
+  @@index([status])
+}
+
+model StudentAttendance {
+  id            String            @id @default(uuid())
+  checkInMethod CheckInMethod
+  checkInTime   DateTime          @default(now())
+  notes         String?
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+  sessionId     String
+  studentId     String
+  session       AttendanceSession @relation("SessionAttendances", fields: [sessionId], references: [id], onDelete: Cascade)
+  student       User              @relation("StudentAttendances", fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([sessionId, studentId])
+  @@index([sessionId])
+  @@index([studentId])
+}
+
+model AbsenceNotification {
+  id               String   @id @default(uuid())
+  weeksMissed      Int
+  notificationSent DateTime @default(now())
+  createdAt        DateTime @default(now())
+  studentId        String
+  tutorId          String
+  student          User     @relation("StudentAbsenceNotifications", fields: [studentId], references: [id], onDelete: Cascade)
+  tutor            User     @relation("TutorAbsenceNotifications", fields: [tutorId], references: [id])
+
+  @@index([studentId])
+  @@index([tutorId])
+  @@index([notificationSent])
+}
+
+model Syllabus {
+  id               String                    @id @default(uuid())
+  title            String
+  description      String?
+  shareToken       String?                   @unique
+  isPublished      Boolean                   @default(false)
+  isGlobal         Boolean                   @default(false)
+  createdAt        DateTime                  @default(now())
+  updatedAt        DateTime                  @updatedAt
+  createdById      String
+  driveLink        String?
+  feedbackForms    ParentFeedback[]          @relation("SyllabusFeedback")
+  createdBy        User                      @relation("TutorSyllabi", fields: [createdById], references: [id])
+  lessons          SyllabusLesson[]          @relation("SyllabusLessons")
+  classroomProgress ClassroomLessonProgress[] @relation("SyllabusClassroomProgress")
+
+  @@index([createdById])
+  @@index([shareToken])
+  @@index([isGlobal])
+}
+
+model SyllabusLesson {
+  id               String                    @id @default(uuid())
+  orderIndex       Int
+  title            String
+  description      String?
+  createdAt        DateTime                  @default(now())
+  updatedAt        DateTime                  @updatedAt
+  syllabusId       String
+  driveLink        String?
+  syllabus         Syllabus                  @relation("SyllabusLessons", fields: [syllabusId], references: [id], onDelete: Cascade)
+  classroomProgress ClassroomLessonProgress[] @relation("LessonClassroomProgress")
+
+  @@index([syllabusId])
+  @@index([orderIndex])
+}
+
+model ClassroomLessonProgress {
+  id          String         @id @default(uuid())
+  classroomId String
+  syllabusId  String
+  lessonId    String
+  isTaught    Boolean        @default(false)
+  taughtDate  DateTime?
+  notes       String?
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+  classroom   Classroom      @relation("ClassroomLessonProgress", fields: [classroomId], references: [id], onDelete: Cascade)
+  syllabus    Syllabus       @relation("SyllabusClassroomProgress", fields: [syllabusId], references: [id], onDelete: Cascade)
+  lesson      SyllabusLesson @relation("LessonClassroomProgress", fields: [lessonId], references: [id], onDelete: Cascade)
+
+  @@unique([classroomId, lessonId])
+  @@index([classroomId])
+  @@index([syllabusId])
+  @@index([lessonId])
+}
+
+model ParentFeedback {
+  id             String          @id @default(uuid())
+  parentName     String?
+  parentEmail    String?
+  overallRating  FeedbackRating?
+  contentQuality FeedbackRating?
+  effectiveness  FeedbackRating?
+  engagement     FeedbackRating?
+  createdAt      DateTime        @default(now())
+  syllabusId     String
+  syllabus       Syllabus        @relation("SyllabusFeedback", fields: [syllabusId], references: [id], onDelete: Cascade)
+
+  @@index([syllabusId])
+  @@index([createdAt])
+}
+
+model Notification {
+  id        String           @id @default(uuid())
+  type      NotificationType
+  title     String
+  message   String
+  isRead    Boolean          @default(false)
+  createdAt DateTime         @default(now())
+  userId    String
+  user      User             @relation("UserNotifications", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([isRead])
+  @@index([createdAt])
+}
+
+model Part2EventType {
+  id          String       @id @default(uuid())
+  name        String       @unique
+  description String?
+  isActive    Boolean      @default(true)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  events      Part2Event[] @relation("Part2EventTypeEvents")
+
+  @@index([isActive])
+}
+
+model Part2Event {
+  id              String                  @id @default(uuid())
+  title           String
+  description     String
+  eventDate       DateTime
+  location        String
+  capacity        Int                     @default(30)
+  notes           String?
+  qrCodeToken     String?                 @unique
+  qrCodeExpiresAt DateTime?
+  status          Part2EventStatus        @default(YAKINDA)
+  createdAt       DateTime                @default(now())
+  updatedAt       DateTime                @updatedAt
+  eventTypeId     String
+  createdById     String
+  createdBy       User                    @relation("Part2EventCreator", fields: [createdById], references: [id])
+  eventType       Part2EventType          @relation("Part2EventTypeEvents", fields: [eventTypeId], references: [id])
+  participants    Part2EventParticipant[] @relation("Part2EventParticipants")
+
+  @@index([eventTypeId])
+  @@index([createdById])
+  @@index([eventDate])
+  @@index([status])
+}
+
+model Part2EventParticipant {
+  id            String                 @id @default(uuid())
+  status        Part2ParticipantStatus @default(REGISTERED)
+  checkInMethod CheckInMethod?
+  registeredAt  DateTime               @default(now())
+  checkInTime   DateTime?
+  notes         String?
+  updatedAt     DateTime               @updatedAt
+  eventId       String
+  studentId     String
+  event         Part2Event             @relation("Part2EventParticipants", fields: [eventId], references: [id], onDelete: Cascade)
+  student       User                   @relation("Part2EventParticipations", fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([eventId, studentId])
+  @@index([eventId])
+  @@index([studentId])
+  @@index([status])
+}
+
 enum UserRole {
   ADMIN
   TUTOR
-  ASISTAN
   STUDENT
+  ASISTAN
 }
 
 enum RequestStatus {
@@ -26,18 +753,6 @@ enum RequestStatus {
 enum TransactionType {
   AWARD
   REDEEM
-}
-
-model EventType {
-  id          String   @id @default(uuid())
-  name        String   @unique
-  description String?
-  isActive    Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  // Relations
-  events Event[] @relation("EventTypeEvents")
 }
 
 enum EventStatus {
@@ -64,429 +779,6 @@ enum ParticipantStatus {
   ABSENT
 }
 
-model Period {
-  id          String       @id @default(uuid())
-  name        String       @unique
-  description String?
-  startDate   DateTime
-  endDate     DateTime?
-  status      PeriodStatus @default(INACTIVE)
-  totalWeeks  Int          @default(8)
-  createdAt   DateTime     @default(now())
-  updatedAt   DateTime     @updatedAt
-
-  // Relations
-  events                 Event[]                 @relation("PeriodEvents")
-  pointsTransactions     PointsTransaction[]     @relation("PeriodPointsTransactions")
-  experienceTransactions ExperienceTransaction[] @relation("PeriodExperienceTransactions")
-  itemRequests           ItemRequest[]           @relation("PeriodItemRequests")
-  wishes                 Wish[]                  @relation("PeriodWishes")
-  studentNotes           StudentNote[]           @relation("PeriodStudentNotes")
-  studentReports         StudentReport[]         @relation("PeriodStudentReports")
-  rollbacks              TransactionRollback[]   @relation("PeriodRollbacks")
-  announcements          Announcement[]          @relation("PeriodAnnouncements")
-  weeklyReports          WeeklyReport[]          @relation("PeriodWeeklyReports")
-
-  @@index([status])
-}
-
-model User {
-  id              String    @id @default(cuid())
-  username        String    @unique
-  email           String    @unique
-  password        String
-  firstName       String?
-  lastName        String?
-  role            UserRole
-  points          Int       @default(0)
-  experience      Int       @default(0)
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
-  avatarUrl       String?
-  phone           String?
-  specialization  String?
-  bio             String?   @db.Text
-  preferences     Json?
-  isActive        Boolean   @default(true) // Active/Passive status for period participation
-  statusChangedAt DateTime? // When status was last changed
-  statusChangedBy String? // Who changed the status (admin/tutor)
-
-  // Relations
-  classroom          Classroom? @relation("ClassroomTutor")
-  students           User[]     @relation("TutorStudents")
-  tutor              User?      @relation("TutorStudents", fields: [tutorId], references: [id])
-  tutorId            String?
-  classroomStudents  Classroom? @relation("ClassroomStudents", fields: [studentClassroomId], references: [id])
-  studentClassroomId String?
-
-  // ASISTAN-TUTOR relationship
-  assistedTutor   User?   @relation("AsistanTutor", fields: [assistedTutorId], references: [id])
-  assistedTutorId String?
-  asistans        User[]  @relation("AsistanTutor")
-
-  // Event relations
-  createdEvents       Event[]            @relation("EventCreator")
-  eventsForTutor      Event[]            @relation("TutorEvents")
-  eventParticipations EventParticipant[] @relation("UserParticipations")
-
-  // Store relations
-  studentRequests ItemRequest[] @relation("StudentRequests")
-  tutorApprovals  ItemRequest[] @relation("TutorApprovals")
-
-  // Points relations
-  studentPoints PointsTransaction[] @relation("StudentPoints")
-  tutorPoints   PointsTransaction[] @relation("TutorPoints")
-
-  // Notes relations
-  studentNotes StudentNote[] @relation("StudentNotes")
-  tutorNotes   StudentNote[] @relation("TutorNotes")
-
-  // Reports relations
-  studentReports StudentReport[] @relation("StudentReports")
-  tutorReports   StudentReport[] @relation("TutorReports")
-
-  // Registration relations
-  processedRegistrations RegistrationRequest[]
-
-  // Experience relations
-  experienceReceived ExperienceTransaction[] @relation("StudentExperience")
-  experienceGiven    ExperienceTransaction[] @relation("TutorExperience")
-
-  // Wish relations
-  wishes Wish[] @relation("StudentWishes")
-
-  // New relation
-  createdCards   PointEarningCard[] @relation("AdminCards")
-  createdReasons PointReason[]      @relation("AdminReasons")
-
-  // Announcement relations
-  createdAnnouncements Announcement[] @relation("AdminAnnouncements")
-
-  // Rollback relations
-  rollbacksAsStudent TransactionRollback[] @relation("RollbackStudent")
-  rollbacksAsAdmin   TransactionRollback[] @relation("RollbackAdmin")
-
-  // Weekly report relations
-  weeklyReports    WeeklyReport[]         @relation("UserWeeklyReports")
-  reviewedReports  WeeklyReport[]         @relation("AdminReviewedReports")
-  createdQuestions WeeklyReportQuestion[] @relation("AdminQuestions")
-
-  // PDF relations
-  uploadedPdfs PartPdf[] @relation("UploadedPdfs")
-
-  // Meeting relations
-  createdMeetings      ManagerMeeting[]    @relation("MeetingCreator")
-  meetingAttendances   MeetingAttendance[] @relation("UserAttendances")
-  responsibleDecisions DecisionResponsibleUser[] @relation("DecisionResponsible")
-
-  // Board member relation
-  boardMember BoardMember? @relation("BoardMemberUser")
-
-  // Part 2 - Attendance and Syllabus relations
-  createdSessions          AttendanceSession[]     @relation("SessionCreator")
-  studentAttendances       StudentAttendance[]     @relation("StudentAttendances")
-  absenceNotificationsAsStudent AbsenceNotification[] @relation("StudentAbsenceNotifications")
-  absenceNotificationsAsTutor   AbsenceNotification[] @relation("TutorAbsenceNotifications")
-  createdSyllabi           Syllabus[]              @relation("TutorSyllabi")
-  notifications            Notification[]          @relation("UserNotifications")
-
-  @@index([tutorId])
-}
-
-model Classroom {
-  id          String   @id @default(uuid())
-  name        String   @default("Sınıf")
-  description String?  @default("Öğretmen ve öğrencileri")
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  // Relations
-  tutor    User   @relation("ClassroomTutor", fields: [tutorId], references: [id])
-  tutorId  String @unique // One tutor per classroom
-  students User[] @relation("ClassroomStudents")
-}
-
-model Event {
-  id            String      @id @default(uuid())
-  title         String
-  description   String
-  startDateTime DateTime
-  endDateTime   DateTime?
-  location      String      @default("Online")
-  customName    String? // Used when event type is "Others"
-  capacity      Int         @default(20)
-  points        Int         @default(0)
-  experience    Int         @default(0)
-  tags          String[]
-  status        EventStatus @default(YAKINDA)
-  eventScope    EventScope  @default(GROUP)
-  createdAt     DateTime    @default(now())
-  updatedAt     DateTime    @updatedAt
-
-  // Period relation
-  periodId String
-  period   Period @relation("PeriodEvents", fields: [periodId], references: [id])
-
-  // Event type relation
-  eventTypeId String
-  eventType   EventType @relation("EventTypeEvents", fields: [eventTypeId], references: [id])
-
-  // Relations
-  createdBy         User               @relation("EventCreator", fields: [createdById], references: [id])
-  createdById       String
-  participants      EventParticipant[] @relation("EventParticipations")
-  createdForTutor   User?              @relation("TutorEvents", fields: [createdForTutorId], references: [id])
-  createdForTutorId String?
-
-  @@index([periodId])
-}
-
-model EventParticipant {
-  id           String            @id @default(uuid())
-  status       ParticipantStatus @default(REGISTERED)
-  registeredAt DateTime          @default(now())
-  updatedAt    DateTime          @updatedAt
-
-  // Relations
-  event   Event  @relation("EventParticipations", fields: [eventId], references: [id], onDelete: Cascade)
-  eventId String
-  user    User   @relation("UserParticipations", fields: [userId], references: [id], onDelete: Cascade)
-  userId  String
-
-  // Unique constraint to prevent duplicate participants
-  @@unique([eventId, userId])
-}
-
-model StoreItem {
-  id             String   @id @default(uuid())
-  name           String   @unique
-  description    String
-  pointsRequired Int
-  imageUrl       String?
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
-
-  // Relations
-  itemRequests ItemRequest[]
-}
-
-model RegistrationRequest {
-  id              String        @id @default(uuid())
-  username        String
-  email           String
-  password        String
-  firstName       String?
-  lastName        String?
-  requestedRole   UserRole      @default(STUDENT)
-  status          RequestStatus @default(PENDING)
-  rejectionReason String?
-  createdAt       DateTime      @default(now())
-  updatedAt       DateTime      @updatedAt
-
-  // Relations
-  processedBy   User?   @relation(fields: [processedById], references: [id])
-  processedById String?
-}
-
-model ItemRequest {
-  id          String        @id @default(uuid())
-  status      RequestStatus @default(PENDING)
-  pointsSpent Int
-  note        String?
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
-
-  // Period relation
-  periodId String
-  period   Period @relation("PeriodItemRequests", fields: [periodId], references: [id])
-
-  // Relations
-  student   User      @relation("StudentRequests", fields: [studentId], references: [id])
-  studentId String
-  tutor     User      @relation("TutorApprovals", fields: [tutorId], references: [id])
-  tutorId   String
-  item      StoreItem @relation(fields: [itemId], references: [id])
-  itemId    String
-
-  @@index([periodId])
-}
-
-model PointsTransaction {
-  id         String          @id @default(uuid())
-  points     Int
-  type       TransactionType
-  reason     String?
-  createdAt  DateTime        @default(now())
-  updatedAt  DateTime        @updatedAt
-  rolledBack Boolean         @default(false)
-
-  // Period relation
-  periodId String
-  period   Period @relation("PeriodPointsTransactions", fields: [periodId], references: [id])
-
-  // Relations
-  student       User         @relation("StudentPoints", fields: [studentId], references: [id])
-  studentId     String
-  tutor         User         @relation("TutorPoints", fields: [tutorId], references: [id])
-  tutorId       String
-  pointReason   PointReason? @relation("ReasonTransactions", fields: [pointReasonId], references: [id])
-  pointReasonId String?
-
-  @@index([periodId])
-}
-
-model ExperienceTransaction {
-  id         String   @id @default(uuid())
-  amount     Int
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
-  rolledBack Boolean  @default(false)
-
-  // Period relation
-  periodId String
-  period   Period @relation("PeriodExperienceTransactions", fields: [periodId], references: [id])
-
-  // Relations
-  student   User   @relation("StudentExperience", fields: [studentId], references: [id])
-  studentId String
-  tutor     User   @relation("TutorExperience", fields: [tutorId], references: [id])
-  tutorId   String
-
-  @@index([periodId])
-}
-
-model Wish {
-  id          String    @id @default(uuid())
-  title       String
-  description String    @db.Text
-  response    String?   @db.Text
-  respondedAt DateTime?
-  respondedBy String?
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-
-  // Period relation
-  periodId String
-  period   Period @relation("PeriodWishes", fields: [periodId], references: [id])
-
-  // Relations
-  student   User   @relation("StudentWishes", fields: [studentId], references: [id])
-  studentId String
-
-  @@index([periodId])
-}
-
-model StudentNote {
-  id        String   @id @default(cuid())
-  content   String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  // Period relation
-  periodId String
-  period   Period @relation("PeriodStudentNotes", fields: [periodId], references: [id])
-
-  // Relations
-  student   User   @relation("StudentNotes", fields: [studentId], references: [id])
-  studentId String
-  tutor     User   @relation("TutorNotes", fields: [tutorId], references: [id])
-  tutorId   String
-
-  @@index([studentId])
-  @@index([tutorId])
-  @@index([periodId])
-}
-
-model StudentReport {
-  id        String   @id @default(cuid())
-  title     String
-  content   String   @db.Text
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  // Period relation
-  periodId String
-  period   Period @relation("PeriodStudentReports", fields: [periodId], references: [id])
-
-  // Relations
-  student   User   @relation("StudentReports", fields: [studentId], references: [id])
-  studentId String
-  tutor     User   @relation("TutorReports", fields: [tutorId], references: [id])
-  tutorId   String
-
-  @@index([studentId])
-  @@index([tutorId])
-  @@index([periodId])
-}
-
-model PointEarningCard {
-  id          String   @id @default(uuid())
-  title       String
-  description String
-  points      Int
-  minPoints   Int? // Minimum points for range
-  maxPoints   Int? // Maximum points for range
-  icon        String? // Store the icon name or URL (optional)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  isActive    Boolean  @default(true)
-
-  // Relations
-  createdBy   User   @relation("AdminCards", fields: [createdById], references: [id])
-  createdById String
-}
-
-model PointReason {
-  id          String   @id @default(uuid())
-  name        String   @unique
-  description String?
-  isActive    Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  // Relations
-  createdBy    User                @relation("AdminReasons", fields: [createdById], references: [id])
-  createdById  String
-  transactions PointsTransaction[] @relation("ReasonTransactions")
-}
-
-model Announcement {
-  id        String   @id @default(uuid())
-  title     String
-  content   String   @db.Text
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  // Period relation
-  periodId String
-  period   Period @relation("PeriodAnnouncements", fields: [periodId], references: [id])
-
-  // Relations
-  createdBy   User   @relation("AdminAnnouncements", fields: [createdById], references: [id])
-  createdById String
-
-  @@index([periodId])
-}
-
-model TransactionRollback {
-  id              String   @id @default(uuid())
-  transactionId   String
-  transactionType String // "POINTS" or "EXPERIENCE"
-  studentId       String
-  adminId         String
-  reason          String
-  createdAt       DateTime @default(now())
-
-  // Period relation
-  periodId String
-  period   Period @relation("PeriodRollbacks", fields: [periodId], references: [id])
-
-  student User @relation("RollbackStudent", fields: [studentId], references: [id])
-  admin   User @relation("RollbackAdmin", fields: [adminId], references: [id])
-
-  @@index([periodId])
-}
-
 enum WeeklyReportStatus {
   DRAFT
   SUBMITTED
@@ -495,150 +787,14 @@ enum WeeklyReportStatus {
 }
 
 enum AttendanceStatus {
-  YAPILDI // ✓
-  YAPILMADI // X
-  YOKTU // O - For variable criteria only
-}
-
-model WeeklyReport {
-  id             String             @id @default(uuid())
-  weekNumber     Int // 1-8 for the 8-week period
-  status         WeeklyReportStatus @default(DRAFT)
-  submissionDate DateTime?
-  reviewDate     DateTime?
-  reviewNotes    String?            @db.Text
-  createdAt      DateTime           @default(now())
-  updatedAt      DateTime           @updatedAt
-
-  // Period relation
-  periodId String
-  period   Period @relation("PeriodWeeklyReports", fields: [periodId], references: [id])
-
-  // User relation (TUTOR or ASISTAN)
-  userId String
-  user   User   @relation("UserWeeklyReports", fields: [userId], references: [id])
-
-  // Reviewed by admin
-  reviewedById String?
-  reviewedBy   User?   @relation("AdminReviewedReports", fields: [reviewedById], references: [id])
-
-  // Fixed criteria responses
-  fixedCriteria WeeklyReportFixedCriteria?
-
-  // Variable criteria responses
-  variableCriteria WeeklyReportVariableCriteria?
-
-  // Comments for each week
-  comments String? @db.Text
-
-  // Points awarded for this week's report
-  pointsAwarded Int @default(0)
-
-  // Dynamic question responses
-  questionResponses WeeklyReportQuestionResponse[]
-
-  @@unique([userId, periodId, weekNumber])
-  @@index([periodId])
-  @@index([userId])
-  @@index([weekNumber])
-}
-
-model WeeklyReportFixedCriteria {
-  id       String       @id @default(uuid())
-  reportId String       @unique
-  report   WeeklyReport @relation(fields: [reportId], references: [id], onDelete: Cascade)
-
-  // For TUTOR role
-  weeklyMeeting        AttendanceStatus? // Haftalık sohbetinize katıldınız mı?
-  groupMeeting         AttendanceStatus? // Haftalık buluşmanıza katıldınız mı?
-  calledAbsentStudents AttendanceStatus? // Gelmeyen öğrencileri aradınız mı?
-  curriculumEducation  AttendanceStatus? // Müfredat eğitimini işlediniz mi?
-  groupActivity        AttendanceStatus? // Gurubunuza veya genele bir etkinlik yaptınız mı?
-  individualAttention  AttendanceStatus? // Haftalık buluşma dışında gurubunuzdaki bir gençle veya gençlerle bir arada bulunup ilgi gösterdiniz mi?
-
-  // For ASISTAN role (different criteria)
-  weeklyMeetingAsistan       AttendanceStatus? // Haftalık sohbetinize katıldınız mı?
-  groupMeetingAsistan        AttendanceStatus? // Haftalık buluşmanıza katıldınız mı?
-  informationMessages        AttendanceStatus? // Özel günlerde gurubu bilgilendirme mesajları paylaşıldı mı?
-  bilgeverseDataEntry        AttendanceStatus? // Bilgeverse'e öğrenci veri girişi yaptınız mı?
-  groupActivityAsistan       AttendanceStatus? // Gurubunuza veya genele bir etkinlik yaptınız mı?
-  individualAttentionAsistan AttendanceStatus? // Haftalık buluşma dışında gurubunuzdaki bir gençle veya gençlerle bir arada bulunup ilgi gösterdiniz mi?
-  workshopParticipation      AttendanceStatus? // Rehber Yardımcılığının yanında Bir Atölye Sorumlusu ise Atölye Çalışmalarına Katıldı mı?
-}
-
-model WeeklyReportVariableCriteria {
-  id       String       @id @default(uuid())
-  reportId String       @unique
-  report   WeeklyReport @relation(fields: [reportId], references: [id], onDelete: Cascade)
-
-  // Variable criteria (same for both TUTOR and ASISTAN)
-  internalTraining        AttendanceStatus? // Dernek içi eğitim ve programlara katıldınız mı?
-  jointActivityLeadership AttendanceStatus? // Ortak faaliyette gurubunuzun başında bulundunuz mu?
-  originalActivity        AttendanceStatus? // Orijinal bir etkinlik ürettiniz mi?
-
-  // Only for TUTOR
-  parentMeeting AttendanceStatus? // Gençlerin Aileleriyle Tanıştınız mı?
+  YAPILDI
+  YAPILMADI
+  YOKTU
 }
 
 enum QuestionType {
   FIXED
   VARIABLE
-}
-
-model WeeklyReportQuestion {
-  id         String       @id @default(uuid())
-  text       String       @db.Text
-  type       QuestionType // FIXED or VARIABLE
-  targetRole UserRole // TUTOR, ASISTAN, or both
-  orderIndex Int // For display ordering
-  isActive   Boolean      @default(true)
-  createdAt  DateTime     @default(now())
-  updatedAt  DateTime     @updatedAt
-
-  // Relations
-  createdBy   User   @relation("AdminQuestions", fields: [createdById], references: [id])
-  createdById String
-
-  // Question responses
-  responses WeeklyReportQuestionResponse[]
-
-  @@index([type, targetRole, isActive])
-  @@index([orderIndex])
-}
-
-model WeeklyReportQuestionResponse {
-  id        String           @id @default(uuid())
-  response  AttendanceStatus // YAPILDI, YAPILMADI, YOKTU
-  createdAt DateTime         @default(now())
-  updatedAt DateTime         @updatedAt
-
-  // Relations
-  question   WeeklyReportQuestion @relation(fields: [questionId], references: [id], onDelete: Cascade)
-  questionId String
-  report     WeeklyReport         @relation(fields: [reportId], references: [id], onDelete: Cascade)
-  reportId   String
-
-  @@unique([questionId, reportId])
-  @@index([reportId])
-}
-
-model PartPdf {
-  id          String   @id @default(uuid())
-  partId      Int // 0 for dashboard, 1-10 for the parts
-  title       String
-  description String?
-  driveLink   String // Google Drive link
-  contentType String? // Type of content: PDF, Video, Image, etc.
-  isActive    Boolean  @default(true) // Whether the link is active/accessible
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  // Relations
-  uploadedBy   User   @relation("UploadedPdfs", fields: [uploadedById], references: [id])
-  uploadedById String
-
-  @@index([partId])
-  @@index([uploadedById])
 }
 
 enum MeetingStatus {
@@ -659,96 +815,6 @@ enum DecisionStatus {
   DONE
 }
 
-model ManagerMeeting {
-  id                 String        @id @default(uuid())
-  title              String
-  description        String?       @db.Text
-  meetingDate        DateTime
-  location           String
-  status             MeetingStatus @default(PLANNED)
-  qrCodeToken        String?       @unique
-  qrCodeExpiresAt    DateTime?
-  maxAttendees       Int?          // Maximum number of attendees (null = unlimited)
-  allowGuestAttendees Boolean      @default(false) // Allow non-admin users to attend
-  createdAt          DateTime      @default(now())
-  updatedAt          DateTime      @updatedAt
-
-  // Relations
-  createdBy   User                @relation("MeetingCreator", fields: [createdById], references: [id])
-  createdById String
-  attendees   MeetingAttendance[] @relation("MeetingAttendances")
-  decisions   MeetingDecision[]   @relation("MeetingDecisions")
-
-  @@index([createdById])
-  @@index([meetingDate])
-  @@index([status])
-}
-
-model MeetingAttendance {
-  id            String        @id @default(uuid())
-  checkInMethod CheckInMethod
-  checkInTime   DateTime      @default(now())
-  attended      Boolean?      // null = unverified, true = attended, false = did not attend
-  markedBy      String?       // User ID who marked attendance
-  markedAt      DateTime?     // When attendance was marked
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @updatedAt
-
-  // Relations
-  meeting   ManagerMeeting @relation("MeetingAttendances", fields: [meetingId], references: [id], onDelete: Cascade)
-  meetingId String
-  user      User           @relation("UserAttendances", fields: [userId], references: [id], onDelete: Cascade)
-  userId    String
-
-  @@unique([meetingId, userId])
-  @@index([meetingId])
-  @@index([userId])
-}
-
-model MeetingDecision {
-  id          String         @id @default(uuid())
-  title       String
-  description String?        @db.Text
-  targetDate  DateTime?
-  status      DecisionStatus @default(TODO)
-  createdAt   DateTime       @default(now())
-  updatedAt   DateTime       @updatedAt
-
-  // Relations
-  meeting            ManagerMeeting              @relation("MeetingDecisions", fields: [meetingId], references: [id], onDelete: Cascade)
-  meetingId          String
-  responsibleUsers   DecisionResponsibleUser[]  @relation("DecisionResponsibleUsers")
-
-  @@index([meetingId])
-  @@index([status])
-}
-
-model DecisionResponsibleUser {
-  id         String          @id @default(uuid())
-  decision   MeetingDecision @relation("DecisionResponsibleUsers", fields: [decisionId], references: [id], onDelete: Cascade)
-  decisionId String
-  user       User            @relation("DecisionResponsible", fields: [userId], references: [id], onDelete: Cascade)
-  userId     String
-
-  @@unique([decisionId, userId])
-  @@index([decisionId])
-  @@index([userId])
-}
-
-model BoardMember {
-  id        String   @id @default(uuid())
-  userId    String   @unique // Reference to User
-  user      User     @relation("BoardMemberUser", fields: [userId], references: [id], onDelete: Cascade)
-  title     String   // Position/title in the board (e.g., "Başkan", "Üye", "Sekreter")
-  isActive  Boolean  @default(true)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@index([isActive])
-  @@index([userId])
-}
-
-// Part 2 - Character Education Groups Management
 enum AttendanceSessionStatus {
   PLANNED
   ACTIVE
@@ -756,157 +822,29 @@ enum AttendanceSessionStatus {
   CANCELLED
 }
 
-// Weekly attendance session created by tutors
-model AttendanceSession {
-  id                String                 @id @default(uuid())
-  title             String                 // e.g., "Week 1 - January 2025"
-  description       String?                @db.Text
-  sessionDate       DateTime               // Date of the session
-  qrCodeToken       String?                @unique // QR code for check-in
-  qrCodeExpiresAt   DateTime?              // QR code expiration
-  status            AttendanceSessionStatus @default(PLANNED)
-  createdAt         DateTime               @default(now())
-  updatedAt         DateTime               @updatedAt
-
-  // Relations
-  createdBy         User                   @relation("SessionCreator", fields: [createdById], references: [id])
-  createdById       String
-  attendances       StudentAttendance[]    @relation("SessionAttendances")
-
-  @@index([createdById])
-  @@index([sessionDate])
-  @@index([status])
-}
-
-// Individual student attendance record
-model StudentAttendance {
-  id              String           @id @default(uuid())
-  checkInMethod   CheckInMethod    // QR or MANUAL
-  checkInTime     DateTime         @default(now())
-  notes           String?          // Optional notes from tutor
-  createdAt       DateTime         @default(now())
-  updatedAt       DateTime         @updatedAt
-
-  // Relations
-  session         AttendanceSession @relation("SessionAttendances", fields: [sessionId], references: [id], onDelete: Cascade)
-  sessionId       String
-  student         User             @relation("StudentAttendances", fields: [studentId], references: [id], onDelete: Cascade)
-  studentId       String
-
-  @@unique([sessionId, studentId])
-  @@index([sessionId])
-  @@index([studentId])
-}
-
-// Absence notification tracking
-model AbsenceNotification {
-  id              String   @id @default(uuid())
-  weeksMissed     Int      // Number of consecutive weeks missed
-  notificationSent DateTime @default(now())
-  createdAt       DateTime @default(now())
-
-  // Relations
-  student         User     @relation("StudentAbsenceNotifications", fields: [studentId], references: [id], onDelete: Cascade)
-  studentId       String
-  tutor           User     @relation("TutorAbsenceNotifications", fields: [tutorId], references: [id])
-  tutorId         String
-
-  @@index([studentId])
-  @@index([tutorId])
-  @@index([notificationSent])
-}
-
-// Syllabus/Curriculum created by tutors
-model Syllabus {
-  id              String           @id @default(uuid())
-  title           String           // e.g., "Karakter Eğitimi Müfredatı - Ocak 2025"
-  description     String?          @db.Text
-  shareToken      String?          @unique // Token for shareable link
-  isPublished     Boolean          @default(false)
-  createdAt       DateTime         @default(now())
-  updatedAt       DateTime         @updatedAt
-
-  // Relations
-  createdBy       User             @relation("TutorSyllabi", fields: [createdById], references: [id])
-  createdById     String
-  lessons         SyllabusLesson[] @relation("SyllabusLessons")
-  feedbackForms   ParentFeedback[] @relation("SyllabusFeedback")
-
-  @@index([createdById])
-  @@index([shareToken])
-}
-
-// Individual lesson in the syllabus
-model SyllabusLesson {
-  id              String    @id @default(uuid())
-  orderIndex      Int       // Order in the syllabus
-  title           String    // Lesson title
-  description     String?   @db.Text
-  isTaught        Boolean   @default(false) // Whether the lesson has been taught
-  taughtDate      DateTime? // When the lesson was taught
-  notes           String?   @db.Text // Tutor's notes about the lesson
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
-
-  // Relations
-  syllabus        Syllabus  @relation("SyllabusLessons", fields: [syllabusId], references: [id], onDelete: Cascade)
-  syllabusId      String
-
-  @@index([syllabusId])
-  @@index([orderIndex])
-}
-
 enum FeedbackRating {
-  VERY_POOR     // 1 - Çok Kötü
-  POOR          // 2 - Kötü
-  AVERAGE       // 3 - Orta
-  GOOD          // 4 - İyi
-  EXCELLENT     // 5 - Mükemmel
+  VERY_POOR
+  POOR
+  AVERAGE
+  GOOD
+  EXCELLENT
 }
 
-// Parent feedback on syllabus (no account required, accessed via shareable link)
-model ParentFeedback {
-  id              String          @id @default(uuid())
-  parentName      String?         // Optional parent name
-  parentEmail     String?         // Optional parent email
-
-  // Structured feedback questions (clickable)
-  overallRating   FeedbackRating? // Overall satisfaction
-  contentQuality  FeedbackRating? // Quality of content
-  effectiveness   FeedbackRating? // Effectiveness of teaching
-  engagement      FeedbackRating? // Student engagement
-
-  createdAt       DateTime        @default(now())
-
-  // Relations
-  syllabus        Syllabus        @relation("SyllabusFeedback", fields: [syllabusId], references: [id], onDelete: Cascade)
-  syllabusId      String
-
-  @@index([syllabusId])
-  @@index([createdAt])
-}
-
-// In-app notification model
 enum NotificationType {
   ABSENCE_ALERT
   SYLLABUS_FEEDBACK
   GENERAL
 }
 
-model Notification {
-  id              String           @id @default(uuid())
-  type            NotificationType
-  title           String
-  message         String           @db.Text
-  isRead          Boolean          @default(false)
-  createdAt       DateTime         @default(now())
-
-  // Relations
-  user            User             @relation("UserNotifications", fields: [userId], references: [id], onDelete: Cascade)
-  userId          String
-
-  @@index([userId])
-  @@index([isRead])
-  @@index([createdAt])
+enum Part2EventStatus {
+  YAKINDA
+  DEVAM_EDIYOR
+  TAMAMLANDI
+  IPTAL_EDILDI
 }
 
+enum Part2ParticipantStatus {
+  REGISTERED
+  ATTENDED
+  ABSENT
+}

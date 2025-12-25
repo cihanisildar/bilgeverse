@@ -15,45 +15,58 @@ export const authOptions: AuthOptions = {
         password: { label: "Password", type: "password" }
       },
       async authorize(credentials) {
-        if (!credentials?.username || !credentials?.password) {
-          throw new Error("Missing credentials");
-        }
+        try {
+          console.log('NextAuth authorize called with username:', credentials?.username);
 
-        const user = await prisma.user.findUnique({
-          where: { username: credentials.username },
-          include: {
-            tutor: {
-              select: {
-                id: true,
-                username: true,
-                firstName: true,
-                lastName: true
+          if (!credentials?.username || !credentials?.password) {
+            console.error('Missing credentials');
+            throw new Error("Missing credentials");
+          }
+
+          const user = await prisma.user.findUnique({
+            where: { username: credentials.username.toLowerCase() },
+            include: {
+              tutor: {
+                select: {
+                  id: true,
+                  username: true,
+                  firstName: true,
+                  lastName: true
+                }
               }
             }
+          });
+
+          if (!user) {
+            console.error('User not found:', credentials.username);
+            throw new Error("Invalid username or password");
           }
-        });
 
-        if (!user) {
-          throw new Error("Invalid username or password");
+          console.log('User found, checking password...');
+          const isValidPassword = await bcrypt.compare(credentials.password, user.password);
+
+          if (!isValidPassword) {
+            console.error('Invalid password for user:', credentials.username);
+            throw new Error("Invalid username or password");
+          }
+
+          console.log('Login successful for user:', user.username);
+          return {
+            id: user.id,
+            username: user.username,
+            role: user.role,
+            tutorId: user.tutorId || undefined,
+            tutor: user.tutor ? {
+              id: user.tutor.id,
+              username: user.tutor.username,
+              firstName: user.tutor.firstName || undefined,
+              lastName: user.tutor.lastName || undefined
+            } : undefined
+          };
+        } catch (error) {
+          console.error('NextAuth authorize error:', error);
+          throw error;
         }
-
-        const isValidPassword = await bcrypt.compare(credentials.password, user.password);
-        if (!isValidPassword) {
-          throw new Error("Invalid username or password");
-        }
-
-        return {
-          id: user.id,
-          username: user.username,
-          role: user.role,
-          tutorId: user.tutorId || undefined,
-          tutor: user.tutor ? {
-            id: user.tutor.id,
-            username: user.tutor.username,
-            firstName: user.tutor.firstName || undefined,
-            lastName: user.tutor.lastName || undefined
-          } : undefined
-        };
       }
     })
   ],

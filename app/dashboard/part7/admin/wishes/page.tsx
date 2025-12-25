@@ -1,8 +1,8 @@
-'use client';
+﻿'use client';
 
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/app/contexts/AuthContext';
-import toast from 'react-hot-toast';
+import { useToast } from '@/app/hooks/use-toast';
 import Link from 'next/link';
 
 type Wish = {
@@ -21,6 +21,7 @@ type Wish = {
 };
 
 export default function AdminWishes() {
+  const toast = useToast();
   const { isAdmin } = useAuth();
   const [wishes, setWishes] = useState<Wish[]>([]);
   const [loading, setLoading] = useState(true);

@@ -5,13 +5,13 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { 
-  ArrowLeft, 
-  Award, 
-  Calendar, 
-  Clock, 
-  PieChart, 
-  TrendingUp, 
+import {
+  ArrowLeft,
+  Award,
+  Calendar,
+  Clock,
+  PieChart,
+  TrendingUp,
   Users,
   BookOpen,
   Activity,
@@ -23,7 +23,7 @@ import {
 } from 'lucide-react';
 import { useParams, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import toast from 'react-hot-toast';
+import { useToast } from '@/app/hooks/use-toast';
 
 type Classroom = {
   id: string;
@@ -53,6 +53,7 @@ type ClassReport = {
 };
 
 export default function ClassReportPage() {
+  const toast = useToast();
   const { user } = useAuth();
   const params = useParams();
   const router = useRouter();
@@ -120,7 +121,7 @@ export default function ClassReportPage() {
             </div>
             <h2 className="text-2xl font-bold text-gray-900">Sınıf Bulunamadı</h2>
             <p className="text-gray-600">Aradığınız sınıf raporu bulunamadı veya erişim izniniz yok.</p>
-            <Button 
+            <Button
               onClick={() => router.push('/dashboard/part7/admin/reports')}
               className="bg-gradient-to-r from-blue-500 to-indigo-500 hover:from-blue-600 hover:to-indigo-600"
             >
@@ -173,7 +174,7 @@ export default function ClassReportPage() {
                   </div>
                 </div>
               </div>
-              
+
               <div className="flex items-center gap-4">
                 <Badge className="bg-purple-100 text-purple-800 text-base px-4 py-2 border border-purple-200">
                   <Users className="h-4 w-4 mr-2" />
@@ -188,28 +189,28 @@ export default function ClassReportPage() {
         <Tabs defaultValue="overview" className="space-y-8">
           <div className="flex justify-center">
             <TabsList className="grid w-full max-w-3xl grid-cols-4 h-14 bg-white/70 backdrop-blur-sm border border-white/20 shadow-lg rounded-2xl p-2">
-              <TabsTrigger 
-                value="overview" 
+              <TabsTrigger
+                value="overview"
                 className="flex items-center gap-2 rounded-xl text-sm font-medium data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-500 data-[state=active]:to-indigo-500 data-[state=active]:text-white data-[state=active]:shadow-lg"
               >
                 <Activity className="h-4 w-4" />
                 Genel Bakış
               </TabsTrigger>
-              <TabsTrigger 
+              <TabsTrigger
                 value="points"
                 className="flex items-center gap-2 rounded-xl text-sm font-medium data-[state=active]:bg-gradient-to-r data-[state=active]:from-yellow-500 data-[state=active]:to-amber-500 data-[state=active]:text-white data-[state=active]:shadow-lg"
               >
                 <Award className="h-4 w-4" />
                 Puan Geçmişi
               </TabsTrigger>
-              <TabsTrigger 
+              <TabsTrigger
                 value="experience"
                 className="flex items-center gap-2 rounded-xl text-sm font-medium data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-500 data-[state=active]:to-cyan-500 data-[state=active]:text-white data-[state=active]:shadow-lg"
               >
                 <Star className="h-4 w-4" />
                 Deneyim
               </TabsTrigger>
-              <TabsTrigger 
+              <TabsTrigger
                 value="events"
                 className="flex items-center gap-2 rounded-xl text-sm font-medium data-[state=active]:bg-gradient-to-r data-[state=active]:from-green-500 data-[state=active]:to-emerald-500 data-[state=active]:text-white data-[state=active]:shadow-lg"
               >
@@ -337,8 +338,8 @@ export default function ClassReportPage() {
               <CardContent>
                 <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 max-h-[60vh] overflow-y-auto pr-2">
                   {classReport.students.map((student) => (
-                    <Card 
-                      key={student.id} 
+                    <Card
+                      key={student.id}
                       className="group cursor-pointer transition-all duration-300 hover:shadow-2xl hover:-translate-y-2 bg-white/90 backdrop-blur-sm border-white/30 overflow-hidden"
                       onClick={() => router.push(`/dashboard/part7/admin/reports/students/${student.id}`)}
                     >
@@ -352,7 +353,7 @@ export default function ClassReportPage() {
                           </div>
                           <ChevronRight className="h-5 w-5 text-gray-400 group-hover:text-purple-500 transition-colors" />
                         </div>
-                        
+
                         <div className="space-y-3">
                           <div className="flex items-center justify-between p-2 bg-yellow-50 rounded-lg">
                             <div className="flex items-center gap-2">
@@ -361,7 +362,7 @@ export default function ClassReportPage() {
                             </div>
                             <span className="font-bold text-yellow-700">{student.points}</span>
                           </div>
-                          
+
                           <div className="flex items-center justify-between p-2 bg-blue-50 rounded-lg">
                             <div className="flex items-center gap-2">
                               <TrendingUp className="h-4 w-4 text-blue-600" />
@@ -544,7 +545,7 @@ export default function ClassReportPage() {
                   <div>
                     <CardTitle className="text-xl">Etkinlik Özeti</CardTitle>
                     <CardDescription>
-                      {classReport.classroom.tutor ? getTutorDisplayName(classReport.classroom.tutor) : 'Bu sınıf'} 
+                      {classReport.classroom.tutor ? getTutorDisplayName(classReport.classroom.tutor) : 'Bu sınıf'}
                       {' '}tarafından oluşturulan etkinlik bilgileri
                     </CardDescription>
                   </div>
@@ -556,7 +557,7 @@ export default function ClassReportPage() {
                     <CardContent className="p-6">
                       <h4 className="font-bold text-lg text-indigo-800 mb-2">Etkinlik Başarı Oranı</h4>
                       <p className="text-4xl font-bold text-indigo-600 mb-2">
-                        {classReport.eventStats?.totalEvents > 0 
+                        {classReport.eventStats?.totalEvents > 0
                           ? Math.round((classReport.eventStats.totalAttendances / (classReport.eventStats.totalEvents * classReport.totalStudents)) * 100)
                           : 0}%
                       </p>
@@ -573,8 +574,8 @@ export default function ClassReportPage() {
                         {classReport.eventStats?.totalEvents > 0 ? 'Aktif' : 'Pasif'}
                       </p>
                       <p className="text-sm text-emerald-600">
-                        {classReport.eventStats?.totalEvents > 0 
-                          ? 'Düzenli etkinlik yapılıyor' 
+                        {classReport.eventStats?.totalEvents > 0
+                          ? 'Düzenli etkinlik yapılıyor'
                           : 'Henüz etkinlik yapılmadı'}
                       </p>
                     </CardContent>

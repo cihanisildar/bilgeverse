@@ -14,10 +14,28 @@ export async function getAttendanceSessions() {
       return { error: 'Yetkisiz erişim', data: null };
     }
 
-    // For tutors, only show their sessions
-    const where = session.user.role === UserRole.TUTOR
-      ? { createdById: session.user.id }
-      : {}; // Admins can see all
+    // Build where clause based on user role
+    let where = {};
+
+    if (session.user.role === UserRole.TUTOR) {
+      // Tutors see only their own sessions
+      where = { createdById: session.user.id };
+    } else if (session.user.role === UserRole.ASISTAN) {
+      // Get the current user's data to find their tutor
+      const currentUser = await prisma.user.findUnique({
+        where: { id: session.user.id },
+        select: { assistedTutorId: true },
+      });
+
+      if (currentUser?.assistedTutorId) {
+        // Assistants see sessions created by their tutor
+        where = { createdById: currentUser.assistedTutorId };
+      } else {
+        // If no tutor assigned, show no sessions
+        where = { createdById: 'none' };
+      }
+    }
+    // Admins see all sessions (empty where clause)
 
     const sessions = await prisma.attendanceSession.findMany({
       where,
@@ -136,7 +154,7 @@ export async function getAttendanceSession(sessionId: string) {
 export async function createAttendanceSession(data: {
   title: string;
   description?: string;
-  sessionDate: Date;
+  sessionDate: string; // Accept as string
   generateQR?: boolean;
 }) {
   try {
@@ -146,20 +164,28 @@ export async function createAttendanceSession(data: {
       return { error: 'Yetkisiz erişim: Sadece öğretmenler ve yöneticiler oturum oluşturabilir', data: null };
     }
 
+    // Convert string to Date
+    const sessionDate = new Date(data.sessionDate);
+
     let qrCodeToken = null;
     let qrCodeExpiresAt = null;
 
     if (data.generateQR) {
       qrCodeToken = crypto.randomBytes(32).toString('hex');
-      // QR code expires 24 hours after session date
-      qrCodeExpiresAt = new Date(data.sessionDate.getTime() + 24 * 60 * 60 * 1000);
+      // QR code expires at the end of the week (Sunday 23:59:59)
+      const weekEnd = new Date(sessionDate);
+      const dayOfWeek = weekEnd.getDay();
+      const daysUntilSunday = dayOfWeek === 0 ? 0 : 7 - dayOfWeek;
+      weekEnd.setDate(weekEnd.getDate() + daysUntilSunday);
+      weekEnd.setHours(23, 59, 59, 999);
+      qrCodeExpiresAt = weekEnd;
     }
 
     const attendanceSession = await prisma.attendanceSession.create({
       data: {
         title: data.title,
         description: data.description,
-        sessionDate: data.sessionDate,
+        sessionDate: sessionDate,
         qrCodeToken,
         qrCodeExpiresAt,
         createdById: session.user.id,
@@ -253,7 +279,13 @@ export async function generateQRCodeForSession(sessionId: string) {
     }
 
     const qrCodeToken = crypto.randomBytes(32).toString('hex');
-    const qrCodeExpiresAt = new Date(attendanceSession.sessionDate.getTime() + 24 * 60 * 60 * 1000);
+    // QR code expires at the end of the week (Sunday 23:59:59)
+    const weekEnd = new Date(attendanceSession.sessionDate);
+    const dayOfWeek = weekEnd.getDay();
+    const daysUntilSunday = dayOfWeek === 0 ? 0 : 7 - dayOfWeek;
+    weekEnd.setDate(weekEnd.getDate() + daysUntilSunday);
+    weekEnd.setHours(23, 59, 59, 999);
+    const qrCodeExpiresAt = weekEnd;
 
     const updated = await prisma.attendanceSession.update({
       where: { id: sessionId },
@@ -356,8 +388,45 @@ export async function manualCheckInToSession(sessionId: string, studentId: strin
   try {
     const session = await getServerSession(authOptions);
 
-    if (!session?.user || (session.user.role !== UserRole.ADMIN && session.user.role !== UserRole.TUTOR)) {
-      return { error: 'Yetkisiz erişim: Sadece öğretmenler ve yöneticiler manuel giriş yapabilir', data: null };
+    if (!session?.user || (session.user.role !== UserRole.ADMIN && session.user.role !== UserRole.TUTOR && session.user.role !== UserRole.ASISTAN)) {
+      return { error: 'Yetkisiz erişim: Sadece öğretmenler, asistanlar ve yöneticiler manuel giriş yapabilir', data: null };
+    }
+
+    // Validate that tutors/assistants can only check in their own students
+    if (session.user.role === UserRole.TUTOR) {
+      const student = await prisma.user.findFirst({
+        where: {
+          id: studentId,
+          tutorId: session.user.id,
+          role: UserRole.STUDENT,
+        },
+      });
+
+      if (!student) {
+        return { error: 'Bu öğrenci sizin grubunuzda değil', data: null };
+      }
+    } else if (session.user.role === UserRole.ASISTAN) {
+      // Check if the student belongs to the assistant's tutor
+      const currentUser = await prisma.user.findUnique({
+        where: { id: session.user.id },
+        select: { assistedTutorId: true },
+      });
+
+      if (!currentUser?.assistedTutorId) {
+        return { error: 'Size atanmış bir öğretmen bulunamadı', data: null };
+      }
+
+      const student = await prisma.user.findFirst({
+        where: {
+          id: studentId,
+          tutorId: currentUser.assistedTutorId,
+          role: UserRole.STUDENT,
+        },
+      });
+
+      if (!student) {
+        return { error: 'Bu öğrenci sizin grubunuzda değil', data: null };
+      }
     }
 
     // Check if already checked in
@@ -428,5 +497,94 @@ export async function deleteAttendanceSession(sessionId: string) {
   } catch (error) {
     console.error('Error deleting attendance session:', error);
     return { error: 'Oturum silinirken bir hata oluştu', data: null };
+  }
+}
+
+// Get students for manual attendance based on tutor's group
+export async function getTutorStudents() {
+  try {
+    const session = await getServerSession(authOptions);
+
+    if (!session?.user) {
+      return { error: 'Yetkisiz erişim', data: null };
+    }
+
+    let students: Array<{
+      id: string;
+      username: string;
+      firstName: string | null;
+      lastName: string | null;
+      tutor: {
+        id: string;
+        firstName: string | null;
+        lastName: string | null;
+      } | null;
+    }> = [];
+
+    if (session.user.role === UserRole.ADMIN || session.user.role === UserRole.TUTOR) {
+      // Both admins and tutors see only THEIR own students (where they are the tutor)
+      students = await prisma.user.findMany({
+        where: {
+          tutorId: session.user.id,
+          role: UserRole.STUDENT,
+          isActive: true,
+        },
+        select: {
+          id: true,
+          username: true,
+          firstName: true,
+          lastName: true,
+          tutor: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+            },
+          },
+        },
+        orderBy: [
+          { firstName: 'asc' },
+          { lastName: 'asc' },
+        ],
+      });
+    } else if (session.user.role === UserRole.ASISTAN) {
+      // Assistants see students of their tutor
+      const currentUser = await prisma.user.findUnique({
+        where: { id: session.user.id },
+        select: { assistedTutorId: true },
+      });
+
+      if (currentUser?.assistedTutorId) {
+        students = await prisma.user.findMany({
+          where: {
+            tutorId: currentUser.assistedTutorId,
+            role: UserRole.STUDENT,
+            isActive: true,
+          },
+          select: {
+            id: true,
+            username: true,
+            firstName: true,
+            lastName: true,
+            tutor: {
+              select: {
+                id: true,
+                firstName: true,
+                lastName: true,
+              },
+            },
+          },
+          orderBy: [
+            { firstName: 'asc' },
+            { lastName: 'asc' },
+          ],
+        });
+      }
+    }
+
+    return { error: null, data: students };
+  } catch (error) {
+    console.error('Error fetching tutor students:', error);
+    return { error: 'Öğrenciler yüklenirken bir hata oluştu', data: null };
   }
 }

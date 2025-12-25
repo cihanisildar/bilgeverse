@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { ProfileSkeleton } from "@/app/components/ui/ProfileSkeleton";
 import { HeaderSkeleton, SkeletonShimmer } from "@/app/components/ui/skeleton-shimmer";
@@ -9,7 +9,7 @@ import { format } from "date-fns";
 import { tr } from "date-fns/locale";
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import toast from 'react-hot-toast';
+import { useToast } from '@/app/hooks/use-toast';
 import { Award, BookOpen, CheckCircle, Edit2, Layers, Mail, Phone, User, Star, Trophy } from 'lucide-react';
 
 type StudentProfile = {
@@ -529,6 +529,7 @@ function LoadingProfile() {
 }
 
 export default function StudentProfilePage() {
+  const toast = useToast();
   const { user, loading } = useAuth();
 
   if (loading) {

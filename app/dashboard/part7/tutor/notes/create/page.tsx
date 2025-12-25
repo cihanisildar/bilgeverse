@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -6,9 +6,10 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { ChevronLeft } from 'lucide-react';
-import toast from 'react-hot-toast';
+import { useToast } from '@/app/hooks/use-toast';
 
 export default function CreateNotePage() {
+  const toast = useToast();
   const router = useRouter();
   const searchParams = useSearchParams();
   const studentId = searchParams.get('studentId');

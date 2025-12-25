@@ -11,7 +11,7 @@ import { tr } from 'date-fns/locale';
 import { useEffect, useState } from 'react';
 import { getAllDecisions } from '@/app/actions/meetings/decisions';
 import Loading from '@/app/components/Loading';
-import toast from 'react-hot-toast';
+import { useToast } from '@/app/hooks/use-toast';
 
 type StatusFilter = 'all' | 'completed' | 'pending';
 
@@ -56,6 +56,7 @@ const filterLabels: Record<StatusFilter, string> = {
 };
 
 export default function DecisionsOverviewPage() {
+  const toast = useToast();
     const router = useRouter();
     const searchParams = useSearchParams();
     const { user, loading: authLoading } = useAuth();

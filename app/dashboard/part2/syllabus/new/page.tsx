@@ -13,6 +13,7 @@ import { useState } from 'react';
 type Lesson = {
   title: string;
   description: string;
+  driveLink: string;
 };
 
 export default function NewSyllabusPage() {
@@ -21,13 +22,14 @@ export default function NewSyllabusPage() {
   const [formData, setFormData] = useState({
     title: '',
     description: '',
+    driveLink: '',
   });
   const [lessons, setLessons] = useState<Lesson[]>([
-    { title: '', description: '' },
+    { title: '', description: '', driveLink: '' },
   ]);
 
   const handleAddLesson = () => {
-    setLessons([...lessons, { title: '', description: '' }]);
+    setLessons([...lessons, { title: '', description: '', driveLink: '' }]);
   };
 
   const handleRemoveLesson = (index: number) => {
@@ -36,7 +38,7 @@ export default function NewSyllabusPage() {
     }
   };
 
-  const handleLessonChange = (index: number, field: 'title' | 'description', value: string) => {
+  const handleLessonChange = (index: number, field: 'title' | 'description' | 'driveLink', value: string) => {
     const updatedLessons = [...lessons];
     updatedLessons[index][field] = value;
     setLessons(updatedLessons);
@@ -52,10 +54,20 @@ export default function NewSyllabusPage() {
       return;
     }
 
-    const result = await createSyllabus.mutateAsync({
-      ...formData,
-      lessons: validLessons,
-    });
+    // All syllabi are global by default (only admins can create)
+    const syllabusData = {
+      title: formData.title,
+      description: formData.description || undefined,
+      driveLink: formData.driveLink || undefined,
+      isGlobal: true, // Always true
+      lessons: validLessons.map(lesson => ({
+        title: lesson.title,
+        description: lesson.description || undefined,
+        driveLink: lesson.driveLink || undefined,
+      })),
+    };
+
+    const result = await createSyllabus.mutateAsync(syllabusData);
 
     if (!result.error && result.data) {
       router.push(`/dashboard/part2/syllabus/${result.data.id}`);
@@ -104,6 +116,17 @@ export default function NewSyllabusPage() {
                     rows={3}
                   />
                 </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="driveLink">Google Drive Linki (Opsiyonel)</Label>
+                  <Input
+                    id="driveLink"
+                    value={formData.driveLink}
+                    onChange={(e) => setFormData({ ...formData, driveLink: e.target.value })}
+                    placeholder="https://drive.google.com/..."
+                    type="url"
+                  />
+                </div>
               </div>
 
               {/* Lessons */}
@@ -142,6 +165,12 @@ export default function NewSyllabusPage() {
                               onChange={(e) => handleLessonChange(index, 'description', e.target.value)}
                               placeholder="Ders açıklaması (opsiyonel)"
                               rows={2}
+                            />
+                            <Input
+                              value={lesson.driveLink}
+                              onChange={(e) => handleLessonChange(index, 'driveLink', e.target.value)}
+                              placeholder="Google Drive Linki (opsiyonel)"
+                              type="url"
                             />
                           </div>
                           {lessons.length > 1 && (

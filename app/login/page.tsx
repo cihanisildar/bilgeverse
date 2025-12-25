@@ -4,13 +4,14 @@ import { ArrowRight, User2 } from 'lucide-react';
 import Link from 'next/link';
 import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
-import toast from 'react-hot-toast';
+import { useToast } from '@/app/hooks/use-toast';
 import { useAuth } from '../contexts/AuthContext';
 
 function LoginForm() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const { login, loading, user } = useAuth();
+  const toast = useToast();
   const searchParams = useSearchParams();
   const router = useRouter();
   const callbackUrl = searchParams.get('callbackUrl');
@@ -126,7 +127,7 @@ function LoginForm() {
               Hesabınız yok mu?
             </p>
             <p className="text-xs text-blue-700 leading-relaxed">
-              BilgeVerse'e katılmak için lütfen dernek yönetimi ile iletişime geçin. 
+              BilgeVerse'e katılmak için lütfen dernek yönetimi ile iletişime geçin.
               Kayıt işlemleri sadece dernek üzerinden gerçekleştirilmektedir.
             </p>
             <p className="text-xs text-blue-600 mt-2 font-medium">

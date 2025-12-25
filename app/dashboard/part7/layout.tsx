@@ -140,13 +140,14 @@ export default function AuthenticatedLayout({
 
   const NavigationLinks = () => (
     <ul className="space-y-2">
-      {isAdmin && (
+      {/* Only show dashboard link for admin and tutors, not students */}
+      {!isStudent && (
         <li>
           <Link
             href="/dashboard"
             className={`flex items-center justify-start px-4 py-2 rounded-lg transition-all duration-200 ${pathname === '/dashboard'
-                ? `${activeIconBg} ${activeLinkColor} font-medium`
-                : 'text-gray-500 hover:bg-gray-50 hover:text-gray-800'
+              ? `${activeIconBg} ${activeLinkColor} font-medium`
+              : 'text-gray-500 hover:bg-gray-50 hover:text-gray-800'
               }`}
             onClick={() => setIsMobileMenuOpen(false)}
           >
@@ -162,8 +163,8 @@ export default function AuthenticatedLayout({
           <Link
             href={link.href}
             className={`flex items-center justify-start px-4 py-2 rounded-lg transition-all duration-200 ${isActive(link.href)
-                ? `${activeIconBg} ${activeLinkColor} font-medium`
-                : 'text-gray-500 hover:bg-gray-50 hover:text-gray-800'
+              ? `${activeIconBg} ${activeLinkColor} font-medium`
+              : 'text-gray-500 hover:bg-gray-50 hover:text-gray-800'
               }`}
             onClick={() => setIsMobileMenuOpen(false)}
           >

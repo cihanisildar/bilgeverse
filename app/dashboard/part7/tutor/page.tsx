@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { HeaderSkeleton, StatsCardSkeleton } from "@/app/components/ui/skeleton-shimmer";
 import { useAuth } from "@/app/contexts/AuthContext";
@@ -7,7 +7,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import toast from 'react-hot-toast';
+import { useToast } from '@/app/hooks/use-toast';
 import { AlertCircle, Award, Bell, Clock, Plus, Search, TrendingUp, ArrowRight, Users, Calendar, MapPin, FileText } from 'lucide-react';
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -603,6 +603,7 @@ function RecentTransactions() {
 }
 
 export default function TutorDashboard() {
+  const toast = useToast();
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(true);
   const { data: userMeetings, isLoading: meetingsLoading } = useUserMeetings();

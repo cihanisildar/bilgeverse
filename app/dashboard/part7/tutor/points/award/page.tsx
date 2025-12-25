@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useAuth } from '@/app/contexts/AuthContext';
 import { Badge } from '@/components/ui/badge';
@@ -12,7 +12,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import toast from 'react-hot-toast';
+import { useToast } from '@/app/hooks/use-toast';
 import { ArrowLeft, Award, Search, User, UserCheck, MinusCircle } from 'lucide-react';
 
 // Types
@@ -76,6 +76,7 @@ const RETRY_CONFIG = {
 const wait = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
 export default function AwardPointsPage() {
+  const toast = useToast();
   const { user } = useAuth();
   const router = useRouter();
   const searchParams = new URLSearchParams(window.location.search);
