@@ -14,10 +14,22 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import Loading from '@/app/components/Loading';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 const formSchema = z.object({
-    userId: z.string().min(1, 'Kullanıcı seçilmelidir'),
+    userId: z.string().optional(),
     title: z.string().min(1, 'Ünvan gereklidir'),
+    firstName: z.string().optional(),
+    lastName: z.string().optional(),
+    username: z.string().optional(),
+    email: z.string().optional(),
+    password: z.string().optional(),
+}).refine((data) => {
+    if (data.userId) return true;
+    return !!(data.firstName && data.lastName && data.username && data.email && data.password);
+}, {
+    message: "Ya mevcut bir kullanıcı seçilmeli ya da yeni kullanıcı bilgileri tam doldurulmalıdır",
+    path: ["userId"]
 });
 
 type FormData = z.infer<typeof formSchema>;
@@ -28,14 +40,21 @@ export default function NewBoardMemberPage() {
     const createMember = useCreateBoardMember();
     const { data: users, isLoading: loadingUsers } = useAllUsers();
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [creationType, setCreationType] = useState<'existing' | 'new'>('existing');
 
     const {
         register,
         handleSubmit,
         control,
         formState: { errors },
+        setValue,
+        clearErrors
     } = useForm<FormData>({
         resolver: zodResolver(formSchema),
+        defaultValues: {
+            userId: '',
+            title: ''
+        }
     });
 
     const userOptions = useMemo(() => {
@@ -49,7 +68,19 @@ export default function NewBoardMemberPage() {
     const onSubmit = async (data: FormData) => {
         setIsSubmitting(true);
         try {
-            const result = await createMember.mutateAsync(data);
+            // Filter data based on creationType
+            const submitData = creationType === 'existing'
+                ? { userId: data.userId, title: data.title }
+                : {
+                    title: data.title,
+                    firstName: data.firstName,
+                    lastName: data.lastName,
+                    username: data.username,
+                    email: data.email,
+                    password: data.password
+                };
+
+            const result = await createMember.mutateAsync(submitData as any);
             if (result && !result.error) {
                 router.push('/dashboard/part1/board-members');
             }
@@ -93,7 +124,7 @@ export default function NewBoardMemberPage() {
                             Yeni Yönetim Kurulu Üyesi
                         </span>
                     </h1>
-                    <p className="text-gray-600">Sistemdeki bir kullanıcıyı yönetim kurulu üyesi olarak ekleyin</p>
+                    <p className="text-gray-600">Sistemdeki bir kullanıcıyı seçin veya yeni bir üye oluşturun</p>
                 </div>
 
                 <Card className="border-0 shadow-lg rounded-2xl overflow-hidden">
@@ -105,38 +136,75 @@ export default function NewBoardMemberPage() {
                             </div>
                             <div>
                                 <CardTitle className="text-xl">Üye Bilgileri</CardTitle>
-                                <CardDescription className="mt-1">Kullanıcı seçin ve ünvanını belirleyin</CardDescription>
+                                <CardDescription className="mt-1">Üye tipini seçin ve bilgilerini doldurun</CardDescription>
                             </div>
                         </div>
                     </CardHeader>
                     <CardContent>
                         <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-                            <div className="space-y-2">
-                                <Label htmlFor="userId" className="text-gray-700 font-medium">
-                                    Kullanıcı <span className="text-red-500">*</span>
-                                </Label>
-                                <Controller
-                                    name="userId"
-                                    control={control}
-                                    render={({ field }) => (
-                                        <Select onValueChange={field.onChange} value={field.value}>
-                                            <SelectTrigger className="border-gray-300 focus:border-indigo-500 focus:ring-indigo-500">
-                                                <SelectValue placeholder="Kullanıcı seçin..." />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                {userOptions.map((option) => (
-                                                    <SelectItem key={option.value} value={option.value}>
-                                                        {option.label}
-                                                    </SelectItem>
-                                                ))}
-                                            </SelectContent>
-                                        </Select>
-                                    )}
-                                />
-                                {errors.userId && (
-                                    <p className="text-sm text-red-600">{errors.userId.message}</p>
-                                )}
-                            </div>
+                            <Tabs defaultValue="existing" onValueChange={(v) => {
+                                setCreationType(v as 'existing' | 'new');
+                                clearErrors();
+                            }} className="w-full">
+                                <TabsList className="grid w-full grid-cols-2 mb-6">
+                                    <TabsTrigger value="existing">Sistemden Seç</TabsTrigger>
+                                    <TabsTrigger value="new">Yeni Kayıt</TabsTrigger>
+                                </TabsList>
+
+                                <TabsContent value="existing" className="space-y-6">
+                                    <div className="space-y-2">
+                                        <Label htmlFor="userId" className="text-gray-700 font-medium">
+                                            Kullanıcı <span className="text-red-500">*</span>
+                                        </Label>
+                                        <Controller
+                                            name="userId"
+                                            control={control}
+                                            render={({ field }) => (
+                                                <Select onValueChange={field.onChange} value={field.value}>
+                                                    <SelectTrigger className="border-gray-300 focus:border-indigo-500 focus:ring-indigo-500">
+                                                        <SelectValue placeholder="Kullanıcı seçin..." />
+                                                    </SelectTrigger>
+                                                    <SelectContent>
+                                                        {userOptions.map((option) => (
+                                                            <SelectItem key={option.value} value={option.value}>
+                                                                {option.label}
+                                                            </SelectItem>
+                                                        ))}
+                                                    </SelectContent>
+                                                </Select>
+                                            )}
+                                        />
+                                        {errors.userId && (
+                                            <p className="text-sm text-red-600">{errors.userId.message}</p>
+                                        )}
+                                    </div>
+                                </TabsContent>
+
+                                <TabsContent value="new" className="space-y-4">
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div className="space-y-2">
+                                            <Label htmlFor="firstName">Ad <span className="text-red-500">*</span></Label>
+                                            <Input id="firstName" {...register('firstName')} placeholder="Ad" />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <Label htmlFor="lastName">Soyad <span className="text-red-500">*</span></Label>
+                                            <Input id="lastName" {...register('lastName')} placeholder="Soyad" />
+                                        </div>
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label htmlFor="username">Kullanıcı Adı <span className="text-red-500">*</span></Label>
+                                        <Input id="username" {...register('username')} placeholder="kullanici.adi" />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label htmlFor="email">E-posta <span className="text-red-500">*</span></Label>
+                                        <Input id="email" type="email" {...register('email')} placeholder="ornek@email.com" />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label htmlFor="password">Şifre <span className="text-red-500">*</span></Label>
+                                        <Input id="password" type="password" {...register('password')} placeholder="••••••••" />
+                                    </div>
+                                </TabsContent>
+                            </Tabs>
 
                             <div className="space-y-2">
                                 <Label htmlFor="title" className="text-gray-700 font-medium">

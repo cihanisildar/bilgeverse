@@ -168,7 +168,7 @@ export default function ClassReportPage() {
                     </p>
                     {classReport.classroom.tutor && (
                       <p className="text-sm text-purple-600 font-medium mt-1">
-                        Eğitmen: {getTutorDisplayName(classReport.classroom.tutor)}
+                        Rehber: {getTutorDisplayName(classReport.classroom.tutor)}
                       </p>
                     )}
                   </div>

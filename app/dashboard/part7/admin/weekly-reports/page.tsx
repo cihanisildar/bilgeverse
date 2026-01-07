@@ -501,7 +501,7 @@ export default function AdminWeeklyReportsPage() {
                   <SelectContent>
                     <SelectItem value="all">Tüm roller</SelectItem>
                     <SelectItem value="TUTOR">Rehber</SelectItem>
-                    <SelectItem value="ASISTAN">Rehber Yardımcısı</SelectItem>
+                    <SelectItem value="ASISTAN">Lider</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

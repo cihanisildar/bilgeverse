@@ -81,7 +81,7 @@ export default function EditWeeklyReportPage() {
     { key: "bilgeverseDataEntry", label: "Bilgeverse'e öğrenci veri girişi yaptınız mı?" },
     { key: "groupActivityAsistan", label: "Gurubunuza veya genele bir etkinlik yaptınız mı?" },
     { key: "individualAttentionAsistan", label: "Haftalık buluşma dışında gurubunuzdaki bir gençle veya gençlerle bir arada bulunup ilgi gösterdiniz mi?" },
-    { key: "workshopParticipation", label: "Rehber Yardımcılığının yanında Bir Atölye Sorumlusu ise Atölye Çalışmalarına Katıldı mı?" }
+    { key: "workshopParticipation", label: "Liderliğin yanında Bir Atölye Sorumlusu ise Atölye Çalışmalarına Katıldı mı?" }
   ];
 
   const variableCriteria = [
@@ -226,7 +226,7 @@ export default function EditWeeklyReportPage() {
               </span>
             </h1>
             <p className="text-gray-600">
-              {report.period.name} dönemi - {report.user.role === "TUTOR" ? "Rehber" : "Rehber Yardımcısı"} Raporu
+              {report.period.name} dönemi - {report.user.role === "TUTOR" ? "Rehber" : "Lider"} Raporu
             </p>
           </div>
         </div>

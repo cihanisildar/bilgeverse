@@ -4,7 +4,7 @@ import { UserRole } from '@prisma/client';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '../../auth/[...nextauth]/auth.config';
 import { requireActivePeriod } from '@/lib/periods';
-import { calculateUserPoints } from '@/lib/points';
+import { calculateUserPoints, calculateMultipleUserPoints } from '@/lib/points';
 
 export const dynamic = 'force-dynamic';
 
@@ -13,9 +13,9 @@ export async function GET(request: NextRequest) {
     console.log('Admin tutors endpoint - Starting request');
     const session = await getServerSession(authOptions);
     console.log('Admin tutors endpoint - Current user:', { id: session?.user?.id, role: session?.user?.role });
-    
+
     if (!session?.user || session.user.role !== UserRole.ADMIN) {
-      console.log('Admin tutors endpoint - Unauthorized access:', { 
+      console.log('Admin tutors endpoint - Unauthorized access:', {
         isAuthenticated: !!session?.user,
         isAdmin: session?.user?.role === UserRole.ADMIN
       });
@@ -29,7 +29,7 @@ export async function GET(request: NextRequest) {
     const activePeriod = await requireActivePeriod();
 
     console.log('Admin tutors endpoint - Fetching tutors');
-    // Fetch all tutors with their students and classroom
+    // Fetch all tutors with their students and classroom (including classroom students)
     const tutors = await prisma.user.findMany({
       where: {
         role: UserRole.TUTOR,
@@ -44,10 +44,15 @@ export async function GET(request: NextRequest) {
           }
         },
         classroom: {
-          select: {
-            id: true,
-            name: true,
-            description: true,
+          include: {
+            students: {
+              select: {
+                id: true,
+                username: true,
+                firstName: true,
+                lastName: true,
+              }
+            }
           }
         },
       },
@@ -55,50 +60,54 @@ export async function GET(request: NextRequest) {
         username: 'asc',
       }
     });
+
     console.log('Admin tutors endpoint - Found tutors:', tutors.length);
-    console.log('Admin tutors endpoint - Tutors with students:', tutors.map(t => ({ 
-      name: t.username, 
-      studentCount: t.students.length 
-    })));
 
-    // Calculate period-aware points for each student
-    const tutorsWithCalculatedStudentPoints = await Promise.all(
-      tutors.map(async (tutor) => {
-        const studentsWithCalculatedPoints = await Promise.all(
-          tutor.students.map(async (student) => {
-            // Calculate points for the active period only
-            const calculatedPoints = await calculateUserPoints(student.id, activePeriod.id);
+    // Collect all student IDs to calculate points in batch
+    const allStudentIds = new Set<string>();
+    tutors.forEach(tutor => {
+      tutor.students.forEach(s => allStudentIds.add(s.id));
+      tutor.classroom?.students.forEach(s => allStudentIds.add(s.id));
+    });
 
-            return {
-              ...student,
-              points: calculatedPoints,
-            };
-          })
-        );
+    // Calculate points for all students in one go
+    const pointsMap = await calculateMultipleUserPoints(Array.from(allStudentIds), activePeriod.id);
 
-        return {
-          ...tutor,
-          students: studentsWithCalculatedPoints,
-        };
-      })
-    );
+    // Process tutors and their merged students
+    const tutorsWithCalculatedData = tutors.map(tutor => {
+      // Merge students from both sources (direct relation and classroom)
+      const mergedStudentsMap = new Map<string, any>();
 
-    // Ensure clean response format
-    const response = {
-      tutors: tutorsWithCalculatedStudentPoints.map(tutor => ({
+      // Add direct students
+      tutor.students.forEach(s => {
+        mergedStudentsMap.set(s.id, { ...s, points: pointsMap.get(s.id) || 0 });
+      });
+
+      // Add classroom students (if any)
+      tutor.classroom?.students.forEach(s => {
+        if (!mergedStudentsMap.has(s.id)) {
+          mergedStudentsMap.set(s.id, { ...s, points: pointsMap.get(s.id) || 0 });
+        }
+      });
+
+      const mergedStudents = Array.from(mergedStudentsMap.values());
+
+      return {
         id: tutor.id,
         username: tutor.username,
         firstName: tutor.firstName,
         lastName: tutor.lastName,
-        classroom: tutor.classroom,
-        students: tutor.students.map(student => ({
-          id: student.id,
-          username: student.username,
-          firstName: student.firstName,
-          lastName: student.lastName,
-          points: student.points
-        }))
-      }))
+        classroom: tutor.classroom ? {
+          id: tutor.classroom.id,
+          name: tutor.classroom.name,
+          description: tutor.classroom.description,
+        } : null,
+        students: mergedStudents,
+      };
+    });
+
+    const response = {
+      tutors: tutorsWithCalculatedData
     };
 
     console.log('Admin tutors endpoint - Response format:', JSON.stringify(response, null, 2));

@@ -220,7 +220,7 @@ export default function AdminWeeklyReportDetailPage() {
     { key: "bilgeverseDataEntry", label: "Bilgeverse'e öğrenci veri girişi yaptınız mı?" },
     { key: "groupActivityAsistan", label: "Gurubunuza veya genele bir etkinlik yaptınız mı?" },
     { key: "individualAttentionAsistan", label: "Haftalık buluşma dışında gurubunuzdaki bir gençle veya gençlerle bir arada bulunup ilgi gösterdiniz mi?" },
-    { key: "workshopParticipation", label: "Rehber Yardımcılığının yanında Bir Atölye Sorumlusu ise Atölye Çalışmalarına Katıldı mı?" }
+    { key: "workshopParticipation", label: "Liderliğin yanında Bir Atölye Sorumlusu ise Atölye Çalışmalarına Katıldı mı?" }
   ];
 
   const variableCriteria = [
@@ -324,7 +324,7 @@ export default function AdminWeeklyReportDetailPage() {
                     <div className="w-2 h-8 bg-gradient-to-b from-indigo-500 to-purple-600 rounded-full"></div>
                     <h1 className="text-4xl font-bold text-gray-900">
                       <span className="bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 bg-clip-text text-transparent">
-                        {report.weekNumber}. Hafta {report.user.role === "TUTOR" ? "Rehber" : "Rehber Yardımcısı"} Raporu
+                        {report.weekNumber}. Hafta {report.user.role === "TUTOR" ? "Rehber" : "Lider"} Raporu
                       </span>
                     </h1>
                   </div>

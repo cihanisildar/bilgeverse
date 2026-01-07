@@ -5,6 +5,7 @@ import { authOptions } from '@/app/api/auth/[...nextauth]/auth.config';
 import prisma from '@/lib/prisma';
 import { createBoardMemberSchema, updateBoardMemberSchema } from '@/lib/validations/board-members';
 import { UserRole } from '@prisma/client';
+import bcrypt from 'bcryptjs';
 
 export async function getBoardMembers() {
     try {
@@ -168,10 +169,44 @@ export async function createBoardMember(data: unknown) {
         }
 
         const validated = createBoardMemberSchema.parse(data);
+        let targetUserId = validated.userId;
+
+        // If no userId provided, create a new user
+        if (!targetUserId) {
+            // Check if username or email already exists
+            const existingUser = await prisma.user.findFirst({
+                where: {
+                    OR: [
+                        { username: validated.username?.toLowerCase() },
+                        { email: validated.email },
+                    ],
+                },
+            });
+
+            if (existingUser) {
+                return { error: 'Bu kullanıcı adı veya e-posta zaten kullanımda', data: null };
+            }
+
+            // Hash password
+            const hashedPassword = await bcrypt.hash(validated.password!, 10);
+
+            // Create user
+            const newUser = await prisma.user.create({
+                data: {
+                    username: validated.username!.toLowerCase(),
+                    email: validated.email!,
+                    password: hashedPassword,
+                    firstName: validated.firstName,
+                    lastName: validated.lastName,
+                    role: 'BOARD_MEMBER' as any, // Cast to any because prisma client might not be refreshed yet
+                },
+            });
+            targetUserId = newUser.id;
+        }
 
         // Check if user is already a board member
         const existing = await prisma.boardMember.findUnique({
-            where: { userId: validated.userId },
+            where: { userId: targetUserId },
         });
 
         if (existing) {
@@ -180,7 +215,7 @@ export async function createBoardMember(data: unknown) {
 
         const boardMember = await prisma.boardMember.create({
             data: {
-                userId: validated.userId,
+                userId: targetUserId!,
                 title: validated.title,
             },
             include: {

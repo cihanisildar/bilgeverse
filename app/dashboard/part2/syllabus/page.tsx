@@ -49,14 +49,24 @@ export default async function SyllabusPage() {
                 : 'Müfredatları görüntüleyin ve sınıfınız için ilerleme kaydedin'}
             </p>
           </div>
-          {isAdmin && (
-            <Link href="/dashboard/part2/syllabus/new">
-              <Button className="bg-gradient-to-r from-cyan-600 to-teal-600 hover:from-cyan-700 hover:to-teal-700 text-white">
-                <Plus className="h-4 w-4 mr-2" />
-                Yeni Müfredat Oluştur
-              </Button>
-            </Link>
-          )}
+          <div className="flex flex-col sm:flex-row gap-3">
+            {isAdmin && (
+              <Link href="/dashboard/part2/syllabus/tracking">
+                <Button className="bg-white hover:bg-gray-50 text-cyan-700 border border-cyan-200">
+                  <BookOpen className="h-4 w-4 mr-2" />
+                  Öğretmen İlerleme Takibi
+                </Button>
+              </Link>
+            )}
+            {isAdmin && (
+              <Link href="/dashboard/part2/syllabus/new">
+                <Button className="bg-gradient-to-r from-cyan-600 to-teal-600 hover:from-cyan-700 hover:to-teal-700 text-white">
+                  <Plus className="h-4 w-4 mr-2" />
+                  Yeni Müfredat Oluştur
+                </Button>
+              </Link>
+            )}
+          </div>
         </div>
 
         <SyllabusList syllabi={syllabi} isAdmin={isAdmin} />

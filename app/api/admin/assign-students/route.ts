@@ -7,7 +7,7 @@ import { authOptions } from '../../auth/[...nextauth]/auth.config';
 export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-    
+
     if (!session?.user || session.user.role !== UserRole.ADMIN) {
       return NextResponse.json(
         { error: 'Unauthorized: Only admins can assign students to tutors' },
@@ -29,7 +29,7 @@ export async function POST(request: NextRequest) {
     const tutor = await prisma.user.findFirst({
       where: {
         id: tutorId,
-        role: UserRole.TUTOR
+        role: { in: [UserRole.TUTOR, UserRole.ASISTAN, UserRole.BOARD_MEMBER] }
       }
     });
 
@@ -76,10 +76,10 @@ export async function POST(request: NextRequest) {
         });
       } else {
         // If no classroom exists, create one for the tutor
-        const classroomName = tutor.firstName && tutor.lastName 
+        const classroomName = tutor.firstName && tutor.lastName
           ? `${tutor.firstName} ${tutor.lastName} Sınıfı`
           : `${tutor.username} Sınıfı`;
-          
+
         const classroomDescription = tutor.firstName && tutor.lastName
           ? `${tutor.firstName} ${tutor.lastName} öğretmeninin sınıfı`
           : `${tutor.username} öğretmeninin sınıfı`;
@@ -101,7 +101,7 @@ export async function POST(request: NextRequest) {
     });
 
     return NextResponse.json(
-      { 
+      {
         message: 'Student assigned to tutor successfully',
         student: {
           id: student.id,
@@ -129,7 +129,7 @@ export async function POST(request: NextRequest) {
 export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-    
+
     if (!session?.user || session.user.role !== UserRole.ADMIN) {
       return NextResponse.json(
         { error: 'Unauthorized: Only admins can view assignment data' },
@@ -154,7 +154,7 @@ export async function GET(request: NextRequest) {
     // Get all tutors
     const tutors = await prisma.user.findMany({
       where: {
-        role: UserRole.TUTOR
+        role: { in: [UserRole.TUTOR, UserRole.ASISTAN, UserRole.BOARD_MEMBER] }
       },
       select: {
         id: true,

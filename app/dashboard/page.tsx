@@ -3,7 +3,7 @@
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/app/contexts/AuthContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { ArrowRight } from 'lucide-react';
+import { ArrowRight, LogOut } from 'lucide-react';
 import { PARTS } from '@/app/lib/parts';
 import { getRoleBasedPath } from '@/app/lib/navigation';
 import { getAllowedParts } from '@/app/lib/permissions';
@@ -14,7 +14,7 @@ import { cn } from '@/lib/utils';
 export default function DashboardPage() {
   const router = useRouter();
   const pathname = usePathname();
-  const { user, loading, isAdmin, isStudent } = useAuth();
+  const { user, loading, isAdmin, isBoardMember, isStudent, logout } = useAuth();
 
   useEffect(() => {
     if (!loading && !user) {
@@ -69,11 +69,20 @@ export default function DashboardPage() {
         {isDashboardPage && (
           <aside className="w-80 bg-white border-r border-gray-200 overflow-y-auto shadow-sm">
             <div className="p-6">
-              <h2 className="text-xl font-semibold text-gray-800 mb-4">
-                <span className="bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-purple-600">
-                  Bölümler
-                </span>
-              </h2>
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-xl font-semibold text-gray-800">
+                  <span className="bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-purple-600">
+                    Bölümler
+                  </span>
+                </h2>
+                <button
+                  onClick={() => logout()}
+                  className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-full transition-all duration-200"
+                  title="Çıkış Yap"
+                >
+                  <LogOut className="h-5 w-5" />
+                </button>
+              </div>
               <div className="space-y-2">
                 {visibleParts.map((part) => (
                   <div
@@ -96,7 +105,7 @@ export default function DashboardPage() {
                   </div>
                 ))}
                 {/* Belgeler Link */}
-                {isAdmin && (
+                {(isAdmin || isBoardMember) && (
                   <div
                     onClick={() => router.push('/dashboard/pdfs')}
                     className="p-4 rounded-lg cursor-pointer transition-all duration-200 hover:bg-gray-50 hover:shadow-md border border-transparent hover:border-gray-200 group"

@@ -47,7 +47,7 @@ export default function AdminUsersPage() {
   const [statusFilter, setStatusFilter] = useState('');
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [statusUpdateLoading, setStatusUpdateLoading] = useState('');
-  
+
   // State for delete confirmation dialog
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [finalConfirmationOpen, setFinalConfirmationOpen] = useState(false);
@@ -84,16 +84,16 @@ export default function AdminUsersPage() {
       try {
         setLoading(true);
         const response = await fetch('/api/users');
-        
+
         if (!response.ok) {
           throw new Error('Failed to fetch users');
         }
-        
+
         const data = await response.json();
         if (!data.users || !Array.isArray(data.users)) {
           throw new Error('Invalid response format');
         }
-        
+
         setUsers(data.users);
         setFilteredUsers(data.users);
       } catch (err) {
@@ -176,26 +176,26 @@ export default function AdminUsersPage() {
 
   const confirmDelete = async () => {
     if (!userToDelete) return;
-    
+
     try {
       setDeleteLoading(true);
-      
+
       const response = await fetch(`/api/users/${userToDelete.id}`, {
         method: 'DELETE',
       });
-      
+
       if (!response.ok) {
         const errorData = await response.json();
         throw new Error(errorData.error || 'Kullanıcı silinirken bir hata oluştu');
       }
-      
+
       // Remove user from state
       setUsers(users.filter(user => user.id !== userToDelete.id));
       setFilteredUsers(filteredUsers.filter(user => user.id !== userToDelete.id));
-      
+
       // Show success toast
       toast.success(`${userToDelete.username} kullanıcısı başarıyla silindi`);
-      
+
       // Close both dialogs
       setDeleteDialogOpen(false);
       setFinalConfirmationOpen(false);
@@ -236,7 +236,7 @@ export default function AdminUsersPage() {
       case 'tutor':
         return 'Rehber';
       case 'asistan':
-        return 'Asistan';
+        return 'Lider';
       case 'student':
         return 'Öğrenci';
       default:
@@ -310,7 +310,7 @@ export default function AdminUsersPage() {
             <h1 className="text-2xl sm:text-3xl font-bold text-white">Kullanıcı Yönetimi</h1>
             <p className="text-sm sm:text-base text-indigo-100 mt-1">Kullanıcıları yönet, düzenle ve takip et</p>
           </div>
-          <Link 
+          <Link
             href="/dashboard/part7/admin/users/new"
             className="w-full sm:w-auto bg-white text-indigo-700 hover:bg-indigo-50 py-2 sm:py-2.5 px-4 sm:px-5 rounded-lg flex items-center justify-center sm:justify-start text-sm font-medium transition-colors shadow-sm"
           >
@@ -321,7 +321,7 @@ export default function AdminUsersPage() {
           </Link>
         </div>
       </div>
-      
+
       {/* Search and filter */}
       <div className="bg-white p-4 sm:p-6 rounded-xl shadow-md border border-gray-100">
         <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
@@ -353,8 +353,8 @@ export default function AdminUsersPage() {
               >
                 <option value="">Tüm Roller</option>
                 <option value={UserRole.ADMIN}>Yönetici</option>
-                <option value={UserRole.TUTOR}>Öğretmen</option>
-                <option value={UserRole.ASISTAN}>Asistan</option>
+                <option value={UserRole.TUTOR}>Rehber</option>
+                <option value={UserRole.ASISTAN}>Lider</option>
                 <option value={UserRole.STUDENT}>Öğrenci</option>
               </select>
             </div>
@@ -379,7 +379,7 @@ export default function AdminUsersPage() {
           </div>
         </div>
       </div>
-      
+
       {/* Users Table */}
       {filteredUsers.length === 0 ? (
         <div className="bg-white shadow-sm rounded-xl p-6 sm:p-8 text-center text-gray-500 border border-gray-100 flex flex-col items-center">
@@ -387,11 +387,11 @@ export default function AdminUsersPage() {
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
           </svg>
           <p className="text-base sm:text-lg font-medium">
-            {searchQuery || roleFilter 
-              ? 'Arama kriterlerine uygun kullanıcı bulunamadı.' 
+            {searchQuery || roleFilter
+              ? 'Arama kriterlerine uygun kullanıcı bulunamadı.'
               : 'Henüz kullanıcı bulunmuyor.'}
           </p>
-          <Link 
+          <Link
             href="/dashboard/part7/admin/users/new"
             className="mt-4 w-full sm:w-auto bg-indigo-600 hover:bg-indigo-700 text-white py-2 px-4 rounded-lg flex items-center justify-center text-sm font-medium transition-colors"
           >
@@ -444,14 +444,14 @@ export default function AdminUsersPage() {
                     <td className="px-4 sm:px-6 py-4 sm:py-5 whitespace-nowrap">
                       <div className="flex items-center">
                         <div className="flex-shrink-0 h-8 w-8 sm:h-10 sm:w-10 bg-indigo-100 rounded-full flex items-center justify-center text-indigo-600 font-semibold text-sm sm:text-base">
-                          {user.firstName 
-                            ? user.firstName.charAt(0) 
+                          {user.firstName
+                            ? user.firstName.charAt(0)
                             : user.username.charAt(0).toUpperCase()}
                         </div>
                         <div className="ml-3 sm:ml-4">
                           <div className="text-sm font-medium text-gray-900">
-                            {user.firstName && user.lastName 
-                              ? `${user.firstName} ${user.lastName}` 
+                            {user.firstName && user.lastName
+                              ? `${user.firstName} ${user.lastName}`
                               : user.username}
                           </div>
                           <div className="text-xs sm:text-sm text-gray-500 hidden sm:block">
@@ -469,11 +469,10 @@ export default function AdminUsersPage() {
                       <button
                         onClick={() => handleStatusToggle(user.id, user.isActive)}
                         disabled={statusUpdateLoading === user.id}
-                        className={`group relative px-3 sm:px-4 py-1.5 inline-flex items-center text-xs leading-5 font-semibold rounded-lg transition-all duration-200 transform ${
-                          user.isActive
+                        className={`group relative px-3 sm:px-4 py-1.5 inline-flex items-center text-xs leading-5 font-semibold rounded-lg transition-all duration-200 transform ${user.isActive
                             ? 'bg-green-100 text-green-800 hover:bg-green-200 hover:shadow-md border-2 border-green-200 hover:border-green-300'
                             : 'bg-red-100 text-red-800 hover:bg-red-200 hover:shadow-md border-2 border-red-200 hover:border-red-300'
-                        } ${statusUpdateLoading === user.id ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:scale-105'}`}
+                          } ${statusUpdateLoading === user.id ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:scale-105'}`}
                       >
                         {statusUpdateLoading === user.id ? (
                           <div className="flex items-center gap-1">
@@ -521,7 +520,7 @@ export default function AdminUsersPage() {
                     </td>
                     <td className="px-4 sm:px-6 py-4 sm:py-5 whitespace-nowrap text-right text-sm font-medium">
                       <div className="flex flex-col sm:flex-row gap-2 sm:justify-end">
-                        <Link 
+                        <Link
                           href={`/dashboard/part7/admin/users/${user.id}`}
                           className="inline-flex items-center justify-center px-2.5 sm:px-3 py-1 sm:py-1.5 border border-indigo-500 text-indigo-600 bg-white hover:bg-indigo-50 rounded-md transition-colors text-xs sm:text-sm"
                         >
@@ -549,7 +548,7 @@ export default function AdminUsersPage() {
           </div>
         </div>
       )}
-      
+
       {/* Initial Delete Confirmation Dialog */}
       <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <DialogContent>
@@ -589,7 +588,7 @@ export default function AdminUsersPage() {
               <p className="font-medium text-gray-900">
                 {userToDelete?.username} kullanıcısını sildiğinizde aşağıdaki veriler de kalıcı olarak silinecektir:
               </p>
-              
+
               {/* General deletion consequences */}
               <ul className="list-disc pl-5 space-y-2 text-sm text-gray-600">
                 <li>Kullanıcının tüm puan işlemleri</li>

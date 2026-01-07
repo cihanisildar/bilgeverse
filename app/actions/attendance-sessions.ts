@@ -3,7 +3,8 @@
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/app/api/auth/[...nextauth]/auth.config';
 import prisma from '@/lib/prisma';
-import { UserRole, CheckInMethod, AttendanceSessionStatus } from '@prisma/client';
+import { UserRole, CheckInMethod, AttendanceSessionStatus, TransactionType } from '@prisma/client';
+import { requireActivePeriod } from '@/lib/periods';
 import crypto from 'crypto';
 
 export async function getAttendanceSessions() {
@@ -231,9 +232,32 @@ export async function updateAttendanceSession(sessionId: string, data: {
       return { error: 'Yetkisiz erişim', data: null };
     }
 
+    // Prepare update data
+    const updateData: any = { ...data };
+
+    // If sessionDate is being updated and there's an existing QR code, update qrCodeExpiresAt
+    if (data.sessionDate) {
+      // First, check if the session has a QR code
+      const existingSession = await prisma.attendanceSession.findUnique({
+        where: { id: sessionId },
+        select: { qrCodeToken: true },
+      });
+
+      // If there's an existing QR code, update its expiration to the new week's end
+      if (existingSession?.qrCodeToken) {
+        const newDate = new Date(data.sessionDate);
+        const dayOfWeek = newDate.getDay();
+        const daysUntilSunday = dayOfWeek === 0 ? 0 : 7 - dayOfWeek;
+        const weekEnd = new Date(newDate);
+        weekEnd.setDate(weekEnd.getDate() + daysUntilSunday);
+        weekEnd.setHours(23, 59, 59, 999);
+        updateData.qrCodeExpiresAt = weekEnd;
+      }
+    }
+
     const attendanceSession = await prisma.attendanceSession.update({
       where: { id: sessionId },
-      data,
+      data: updateData,
       include: {
         createdBy: {
           select: {
@@ -347,32 +371,59 @@ export async function checkInToSession(sessionId: string) {
       return { error: 'Zaten giriş yapılmış', data: null };
     }
 
-    // Create attendance record
-    const attendance = await prisma.studentAttendance.create({
-      data: {
-        sessionId,
-        studentId: session.user.id,
-        checkInMethod: CheckInMethod.QR,
-      },
-      include: {
-        student: {
-          select: {
-            id: true,
-            username: true,
-            firstName: true,
-            lastName: true,
+    // Get active period
+    let activePeriod;
+    try {
+      activePeriod = await requireActivePeriod();
+    } catch (error) {
+      console.error('Active period error in checkInToSession:', error);
+      return { error: 'Aktif dönem bulunamadı. Lütfen yöneticinize başvurun.', data: null };
+    }
+
+    // Create attendance record and award points in a transaction
+    const result = await prisma.$transaction(async (tx) => {
+      // 1. Create attendance record
+      const attendance = await tx.studentAttendance.create({
+        data: {
+          sessionId,
+          studentId: session.user.id,
+          checkInMethod: CheckInMethod.QR,
+        },
+        include: {
+          student: {
+            select: {
+              id: true,
+              username: true,
+              firstName: true,
+              lastName: true,
+            },
           },
         },
-      },
+      });
+
+      // 2. Award 30 points
+      await tx.pointsTransaction.create({
+        data: {
+          studentId: session.user.id,
+          tutorId: attendanceSession.createdById, // Use the session creator as the tutor
+          points: 30,
+          type: TransactionType.AWARD,
+          reason: 'Haftalık Yoklama Katılımı',
+          periodId: activePeriod.id,
+        }
+      });
+
+      return attendance;
     });
 
     return {
       error: null,
       data: {
-        ...attendance,
-        checkInTime: attendance.checkInTime.toISOString(),
-        createdAt: attendance.createdAt.toISOString(),
-        updatedAt: attendance.updatedAt.toISOString(),
+        ...result,
+        checkInTime: result.checkInTime.toISOString(),
+        createdAt: result.createdAt.toISOString(),
+        updatedAt: result.updatedAt.toISOString(),
+        pointsAwarded: 30
       },
     };
   } catch (error: any) {
@@ -384,8 +435,6 @@ export async function checkInToSession(sessionId: string) {
   }
 }
 
-import { requireActivePeriod } from '@/lib/periods';
-import { TransactionType } from '@prisma/client';
 
 export async function manualCheckInToSession(sessionId: string, studentId: string, notes?: string) {
   try {
@@ -520,6 +569,126 @@ export async function manualCheckInToSession(sessionId: string, studentId: strin
     }
     console.error('Error manually checking in:', error);
     return { error: 'Manuel giriş yapılırken bir hata oluştu', data: null };
+  }
+}
+
+// Remove a student's attendance from a session and refund their points
+export async function removeAttendanceFromSession(sessionId: string, studentId: string) {
+  try {
+    const session = await getServerSession(authOptions);
+
+    if (!session?.user || (session.user.role !== UserRole.ADMIN && session.user.role !== UserRole.TUTOR && session.user.role !== UserRole.ASISTAN)) {
+      return { error: 'Yetkisiz erişim: Sadece öğretmenler, asistanlar ve yöneticiler yoklama geri alabilir', data: null };
+    }
+
+    // Validate that tutors/assistants can only remove attendance for their own students
+    if (session.user.role === UserRole.TUTOR) {
+      const student = await prisma.user.findFirst({
+        where: {
+          id: studentId,
+          tutorId: session.user.id,
+          role: UserRole.STUDENT,
+        },
+      });
+
+      if (!student) {
+        return { error: 'Bu öğrenci sizin grubunuzda değil', data: null };
+      }
+    } else if (session.user.role === UserRole.ASISTAN) {
+      const currentUser = await prisma.user.findUnique({
+        where: { id: session.user.id },
+        select: { assistedTutorId: true },
+      });
+
+      if (!currentUser?.assistedTutorId) {
+        return { error: 'Size atanmış bir öğretmen bulunamadı', data: null };
+      }
+
+      const student = await prisma.user.findFirst({
+        where: {
+          id: studentId,
+          tutorId: currentUser.assistedTutorId,
+          role: UserRole.STUDENT,
+        },
+      });
+
+      if (!student) {
+        return { error: 'Bu öğrenci sizin grubunuzda değil', data: null };
+      }
+    }
+
+    // Check if attendance record exists
+    const existingAttendance = await prisma.studentAttendance.findUnique({
+      where: {
+        sessionId_studentId: {
+          sessionId,
+          studentId,
+        },
+      },
+    });
+
+    if (!existingAttendance) {
+      return { error: 'Öğrencinin yoklama kaydı bulunamadı', data: null };
+    }
+
+    // Get active period for points transaction lookup
+    let activePeriod;
+    try {
+      activePeriod = await requireActivePeriod();
+    } catch (error) {
+      console.error('Active period error:', error);
+      return { error: 'Aktif dönem bulunamadı. Lütfen önce bir dönem başlatın.', data: null };
+    }
+
+    // Perform operations in a transaction
+    await prisma.$transaction(async (tx) => {
+      // 1. Delete the attendance record
+      await tx.studentAttendance.delete({
+        where: {
+          sessionId_studentId: {
+            sessionId,
+            studentId,
+          },
+        },
+      });
+
+      // 2. Find and delete the associated points transaction
+      // We look for a 30-point AWARD transaction for "Haftalık Yoklama Katılımı"
+      const pointTransaction = await tx.pointsTransaction.findFirst({
+        where: {
+          studentId,
+          points: 30,
+          type: TransactionType.AWARD,
+          reason: 'Haftalık Yoklama Katılımı',
+          periodId: activePeriod.id,
+          // Match approximately by time (within 1 minute of attendance creation)
+          createdAt: {
+            gte: new Date(existingAttendance.createdAt.getTime() - 60000),
+            lte: new Date(existingAttendance.createdAt.getTime() + 60000),
+          },
+        },
+        orderBy: {
+          createdAt: 'desc',
+        },
+      });
+
+      if (pointTransaction) {
+        await tx.pointsTransaction.delete({
+          where: { id: pointTransaction.id },
+        });
+      }
+    });
+
+    return {
+      error: null,
+      data: {
+        success: true,
+        pointsRemoved: 30,
+      },
+    };
+  } catch (error: any) {
+    console.error('Error removing attendance:', error);
+    return { error: 'Yoklama geri alınırken bir hata oluştu', data: null };
   }
 }
 

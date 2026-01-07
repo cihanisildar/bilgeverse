@@ -5,10 +5,11 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Users, Search, CheckCircle2, UserCheck } from 'lucide-react';
-import { getTutorStudents, manualCheckInToSession } from '@/app/actions/attendance-sessions';
+import { Users, Search, CheckCircle2, UserCheck, Undo2 } from 'lucide-react';
+import { getTutorStudents, manualCheckInToSession, removeAttendanceFromSession } from '@/app/actions/attendance-sessions';
 import { useToast } from '@/app/hooks/use-toast';
 import { useQueryClient } from '@tanstack/react-query';
+import { useRouter } from 'next/navigation';
 
 type Student = {
     id: string;
@@ -30,12 +31,16 @@ type StudentAttendanceListProps = {
 export default function StudentAttendanceList({ sessionId, attendances }: StudentAttendanceListProps) {
     const toast = useToast();
     const queryClient = useQueryClient();
+    const router = useRouter();
     const [students, setStudents] = useState<Student[]>([]);
     const [searchTerm, setSearchTerm] = useState('');
     const [loading, setLoading] = useState(true);
     const [checkingInIds, setCheckingInIds] = useState<Set<string>>(new Set());
+    const [removingIds, setRemovingIds] = useState<Set<string>>(new Set());
     const [selectedStudents, setSelectedStudents] = useState<Set<string>>(new Set());
     const [bulkChecking, setBulkChecking] = useState(false);
+    // Local state for attendances to enable optimistic updates
+    const [localAttendances, setLocalAttendances] = useState<any[]>(attendances || []);
 
     useEffect(() => {
         const fetchStudents = async () => {
@@ -62,15 +67,45 @@ export default function StudentAttendanceList({ sessionId, attendances }: Studen
                 toast.error(result.error);
             } else {
                 toast.success('Öğrenci başarıyla işaretlendi ve 30 puan eklendi');
+                // Optimistic update - add to local attendances
+                setLocalAttendances(prev => [...prev, { studentId, ...result.data }]);
                 // Invalidate React Query cache
                 queryClient.invalidateQueries({ queryKey: ['attendanceSession', sessionId] });
                 // Force router to refresh server data
-                window.location.reload();
+                router.refresh();
             }
         } catch (error) {
             toast.error('Giriş yapılırken bir hata oluştu');
         } finally {
             setCheckingInIds(prev => {
+                const newSet = new Set(prev);
+                newSet.delete(studentId);
+                return newSet;
+            });
+        }
+    };
+
+    const handleRemoveAttendance = async (studentId: string) => {
+        setRemovingIds(prev => new Set(prev).add(studentId));
+
+        try {
+            const result = await removeAttendanceFromSession(sessionId, studentId);
+
+            if (result.error) {
+                toast.error(result.error);
+            } else {
+                toast.success('Yoklama geri alındı ve 30 puan düşürüldü');
+                // Optimistic update - remove from local attendances
+                setLocalAttendances(prev => prev.filter(a => a.studentId !== studentId));
+                // Invalidate React Query cache
+                queryClient.invalidateQueries({ queryKey: ['attendanceSession', sessionId] });
+                // Force router to refresh server data
+                router.refresh();
+            }
+        } catch (error) {
+            toast.error('Yoklama geri alınırken bir hata oluştu');
+        } finally {
+            setRemovingIds(prev => {
                 const newSet = new Set(prev);
                 newSet.delete(studentId);
                 return newSet;
@@ -87,6 +122,7 @@ export default function StudentAttendanceList({ sessionId, attendances }: Studen
         setBulkChecking(true);
         let successCount = 0;
         let errorCount = 0;
+        const successfulStudentIds: string[] = [];
 
         for (const studentId of selectedStudents) {
             // Skip already checked in students
@@ -98,10 +134,19 @@ export default function StudentAttendanceList({ sessionId, attendances }: Studen
                     errorCount++;
                 } else {
                     successCount++;
+                    successfulStudentIds.push(studentId);
                 }
             } catch (error) {
                 errorCount++;
             }
+        }
+
+        // Optimistic update - add all successful students to local attendances
+        if (successfulStudentIds.length > 0) {
+            setLocalAttendances(prev => [
+                ...prev,
+                ...successfulStudentIds.map(studentId => ({ studentId }))
+            ]);
         }
 
         setBulkChecking(false);
@@ -109,7 +154,8 @@ export default function StudentAttendanceList({ sessionId, attendances }: Studen
 
         if (successCount > 0) {
             toast.success(`${successCount} öğrenci başarıyla işaretlendi ve ${successCount * 30} puan eklendi`);
-            window.location.reload();
+            // Refresh server data in background
+            router.refresh();
         }
         if (errorCount > 0) {
             toast.error(`${errorCount} öğrenci işaretlenemedi`);
@@ -138,7 +184,7 @@ export default function StudentAttendanceList({ sessionId, attendances }: Studen
     };
 
     const isCheckedIn = (studentId: string) => {
-        return attendances?.some((a: any) => a.studentId === studentId);
+        return localAttendances?.some((a: any) => a.studentId === studentId);
     };
 
     const filteredStudents = students.filter(student => {
@@ -175,7 +221,7 @@ export default function StudentAttendanceList({ sessionId, attendances }: Studen
         );
     }
 
-    const checkedInCount = attendances?.length || 0;
+    const checkedInCount = localAttendances?.length || 0;
     const totalStudents = students.length;
     const uncheckedStudents = filteredStudents.filter(s => !isCheckedIn(s.id));
 
@@ -256,6 +302,7 @@ export default function StudentAttendanceList({ sessionId, attendances }: Studen
                         filteredStudents.map((student) => {
                             const checkedIn = isCheckedIn(student.id);
                             const checking = checkingInIds.has(student.id);
+                            const removing = removingIds.has(student.id);
 
                             // Debug logging
                             console.log(`Student ${student.username}:`, { checkedIn, studentId: student.id, attendances });
@@ -304,30 +351,46 @@ export default function StudentAttendanceList({ sessionId, attendances }: Studen
                                             </div>
                                         </div>
 
-                                        <Button
-                                            onClick={() => handleCheckIn(student.id)}
-                                            disabled={checkedIn || checking}
-                                            size="sm"
-                                            variant={checkedIn ? "secondary" : "default"}
-                                            className={`min-w-[120px] ${checkedIn
-                                                ? 'bg-green-600 hover:bg-green-700 text-white cursor-not-allowed'
-                                                : 'bg-purple-600 hover:bg-purple-700 text-white'
-                                                }`}
-                                        >
-                                            {checking ? (
-                                                <>
-                                                    <div className="inline-block animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                                                    İşleniyor...
-                                                </>
-                                            ) : checkedIn ? (
-                                                'İşaretlendi'
-                                            ) : (
-                                                <>
-                                                    <UserCheck className="h-4 w-4 mr-2" />
-                                                    İşaretle
-                                                </>
-                                            )}
-                                        </Button>
+                                        {checkedIn ? (
+                                            <Button
+                                                onClick={() => handleRemoveAttendance(student.id)}
+                                                disabled={removing}
+                                                size="sm"
+                                                variant="outline"
+                                                className="min-w-[120px] border-red-300 text-red-600 hover:bg-red-50 hover:text-red-700 hover:border-red-400"
+                                            >
+                                                {removing ? (
+                                                    <>
+                                                        <div className="inline-block animate-spin rounded-full h-4 w-4 border-b-2 border-red-600 mr-2"></div>
+                                                        Geri Alınıyor...
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        <Undo2 className="h-4 w-4 mr-2" />
+                                                        Geri Al
+                                                    </>
+                                                )}
+                                            </Button>
+                                        ) : (
+                                            <Button
+                                                onClick={() => handleCheckIn(student.id)}
+                                                disabled={checking}
+                                                size="sm"
+                                                className="min-w-[120px] bg-purple-600 hover:bg-purple-700 text-white"
+                                            >
+                                                {checking ? (
+                                                    <>
+                                                        <div className="inline-block animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                                                        İşleniyor...
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        <UserCheck className="h-4 w-4 mr-2" />
+                                                        İşaretle
+                                                    </>
+                                                )}
+                                            </Button>
+                                        )}
                                     </div>
                                 </div>
                             );

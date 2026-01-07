@@ -12,6 +12,8 @@ export function getRoleBasedPath(role: UserRole): string {
     case UserRole.TUTOR:
     case UserRole.ASISTAN:
       return '/dashboard/part7/tutor';
+    case UserRole.BOARD_MEMBER:
+      return '/dashboard';
     case UserRole.STUDENT:
       return '/dashboard/part7/student';
     default:

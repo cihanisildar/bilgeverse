@@ -143,7 +143,7 @@ export default function CreateWeeklyReportPage() {
     { key: "bilgeverseDataEntry", label: "Bilgeverse'e öğrenci veri girişi yaptınız mı?" },
     { key: "groupActivityAsistan", label: "Gurubunuza veya genele bir etkinlik yaptınız mı?" },
     { key: "individualAttentionAsistan", label: "Haftalık buluşma dışında gurubunuzdaki bir gençle veya gençlerle bir arada bulunup ilgi gösterdiniz mi?" },
-    { key: "workshopParticipation", label: "Rehber Yardımcılığının yanında Bir Atölye Sorumlusu ise Atölye Çalışmalarına Katıldı mı?" }
+    { key: "workshopParticipation", label: "Liderliğin yanında Bir Atölye Sorumlusu ise Atölye Çalışmalarına Katıldı mı?" }
   ];
 
   const variableCriteria = [
@@ -248,7 +248,7 @@ export default function CreateWeeklyReportPage() {
             <div className="flex items-center gap-4">
               <h3 className="text-sm font-semibold text-slate-700">Form İlerlemesi</h3>
               <div className="w-48 bg-slate-200 rounded-full h-2 overflow-hidden">
-                <div 
+                <div
                   className="bg-gradient-to-r from-indigo-500 to-purple-500 h-2 rounded-full transition-all duration-500 ease-out"
                   style={{ width: `${progress}%` }}
                 ></div>
@@ -257,10 +257,10 @@ export default function CreateWeeklyReportPage() {
             <div className="flex items-center gap-3">
               <span className="text-sm font-medium text-slate-600 bg-slate-100 px-3 py-1 rounded-full">{progress}%</span>
               <p className="text-xs text-slate-500">
-                {progress === 0 ? "Başlayın" : 
-                 progress < 50 ? "Yarı yoldasınız!" :
-                 progress < 100 ? "Neredeyse bitti!" :
-                 "Tamamlandı!"}
+                {progress === 0 ? "Başlayın" :
+                  progress < 50 ? "Yarı yoldasınız!" :
+                    progress < 100 ? "Neredeyse bitti!" :
+                      "Tamamlandı!"}
               </p>
             </div>
           </div>
@@ -273,8 +273,8 @@ export default function CreateWeeklyReportPage() {
           {/* Top Navigation */}
           <div className="flex items-center justify-between mb-8">
             <Link href="/dashboard/part7/tutor/weekly-reports">
-              <Button 
-                variant="ghost" 
+              <Button
+                variant="ghost"
                 size="sm"
                 className="hover:bg-slate-100 transition-colors duration-200 text-slate-600 hover:text-slate-800 group"
               >
@@ -297,7 +297,7 @@ export default function CreateWeeklyReportPage() {
           <div className="text-center mb-8">
             <h1 className="text-4xl font-bold text-slate-800 mb-2">
               <span className="bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 bg-clip-text text-transparent">
-                Yeni {isTutor ? "Rehber" : "Rehber Yardımcısı"} Raporu
+                Yeni {isTutor ? "Rehber" : "Lider"} Raporu
               </span>
             </h1>
             <p className="text-slate-600 text-lg">Haftalık faaliyetlerinizi raporlayın</p>
@@ -380,21 +380,19 @@ export default function CreateWeeklyReportPage() {
                                   />
                                   <Label
                                     htmlFor={`${question.id}-${option.value}`}
-                                    className={`flex items-center space-x-3 p-4 rounded-xl border-2 cursor-pointer transition-all duration-200 hover:scale-[1.02] ${
-                                      isSelected
+                                    className={`flex items-center space-x-3 p-4 rounded-xl border-2 cursor-pointer transition-all duration-200 hover:scale-[1.02] ${isSelected
                                         ? option.value === "YAPILDI"
                                           ? "border-green-500 bg-green-50 shadow-md"
                                           : "border-red-500 bg-red-50 shadow-md"
                                         : "border-slate-200 bg-white hover:border-slate-300 hover:shadow-sm"
-                                    }`}
+                                      }`}
                                   >
-                                    <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all duration-200 ${
-                                      isSelected
+                                    <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all duration-200 ${isSelected
                                         ? option.value === "YAPILDI"
                                           ? "border-green-500 bg-green-500"
                                           : "border-red-500 bg-red-500"
                                         : "border-slate-300"
-                                    }`}>
+                                      }`}>
                                       {isSelected && (
                                         <div className="w-2 h-2 bg-white rounded-full"></div>
                                       )}
@@ -448,25 +446,23 @@ export default function CreateWeeklyReportPage() {
                                   />
                                   <Label
                                     htmlFor={`${question.id}-${option.value}`}
-                                    className={`flex items-center space-x-3 p-4 rounded-xl border-2 cursor-pointer transition-all duration-200 hover:scale-[1.02] ${
-                                      isSelected
+                                    className={`flex items-center space-x-3 p-4 rounded-xl border-2 cursor-pointer transition-all duration-200 hover:scale-[1.02] ${isSelected
                                         ? option.value === "YAPILDI"
                                           ? "border-green-500 bg-green-50 shadow-md"
                                           : option.value === "YAPILMADI"
-                                          ? "border-red-500 bg-red-50 shadow-md"
-                                          : "border-gray-500 bg-gray-50 shadow-md"
+                                            ? "border-red-500 bg-red-50 shadow-md"
+                                            : "border-gray-500 bg-gray-50 shadow-md"
                                         : "border-slate-200 bg-white hover:border-slate-300 hover:shadow-sm"
-                                    }`}
+                                      }`}
                                   >
-                                    <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all duration-200 ${
-                                      isSelected
+                                    <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all duration-200 ${isSelected
                                         ? option.value === "YAPILDI"
                                           ? "border-green-500 bg-green-500"
                                           : option.value === "YAPILMADI"
-                                          ? "border-red-500 bg-red-500"
-                                          : "border-gray-500 bg-gray-500"
+                                            ? "border-red-500 bg-red-500"
+                                            : "border-gray-500 bg-gray-500"
                                         : "border-slate-300"
-                                    }`}>
+                                      }`}>
                                       {isSelected && (
                                         <div className="w-2 h-2 bg-white rounded-full"></div>
                                       )}
@@ -490,135 +486,131 @@ export default function CreateWeeklyReportPage() {
           {/* Fallback to static criteria if no questions loaded */}
           {!isLoadingQuestions && !questions && (
             <>
-            <Card className="border-0 shadow-lg hover:shadow-xl transition-all duration-300 bg-white/80 backdrop-blur-sm">
-              <CardHeader className="pb-4">
-                <CardTitle className="text-xl font-semibold text-slate-800 flex items-center gap-2">
-                  <div className="w-1 h-6 bg-gradient-to-b from-emerald-500 to-teal-500 rounded-full"></div>
-                  Sabit Kriterler
-                </CardTitle>
-                <p className="text-slate-600 text-sm">Her hafta düzenli olarak yapılması gereken faaliyetler</p>
-              </CardHeader>
-              <CardContent className="space-y-8">
-                {fixedCriteria.map((criterion, index) => (
-                  <div key={criterion.key} className="space-y-4 p-6 bg-slate-50/50 rounded-xl border border-slate-100 hover:bg-slate-50 transition-colors duration-200">
-                    <Label className="text-base font-medium leading-relaxed text-slate-700 block">
-                      {criterion.label}
-                    </Label>
-                    <RadioGroup
-                      value={formData.fixedCriteria[criterion.key] || ""}
-                      onValueChange={(value) => handleFixedCriteriaChange(criterion.key, value)}
-                      className="grid grid-cols-1 md:grid-cols-2 gap-4"
-                    >
-                      {attendanceOptions.slice(0, 2).map((option) => {
-                        const IconComponent = option.icon;
-                        const isSelected = formData.fixedCriteria[criterion.key] === option.value;
-                        return (
-                          <div key={option.value} className="relative">
-                            <RadioGroupItem
-                              value={option.value}
-                              id={`${criterion.key}-${option.value}`}
-                              className="sr-only"
-                            />
-                            <Label
-                              htmlFor={`${criterion.key}-${option.value}`}
-                              className={`flex items-center space-x-3 p-4 rounded-xl border-2 cursor-pointer transition-all duration-200 hover:scale-[1.02] ${
-                                isSelected
-                                  ? option.value === "YAPILDI"
-                                    ? "border-green-500 bg-green-50 shadow-md"
-                                    : "border-red-500 bg-red-50 shadow-md"
-                                  : "border-slate-200 bg-white hover:border-slate-300 hover:shadow-sm"
-                              }`}
-                            >
-                              <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all duration-200 ${
-                                isSelected
-                                  ? option.value === "YAPILDI"
-                                    ? "border-green-500 bg-green-500"
-                                    : "border-red-500 bg-red-500"
-                                  : "border-slate-300"
-                              }`}>
-                                {isSelected && (
-                                  <div className="w-2 h-2 bg-white rounded-full"></div>
-                                )}
-                              </div>
-                              <IconComponent className={`h-5 w-5 ${option.color}`} />
-                              <span className={`font-medium ${option.color}`}>{option.label}</span>
-                            </Label>
-                          </div>
-                        );
-                      })}
-                    </RadioGroup>
-                  </div>
-                ))}
-              </CardContent>
-            </Card>
+              <Card className="border-0 shadow-lg hover:shadow-xl transition-all duration-300 bg-white/80 backdrop-blur-sm">
+                <CardHeader className="pb-4">
+                  <CardTitle className="text-xl font-semibold text-slate-800 flex items-center gap-2">
+                    <div className="w-1 h-6 bg-gradient-to-b from-emerald-500 to-teal-500 rounded-full"></div>
+                    Sabit Kriterler
+                  </CardTitle>
+                  <p className="text-slate-600 text-sm">Her hafta düzenli olarak yapılması gereken faaliyetler</p>
+                </CardHeader>
+                <CardContent className="space-y-8">
+                  {fixedCriteria.map((criterion, index) => (
+                    <div key={criterion.key} className="space-y-4 p-6 bg-slate-50/50 rounded-xl border border-slate-100 hover:bg-slate-50 transition-colors duration-200">
+                      <Label className="text-base font-medium leading-relaxed text-slate-700 block">
+                        {criterion.label}
+                      </Label>
+                      <RadioGroup
+                        value={formData.fixedCriteria[criterion.key] || ""}
+                        onValueChange={(value) => handleFixedCriteriaChange(criterion.key, value)}
+                        className="grid grid-cols-1 md:grid-cols-2 gap-4"
+                      >
+                        {attendanceOptions.slice(0, 2).map((option) => {
+                          const IconComponent = option.icon;
+                          const isSelected = formData.fixedCriteria[criterion.key] === option.value;
+                          return (
+                            <div key={option.value} className="relative">
+                              <RadioGroupItem
+                                value={option.value}
+                                id={`${criterion.key}-${option.value}`}
+                                className="sr-only"
+                              />
+                              <Label
+                                htmlFor={`${criterion.key}-${option.value}`}
+                                className={`flex items-center space-x-3 p-4 rounded-xl border-2 cursor-pointer transition-all duration-200 hover:scale-[1.02] ${isSelected
+                                    ? option.value === "YAPILDI"
+                                      ? "border-green-500 bg-green-50 shadow-md"
+                                      : "border-red-500 bg-red-50 shadow-md"
+                                    : "border-slate-200 bg-white hover:border-slate-300 hover:shadow-sm"
+                                  }`}
+                              >
+                                <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all duration-200 ${isSelected
+                                    ? option.value === "YAPILDI"
+                                      ? "border-green-500 bg-green-500"
+                                      : "border-red-500 bg-red-500"
+                                    : "border-slate-300"
+                                  }`}>
+                                  {isSelected && (
+                                    <div className="w-2 h-2 bg-white rounded-full"></div>
+                                  )}
+                                </div>
+                                <IconComponent className={`h-5 w-5 ${option.color}`} />
+                                <span className={`font-medium ${option.color}`}>{option.label}</span>
+                              </Label>
+                            </div>
+                          );
+                        })}
+                      </RadioGroup>
+                    </div>
+                  ))}
+                </CardContent>
+              </Card>
 
-            {/* Variable Criteria (Static fallback) */}
-            <Card className="border-0 shadow-lg hover:shadow-xl transition-all duration-300 bg-white/80 backdrop-blur-sm">
-              <CardHeader className="pb-4">
-                <CardTitle className="text-xl font-semibold text-slate-800 flex items-center gap-2">
-                  <div className="w-1 h-6 bg-gradient-to-b from-amber-500 to-orange-500 rounded-full"></div>
-                  Değişken Kriterler
-                </CardTitle>
-                <p className="text-slate-600 text-sm">Opsiyonel faaliyetler ve ek görevler</p>
-              </CardHeader>
-              <CardContent className="space-y-8">
-                {variableCriteria.map((criterion, index) => (
-                  <div key={criterion.key} className="space-y-4 p-6 bg-slate-50/50 rounded-xl border border-slate-100 hover:bg-slate-50 transition-colors duration-200">
-                    <Label className="text-base font-medium leading-relaxed text-slate-700 block">
-                      {criterion.label}
-                    </Label>
-                    <RadioGroup
-                      value={formData.variableCriteria[criterion.key] || ""}
-                      onValueChange={(value) => handleVariableCriteriaChange(criterion.key, value)}
-                      className="grid grid-cols-1 md:grid-cols-3 gap-4"
-                    >
-                      {attendanceOptions.map((option) => {
-                        const IconComponent = option.icon;
-                        const isSelected = formData.variableCriteria[criterion.key] === option.value;
-                        return (
-                          <div key={option.value} className="relative">
-                            <RadioGroupItem
-                              value={option.value}
-                              id={`${criterion.key}-${option.value}`}
-                              className="sr-only"
-                            />
-                            <Label
-                              htmlFor={`${criterion.key}-${option.value}`}
-                              className={`flex items-center space-x-3 p-4 rounded-xl border-2 cursor-pointer transition-all duration-200 hover:scale-[1.02] ${
-                                isSelected
-                                  ? option.value === "YAPILDI"
-                                    ? "border-green-500 bg-green-50 shadow-md"
-                                    : option.value === "YAPILMADI"
-                                    ? "border-red-500 bg-red-50 shadow-md"
-                                    : "border-gray-500 bg-gray-50 shadow-md"
-                                  : "border-slate-200 bg-white hover:border-slate-300 hover:shadow-sm"
-                              }`}
-                            >
-                              <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all duration-200 ${
-                                isSelected
-                                  ? option.value === "YAPILDI"
-                                    ? "border-green-500 bg-green-500"
-                                    : option.value === "YAPILMADI"
-                                    ? "border-red-500 bg-red-500"
-                                    : "border-gray-500 bg-gray-500"
-                                  : "border-slate-300"
-                              }`}>
-                                {isSelected && (
-                                  <div className="w-2 h-2 bg-white rounded-full"></div>
-                                )}
-                              </div>
-                              <IconComponent className={`h-5 w-5 ${option.color}`} />
-                              <span className={`font-medium text-sm ${option.color}`}>{option.label}</span>
-                            </Label>
-                          </div>
-                        );
-                      })}
-                    </RadioGroup>
-                  </div>
-                ))}
-              </CardContent>
-            </Card>
-          </>
+              {/* Variable Criteria (Static fallback) */}
+              <Card className="border-0 shadow-lg hover:shadow-xl transition-all duration-300 bg-white/80 backdrop-blur-sm">
+                <CardHeader className="pb-4">
+                  <CardTitle className="text-xl font-semibold text-slate-800 flex items-center gap-2">
+                    <div className="w-1 h-6 bg-gradient-to-b from-amber-500 to-orange-500 rounded-full"></div>
+                    Değişken Kriterler
+                  </CardTitle>
+                  <p className="text-slate-600 text-sm">Opsiyonel faaliyetler ve ek görevler</p>
+                </CardHeader>
+                <CardContent className="space-y-8">
+                  {variableCriteria.map((criterion, index) => (
+                    <div key={criterion.key} className="space-y-4 p-6 bg-slate-50/50 rounded-xl border border-slate-100 hover:bg-slate-50 transition-colors duration-200">
+                      <Label className="text-base font-medium leading-relaxed text-slate-700 block">
+                        {criterion.label}
+                      </Label>
+                      <RadioGroup
+                        value={formData.variableCriteria[criterion.key] || ""}
+                        onValueChange={(value) => handleVariableCriteriaChange(criterion.key, value)}
+                        className="grid grid-cols-1 md:grid-cols-3 gap-4"
+                      >
+                        {attendanceOptions.map((option) => {
+                          const IconComponent = option.icon;
+                          const isSelected = formData.variableCriteria[criterion.key] === option.value;
+                          return (
+                            <div key={option.value} className="relative">
+                              <RadioGroupItem
+                                value={option.value}
+                                id={`${criterion.key}-${option.value}`}
+                                className="sr-only"
+                              />
+                              <Label
+                                htmlFor={`${criterion.key}-${option.value}`}
+                                className={`flex items-center space-x-3 p-4 rounded-xl border-2 cursor-pointer transition-all duration-200 hover:scale-[1.02] ${isSelected
+                                    ? option.value === "YAPILDI"
+                                      ? "border-green-500 bg-green-50 shadow-md"
+                                      : option.value === "YAPILMADI"
+                                        ? "border-red-500 bg-red-50 shadow-md"
+                                        : "border-gray-500 bg-gray-50 shadow-md"
+                                    : "border-slate-200 bg-white hover:border-slate-300 hover:shadow-sm"
+                                  }`}
+                              >
+                                <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all duration-200 ${isSelected
+                                    ? option.value === "YAPILDI"
+                                      ? "border-green-500 bg-green-500"
+                                      : option.value === "YAPILMADI"
+                                        ? "border-red-500 bg-red-500"
+                                        : "border-gray-500 bg-gray-500"
+                                    : "border-slate-300"
+                                  }`}>
+                                  {isSelected && (
+                                    <div className="w-2 h-2 bg-white rounded-full"></div>
+                                  )}
+                                </div>
+                                <IconComponent className={`h-5 w-5 ${option.color}`} />
+                                <span className={`font-medium text-sm ${option.color}`}>{option.label}</span>
+                              </Label>
+                            </div>
+                          );
+                        })}
+                      </RadioGroup>
+                    </div>
+                  ))}
+                </CardContent>
+              </Card>
+            </>
           )}
 
           {/* Comments */}

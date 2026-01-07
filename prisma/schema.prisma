@@ -107,6 +107,9 @@ model User {
   createdQuestions              WeeklyReportQuestion[]    @relation("AdminQuestions")
   wishes                        Wish[]                    @relation("StudentWishes")
   meslekkocuId                  String?
+  studentTags                   StudentTag[]              @relation("StudentTags")
+  assignedStudentTags           StudentTag[]              @relation("TutorAssignedTags")
+  createdTagTemplates           TagTemplate[]             @relation("AdminTagTemplates")
 
   @@index([tutorId])
 }
@@ -743,6 +746,7 @@ enum UserRole {
   TUTOR
   STUDENT
   ASISTAN
+  BOARD_MEMBER
 }
 
 enum RequestStatus {
@@ -842,6 +846,41 @@ enum Part2EventStatus {
   DEVAM_EDIYOR
   TAMAMLANDI
   IPTAL_EDILDI
+}
+
+// Tag Templates - Created by admin for use across the system
+model TagTemplate {
+  id          String       @id @default(uuid())
+  name        String       @unique
+  color       String       @default("#6366f1")
+  description String?
+  icon        String?
+  isActive    Boolean      @default(true)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  createdById String
+  createdBy   User         @relation("AdminTagTemplates", fields: [createdById], references: [id])
+  studentTags StudentTag[] @relation("TemplateStudentTags")
+
+  @@index([isActive])
+}
+
+// Student Tags - Manual tagging by tutors for sociometric analysis
+model StudentTag {
+  id          String        @id @default(uuid())
+  studentId   String
+  tutorId     String
+  templateId  String
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  student     User          @relation("StudentTags", fields: [studentId], references: [id], onDelete: Cascade)
+  tutor       User          @relation("TutorAssignedTags", fields: [tutorId], references: [id], onDelete: Cascade)
+  template    TagTemplate   @relation("TemplateStudentTags", fields: [templateId], references: [id], onDelete: Cascade)
+
+  @@unique([studentId, templateId, tutorId])
+  @@index([studentId])
+  @@index([tutorId])
+  @@index([templateId])
 }
 
 enum Part2ParticipantStatus {

@@ -300,9 +300,9 @@ export default function WeeklyReportsPerformancePage() {
           <div className="flex-1">
             <div className="flex items-center gap-4 mb-4">
               <Link href="/dashboard/part7/admin/weekly-reports">
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
+                <Button
+                  variant="ghost"
+                  size="sm"
                   className="hover:bg-indigo-50 hover:text-indigo-600 transition-all duration-200 group"
                 >
                   <ArrowLeft className="h-4 w-4 mr-2 group-hover:-translate-x-0.5 transition-transform" />
@@ -317,21 +317,21 @@ export default function WeeklyReportsPerformancePage() {
               </span>
             </h1>
             <p className="text-gray-600 text-lg">
-              {currentPeriod ? `${currentPeriod.name} dönemi tutora ve asistan performansları` : "Performans takip paneli"}
+              {currentPeriod ? `${currentPeriod.name} dönemi rehber ve lider performansları` : "Performans takip paneli"}
             </p>
           </div>
-          
+
           <div className="flex flex-col sm:flex-row gap-3">
-            <Button 
-              onClick={fetchPerformanceData} 
-              variant="outline" 
+            <Button
+              onClick={fetchPerformanceData}
+              variant="outline"
               className="hover:bg-indigo-50 hover:border-indigo-200 hover:text-indigo-600 transition-all duration-200"
             >
               <RefreshCw className="h-4 w-4 mr-2" />
               Yenile
             </Button>
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               className="hover:bg-green-50 hover:border-green-200 hover:text-green-600 transition-all duration-200"
             >
               <Download className="h-4 w-4 mr-2" />
@@ -404,7 +404,7 @@ export default function WeeklyReportsPerformancePage() {
                   <SelectContent>
                     <SelectItem value="all">Tüm Roller</SelectItem>
                     <SelectItem value="TUTOR">Rehber</SelectItem>
-                    <SelectItem value="ASISTAN">Rehber Yardımcısı</SelectItem>
+                    <SelectItem value="ASISTAN">Lider</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -504,16 +504,14 @@ export default function WeeklyReportsPerformancePage() {
                         {performance.weeklyProgress.map((week) => (
                           <div
                             key={week.week}
-                            className={`w-3 h-8 rounded-sm ${
-                              week.approved ? "bg-green-500" :
-                              week.submitted ? "bg-yellow-500" :
-                              "bg-gray-200"
-                            }`}
-                            title={`${week.week}. Hafta - ${
-                              week.approved ? `Onaylandı (${week.pointsAwarded} puan)` :
-                              week.submitted ? "Gönderildi" :
-                              "Henüz gönderilmedi"
-                            }`}
+                            className={`w-3 h-8 rounded-sm ${week.approved ? "bg-green-500" :
+                                week.submitted ? "bg-yellow-500" :
+                                  "bg-gray-200"
+                              }`}
+                            title={`${week.week}. Hafta - ${week.approved ? `Onaylandı (${week.pointsAwarded} puan)` :
+                                week.submitted ? "Gönderildi" :
+                                  "Henüz gönderilmedi"
+                              }`}
                           />
                         ))}
                       </div>

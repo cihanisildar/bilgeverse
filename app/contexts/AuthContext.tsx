@@ -37,6 +37,7 @@ type AuthContextType = {
   checkAuth: () => Promise<void>;
   refreshUser: () => Promise<void>;
   isAdmin: boolean;
+  isBoardMember: boolean;
   isTutor: boolean;
   isStudent: boolean;
 };
@@ -59,10 +60,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const { data: session, status } = useSession();
 
   const isPublicPath = (path: string) => {
-    return path === '/' || 
-           path === '/login' || 
-           path === '/register' || 
-           path.startsWith('/_next');
+    return path === '/' ||
+      path === '/login' ||
+      path === '/register' ||
+      path.startsWith('/_next');
   };
 
   const checkAuth = async () => {
@@ -79,12 +80,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         const data = await res.json();
         setUser(data.user);
         setUserUpdatedFromAPI(true); // Mark that user was updated from API
-        
+
         // Reset the flag after a short delay to allow future session updates
         setTimeout(() => {
           setUserUpdatedFromAPI(false);
         }, 1000);
-        
+
         return data.user; // Return the fresh user data
       } else {
         setUser(null);
@@ -118,7 +119,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     if (session?.user && (!user || user.id !== session.user.id) && !userUpdatedFromAPI) {
       setUser(session.user as AuthUser);
     }
-    
+
     setLoading(false);
   }, [session?.user?.id, status, user?.id, userUpdatedFromAPI]); // Only depend on user ID and status, not the entire session
 
@@ -140,10 +141,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         const errorMessage = result.error === 'CredentialsSignin'
           ? 'Kullanıcı adı veya şifre hatalı'
           : result.error === 'Missing credentials'
-          ? 'Kullanıcı adı ve şifre gereklidir'
-          : result.error === 'Invalid username or password'
-          ? 'Kullanıcı adı veya şifre hatalı'
-          : result.error;
+            ? 'Kullanıcı adı ve şifre gereklidir'
+            : result.error === 'Invalid username or password'
+              ? 'Kullanıcı adı veya şifre hatalı'
+              : result.error;
 
         console.error('Login error:', errorMessage);
         toast.error(errorMessage);
@@ -220,6 +221,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const isAdmin = user?.role === UserRole.ADMIN;
+  const isBoardMember = user?.role === UserRole.BOARD_MEMBER;
   const isTutor = user?.role === UserRole.TUTOR || user?.role === UserRole.ASISTAN;
   const isStudent = user?.role === UserRole.STUDENT;
   const isAuthenticated = Boolean(user && !loading);
@@ -235,6 +237,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         checkAuth,
         refreshUser,
         isAdmin,
+        isBoardMember,
         isTutor,
         isStudent,
       }}

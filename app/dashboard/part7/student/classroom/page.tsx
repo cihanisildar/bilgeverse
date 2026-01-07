@@ -121,20 +121,18 @@ function StudentCard({ student, isCurrentUser = false, rank }: { student: User; 
   };
 
   return (
-    <div className={`group relative overflow-hidden rounded-2xl p-5 transition-all duration-300 transform hover:scale-[1.02] hover:shadow-xl ${
-      isCurrentUser 
-        ? 'bg-gradient-to-br from-violet-100 via-blue-50 to-indigo-100 border-2 border-violet-200 shadow-lg' 
+    <div className={`group relative overflow-hidden rounded-2xl p-5 transition-all duration-300 transform hover:scale-[1.02] hover:shadow-xl ${isCurrentUser
+        ? 'bg-gradient-to-br from-violet-100 via-blue-50 to-indigo-100 border-2 border-violet-200 shadow-lg'
         : 'bg-gradient-to-br from-white to-gray-50/80 hover:from-blue-50 hover:to-purple-50 border border-gray-200/60 hover:border-blue-200 shadow-md hover:shadow-lg'
-    }`}>
+      }`}>
       {/* Decorative background elements */}
       <div className="absolute top-0 right-0 w-20 h-20 bg-gradient-to-br from-blue-200/20 to-purple-200/20 rounded-full -translate-y-10 translate-x-10 group-hover:scale-110 transition-transform duration-500"></div>
       <div className="absolute bottom-0 left-0 w-16 h-16 bg-gradient-to-br from-pink-200/20 to-orange-200/20 rounded-full translate-y-8 -translate-x-8 group-hover:scale-110 transition-transform duration-500"></div>
-      
+
       <div className="relative z-10 flex items-center gap-4">
         <div className="relative">
-          <Avatar className={`h-14 w-14 ring-3 ring-offset-2 transition-all duration-300 ${
-            isCurrentUser ? 'ring-violet-300' : 'ring-blue-200 group-hover:ring-blue-300'
-          }`}>
+          <Avatar className={`h-14 w-14 ring-3 ring-offset-2 transition-all duration-300 ${isCurrentUser ? 'ring-violet-300' : 'ring-blue-200 group-hover:ring-blue-300'
+            }`}>
             <AvatarImage src={student.avatarUrl} className="object-cover" />
             <AvatarFallback className={`bg-gradient-to-br ${getRankColor()} text-white text-lg font-bold shadow-lg`}>
               {getAvatarFallback()}
@@ -146,7 +144,7 @@ function StudentCard({ student, isCurrentUser = false, rank }: { student: User; 
             </div>
           )}
         </div>
-        
+
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap mb-1">
             <p className="font-semibold text-gray-900 text-base truncate">
@@ -205,7 +203,7 @@ export default function ClassroomPage() {
     const fetchClassroomInfo = async () => {
       try {
         setLoading(true);
-        
+
         const [classroomResponse, userResponse] = await Promise.all([
           fetch('/api/student/classroom', {
             credentials: 'include',
@@ -301,7 +299,7 @@ export default function ClassroomPage() {
           <h1 className="text-4xl font-bold bg-gradient-to-r from-violet-600 to-indigo-600 bg-clip-text text-transparent mb-2">
             Sınıfım
           </h1>
-          <p className="text-gray-600">Danışman öğretmeniniz ve sınıf arkadaşlarınız</p>
+          <p className="text-gray-600">Rehberiniz ve sınıf arkadaşlarınız</p>
         </div>
 
         {/* Tutor Section */}
@@ -310,15 +308,15 @@ export default function ClassroomPage() {
           <div className="absolute inset-0 bg-white/10 backdrop-blur-sm"></div>
           <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full -translate-y-16 translate-x-16"></div>
           <div className="absolute bottom-0 left-0 w-24 h-24 bg-white/5 rounded-full translate-y-12 -translate-x-12"></div>
-          
+
           <div className="relative z-10">
             <div className="flex items-center gap-3 mb-6">
               <div className="p-2 bg-white/20 rounded-xl backdrop-blur-sm">
                 <GraduationCap className="h-6 w-6 text-white" />
               </div>
-              <h2 className="text-2xl font-bold text-white">Danışman Öğretmen</h2>
+              <h2 className="text-2xl font-bold text-white">Rehber</h2>
             </div>
-            
+
             <div className="flex flex-col sm:flex-row items-center sm:items-start gap-6">
               <Avatar className="h-20 w-20 ring-4 ring-white/30 shadow-xl">
                 <AvatarImage src={classroom.tutor.avatarUrl} className="object-cover" />
@@ -352,7 +350,7 @@ export default function ClassroomPage() {
                 </p>
                 <p className="text-white/80 text-lg">@{classroom.tutor.username}</p>
                 <div className="mt-3 px-4 py-2 bg-white/20 rounded-full backdrop-blur-sm inline-block">
-                  <span className="text-white/90 font-medium">Öğretmen</span>
+                  <span className="text-white/90 font-medium">Rehber</span>
                 </div>
               </div>
             </div>
@@ -380,7 +378,7 @@ export default function ClassroomPage() {
               </div>
             </div>
           </div>
-          
+
           <div className="p-6">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
               {allStudents.map((student, index) => (

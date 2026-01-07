@@ -38,6 +38,7 @@ interface ActivityStats {
     averageParticipationRate: number;
     mostPopularActivity?: string;
     leastPopularActivity?: string;
+    topActivities: { name: string; participationCount: number }[];
     weeklyTrend: { week: string; count: number }[];
 }
 
@@ -305,6 +306,10 @@ export async function getSociometricData(classroomId: string) {
         const sortedTypes = Object.entries(eventTypeStats).sort((a, b) => b[1] - a[1]);
         const mostPopularActivity = sortedTypes[0]?.[0];
         const leastPopularActivity = sortedTypes[sortedTypes.length - 1]?.[0];
+        const topActivities = sortedTypes.slice(0, 3).map(([name, count]) => ({
+            name,
+            participationCount: count
+        }));
 
         // Weekly trend (last 8 weeks)
         const weeklyTrend = events.slice(0, 8).map(event => ({
@@ -318,6 +323,7 @@ export async function getSociometricData(classroomId: string) {
             averageParticipationRate,
             mostPopularActivity,
             leastPopularActivity,
+            topActivities,
             weeklyTrend,
         };
 
@@ -326,6 +332,7 @@ export async function getSociometricData(classroomId: string) {
             isolatedStudents,
             friendGroups,
             activityStats,
+            students: classroom.students,
             classroomInfo: {
                 name: classroom.name,
                 totalStudents: classroom.students.length,

@@ -25,6 +25,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import NotesManager from '@/app/components/student/NotesManager';
 import ReportsManager from '@/app/components/student/ReportsManager';
+import StudentTagManager from '@/app/components/student/StudentTagManager';
 
 type Student = {
   id: string;
@@ -62,7 +63,7 @@ export default function StudentDetailPage() {
   const [activeTab, setActiveTab] = useState('overview');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  
+
   const studentId = params.id as string;
 
   useEffect(() => {
@@ -72,34 +73,34 @@ export default function StudentDetailPage() {
   const fetchStudentDetails = async () => {
     try {
       setLoading(true);
-      
+
       // Fetch student details
       const studentRes = await fetch(`/api/users/${studentId}`);
       if (!studentRes.ok) {
         throw new Error('Failed to fetch student details');
       }
       const studentData = await studentRes.json();
-      
+
       // Fetch student rank
       const rankRes = await fetch(`/api/leaderboard?userId=${studentId}`);
       if (!rankRes.ok) {
         throw new Error('Failed to fetch rank information');
       }
       const rankData = await rankRes.json();
-      
+
       // Fetch point history
       const pointsRes = await fetch(`/api/points?studentId=${studentId}`);
       if (!pointsRes.ok) {
         throw new Error('Failed to fetch points history');
       }
       const pointsData = await pointsRes.json();
-      
+
       setStudent({
         ...studentData.user,
         rank: rankData.rank,
         totalStudents: rankData.totalStudents
       });
-      
+
       setPointHistory(pointsData.transactions || []);
     } catch (err) {
       console.error('Error fetching student details:', err);
@@ -132,7 +133,7 @@ export default function StudentDetailPage() {
       return person.username[0].toUpperCase();
     }
   };
-  
+
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     return date.toLocaleDateString('tr-TR', {
@@ -141,7 +142,7 @@ export default function StudentDetailPage() {
       year: 'numeric'
     });
   };
-  
+
   const formatTime = (dateString: string) => {
     const date = new Date(dateString);
     return date.toLocaleTimeString('tr-TR', {
@@ -182,15 +183,15 @@ export default function StudentDetailPage() {
     <div className="max-w-7xl mx-auto px-4 py-6 space-y-8">
       {/* Back button and header */}
       <div className="space-y-6">
-        <Button 
-          variant="ghost" 
+        <Button
+          variant="ghost"
           className="flex items-center text-gray-500 hover:text-gray-700 -ml-3"
           onClick={() => router.back()}
         >
           <ChevronLeft className="h-5 w-5 mr-1" />
           <span>Öğrencilere Dön</span>
         </Button>
-        
+
         <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
           <div className="md:flex">
             <div className="md:w-1/3 bg-gradient-to-r from-blue-50 to-indigo-50 p-6 flex flex-col justify-center items-center md:items-start">
@@ -204,34 +205,42 @@ export default function StudentDetailPage() {
                 <User className="h-4 w-4 mr-1" />
                 {student.username}
               </div>
-              
+
               {student.email && (
                 <div className="text-sm text-gray-600 mb-4 flex items-center">
                   <Mail className="h-4 w-4 mr-1" />
                   {student.email}
                 </div>
               )}
-              
+
               {student.createdAt && (
-                <div className="text-sm text-gray-600 flex items-center">
+                <div className="text-sm text-gray-600 flex items-center mb-4">
                   <Calendar className="h-4 w-4 mr-1" />
                   Kayıt: {formatDate(student.createdAt)}
                 </div>
               )}
+
+              {/* Student Tags */}
+              <div className="w-full">
+                <StudentTagManager
+                  studentId={student.id}
+                  studentName={getFullName(student)}
+                />
+              </div>
             </div>
-            
+
             <div className="md:w-2/3 p-6">
               <div className="flex flex-wrap gap-6">
                 <div className="flex-1 min-w-[120px]">
                   <div className="text-sm text-gray-500 mb-1">Toplam Puan</div>
                   <div className="text-3xl font-bold text-blue-600">{student.points}</div>
                 </div>
-                
+
                 <div className="flex-1 min-w-[120px]">
                   <div className="text-sm text-gray-500 mb-1">Deneyim</div>
                   <div className="text-3xl font-bold text-green-600">{student.experience}</div>
                 </div>
-                
+
                 <div className="flex-1 min-w-[120px]">
                   <div className="text-sm text-gray-500 mb-1">Sıralama</div>
                   <div className="flex items-center">
@@ -239,7 +248,7 @@ export default function StudentDetailPage() {
                     <span className="text-gray-400 ml-1">/ {student.totalStudents}</span>
                   </div>
                 </div>
-                
+
                 <div className="flex-1 min-w-[120px]">
                   <div className="text-sm text-gray-500 mb-1">Son Etkinlik</div>
                   <div className="text-gray-800">
@@ -251,7 +260,7 @@ export default function StudentDetailPage() {
                   </div>
                 </div>
               </div>
-              
+
               <div className="mt-6 flex flex-wrap gap-2">
                 <Link href={`/dashboard/part7/tutor/points/award?studentId=${student.id}`}>
                   <Button className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white">
@@ -259,14 +268,14 @@ export default function StudentDetailPage() {
                     Puan Ver
                   </Button>
                 </Link>
-                
+
                 <Link href={`/dashboard/part7/tutor/reports/view?studentId=${student.id}`}>
                   <Button variant="outline" className="border-blue-100">
                     <FileText className="h-4 w-4 mr-2" />
                     Raporlar
                   </Button>
                 </Link>
-                
+
                 <Link href={`/dashboard/part7/tutor/notes/view?studentId=${student.id}`}>
                   <Button variant="outline" className="border-amber-100 text-amber-600 hover:bg-amber-50">
                     <AlertTriangle className="h-4 w-4 mr-2" />
@@ -278,7 +287,7 @@ export default function StudentDetailPage() {
           </div>
         </div>
       </div>
-      
+
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
         <div className="bg-white rounded-lg shadow-sm border border-gray-100 p-1">
@@ -288,7 +297,7 @@ export default function StudentDetailPage() {
             <TabsTrigger value="events">Etkinlikler</TabsTrigger>
           </TabsList>
         </div>
-        
+
         {/* Overview Tab */}
         <TabsContent value="overview" className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -311,7 +320,7 @@ export default function StudentDetailPage() {
                 </div>
               </CardContent>
             </Card>
-            
+
             <Card className="border border-blue-100 shadow-sm">
               <CardHeader className="pb-2">
                 <CardTitle className="text-lg text-gray-700">Katılım Bilgisi</CardTitle>
@@ -335,7 +344,7 @@ export default function StudentDetailPage() {
                 </div>
               </CardContent>
             </Card>
-            
+
             <Card className="border border-purple-100 shadow-sm">
               <CardHeader className="pb-2">
                 <CardTitle className="text-lg text-gray-700">Başarılar</CardTitle>
@@ -368,7 +377,7 @@ export default function StudentDetailPage() {
             </Card>
           </div>
         </TabsContent>
-        
+
         {/* Points History Tab */}
         <TabsContent value="points" className="space-y-6">
           <Card className="border border-gray-100 shadow-sm">
@@ -422,7 +431,7 @@ export default function StudentDetailPage() {
             </CardContent>
           </Card>
         </TabsContent>
-        
+
         {/* Events Tab */}
         <TabsContent value="events" className="space-y-6">
           <Card className="border border-gray-100 shadow-sm">

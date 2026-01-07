@@ -191,7 +191,7 @@ export default function AuthenticatedLayout({
           <div className="ml-3 overflow-hidden">
             <p className="text-sm font-medium text-gray-800 truncate tracking-wide">{user?.username}</p>
             <p className="text-xs text-gray-500 tracking-wide">
-              {user?.role === UserRole.ADMIN ? 'Yönetici' : user?.role === UserRole.TUTOR ? 'Öğretmen' : user?.role === UserRole.ASISTAN ? 'Asistan' : 'Öğrenci'}
+              {user?.role === UserRole.ADMIN ? 'Yönetici' : user?.role === UserRole.TUTOR ? 'Rehber' : user?.role === UserRole.ASISTAN ? 'Lider' : 'Öğrenci'}
             </p>
           </div>
           <Button
@@ -241,7 +241,7 @@ export default function AuthenticatedLayout({
                   <div className="ml-3 overflow-hidden">
                     <p className="text-sm font-medium text-gray-800 truncate tracking-wide">{user?.username}</p>
                     <p className="text-xs text-gray-500 tracking-wide">
-                      {user?.role === UserRole.ADMIN ? 'Yönetici' : user?.role === UserRole.TUTOR ? 'Öğretmen' : user?.role === UserRole.ASISTAN ? 'Asistan' : 'Öğrenci'}
+                      {user?.role === UserRole.ADMIN ? 'Yönetici' : user?.role === UserRole.TUTOR ? 'Rehber' : user?.role === UserRole.ASISTAN ? 'Lider' : 'Öğrenci'}
                     </p>
                   </div>
                   <Button

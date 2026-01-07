@@ -15,7 +15,7 @@ type Tutor = {
 
 export default function NewUserPage() {
   const router = useRouter();
-  
+
   const [tutors, setTutors] = useState<Tutor[]>([]);
   const [loading, setLoading] = useState(false);
   const [creating, setCreating] = useState(false);
@@ -46,11 +46,11 @@ export default function NewUserPage() {
       try {
         setLoading(true);
         const response = await fetch('/api/users?role=tutor');
-        
+
         if (!response.ok) {
           throw new Error('Failed to fetch tutors');
         }
-        
+
         const data = await response.json();
         setTutors(data.users.filter((user: any) => user.role === 'TUTOR').map((tutor: any) => ({
           id: tutor.id,
@@ -72,7 +72,7 @@ export default function NewUserPage() {
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
-    
+
     // Clear error when field is edited
     if (formErrors[name as keyof typeof formErrors]) {
       setFormErrors(prev => ({ ...prev, [name]: '' }));
@@ -90,9 +90,9 @@ export default function NewUserPage() {
       tutorId: '',
       assistedTutorId: '',
     };
-    
+
     let isValid = true;
-    
+
     if (!formData.username.trim()) {
       errors.username = 'Kullanıcı adı gereklidir';
       isValid = false;
@@ -100,17 +100,17 @@ export default function NewUserPage() {
       errors.username = 'Kullanıcı adı en az 3 karakter olmalıdır';
       isValid = false;
     }
-    
+
     if (!formData.firstName.trim()) {
       errors.firstName = 'Ad gereklidir';
       isValid = false;
     }
-    
+
     if (!formData.lastName.trim()) {
       errors.lastName = 'Soyad gereklidir';
       isValid = false;
     }
-    
+
     if (!formData.password) {
       errors.password = 'Şifre gereklidir';
       isValid = false;
@@ -118,45 +118,45 @@ export default function NewUserPage() {
       errors.password = 'Şifre en az 6 karakter olmalıdır';
       isValid = false;
     }
-    
+
     if (formData.password !== formData.confirmPassword) {
       errors.confirmPassword = 'Şifreler eşleşmiyor';
       isValid = false;
     }
-    
+
     if (!formData.role) {
       errors.role = 'Kullanıcı rolü gereklidir';
       isValid = false;
     }
-    
+
     if (formData.role === UserRole.STUDENT && !formData.tutorId) {
-      errors.tutorId = 'Öğrenci için danışman atanması gereklidir';
+      errors.tutorId = 'Öğrenci için rehber atanması gereklidir';
       isValid = false;
     }
 
     if (formData.role === UserRole.ASISTAN && !formData.assistedTutorId) {
-      errors.assistedTutorId = 'Asistan için yardım edeceği öğretmen atanması gereklidir';
+      errors.assistedTutorId = 'Lider için yardım edeceği rehber atanması gereklidir';
       isValid = false;
     }
-    
+
     setFormErrors(errors);
     return isValid;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!validateForm()) {
       return;
     }
-    
+
     try {
       setCreating(true);
       setError('');
-      
+
       // Generate an email from the username
       const email = `${formData.username}@ogrtakip.com`;
-      
+
       const response = await fetch('/api/auth/register', {
         method: 'POST',
         headers: {
@@ -174,12 +174,12 @@ export default function NewUserPage() {
           adminCreated: true, // Flag to bypass email verification
         }),
       });
-      
+
       if (!response.ok) {
         const errorData = await response.json();
         throw new Error(errorData.error || 'Kullanıcı oluşturulurken bir hata oluştu');
       }
-      
+
       // Navigate back to users list
       router.push('/dashboard/part7/admin/users');
       router.refresh();
@@ -202,7 +202,7 @@ export default function NewUserPage() {
           </span>
           Yeni Kullanıcı Oluştur
         </h1>
-        <Link 
+        <Link
           href="/dashboard/part7/admin/users"
           className="flex items-center text-sm font-medium text-indigo-600 hover:text-indigo-800 bg-indigo-50 hover:bg-indigo-100 transition-colors duration-150 py-2 px-4 rounded-full"
         >
@@ -212,7 +212,7 @@ export default function NewUserPage() {
           Kullanıcılara Dön
         </Link>
       </div>
-      
+
       {error && (
         <div className="bg-red-50 border-l-4 border-red-400 text-red-700 p-4 rounded-md flex items-center shadow-sm">
           <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2 flex-shrink-0" viewBox="0 0 20 20" fill="currentColor">
@@ -221,7 +221,7 @@ export default function NewUserPage() {
           {error}
         </div>
       )}
-      
+
       <div className="bg-white shadow-md rounded-xl p-8 border border-gray-100">
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
@@ -253,7 +253,7 @@ export default function NewUserPage() {
                 </p>
               )}
             </div>
-            
+
             {/* First Name */}
             <div className="space-y-2">
               <label htmlFor="firstName" className="block text-sm font-medium text-gray-700 flex items-center">
@@ -282,7 +282,7 @@ export default function NewUserPage() {
                 </p>
               )}
             </div>
-            
+
             {/* Last Name */}
             <div className="space-y-2">
               <label htmlFor="lastName" className="block text-sm font-medium text-gray-700 flex items-center">
@@ -311,7 +311,7 @@ export default function NewUserPage() {
                 </p>
               )}
             </div>
-            
+
             {/* Password */}
             <div className="space-y-2">
               <label htmlFor="password" className="block text-sm font-medium text-gray-700 flex items-center">
@@ -340,7 +340,7 @@ export default function NewUserPage() {
                 </p>
               )}
             </div>
-            
+
             {/* Confirm Password */}
             <div className="space-y-2">
               <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 flex items-center">
@@ -369,7 +369,7 @@ export default function NewUserPage() {
                 </p>
               )}
             </div>
-            
+
             {/* Role */}
             <div className="space-y-2">
               <label htmlFor="role" className="block text-sm font-medium text-gray-700 flex items-center">
@@ -388,8 +388,8 @@ export default function NewUserPage() {
                 >
                   <option value="">Rol Seçin</option>
                   <option value={UserRole.ADMIN}>Yönetici</option>
-                  <option value={UserRole.TUTOR}>Öğretmen</option>
-                  <option value={UserRole.ASISTAN}>Asistan</option>
+                  <option value={UserRole.TUTOR}>Rehber</option>
+                  <option value={UserRole.ASISTAN}>Lider</option>
                   <option value={UserRole.STUDENT}>Öğrenci</option>
                 </select>
                 <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700">
@@ -407,7 +407,7 @@ export default function NewUserPage() {
                 </p>
               )}
             </div>
-            
+
             {/* Tutor (only for students) */}
             {formData.role === UserRole.STUDENT && (
               <div className="space-y-2">
@@ -415,7 +415,7 @@ export default function NewUserPage() {
                   <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
                   </svg>
-                  Danışman<span className="text-indigo-600 ml-0.5">*</span>
+                  Rehber<span className="text-indigo-600 ml-0.5">*</span>
                 </label>
                 <div className="relative">
                   <select
@@ -425,12 +425,12 @@ export default function NewUserPage() {
                     onChange={handleChange}
                     className={`block w-full border ${formErrors.tutorId ? 'border-red-300 bg-red-50' : 'border-gray-300'} rounded-lg shadow-sm py-3 px-4 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm transition duration-150 appearance-none`}
                   >
-                    <option value="">Danışman Seçin</option>
+                    <option value="">Rehber Seçin</option>
                     {tutors.map(tutor => (
                       <option key={tutor.id} value={tutor.id}>
                         {tutor.firstName && tutor.lastName
-                          ? `${tutor.firstName} ${tutor.lastName} (Öğretmen)`
-                          : `${tutor.username} (Öğretmen)`}
+                          ? `${tutor.firstName} ${tutor.lastName} (Rehber)`
+                          : `${tutor.username} (Rehber)`}
                       </option>
                     ))}
                   </select>
@@ -467,7 +467,7 @@ export default function NewUserPage() {
                   <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
                   </svg>
-                  Yardım Edeceği Öğretmen<span className="text-indigo-600 ml-0.5">*</span>
+                  Yardım Edeceği Rehber<span className="text-indigo-600 ml-0.5">*</span>
                 </label>
                 <div className="relative">
                   <select
@@ -477,12 +477,12 @@ export default function NewUserPage() {
                     onChange={handleChange}
                     className={`block w-full border ${formErrors.assistedTutorId ? 'border-red-300 bg-red-50' : 'border-gray-300'} rounded-lg shadow-sm py-3 px-4 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm transition duration-150 appearance-none`}
                   >
-                    <option value="">Öğretmen Seçin</option>
+                    <option value="">Rehber Seçin</option>
                     {tutors.map(tutor => (
                       <option key={tutor.id} value={tutor.id}>
                         {tutor.firstName && tutor.lastName
-                          ? `${tutor.firstName} ${tutor.lastName} (Öğretmen)`
-                          : `${tutor.username} (Öğretmen)`}
+                          ? `${tutor.firstName} ${tutor.lastName} (Rehber)`
+                          : `${tutor.username} (Rehber)`}
                       </option>
                     ))}
                   </select>
@@ -512,7 +512,7 @@ export default function NewUserPage() {
               </div>
             )}
           </div>
-          
+
           <div className="mt-8 pt-6 border-t border-gray-200">
             <div className="flex items-center text-sm text-gray-500 mb-6">
               <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-indigo-500 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -520,10 +520,10 @@ export default function NewUserPage() {
               </svg>
               <span className="text-indigo-600 font-medium mr-1">*</span> işaretli alanlar zorunludur
             </div>
-            
+
             {/* Submit button */}
             <div className="flex items-center justify-end">
-              <Link 
+              <Link
                 href="/dashboard/part7/admin/users"
                 className="mr-4 px-5 py-2.5 border border-gray-300 text-gray-700 bg-white rounded-lg shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors duration-150 text-sm font-medium"
               >

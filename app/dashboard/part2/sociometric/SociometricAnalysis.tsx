@@ -6,6 +6,15 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Button } from '@/components/ui/button';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogHeader,
+    DialogTitle,
+    DialogTrigger,
+} from '@/components/ui/dialog';
 import {
     Users,
     UserMinus,
@@ -14,9 +23,16 @@ import {
     TrendingUp,
     Calendar,
     AlertCircle,
-    Loader2
+    Loader2,
+    Tag,
+    Settings,
+    UserPlus
 } from 'lucide-react';
 import { getSociometricData } from '@/app/actions/sociometric';
+import StudentTagsView from '@/app/components/student/StudentTagsView';
+import TagTemplateManager from '@/app/components/admin/TagTemplateManager';
+import QuickTagAssigner from '@/app/components/student/QuickTagAssigner';
+import FavoriteActivitiesDialog from '@/app/components/sociometric/FavoriteActivitiesDialog';
 
 interface SociometricAnalysisProps {
     userId: string;
@@ -34,6 +50,7 @@ interface SociometricData {
     isolatedStudents: IsolatedStudent[];
     friendGroups: FriendGroup[];
     activityStats: ActivityStats;
+    students: any[];
     classroomInfo: {
         name: string;
         totalStudents: number;
@@ -75,6 +92,7 @@ interface ActivityStats {
     averageParticipationRate: number;
     mostPopularActivity?: string;
     leastPopularActivity?: string;
+    topActivities: { name: string; participationCount: number }[];
     weeklyTrend: { week: string; count: number }[];
 }
 
@@ -130,8 +148,65 @@ export default function SociometricAnalysis({ userId, userRole }: SociometricAna
             .slice(0, 2);
     };
 
+    const [tagManagementOpen, setTagManagementOpen] = useState(false);
+
     return (
         <div className="space-y-6">
+            {/* Admin Header with Tag Management Button */}
+            {userRole === 'ADMIN' && (
+                <div className="flex justify-end gap-2">
+                    <Dialog open={tagManagementOpen} onOpenChange={setTagManagementOpen}>
+                        <DialogTrigger asChild>
+                            <Button
+                                variant="outline"
+                                className="flex items-center gap-2 border-violet-200 hover:bg-violet-50"
+                            >
+                                <Settings className="h-4 w-4 text-violet-600" />
+                                Etiket Yönetimi
+                            </Button>
+                        </DialogTrigger>
+                        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+                            <DialogHeader>
+                                <DialogTitle className="flex items-center gap-2">
+                                    <Settings className="h-5 w-5 text-violet-600" />
+                                    Etiket Şablonları Yönetimi
+                                </DialogTitle>
+                                <DialogDescription>
+                                    Tüm sınıflar için geçerli etiket şablonlarını oluşturun ve yönetin
+                                </DialogDescription>
+                            </DialogHeader>
+                            <TagTemplateManager embedded />
+                        </DialogContent>
+                    </Dialog>
+                    {selectedClassroom && data?.activityStats && (
+                        <FavoriteActivitiesDialog activities={data.activityStats.topActivities} />
+                    )}
+                    {selectedClassroom && data?.students && (
+                        <QuickTagAssigner
+                            classroomId={selectedClassroom}
+                            students={data.students}
+                            onTagsChange={() => loadSociometricData(selectedClassroom)}
+                        />
+                    )}
+                </div>
+            )}
+
+            {/* Tutor Header with Quick Tag Assign Button */}
+            {userRole === 'TUTOR' && selectedClassroom && data && (
+                <div className="flex justify-end gap-2">
+                    {data.activityStats && (
+                        <FavoriteActivitiesDialog activities={data.activityStats.topActivities} />
+                    )}
+                    {data.students && (
+                        <QuickTagAssigner
+                            classroomId={selectedClassroom}
+                            students={data.students}
+                            onTagsChange={() => loadSociometricData(selectedClassroom)}
+                        />
+                    )}
+                </div>
+            )}
+
             {/* Classroom Selector - Only for Admin */}
             {userRole === 'ADMIN' && (
                 <Card className="border-0 shadow-lg">
@@ -235,7 +310,7 @@ export default function SociometricAnalysis({ userId, userRole }: SociometricAna
 
                     {/* Tabs for Different Views */}
                     <Tabs defaultValue="leaders" className="space-y-4">
-                        <TabsList className="grid w-full grid-cols-3 lg:w-auto">
+                        <TabsList className="grid w-full grid-cols-4 lg:w-auto">
                             <TabsTrigger value="leaders" className="flex items-center gap-2">
                                 <Crown className="h-4 w-4" />
                                 Grup Liderleri
@@ -247,6 +322,10 @@ export default function SociometricAnalysis({ userId, userRole }: SociometricAna
                             <TabsTrigger value="groups" className="flex items-center gap-2">
                                 <Network className="h-4 w-4" />
                                 Arkadaş Grupları
+                            </TabsTrigger>
+                            <TabsTrigger value="tags" className="flex items-center gap-2">
+                                <Tag className="h-4 w-4" />
+                                Etiketler
                             </TabsTrigger>
                         </TabsList>
 
@@ -435,6 +514,11 @@ export default function SociometricAnalysis({ userId, userRole }: SociometricAna
                                     )}
                                 </CardContent>
                             </Card>
+                        </TabsContent>
+
+                        {/* Student Tags Tab */}
+                        <TabsContent value="tags" className="space-y-4">
+                            <StudentTagsView classroomId={selectedClassroom} />
                         </TabsContent>
                     </Tabs>
                 </>

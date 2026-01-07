@@ -155,7 +155,7 @@ export default function WeeklyReportsPage() {
           <div>
             <h1 className="text-3xl font-bold text-gray-800 mb-2">
               <span className="bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
-                {isTutor ? "Rehber" : "Rehber Yardımcısı"} Haftalık Raporları
+                {isTutor ? "Rehber" : "Lider"} Haftalık Raporları
               </span>
             </h1>
             <p className="text-gray-600">

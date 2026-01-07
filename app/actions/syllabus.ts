@@ -728,3 +728,188 @@ export async function toggleGlobalStatus(syllabusId: string) {
     return { error: 'Global durum değiştirilirken bir hata oluştu', data: null };
   }
 }
+
+export async function getGlobalSyllabusProgress(params?: { search?: string, page?: number, pageSize?: number }) {
+  try {
+    const session = await getServerSession(authOptions);
+
+    if (!session?.user || session.user.role !== UserRole.ADMIN) {
+      return { error: 'Yetkisiz erişim', data: null };
+    }
+
+    const page = params?.page || 1;
+    const pageSize = params?.pageSize || 10;
+    const skip = (page - 1) * pageSize;
+    const search = params?.search?.toLowerCase() || '';
+
+    // 1. Fetch all global syllabi
+    const globalSyllabi = await prisma.syllabus.findMany({
+      where: { isGlobal: true },
+      include: {
+        lessons: {
+          orderBy: { orderIndex: 'asc' },
+        },
+      },
+    });
+
+    // 2. Fetch all classrooms with filters and pagination
+    const totalClassrooms = await prisma.classroom.count({
+      where: search ? {
+        OR: [
+          { name: { contains: search, mode: 'insensitive' } },
+          {
+            tutor: {
+              OR: [
+                { firstName: { contains: search, mode: 'insensitive' } },
+                { lastName: { contains: search, mode: 'insensitive' } },
+                { username: { contains: search, mode: 'insensitive' } },
+              ],
+            },
+          },
+        ],
+      } : undefined,
+    });
+
+    const classrooms = await prisma.classroom.findMany({
+      where: search ? {
+        OR: [
+          { name: { contains: search, mode: 'insensitive' } },
+          {
+            tutor: {
+              OR: [
+                { firstName: { contains: search, mode: 'insensitive' } },
+                { lastName: { contains: search, mode: 'insensitive' } },
+                { username: { contains: search, mode: 'insensitive' } },
+              ],
+            },
+          },
+        ],
+      } : undefined,
+      include: {
+        tutor: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            username: true,
+          },
+        },
+      },
+      skip,
+      take: pageSize,
+      orderBy: { name: 'asc' },
+    });
+
+    // 3. Fetch all progress records for these syllabi and selected classrooms
+    const progressRecords = await prisma.classroomLessonProgress.findMany({
+      where: {
+        syllabusId: { in: globalSyllabi.map(s => s.id) },
+        classroomId: { in: classrooms.map(c => c.id) },
+      },
+    });
+
+    // 4. Map the data structure: Map Classrooms -> Syllabi Progress
+    const reportData = classrooms.map(classroom => {
+      const syllabusProgress = globalSyllabi.map(syllabus => {
+        const syllabusLessonsCount = syllabus.lessons.length;
+
+        const completedLessons = progressRecords.filter(p =>
+          p.classroomId === classroom.id &&
+          p.syllabusId === syllabus.id &&
+          p.isTaught
+        );
+
+        const lastCompletedLesson = completedLessons.length > 0
+          ? completedLessons.sort((a, b) => (b.taughtDate?.getTime() || 0) - (a.taughtDate?.getTime() || 0))[0]
+          : null;
+
+        return {
+          syllabusId: syllabus.id,
+          syllabusTitle: syllabus.title,
+          completedCount: completedLessons.length,
+          totalCount: syllabusLessonsCount,
+          percentage: syllabusLessonsCount > 0 ? (completedLessons.length / syllabusLessonsCount) * 100 : 0,
+          lastUpdated: lastCompletedLesson?.taughtDate?.toISOString() || null,
+        };
+      });
+
+      return {
+        classroomId: classroom.id,
+        classroomName: classroom.name,
+        tutorName: `${classroom.tutor.firstName || ''} ${classroom.tutor.lastName || ''}`.trim() || classroom.tutor.username,
+        syllabiProgress: syllabusProgress,
+      };
+    });
+
+    return {
+      error: null,
+      data: {
+        results: reportData,
+        pagination: {
+          total: totalClassrooms,
+          page,
+          pageSize,
+          totalPages: Math.ceil(totalClassrooms / pageSize),
+        }
+      },
+    };
+  } catch (error) {
+    console.error('Error fetching global syllabus progress:', error);
+    return { error: 'İlerleme verileri yüklenirken bir hata oluştu', data: null };
+  }
+}
+
+export async function getClassroomSyllabusDetail(classroomId: string, syllabusId: string) {
+  try {
+    const session = await getServerSession(authOptions);
+
+    if (!session?.user || session.user.role !== UserRole.ADMIN) {
+      return { error: 'Yetkisiz erişim', data: null };
+    }
+
+    const syllabus = await prisma.syllabus.findUnique({
+      where: { id: syllabusId },
+      include: {
+        lessons: {
+          orderBy: { orderIndex: 'asc' },
+        },
+      },
+    });
+
+    if (!syllabus) {
+      return { error: 'Müfredat bulunamadı', data: null };
+    }
+
+    const progress = await prisma.classroomLessonProgress.findMany({
+      where: {
+        classroomId,
+        syllabusId,
+      },
+    });
+
+    const progressMap = new Map(progress.map(p => [p.lessonId, p]));
+
+    const detailedLessons = syllabus.lessons.map(lesson => {
+      const lessonProgress = progressMap.get(lesson.id);
+      return {
+        ...lesson,
+        isTaught: lessonProgress?.isTaught || false,
+        taughtDate: lessonProgress?.taughtDate ? lessonProgress.taughtDate.toISOString() : null,
+        notes: lessonProgress?.notes || null,
+        createdAt: lesson.createdAt.toISOString(),
+        updatedAt: lesson.updatedAt.toISOString(),
+      };
+    });
+
+    return {
+      error: null,
+      data: {
+        syllabusTitle: syllabus.title,
+        lessons: detailedLessons,
+      },
+    };
+  } catch (error) {
+    console.error('Error fetching classroom syllabus detail:', error);
+    return { error: 'Detay verileri yüklenirken bir hata oluştu', data: null };
+  }
+}

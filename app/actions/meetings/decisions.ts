@@ -278,7 +278,7 @@ export async function deleteDecision(id: string) {
   }
 }
 
-export async function getAllDecisions(statusFilter?: 'all' | 'completed' | 'pending') {
+export async function getAllDecisions(statusFilter?: 'all' | 'completed' | 'todo' | 'in-progress' | 'pending') {
   try {
     const session = await getServerSession(authOptions);
 
@@ -290,6 +290,10 @@ export async function getAllDecisions(statusFilter?: 'all' | 'completed' | 'pend
     const whereClause: any = {};
     if (statusFilter === 'completed') {
       whereClause.status = DecisionStatus.DONE;
+    } else if (statusFilter === 'todo') {
+      whereClause.status = DecisionStatus.TODO;
+    } else if (statusFilter === 'in-progress') {
+      whereClause.status = DecisionStatus.IN_PROGRESS;
     } else if (statusFilter === 'pending') {
       whereClause.status = {
         in: [DecisionStatus.TODO, DecisionStatus.IN_PROGRESS],
@@ -372,6 +376,16 @@ export async function getDecisionStatistics() {
       where: { status: DecisionStatus.DONE },
     });
 
+    // Get todo decisions count
+    const todoDecisions = await prisma.meetingDecision.count({
+      where: { status: DecisionStatus.TODO },
+    });
+
+    // Get in progress decisions count
+    const inProgressDecisions = await prisma.meetingDecision.count({
+      where: { status: DecisionStatus.IN_PROGRESS },
+    });
+
     // Get pending decisions count (TODO + IN_PROGRESS)
     const pendingDecisions = await prisma.meetingDecision.count({
       where: {
@@ -386,6 +400,8 @@ export async function getDecisionStatistics() {
       data: {
         total: totalDecisions,
         completed: completedDecisions,
+        todo: todoDecisions,
+        inProgress: inProgressDecisions,
         pending: pendingDecisions,
       },
     };

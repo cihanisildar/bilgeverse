@@ -186,18 +186,18 @@ export default function QuestionManagementPage() {
   };
 
   const getRoleLabel = (role: string) => {
-    return role === "TUTOR" ? "Rehber" : "Rehber Yardımcısı";
+    return role === "TUTOR" ? "Rehber" : "Lider";
   };
 
   // Searchable Select Component
-  const SearchableSelect = <T extends string>({ 
-    value, 
-    onValueChange, 
-    options, 
-    placeholder, 
+  const SearchableSelect = <T extends string>({
+    value,
+    onValueChange,
+    options,
+    placeholder,
     searchPlaceholder,
     filter,
-    onFilterChange 
+    onFilterChange
   }: {
     value: T;
     onValueChange: (value: T) => void;
@@ -207,7 +207,7 @@ export default function QuestionManagementPage() {
     filter: string;
     onFilterChange: (value: string) => void;
   }) => {
-    const filteredOptions = options.filter(option => 
+    const filteredOptions = options.filter(option =>
       option.label.toLowerCase().includes(filter.toLowerCase())
     );
 
@@ -340,7 +340,7 @@ export default function QuestionManagementPage() {
                 <Label className="text-sm font-medium text-gray-700 whitespace-nowrap">
                   Filtreler:
                 </Label>
-                
+
                 {/* All Filter Buttons in One Line */}
                 <div className="flex flex-wrap gap-2">
                   {/* Role Filter Buttons */}
@@ -367,7 +367,7 @@ export default function QuestionManagementPage() {
                     onClick={() => setRoleDisplayFilter("ASISTAN")}
                     className={roleDisplayFilter === "ASISTAN" ? "bg-indigo-600 hover:bg-indigo-700 text-white" : "bg-white text-black hover:bg-gray-100"}
                   >
-                    Rehber Yardımcısı
+                    Lider
                   </Button>
 
                   {/* Type Filter Buttons */}
@@ -444,7 +444,7 @@ export default function QuestionManagementPage() {
                     onValueChange={(value) => setFormData({ ...formData, targetRole: value as "TUTOR" | "ASISTAN" })}
                     options={[
                       { value: "TUTOR" as const, label: "Rehber" },
-                      { value: "ASISTAN" as const, label: "Rehber Yardımcısı" }
+                      { value: "ASISTAN" as const, label: "Lider" }
                     ]}
                     placeholder="Hedef rolü seçin"
                     searchPlaceholder="Hedef rol ara..."
@@ -610,14 +610,14 @@ function EditQuestionForm({ question, onSave, onCancel }: EditQuestionFormProps)
   };
 
   // Searchable Select Component for Edit Form
-  const SearchableSelect = <T extends string>({ 
-    value, 
-    onValueChange, 
-    options, 
-    placeholder, 
+  const SearchableSelect = <T extends string>({
+    value,
+    onValueChange,
+    options,
+    placeholder,
     searchPlaceholder,
     filter,
-    onFilterChange 
+    onFilterChange
   }: {
     value: T;
     onValueChange: (value: T) => void;
@@ -627,7 +627,7 @@ function EditQuestionForm({ question, onSave, onCancel }: EditQuestionFormProps)
     filter: string;
     onFilterChange: (value: string) => void;
   }) => {
-    const filteredOptions = options.filter(option => 
+    const filteredOptions = options.filter(option =>
       option.label.toLowerCase().includes(filter.toLowerCase())
     );
 
@@ -694,7 +694,7 @@ function EditQuestionForm({ question, onSave, onCancel }: EditQuestionFormProps)
             onValueChange={(value) => setFormData({ ...formData, targetRole: value as "TUTOR" | "ASISTAN" })}
             options={[
               { value: "TUTOR" as const, label: "Rehber" },
-              { value: "ASISTAN" as const, label: "Rehber Yardımcısı" }
+              { value: "ASISTAN" as const, label: "Lider" }
             ]}
             placeholder="Hedef rolü seçin"
             searchPlaceholder="Hedef rol ara..."

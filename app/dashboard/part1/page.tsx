@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/app/contexts/AuthContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ArrowRight, FileText, Calendar, ExternalLink, Power, Users, CheckCircle2, Clock, ListTodo } from 'lucide-react';
+import { ArrowRight, ArrowLeft, FileText, Calendar, ExternalLink, Power, Users, CheckCircle2, Clock, ListTodo } from 'lucide-react';
 import { PARTS } from '@/app/lib/parts';
 import { getRoleBasedPath } from '@/app/lib/navigation';
 import { useEffect, useState } from 'react';
@@ -12,7 +12,8 @@ import { usePathname } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import Loading from '@/app/components/Loading';
 import { useToast } from '@/app/hooks/use-toast';
-import { getDecisionStatistics } from '@/app/actions/meetings/decisions';
+import { getDecisionStatistics, getAllDecisions } from '@/app/actions/meetings/decisions';
+import { DecisionStatus } from '@prisma/client';
 
 type PartPdf = {
   id: string;
@@ -38,8 +39,10 @@ export default function Part1Page() {
   const { user, loading, isAdmin } = useAuth();
   const [pdfs, setPdfs] = useState<PartPdf[]>([]);
   const [loadingPdfs, setLoadingPdfs] = useState(true);
-  const [decisionStats, setDecisionStats] = useState<{ total: number; completed: number; pending: number } | null>(null);
+  const [decisionStats, setDecisionStats] = useState<{ total: number; completed: number; pending: number; todo: number; inProgress: number } | null>(null);
   const [loadingStats, setLoadingStats] = useState(true);
+  const [pendingDecisions, setPendingDecisions] = useState<any[]>([]);
+  const [loadingDecisions, setLoadingDecisions] = useState(true);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -60,6 +63,8 @@ export default function Part1Page() {
       fetchDecisionStats();
     }
   }, [user]);
+
+  // Remove fetchPendingDecisions as the user wants to see them via cards
 
   const fetchPdfs = async () => {
     try {
@@ -135,51 +140,22 @@ export default function Part1Page() {
   // Filter parts to only show part 7 for non-admin users
   const visibleParts = isAdmin ? PARTS : PARTS.filter(part => part.id === 7);
 
-  // Show sidebar on part1 page
-  const isDashboardPage = pathname === '/dashboard/part1';
-
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50">
       <div className="flex h-screen">
-        {/* Sidebar */}
-        {isDashboardPage && (
-          <aside className="w-80 bg-white border-r border-gray-200 overflow-y-auto shadow-sm">
-            <div className="p-6">
-              <h2 className="text-xl font-semibold text-gray-800 mb-4">
-                <span className="bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-purple-600">
-                  Bölümler
-                </span>
-              </h2>
-              <div className="space-y-2">
-                {visibleParts.map((part) => (
-                  <div
-                    key={part.id}
-                    onClick={() => handlePartClick(part.id, part.path)}
-                    className="p-4 rounded-lg cursor-pointer transition-all duration-200 hover:bg-gray-50 hover:shadow-md border border-transparent hover:border-gray-200 group"
-                  >
-                    <div className="flex items-center space-x-3">
-                      <div className={`w-12 h-12 flex items-center justify-center rounded-lg ${part.bgColor} ${part.textColor} group-hover:scale-110 transition-transform`}>
-                        {part.icon}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <h3 className="font-semibold text-gray-800 group-hover:text-indigo-600 transition-colors">
-                          {part.name}
-                        </h3>
-                        <p className="text-sm text-gray-500 truncate">{part.description}</p>
-                      </div>
-                      <ArrowRight className="h-4 w-4 text-gray-400 group-hover:text-indigo-600 group-hover:translate-x-1 transition-all" />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </aside>
-        )}
-
         {/* Main Content */}
         <main className="flex-1 overflow-y-auto p-6 lg:p-8">
           <div className="max-w-7xl mx-auto">
+            {/* Header with Back Button */}
             <div className="mb-8">
+              <Button
+                variant="ghost"
+                onClick={() => router.push('/dashboard')}
+                className="mb-4 text-gray-600 hover:text-indigo-600 hover:bg-indigo-50"
+              >
+                <ArrowLeft className="h-4 w-4 mr-2" />
+                Ana Dashboard'a Dön
+              </Button>
               <h1 className="text-3xl font-bold text-gray-800 mb-2">
                 <span className="bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-purple-600">
                   Bilgeder Yönetim Kurulu
@@ -190,15 +166,15 @@ export default function Part1Page() {
 
             {/* Decision Summary Cards */}
             {loadingStats ? (
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-                {[1, 2, 3].map((i) => (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                {[1, 2, 3, 4].map((i) => (
                   <Card key={i} className="border-0 shadow-md rounded-xl overflow-hidden bg-white">
                     <div className="h-1.5 bg-gradient-to-r from-gray-200 to-gray-300"></div>
                     <CardContent className="pt-6">
                       <div className="flex items-center justify-between">
                         <div className="flex-1">
-                          <Skeleton className="h-4 w-32 mb-3" />
-                          <Skeleton className="h-9 w-16" />
+                          <Skeleton className="h-4 w-24 mb-3" />
+                          <Skeleton className="h-9 w-12" />
                         </div>
                         <Skeleton className="w-12 h-12 rounded-full" />
                       </div>
@@ -207,7 +183,7 @@ export default function Part1Page() {
                 ))}
               </div>
             ) : decisionStats ? (
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
                 <Card
                   className="border-0 shadow-md rounded-xl overflow-hidden bg-white cursor-pointer transition-all duration-200 hover:shadow-xl hover:-translate-y-1"
                   onClick={() => router.push('/dashboard/part1/decisions?status=all')}
@@ -228,6 +204,42 @@ export default function Part1Page() {
 
                 <Card
                   className="border-0 shadow-md rounded-xl overflow-hidden bg-white cursor-pointer transition-all duration-200 hover:shadow-xl hover:-translate-y-1"
+                  onClick={() => router.push('/dashboard/part1/decisions?status=todo')}
+                >
+                  <div className="h-1.5 bg-gradient-to-r from-orange-500 to-amber-500"></div>
+                  <CardContent className="pt-6">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-medium text-gray-600">Yapılacak Kararlar</p>
+                        <p className="text-3xl font-bold text-gray-800 mt-2">{decisionStats.todo}</p>
+                      </div>
+                      <div className="w-12 h-12 flex items-center justify-center rounded-full bg-orange-100 text-orange-600">
+                        <Clock className="h-6 w-6" />
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card
+                  className="border-0 shadow-md rounded-xl overflow-hidden bg-white cursor-pointer transition-all duration-200 hover:shadow-xl hover:-translate-y-1"
+                  onClick={() => router.push('/dashboard/part1/decisions?status=in-progress')}
+                >
+                  <div className="h-1.5 bg-gradient-to-r from-indigo-500 to-blue-500"></div>
+                  <CardContent className="pt-6">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-medium text-gray-600">Devam Eden Kararlar</p>
+                        <p className="text-3xl font-bold text-gray-800 mt-2">{decisionStats.inProgress}</p>
+                      </div>
+                      <div className="w-12 h-12 flex items-center justify-center rounded-full bg-indigo-100 text-indigo-600">
+                        <ExternalLink className="h-6 w-6" />
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card
+                  className="border-0 shadow-md rounded-xl overflow-hidden bg-white cursor-pointer transition-all duration-200 hover:shadow-xl hover:-translate-y-1"
                   onClick={() => router.push('/dashboard/part1/decisions?status=completed')}
                 >
                   <div className="h-1.5 bg-gradient-to-r from-green-500 to-emerald-500"></div>
@@ -239,24 +251,6 @@ export default function Part1Page() {
                       </div>
                       <div className="w-12 h-12 flex items-center justify-center rounded-full bg-green-100 text-green-600">
                         <CheckCircle2 className="h-6 w-6" />
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Card
-                  className="border-0 shadow-md rounded-xl overflow-hidden bg-white cursor-pointer transition-all duration-200 hover:shadow-xl hover:-translate-y-1"
-                  onClick={() => router.push('/dashboard/part1/decisions?status=pending')}
-                >
-                  <div className="h-1.5 bg-gradient-to-r from-orange-500 to-amber-500"></div>
-                  <CardContent className="pt-6">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-sm font-medium text-gray-600">Bekleyen Kararlar</p>
-                        <p className="text-3xl font-bold text-gray-800 mt-2">{decisionStats.pending}</p>
-                      </div>
-                      <div className="w-12 h-12 flex items-center justify-center rounded-full bg-orange-100 text-orange-600">
-                        <Clock className="h-6 w-6" />
                       </div>
                     </div>
                   </CardContent>
