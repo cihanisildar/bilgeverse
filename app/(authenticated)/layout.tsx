@@ -62,6 +62,7 @@ export default function AuthenticatedLayout({
     { href: '/dashboard/part7/admin/weekly-reports', label: 'Haftalık Raporlar', icon: <BookOpen className="h-5 w-5" /> },
     { href: '/dashboard/part7/admin/leaderboard', label: 'Liderlik Tablosu', icon: <Trophy className="h-5 w-5" /> },
     { href: '/dashboard/part7/admin/reports', label: 'Raporlar', icon: <PieChart className="h-5 w-5" /> },
+    { href: '/dashboard/part4', label: 'Atölyeler', icon: <Grid3x3 className="h-5 w-5" /> },
   ];
 
   const tutorLinks: NavLink[] = [
@@ -77,6 +78,7 @@ export default function AuthenticatedLayout({
     { href: '/dashboard/part7/tutor/reports', label: 'Raporlar', icon: <PieChart className="h-5 w-5" /> },
     { href: '/dashboard/part7/tutor/store', label: 'Mağaza', icon: <ShoppingCart className="h-5 w-5" /> },
     { href: '/dashboard/part7/tutor/requests', label: 'Ürün İstekleri', icon: <ClipboardList className="h-5 w-5" /> },
+    { href: '/dashboard/part4', label: 'Atölyeler', icon: <Grid3x3 className="h-5 w-5" /> },
   ];
 
   const studentLinks: NavLink[] = [
@@ -151,8 +153,8 @@ export default function AuthenticatedLayout({
           <Link
             href="/dashboard"
             className={`flex items-center justify-start px-4 py-2 rounded-lg transition-all duration-200 ${pathname === '/dashboard'
-                ? `${activeIconBg} ${activeLinkColor} font-medium`
-                : 'text-gray-500 hover:bg-gray-50 hover:text-gray-800'
+              ? `${activeIconBg} ${activeLinkColor} font-medium`
+              : 'text-gray-500 hover:bg-gray-50 hover:text-gray-800'
               }`}
             onClick={() => setIsMobileMenuOpen(false)}
           >
@@ -168,8 +170,8 @@ export default function AuthenticatedLayout({
           <Link
             href={link.href}
             className={`flex items-center justify-start px-4 py-2 rounded-lg transition-all duration-200 ${isActive(link.href)
-                ? `${activeIconBg} ${activeLinkColor} font-medium`
-                : 'text-gray-500 hover:bg-gray-50 hover:text-gray-800'
+              ? `${activeIconBg} ${activeLinkColor} font-medium`
+              : 'text-gray-500 hover:bg-gray-50 hover:text-gray-800'
               }`}
             onClick={() => setIsMobileMenuOpen(false)}
           >

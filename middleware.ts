@@ -98,6 +98,7 @@ export async function middleware(request: NextRequest) {
     if (pathname.startsWith('/dashboard/part') &&
       !pathname.startsWith('/dashboard/part7') &&
       !pathname.startsWith('/dashboard/part2') &&
+      !pathname.startsWith('/dashboard/part4') &&
       !isCheckInPage &&
       !isMeetingDetailPage) {
       if (token.role !== UserRole.ADMIN && token.role !== UserRole.BOARD_MEMBER) {

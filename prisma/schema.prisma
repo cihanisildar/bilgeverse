@@ -110,6 +110,10 @@ model User {
   studentTags                   StudentTag[]              @relation("StudentTags")
   assignedStudentTags           StudentTag[]              @relation("TutorAssignedTags")
   createdTagTemplates           TagTemplate[]             @relation("AdminTagTemplates")
+  workshopAssignments           WorkshopAssignment[]      @relation("WorkshopAssignments")
+  createdWorkshopActivities     WorkshopActivity[]        @relation("WorkshopActivities")
+  workshopMemberships           WorkshopStudent[]         @relation("WorkshopStudents")
+  workshopAttendances           WorkshopAttendance[]      @relation("WorkshopAttendances")
 
   @@index([tutorId])
 }
@@ -887,4 +891,80 @@ enum Part2ParticipantStatus {
   REGISTERED
   ATTENDED
   ABSENT
+}
+
+model Workshop {
+  id          String               @id @default(uuid())
+  name        String
+  description String?
+  imageUrl    String?
+  createdAt   DateTime             @default(now())
+  updatedAt   DateTime             @updatedAt
+  assignments WorkshopAssignment[]
+  activities  WorkshopActivity[]
+  students    WorkshopStudent[]
+  courses     WorkshopCourse[]
+}
+
+model WorkshopCourse {
+  id          String   @id @default(uuid())
+  workshopId  String
+  title       String
+  description String?
+  date        DateTime
+  isCompleted Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  workshop    Workshop @relation(fields: [workshopId], references: [id], onDelete: Cascade)
+}
+
+model WorkshopAssignment {
+  id         String   @id @default(uuid())
+  workshopId String
+  userId     String
+  role       UserRole
+  workshop   Workshop @relation(fields: [workshopId], references: [id], onDelete: Cascade)
+  user       User     @relation("WorkshopAssignments", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([workshopId, userId])
+}
+
+model WorkshopActivity {
+  id          String               @id @default(uuid())
+  workshopId  String
+  tutorId     String
+  title       String
+  description String?
+  date        DateTime
+  startTime   String?
+  endTime     String?
+  location    String?
+  qrCodeToken String?              @unique
+  workshop    Workshop             @relation(fields: [workshopId], references: [id], onDelete: Cascade)
+  tutor       User                 @relation("WorkshopActivities", fields: [tutorId], references: [id], onDelete: Cascade)
+  attendances WorkshopAttendance[]
+}
+
+model WorkshopStudent {
+  id         String   @id @default(uuid())
+  workshopId String
+  studentId  String
+  joinedAt   DateTime @default(now())
+  workshop   Workshop @relation(fields: [workshopId], references: [id], onDelete: Cascade)
+  student    User     @relation("WorkshopStudents", fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([workshopId, studentId])
+}
+
+model WorkshopAttendance {
+  id            String        @id @default(uuid())
+  activityId    String
+  studentId     String
+  status        Boolean       @default(false)
+  checkInMethod CheckInMethod @default(MANUAL)
+  checkInTime   DateTime?
+  activity      WorkshopActivity @relation(fields: [activityId], references: [id], onDelete: Cascade)
+  student       User             @relation("WorkshopAttendances", fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([activityId, studentId])
 }

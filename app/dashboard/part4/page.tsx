@@ -1,21 +1,80 @@
 import { redirect } from 'next/navigation';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { ArrowLeft, FileText } from 'lucide-react';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
+import { ArrowLeft, FileText, Plus, BarChart2, LayoutGrid } from 'lucide-react';
 import { PARTS } from '@/app/lib/parts';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/app/api/auth/[...nextauth]/auth.config';
 import PartDocuments from '@/app/components/PartDocuments';
+import { WorkshopList } from '@/components/workshops/WorkshopList';
+import { WorkshopReports } from '@/components/workshops/WorkshopReports';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import prisma from '@/lib/prisma';
+import { UserRole } from '@prisma/client';
+import { CreateWorkshopModal } from '@/components/workshops/CreateWorkshopModal';
 
-export default async function Part4Page() {
+import { getWorkshops } from '@/lib/workshops';
+
+export default async function Part4Page({
+  searchParams,
+}: {
+  searchParams: { tab?: string };
+}) {
   const session = await getServerSession(authOptions);
 
   if (!session?.user) {
     redirect('/login');
   }
 
+  const activeTab = searchParams.tab || 'workshops';
   const part = PARTS.find(p => p.id === 4);
+  const isPrivileged = [UserRole.ADMIN, UserRole.BOARD_MEMBER, UserRole.TUTOR, UserRole.ASISTAN].includes(session.user.role as any);
+  const isAdminOrBoard = [UserRole.ADMIN, UserRole.BOARD_MEMBER].includes(session.user.role as any);
+
+  // Fetch Workshops via Service Layer
+  const workshops = await getWorkshops();
+
+  // Fetch Report Data if admin/board
+  let reportData = null;
+  if (isAdminOrBoard) {
+    const tutorActivityCounts = await prisma.workshopActivity.groupBy({
+      by: ['tutorId'],
+      _count: { id: true },
+    });
+    const tutorIds = tutorActivityCounts.map((t: any) => t.tutorId);
+    const tutors = await prisma.user.findMany({
+      where: { id: { in: tutorIds } },
+      select: { id: true, firstName: true, lastName: true },
+    });
+    const tutorStats = tutorActivityCounts.map((stat: any) => {
+      const tutor = tutors.find((t: any) => t.id === stat.tutorId);
+      return {
+        tutorName: tutor ? `${tutor.firstName} ${tutor.lastName}` : 'Unknown',
+        activityCount: stat._count.id,
+      };
+    });
+
+    const wsForReports = await prisma.workshop.findMany({
+      include: {
+        _count: { select: { activities: true, students: true } },
+        activities: { include: { _count: { select: { attendances: { where: { status: true } } } } } }
+      }
+    });
+
+    const workshopReports = wsForReports.map((w: any) => {
+      const totalPossible = w._count.activities * w._count.students;
+      const actual = w.activities.reduce((acc: number, curr: any) => acc + (curr._count?.attendances || 0), 0);
+      return {
+        id: w.id,
+        name: w.name,
+        activityCount: w._count.activities,
+        studentCount: w._count.students,
+        attendanceRate: totalPossible > 0 ? (actual / totalPossible * 100).toFixed(2) : 0,
+      };
+    });
+    reportData = { tutorStats, workshopReports };
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-amber-50 via-white to-orange-50 p-6 lg:p-8">
@@ -27,47 +86,69 @@ export default async function Part4Page() {
           </Button>
         </Link>
 
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-800 mb-2">
-            <span className="bg-clip-text text-transparent bg-gradient-to-r from-amber-600 to-orange-600">
-              {part?.name}
-            </span>
-          </h1>
-          <p className="text-gray-600">{part?.description}</p>
-        </div>
-
-        <div className="mb-8">
-          <div className="flex items-center justify-between mb-6">
-            <div>
-              <h2 className="text-2xl font-bold text-gray-800 mb-1">Belgeler</h2>
-              <p className="text-gray-600">Bu bölüm için paylaşılan belgeler</p>
-            </div>
-            <Link href="/dashboard/pdfs">
-              <Button variant="outline" className="border-amber-200 text-amber-600 hover:bg-amber-50">
-                <FileText className="h-4 w-4 mr-2" />
-                Tüm Belgeleri Görüntüle
-              </Button>
-            </Link>
+        <div className="flex flex-col md:flex-row md:items-end justify-between mb-8 gap-4">
+          <div>
+            <h1 className="text-4xl font-extrabold text-gray-900 mb-2 tracking-tight">
+              <span className="bg-clip-text text-transparent bg-gradient-to-r from-amber-600 to-orange-600">
+                {part?.name}
+              </span>
+            </h1>
+            <p className="text-gray-600 text-lg max-w-2xl">{part?.description}</p>
           </div>
-          <PartDocuments partId={4} gradientFrom="from-amber-600" gradientTo="to-orange-600" />
+          {session.user.role === UserRole.ADMIN && (
+            <CreateWorkshopModal>
+              <Button className="bg-gradient-to-r from-amber-600 to-orange-600 text-white shadow-lg hover:shadow-xl transition-all border-0">
+                <Plus className="h-5 w-5 mr-2" />
+                Yeni Atölye
+              </Button>
+            </CreateWorkshopModal>
+          )}
         </div>
 
-        <Card className="border-0 shadow-lg rounded-2xl overflow-hidden">
-          <div className="h-2 bg-gradient-to-r from-amber-500 to-orange-500"></div>
-          <CardHeader>
-            <CardTitle className="text-2xl">Geliştirme Aşamasında</CardTitle>
-            <CardDescription>Bu bölüm yakında kullanıma açılacaktır</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="text-center py-12">
-              <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-gradient-to-br from-amber-100 to-orange-100 mb-6">
-                <FileText className="h-10 w-10 text-amber-600" />
-              </div>
-              <p className="text-gray-600 mb-4">Beceri atölyeleri yönetim sistemi üzerinde çalışıyoruz.</p>
-              <p className="text-sm text-gray-500">Bu bölüm tamamlandığında atölye planlaması, katılımcı kaydı ve ilerleme takibi özellikleri sunacaktır.</p>
+        <Tabs defaultValue={activeTab} className="w-full">
+          <div className="flex items-center justify-between mb-6">
+            <TabsList className="bg-white/50 border border-amber-100 p-1 rounded-xl">
+              <TabsTrigger value="workshops" className="rounded-lg px-6 data-[state=active]:bg-white data-[state=active]:text-amber-600 data-[state=active]:shadow-sm">
+                <LayoutGrid className="h-4 w-4 mr-2" />
+                Atölyeler
+              </TabsTrigger>
+              {isAdminOrBoard && (
+                <TabsTrigger value="reports" className="rounded-lg px-6 data-[state=active]:bg-white data-[state=active]:text-amber-600 data-[state=active]:shadow-sm">
+                  <BarChart2 className="h-4 w-4 mr-2" />
+                  Raporlar
+                </TabsTrigger>
+              )}
+              <TabsTrigger value="documents" className="rounded-lg px-6 data-[state=active]:bg-white data-[state=active]:text-amber-600 data-[state=active]:shadow-sm">
+                <FileText className="h-4 w-4 mr-2" />
+                Belgeler
+              </TabsTrigger>
+            </TabsList>
+
+            {activeTab === 'documents' && (
+              <Link href="/dashboard/pdfs">
+                <Button variant="outline" className="border-amber-200 text-amber-600 hover:bg-amber-50 rounded-xl">
+                  Tüm Belgeler
+                </Button>
+              </Link>
+            )}
+          </div>
+
+          <TabsContent value="workshops" className="mt-0 outline-none">
+            <WorkshopList workshops={workshops as any} role={session.user.role} />
+          </TabsContent>
+
+          {isAdminOrBoard && reportData && (
+            <TabsContent value="reports" className="mt-0 outline-none">
+              <WorkshopReports data={reportData} />
+            </TabsContent>
+          )}
+
+          <TabsContent value="documents" className="mt-0 outline-none">
+            <div className="bg-white/40 backdrop-blur-sm rounded-3xl p-6 border border-amber-100/50">
+              <PartDocuments partId={4} gradientFrom="from-amber-600" gradientTo="to-orange-600" />
             </div>
-          </CardContent>
-        </Card>
+          </TabsContent>
+        </Tabs>
       </div>
     </div>
   );
