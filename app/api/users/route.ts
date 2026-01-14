@@ -44,8 +44,8 @@ export async function GET(request: NextRequest) {
 
     let users: any[] = [];
 
-    // If admin, return all users
-    if (session.user.role === UserRole.ADMIN) {
+    // If admin or board member, return all users
+    if (session.user.role === UserRole.ADMIN || session.user.role === UserRole.BOARD_MEMBER) {
       users = await prisma.user.findMany({
         select: {
           id: true,

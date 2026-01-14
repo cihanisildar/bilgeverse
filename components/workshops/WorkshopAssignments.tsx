@@ -21,10 +21,12 @@ import {
 
 export function WorkshopAssignments({
     workshopId,
-    assignments
+    assignments,
+    currentUserRole
 }: {
     workshopId: string;
     assignments: any[];
+    currentUserRole: string;
 }) {
     const [loading, setLoading] = useState(false);
     const [fetching, setFetching] = useState(false);
@@ -46,8 +48,14 @@ export function WorkshopAssignments({
             const data = await res.json();
 
             const assignedIds = assignments.map(a => a.userId);
+
+            // Define roles that can be assigned based on current user's role
+            const assignableRoles = currentUserRole === 'ADMIN'
+                ? ['ADMIN', 'BOARD_MEMBER', 'TUTOR', 'ASISTAN']
+                : ['TUTOR', 'ASISTAN'];
+
             const filtered = data.users.filter((u: any) =>
-                ['BOARD_MEMBER', 'TUTOR'].includes(u.role) && !assignedIds.includes(u.id)
+                assignableRoles.includes(u.role) && !assignedIds.includes(u.id)
             );
             setAllPrivilegedUsers(filtered);
         } catch (error) {
@@ -68,7 +76,7 @@ export function WorkshopAssignments({
             });
             if (!res.ok) throw new Error('Assignment failed');
 
-            toast.success(`${selectedUserIds.length} rehber başarıyla atandı.`);
+            toast.success(`${selectedUserIds.length} kişi başarıyla atandı.`);
             setSelectedUserIds([]);
             router.refresh();
         } catch (error) {
@@ -114,7 +122,7 @@ export function WorkshopAssignments({
                 <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
                     <h3 className="text-xl font-bold text-gray-900 flex items-center">
                         <UserPlus className="h-5 w-5 mr-2 text-amber-600" />
-                        Rehber Ata
+                        Yetkili Ata
                     </h3>
                     {selectedUserIds.length > 0 && (
                         <Button
@@ -131,7 +139,7 @@ export function WorkshopAssignments({
                 <div className="relative mb-6">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                     <Input
-                        placeholder="İsim ile rehber ara..."
+                        placeholder="İsim ile yetkili ara..."
                         className="pl-10 rounded-2xl border-amber-100 bg-amber-50/30 shadow-none focus-visible:ring-amber-500"
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
@@ -145,7 +153,7 @@ export function WorkshopAssignments({
                         </div>
                     ) : filteredUsers.length === 0 ? (
                         <p className="text-sm text-gray-500 italic py-8 text-center bg-gray-50 rounded-2xl">
-                            {searchTerm ? "Arama kriterine uygun kullanıcı bulunamadı." : "Atanabilecek uygun rehber bulunamadı."}
+                            {searchTerm ? "Arama kriterine uygun kullanıcı bulunamadı." : "Atanabilecek uygun kişi bulunamadı."}
                         </p>
                     ) : (
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -154,8 +162,8 @@ export function WorkshopAssignments({
                                     key={user.id}
                                     onClick={() => toggleUserSelection(user.id)}
                                     className={`flex items-center justify-between p-3 rounded-2xl border cursor-pointer transition-all ${selectedUserIds.includes(user.id)
-                                            ? "bg-amber-50 border-amber-200 shadow-sm"
-                                            : "bg-white border-gray-100 hover:border-amber-100 hover:bg-amber-50/30"
+                                        ? "bg-amber-50 border-amber-200 shadow-sm"
+                                        : "bg-white border-gray-100 hover:border-amber-100 hover:bg-amber-50/30"
                                         }`}
                                 >
                                     <div className="flex items-center gap-3">
@@ -167,7 +175,10 @@ export function WorkshopAssignments({
                                                 {user.firstName} {user.lastName}
                                             </p>
                                             <Badge variant="outline" className="text-[10px] p-0 h-auto text-gray-500 border-0">
-                                                {user.role === 'TUTOR' ? 'Rehber' : 'Kurul Üyesi'}
+                                                {user.role === 'ADMIN' ? 'Admin' :
+                                                    user.role === 'BOARD_MEMBER' ? 'Kurul Üyesi' :
+                                                        user.role === 'TUTOR' ? 'Rehber' :
+                                                            user.role === 'ASISTAN' ? 'Asistan' : user.role}
                                             </Badge>
                                         </div>
                                     </div>
@@ -190,7 +201,7 @@ export function WorkshopAssignments({
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {assignments.length === 0 ? (
-                        <p className="text-gray-500 italic py-4">Henüz atanmış bir rehber bulunmuyor.</p>
+                        <p className="text-gray-500 italic py-4">Henüz atanmış bir görevlendirme bulunmuyor.</p>
                     ) : (
                         assignments.map((assignment) => (
                             <div key={assignment.id} className="flex items-center justify-between p-4 bg-white rounded-2xl border border-gray-100 shadow-sm">
@@ -203,7 +214,10 @@ export function WorkshopAssignments({
                                             {assignment.user.firstName} {assignment.user.lastName}
                                         </p>
                                         <Badge variant="secondary" className="text-[10px] uppercase font-bold py-0 h-4 min-w-[80px] justify-center">
-                                            {assignment.role}
+                                            {assignment.role === 'ADMIN' ? 'Admin' :
+                                                assignment.role === 'BOARD_MEMBER' ? 'Kurul Üyesi' :
+                                                    assignment.role === 'TUTOR' ? 'Rehber' :
+                                                        assignment.role === 'ASISTAN' ? 'Asistan' : assignment.role}
                                         </Badge>
                                     </div>
                                 </div>
@@ -235,7 +249,7 @@ export function WorkshopAssignments({
                         <AlertDialogDescription className="text-gray-600">
                             <span className="font-bold text-gray-900">
                                 {userToRemove?.firstName} {userToRemove?.lastName}
-                            </span> isimli öğretmen bu atölyedeki görevinden alınacaktır. Bu işlem geri alınamaz.
+                            </span> isimli kullanıcı bu atölyedeki görevinden alınacaktır. Bu işlem geri alınamaz.
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter className="gap-2">

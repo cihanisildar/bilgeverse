@@ -95,7 +95,7 @@ export default async function Part4Page({
             </h1>
             <p className="text-gray-600 text-lg max-w-2xl">{part?.description}</p>
           </div>
-          {session.user.role === UserRole.ADMIN && (
+          {isAdminOrBoard && (
             <CreateWorkshopModal>
               <Button className="bg-gradient-to-r from-amber-600 to-orange-600 text-white shadow-lg hover:shadow-xl transition-all border-0">
                 <Plus className="h-5 w-5 mr-2" />
@@ -118,12 +118,13 @@ export default async function Part4Page({
                   Raporlar
                 </TabsTrigger>
               )}
-              <TabsTrigger value="documents" className="rounded-lg px-6 data-[state=active]:bg-white data-[state=active]:text-amber-600 data-[state=active]:shadow-sm">
-                <FileText className="h-4 w-4 mr-2" />
-                Belgeler
-              </TabsTrigger>
+              {isAdminOrBoard && (
+                <TabsTrigger value="documents" className="rounded-lg px-6 data-[state=active]:bg-white data-[state=active]:text-amber-600 data-[state=active]:shadow-sm">
+                  <FileText className="h-4 w-4 mr-2" />
+                  Belgeler
+                </TabsTrigger>
+              )}
             </TabsList>
-
             {activeTab === 'documents' && (
               <Link href="/dashboard/pdfs">
                 <Button variant="outline" className="border-amber-200 text-amber-600 hover:bg-amber-50 rounded-xl">

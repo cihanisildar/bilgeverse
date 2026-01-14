@@ -114,6 +114,8 @@ model User {
   createdWorkshopActivities     WorkshopActivity[]        @relation("WorkshopActivities")
   workshopMemberships           WorkshopStudent[]         @relation("WorkshopStudents")
   workshopAttendances           WorkshopAttendance[]      @relation("WorkshopAttendances")
+  workshopJoinRequests          WorkshopJoinRequest[]     @relation("StudentJoinRequests")
+  reviewedWorkshopJoinRequests  WorkshopJoinRequest[]     @relation("ReviewedJoinRequests")
 
   @@index([tutorId])
 }
@@ -904,6 +906,7 @@ model Workshop {
   activities  WorkshopActivity[]
   students    WorkshopStudent[]
   courses     WorkshopCourse[]
+  joinRequests WorkshopJoinRequest[] @relation("WorkshopJoinRequests")
 }
 
 model WorkshopCourse {
@@ -967,4 +970,31 @@ model WorkshopAttendance {
   student       User             @relation("WorkshopAttendances", fields: [studentId], references: [id], onDelete: Cascade)
 
   @@unique([activityId, studentId])
+}
+
+model WorkshopJoinRequest {
+  id         String                    @id @default(uuid())
+  workshopId String
+  studentId  String
+  status     WorkshopJoinRequestStatus @default(PENDING)
+  message    String?
+  createdAt  DateTime                  @default(now())
+  updatedAt  DateTime                  @updatedAt
+  reviewedBy String?
+  reviewedAt DateTime?
+  
+  workshop   Workshop @relation("WorkshopJoinRequests", fields: [workshopId], references: [id], onDelete: Cascade)
+  student    User     @relation("StudentJoinRequests", fields: [studentId], references: [id], onDelete: Cascade)
+  reviewer   User?    @relation("ReviewedJoinRequests", fields: [reviewedBy], references: [id])
+
+  @@unique([workshopId, studentId])
+  @@index([workshopId])
+  @@index([studentId])
+  @@index([status])
+}
+
+enum WorkshopJoinRequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
 }

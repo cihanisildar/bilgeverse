@@ -34,6 +34,22 @@ export async function POST(
             // If student is checking themselves in
             const finalStudentId = studentId || session.user.id;
 
+            // Verify student is enrolled in the workshop
+            const enrollment = await prisma.workshopStudent.findUnique({
+                where: {
+                    workshopId_studentId: {
+                        workshopId: activity.workshopId,
+                        studentId: finalStudentId,
+                    },
+                },
+            });
+
+            if (!enrollment) {
+                return NextResponse.json({
+                    error: 'Not enrolled in this workshop. Please request to join the workshop first.'
+                }, { status: 403 });
+            }
+
             const attendance = await prisma.workshopAttendance.upsert({
                 where: {
                     activityId_studentId: {

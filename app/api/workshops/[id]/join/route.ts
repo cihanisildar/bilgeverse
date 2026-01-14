@@ -29,14 +29,22 @@ export async function POST(
 
         if (existing) {
             // Toggle: Leave if already joined
-            await prisma.workshopStudent.delete({
-                where: {
-                    workshopId_studentId: {
+            await prisma.$transaction([
+                prisma.workshopStudent.delete({
+                    where: {
+                        workshopId_studentId: {
+                            workshopId: params.id,
+                            studentId: userId,
+                        },
+                    },
+                }),
+                prisma.workshopJoinRequest.deleteMany({
+                    where: {
                         workshopId: params.id,
                         studentId: userId,
                     },
-                },
-            });
+                }),
+            ]);
             return NextResponse.json({ joined: false });
         } else {
             // Join

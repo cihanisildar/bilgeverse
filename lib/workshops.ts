@@ -1,5 +1,42 @@
 import prisma from './prisma';
-import { Prisma } from '@prisma/client';
+import { Prisma, WorkshopJoinRequestStatus } from '@prisma/client';
+
+
+
+export async function getWorkshopJoinRequest(workshopId: string, studentId: string) {
+    return await prisma.workshopJoinRequest.findUnique({
+        where: {
+            workshopId_studentId: {
+                workshopId,
+                studentId,
+            },
+        },
+    });
+}
+
+export async function getPendingJoinRequests(workshopId: string) {
+    return await prisma.workshopJoinRequest.findMany({
+        where: {
+            workshopId,
+            status: WorkshopJoinRequestStatus.PENDING,
+        },
+        include: {
+            student: {
+                select: {
+                    id: true,
+                    firstName: true,
+                    lastName: true,
+                    email: true,
+                    avatarUrl: true,
+                    username: true,
+                },
+            },
+        },
+        orderBy: {
+            createdAt: 'desc',
+        },
+    });
+}
 
 export const workshopInclude = {
     assignments: {

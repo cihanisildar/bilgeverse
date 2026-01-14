@@ -112,11 +112,6 @@ export async function middleware(request: NextRequest) {
       }
     }
 
-    // Redirect students from /dashboard to part 7 (tutors and admins can access dashboard)
-    if (pathname === '/dashboard' && token.role === UserRole.STUDENT) {
-      console.log('Student user accessing dashboard, redirecting to part 7');
-      return NextResponse.redirect(new URL('/dashboard/part7/student', request.url));
-    }
 
     // Check route permissions
     if (pathname.startsWith('/dashboard/part7/admin') || pathname.startsWith('/api/admin')) {

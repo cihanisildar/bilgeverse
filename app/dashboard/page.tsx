@@ -22,12 +22,6 @@ export default function DashboardPage() {
     }
   }, [loading, user, router]);
 
-  // Redirect students to their part7 area (only tutors and admins can access dashboard page)
-  useEffect(() => {
-    if (!loading && user && isStudent) {
-      router.replace(getRoleBasedPath(user.role));
-    }
-  }, [loading, user, isStudent, router]);
 
   if (loading) {
     return (

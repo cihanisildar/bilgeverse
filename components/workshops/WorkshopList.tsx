@@ -65,11 +65,6 @@ export function WorkshopCard({ workshop, role }: { workshop: Workshop; role: str
                         Detaylar
                     </Button>
                 </Link>
-                {role === "STUDENT" && (
-                    <Button className="bg-gradient-to-r from-amber-600 to-orange-600 text-white border-0 hover:opacity-90">
-                        {isJoined ? "Ayrıl" : "Katıl"}
-                    </Button>
-                )}
             </CardFooter>
         </Card>
     );

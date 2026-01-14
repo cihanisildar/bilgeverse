@@ -1,10 +1,9 @@
 import { redirect } from 'next/navigation';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/app/api/auth/[...nextauth]/auth.config';
-import prisma from '@/lib/prisma';
-import { Prisma, UserRole } from '@prisma/client';
+import { UserRole } from '@prisma/client';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Calendar, Users, Briefcase, Plus, ShieldCheck, List } from 'lucide-react';
+import { ArrowLeft, Calendar, Users, Briefcase, Plus, ShieldCheck, List, UserCircle2 } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { Badge } from '@/components/ui/badge';
@@ -15,9 +14,9 @@ import { WorkshopAssignments } from '@/components/workshops/WorkshopAssignments'
 import { WorkshopActions } from '@/components/workshops/WorkshopActions';
 import { WorkshopPlan } from '@/components/workshops/WorkshopPlan';
 import { Progress } from '@/components/ui/progress';
-
-// Define the include object as const for perfect type inference
-import { getWorkshopById } from '@/lib/workshops';
+import { WorkshopJoinButton } from '@/components/workshops/WorkshopJoinButton';
+import { JoinRequestsTab } from '@/components/workshops/JoinRequestsTab';
+import { getWorkshopById, getWorkshopJoinRequest, getPendingJoinRequests } from '@/lib/workshops';
 
 export default async function WorkshopDetailsPage({ params }: { params: { id: string } }) {
     const session = await getServerSession(authOptions);
@@ -35,12 +34,37 @@ export default async function WorkshopDetailsPage({ params }: { params: { id: st
     const isAdminOrBoard = [UserRole.ADMIN, UserRole.BOARD_MEMBER].includes(session.user.role as any);
     const isAssigned = workshop.assignments.some((a) => a.userId === session.user.id);
     const isTeacher = [UserRole.TUTOR, UserRole.ASISTAN].includes(session.user.role as any);
+    const isStudent = session.user.role === UserRole.STUDENT;
 
     // canManage: Edit, Delete, Add Students/Activities/Plans
     const canManage = isAdminOrBoard || isAssigned;
 
     // isPrivileged: General visibility
     const isPrivileged = isAdminOrBoard || isTeacher || isAssigned;
+
+    // Check student membership status
+    const isMember = workshop.students.some((s) => s.studentId === session.user.id);
+
+    // Check if student has pending join request
+    let joinRequest = null;
+    let studentStatus: 'not_member' | 'pending' | 'member' = 'not_member';
+
+    if (isStudent) {
+        if (isMember) {
+            studentStatus = 'member';
+        } else {
+            joinRequest = await getWorkshopJoinRequest(params.id, session.user.id);
+            if (joinRequest && joinRequest.status === 'PENDING') {
+                studentStatus = 'pending';
+            }
+        }
+    }
+
+    // Fetch pending join requests for tutors/admin
+    let joinRequests: any[] = [];
+    if (canManage) {
+        joinRequests = await getPendingJoinRequests(params.id);
+    }
 
     const completedCourses = workshop.courses.filter((c) => c.isCompleted).length;
     const progressCount = workshop.courses.length;
@@ -70,13 +94,18 @@ export default async function WorkshopDetailsPage({ params }: { params: { id: st
                                     </div>
                                 )}
                                 <div className="space-y-4 flex-1">
-                                    <div className="flex justify-between items-start">
+                                    <div className="flex justify-between items-start gap-4">
                                         <h1 className="text-4xl font-extrabold text-gray-900 leading-tight">
                                             {workshop.name}
                                         </h1>
-                                        {canManage && (
-                                            <WorkshopActions workshop={workshop} />
-                                        )}
+                                        <div className="flex gap-2">
+                                            {isStudent && (
+                                                <WorkshopJoinButton workshopId={workshop.id} currentStatus={studentStatus} />
+                                            )}
+                                            {canManage && (
+                                                <WorkshopActions workshop={workshop} />
+                                            )}
+                                        </div>
                                     </div>
                                     <p className="text-gray-600 text-lg">
                                         {workshop.description || "Bu atölye için henüz bir açıklama girilmemiş."}
@@ -118,10 +147,21 @@ export default async function WorkshopDetailsPage({ params }: { params: { id: st
                                     <List className="h-4 w-4 mr-2" />
                                     Müfredat
                                 </TabsTrigger>
-                                <TabsTrigger value="students" className="rounded-lg px-8 data-[state=active]:bg-white data-[state=active]:text-amber-600">
-                                    <Users className="h-4 w-4 mr-2" />
-                                    Öğrenciler
-                                </TabsTrigger>
+                                {(!isStudent || isMember) && (
+                                    <TabsTrigger value="students" className="rounded-lg px-8 data-[state=active]:bg-white data-[state=active]:text-amber-600">
+                                        <Users className="h-4 w-4 mr-2" />
+                                        Öğrenciler
+                                    </TabsTrigger>
+                                )}
+                                {canManage && (
+                                    <TabsTrigger value="requests" className="rounded-lg px-8 data-[state=active]:bg-white data-[state=active]:text-amber-600">
+                                        <UserCircle2 className="h-4 w-4 mr-2" />
+                                        Katılım İstekleri
+                                        {joinRequests.length > 0 && (
+                                            <Badge className="ml-2 bg-amber-500 text-white">{joinRequests.length}</Badge>
+                                        )}
+                                    </TabsTrigger>
+                                )}
                                 {isAdminOrBoard && (
                                     <TabsTrigger value="management" className="rounded-lg px-8 data-[state=active]:bg-white data-[state=active]:text-amber-600">
                                         <ShieldCheck className="h-4 w-4 mr-2" />
@@ -146,21 +186,33 @@ export default async function WorkshopDetailsPage({ params }: { params: { id: st
                                 />
                             </TabsContent>
 
-                            <TabsContent value="students">
-                                <WorkshopStudents
-                                    workshopId={workshop.id}
-                                    students={workshop.students}
-                                    isPrivileged={canManage}
-                                    currentUserRole={session.user.role}
-                                    currentUserId={session.user.id}
-                                />
-                            </TabsContent>
+                            {(!isStudent || isMember) && (
+                                <TabsContent value="students">
+                                    <WorkshopStudents
+                                        workshopId={workshop.id}
+                                        students={workshop.students}
+                                        isPrivileged={canManage}
+                                        currentUserRole={session.user.role}
+                                        currentUserId={session.user.id}
+                                    />
+                                </TabsContent>
+                            )}
+
+                            {canManage && (
+                                <TabsContent value="requests">
+                                    <JoinRequestsTab
+                                        workshopId={workshop.id}
+                                        initialRequests={joinRequests}
+                                    />
+                                </TabsContent>
+                            )}
 
                             {isAdminOrBoard && (
                                 <TabsContent value="management">
                                     <WorkshopAssignments
                                         workshopId={workshop.id}
                                         assignments={workshop.assignments}
+                                        currentUserRole={session.user.role}
                                     />
                                 </TabsContent>
                             )}
@@ -171,7 +223,7 @@ export default async function WorkshopDetailsPage({ params }: { params: { id: st
                         <div className="bg-white rounded-3xl p-6 shadow-sm border border-amber-100">
                             <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center">
                                 <Briefcase className="h-5 w-5 mr-2 text-amber-600" />
-                                Rehberler
+                                Yetkililer
                             </h3>
                             <div className="space-y-4">
                                 {workshop.assignments && workshop.assignments.length > 0 ? (
@@ -191,7 +243,10 @@ export default async function WorkshopDetailsPage({ params }: { params: { id: st
                                                     {assignment.user.firstName} {assignment.user.lastName}
                                                 </p>
                                                 <Badge variant="outline" className="text-[10px] uppercase tracking-wider p-0 h-auto text-amber-600 border-0">
-                                                    {assignment.role}
+                                                    {assignment.role === 'ADMIN' ? 'Admin' :
+                                                        assignment.role === 'BOARD_MEMBER' ? 'Kurul Üyesi' :
+                                                            assignment.role === 'TUTOR' ? 'Rehber' :
+                                                                assignment.role === 'ASISTAN' ? 'Asistan' : assignment.role}
                                                 </Badge>
                                             </div>
                                         </div>

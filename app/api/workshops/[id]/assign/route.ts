@@ -29,6 +29,18 @@ export async function POST(
             select: { id: true, role: true }
         });
 
+        // Validation: Only ADMIN can assign ADMIN or BOARD_MEMBER roles
+        if (session.user.role !== UserRole.ADMIN) {
+            const hasHighLevelRole = users.some(u =>
+                u.role === UserRole.ADMIN || u.role === UserRole.BOARD_MEMBER
+            );
+            if (hasHighLevelRole) {
+                return NextResponse.json({
+                    error: 'Only administrators can assign Admin or Board Member roles.'
+                }, { status: 403 });
+            }
+        }
+
         const results = await Promise.all(users.map(async (user) => {
             return prisma.workshopAssignment.upsert({
                 where: {
