@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '../auth/[...nextauth]/auth.config';
@@ -7,7 +8,7 @@ export async function GET() {
   try {
     // Check authentication
     const session = await getServerSession(authOptions);
-    
+
     if (!session?.user) {
       return NextResponse.json(
         { error: "Unauthorized" },
@@ -19,7 +20,7 @@ export async function GET() {
       where: { isActive: true },
       orderBy: { createdAt: 'desc' },
     });
-    
+
     return NextResponse.json(cards);
   } catch (error) {
     console.error('Failed to fetch cards:', error);

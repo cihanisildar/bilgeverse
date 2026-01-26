@@ -109,11 +109,28 @@ export async function getWorkshopById(id: string): Promise<WorkshopWithDetails |
     return workshop as unknown as WorkshopWithDetails | null;
 }
 
-export async function getWorkshops(): Promise<WorkshopWithDetails[]> {
+export async function getWorkshops(userId?: string, role?: string): Promise<WorkshopWithDetails[]> {
     const workshops = await prisma.workshop.findMany({
         include: workshopInclude as any,
         orderBy: { createdAt: 'desc' }
     });
+
+    // For students, sort enrolled workshops first
+    if (role === 'STUDENT' && userId) {
+        const enrolled: WorkshopWithDetails[] = [];
+        const notEnrolled: WorkshopWithDetails[] = [];
+
+        workshops.forEach((workshop: any) => {
+            const isEnrolled = workshop.students.some((s: any) => s.studentId === userId);
+            if (isEnrolled) {
+                enrolled.push(workshop);
+            } else {
+                notEnrolled.push(workshop);
+            }
+        });
+
+        return [...enrolled, ...notEnrolled] as unknown as WorkshopWithDetails[];
+    }
 
     return workshops as unknown as WorkshopWithDetails[];
 }

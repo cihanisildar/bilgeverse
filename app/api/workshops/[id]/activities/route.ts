@@ -53,7 +53,7 @@ export async function POST(
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
-        // Permission check: Admin, Board Member, or Assigned Tutor
+        // Permission check: Admin, Board Member, or Assigned Tutor/Asistan
         const isSpecialRole = session.user.role === UserRole.ADMIN || session.user.role === UserRole.BOARD_MEMBER;
 
         if (!isSpecialRole) {
@@ -66,7 +66,8 @@ export async function POST(
                 },
             });
 
-            if (!assignment || assignment.role !== UserRole.TUTOR) {
+            const allowedRoles: UserRole[] = [UserRole.TUTOR, UserRole.ASISTAN];
+            if (!assignment || !allowedRoles.includes(assignment.role)) {
                 return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
             }
         }

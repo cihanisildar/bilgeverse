@@ -4,10 +4,13 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { format } from 'date-fns';
 import { tr } from 'date-fns/locale';
-import { Calendar, CheckCircle2, Clock, MapPin, QrCode, User } from 'lucide-react';
-import { useState } from 'react';
+import { Calendar, CheckCircle2, Clock, MapPin, QrCode, User, Pencil, Trash2, Check, X } from 'lucide-react';
+import { useState, useEffect } from 'react';
 import { AddActivityModal } from './AddActivityModal';
 import { AttendanceModal } from './AttendanceModal';
+import { EditActivityDialog } from './EditActivityDialog';
+import { DeleteActivityDialog } from './DeleteActivityDialog';
+import { Badge } from '@/components/ui/badge';
 
 interface Activity {
     id: string;
@@ -22,17 +25,64 @@ interface Activity {
     _count: { attendances: number };
 }
 
+interface StudentAttendance {
+    [activityId: string]: boolean;
+}
+
 export function WorkshopActivities({
     workshopId,
     activities,
-    isPrivileged
+    isPrivileged,
+    currentUserId,
+    isStudent
 }: {
     workshopId: string;
     activities: any[];
     isPrivileged: boolean;
+    currentUserId?: string;
+    isStudent?: boolean;
 }) {
     const [selectedActivity, setSelectedActivity] = useState<any>(null);
     const [attendanceOpen, setAttendanceOpen] = useState(false);
+    const [editOpen, setEditOpen] = useState(false);
+    const [deleteOpen, setDeleteOpen] = useState(false);
+    const [activityToEdit, setActivityToEdit] = useState<any>(null);
+    const [activityToDelete, setActivityToDelete] = useState<any>(null);
+    const [studentAttendance, setStudentAttendance] = useState<StudentAttendance>({});
+    const [loadingAttendance, setLoadingAttendance] = useState(false);
+
+    // Fetch student's attendance status for all activities
+    useEffect(() => {
+        if (isStudent && currentUserId && activities.length > 0) {
+            fetchStudentAttendance();
+        }
+    }, [isStudent, currentUserId, activities]);
+
+    const fetchStudentAttendance = async () => {
+        setLoadingAttendance(true);
+        try {
+            const attendanceMap: StudentAttendance = {};
+
+            // Fetch attendance for each activity
+            await Promise.all(
+                activities.map(async (activity) => {
+                    const res = await fetch(`/api/workshops/activities/${activity.id}/attendance/student`);
+                    if (res.ok) {
+                        const data = await res.json();
+                        attendanceMap[activity.id] = data.attended;
+                    } else {
+                        attendanceMap[activity.id] = false;
+                    }
+                })
+            );
+
+            setStudentAttendance(attendanceMap);
+        } catch (error) {
+            console.error('Error fetching student attendance:', error);
+        } finally {
+            setLoadingAttendance(false);
+        }
+    };
 
     return (
         <div className="space-y-6">
@@ -73,16 +123,40 @@ export function WorkshopActivities({
                                             <p className="text-gray-600 text-sm line-clamp-1">{activity.description}</p>
                                         </div>
                                         {isPrivileged && (
-                                            <Button
-                                                onClick={() => {
-                                                    setSelectedActivity(activity);
-                                                    setAttendanceOpen(true);
-                                                }}
-                                                className="bg-amber-600 hover:bg-amber-700 text-white rounded-xl shadow-sm"
-                                            >
-                                                <QrCode className="h-4 w-4 mr-2" />
-                                                Yoklama & QR
-                                            </Button>
+                                            <div className="flex gap-2">
+                                                <Button
+                                                    onClick={() => {
+                                                        setActivityToEdit(activity);
+                                                        setEditOpen(true);
+                                                    }}
+                                                    variant="outline"
+                                                    size="sm"
+                                                    className="border-amber-200 text-amber-700 hover:bg-amber-50 rounded-xl"
+                                                >
+                                                    <Pencil className="h-4 w-4" />
+                                                </Button>
+                                                <Button
+                                                    onClick={() => {
+                                                        setActivityToDelete(activity);
+                                                        setDeleteOpen(true);
+                                                    }}
+                                                    variant="outline"
+                                                    size="sm"
+                                                    className="border-red-200 text-red-700 hover:bg-red-50 rounded-xl"
+                                                >
+                                                    <Trash2 className="h-4 w-4" />
+                                                </Button>
+                                                <Button
+                                                    onClick={() => {
+                                                        setSelectedActivity(activity);
+                                                        setAttendanceOpen(true);
+                                                    }}
+                                                    className="bg-amber-600 hover:bg-amber-700 text-white rounded-xl shadow-sm"
+                                                >
+                                                    <QrCode className="h-4 w-4 mr-2" />
+                                                    Yoklama & QR
+                                                </Button>
+                                            </div>
                                         )}
                                     </div>
 
@@ -105,6 +179,25 @@ export function WorkshopActivities({
                                             <CheckCircle2 className="h-4 w-4 mr-2" />
                                             {activity._count.attendances} Katılımcı
                                         </div>
+                                        {isStudent && currentUserId && (
+                                            <div className="ml-auto">
+                                                {loadingAttendance ? (
+                                                    <Badge variant="outline" className="text-gray-400">
+                                                        Kontrol ediliyor...
+                                                    </Badge>
+                                                ) : studentAttendance[activity.id] ? (
+                                                    <Badge className="bg-green-600 hover:bg-green-700 text-white">
+                                                        <Check className="h-3 w-3 mr-1" />
+                                                        Katıldınız
+                                                    </Badge>
+                                                ) : (
+                                                    <Badge variant="outline" className="border-gray-300 text-gray-600">
+                                                        <X className="h-3 w-3 mr-1" />
+                                                        Katılmadınız
+                                                    </Badge>
+                                                )}
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
                             </CardContent>
@@ -118,6 +211,22 @@ export function WorkshopActivities({
                     open={attendanceOpen}
                     onOpenChange={setAttendanceOpen}
                     activity={selectedActivity}
+                />
+            )}
+
+            {activityToEdit && (
+                <EditActivityDialog
+                    activity={activityToEdit}
+                    open={editOpen}
+                    onOpenChange={setEditOpen}
+                />
+            )}
+
+            {activityToDelete && (
+                <DeleteActivityDialog
+                    activity={activityToDelete}
+                    open={deleteOpen}
+                    onOpenChange={setDeleteOpen}
                 />
             )}
         </div>

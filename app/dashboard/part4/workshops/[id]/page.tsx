@@ -175,6 +175,8 @@ export default async function WorkshopDetailsPage({ params }: { params: { id: st
                                     workshopId={workshop.id}
                                     activities={workshop.activities}
                                     isPrivileged={canManage}
+                                    currentUserId={session.user.id}
+                                    isStudent={isStudent}
                                 />
                             </TabsContent>
 

@@ -33,7 +33,7 @@ export default async function Part4Page({
   const isAdminOrBoard = [UserRole.ADMIN, UserRole.BOARD_MEMBER].includes(session.user.role as any);
 
   // Fetch Workshops via Service Layer
-  const workshops = await getWorkshops();
+  const workshops = await getWorkshops(session.user.id, session.user.role);
 
   // Fetch Report Data if admin/board
   let reportData = null;
@@ -135,7 +135,7 @@ export default async function Part4Page({
           </div>
 
           <TabsContent value="workshops" className="mt-0 outline-none">
-            <WorkshopList workshops={workshops as any} role={session.user.role} />
+            <WorkshopList workshops={workshops as any} role={session.user.role} userId={session.user.id} />
           </TabsContent>
 
           {isAdminOrBoard && reportData && (

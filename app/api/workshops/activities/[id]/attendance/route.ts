@@ -50,6 +50,40 @@ export async function POST(
                 }, { status: 403 });
             }
 
+            // Check if student has already attended
+            const existingAttendance = await prisma.workshopAttendance.findUnique({
+                where: {
+                    activityId_studentId: {
+                        activityId: params.id,
+                        studentId: finalStudentId,
+                    },
+                },
+            });
+
+            // If already attended, return special message
+            if (existingAttendance && existingAttendance.status) {
+                return NextResponse.json({
+                    alreadyAttended: true,
+                    message: 'Yoklamanız daha önce alındı',
+                    attendance: existingAttendance
+                }, { status: 200 });
+            }
+
+            // This is a new check-in, award rewards
+            const isFirstCheckIn = !existingAttendance || !existingAttendance.status;
+
+            // Get active period for transactions
+            const activePeriod = await prisma.period.findFirst({
+                where: { status: 'ACTIVE' },
+            });
+
+            if (!activePeriod) {
+                return NextResponse.json({ error: 'No active period found' }, { status: 500 });
+            }
+
+            // Use activity tutor for transactions
+            const tutorId = activity.tutorId;
+
             const attendance = await prisma.workshopAttendance.upsert({
                 where: {
                     activityId_studentId: {
@@ -70,7 +104,45 @@ export async function POST(
                     checkInTime: new Date(),
                 },
             });
-            return NextResponse.json(attendance);
+
+            // Award points and experience (30 each) on first check-in
+            if (isFirstCheckIn) {
+                await prisma.user.update({
+                    where: { id: finalStudentId },
+                    data: {
+                        points: { increment: 30 },
+                        experience: { increment: 30 },
+                    },
+                });
+
+                // Create points transaction
+                await prisma.pointsTransaction.create({
+                    data: {
+                        points: 30,
+                        type: 'AWARD',
+                        reason: `Atölye faaliyeti katılımı: ${activity.title}`,
+                        studentId: finalStudentId,
+                        tutorId: tutorId,
+                        periodId: activePeriod.id,
+                    },
+                });
+
+                // Create experience transaction
+                await prisma.experienceTransaction.create({
+                    data: {
+                        amount: 30,
+                        studentId: finalStudentId,
+                        tutorId: tutorId,
+                        periodId: activePeriod.id,
+                    },
+                });
+            }
+
+            return NextResponse.json({
+                attendance,
+                pointsAwarded: isFirstCheckIn ? 30 : 0,
+                experienceAwarded: isFirstCheckIn ? 30 : 0
+            });
         }
 
         // Manual Check-in Logic (Requires Tutor/Board/Admin)
