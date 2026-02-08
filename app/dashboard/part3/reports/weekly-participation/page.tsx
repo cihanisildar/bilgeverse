@@ -79,9 +79,9 @@ export default function WeeklyParticipationPage() {
                                 Raporlara Dön
                             </Button>
                         </Link>
-                        <h1 className="text-3xl font-bold text-gray-900 tracking-tight">Haftalık Katılım Raporu</h1>
+                        <h1 className="text-3xl font-bold text-gray-900 tracking-tight">Genel Katılım Raporu</h1>
                         <p className="text-gray-500 mt-1">
-                            {format(new Date(weekStart), 'dd MMMM', { locale: tr })} - {format(new Date(weekEnd), 'dd MMMM yyyy', { locale: tr })} tarihleri arası katılım analizi.
+                            {format(new Date(weekStart), 'dd MMMM yyyy', { locale: tr })} - {format(new Date(weekEnd), 'dd MMMM yyyy', { locale: tr })} tarihleri arası genel katılım analizi.
                         </p>
                     </div>
                 </div>
@@ -90,12 +90,12 @@ export default function WeeklyParticipationPage() {
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
                     <Card className="shadow-sm border-gray-200">
                         <CardHeader className="flex flex-row items-center justify-between pb-2">
-                            <CardTitle className="text-xs font-semibold text-gray-400 uppercase tracking-widest">Haftalık Etkinlik</CardTitle>
+                            <CardTitle className="text-xs font-semibold text-gray-400 uppercase tracking-widest">Toplam Etkinlik</CardTitle>
                             <Calendar className="h-4 w-4 text-blue-500" />
                         </CardHeader>
                         <CardContent>
                             <div className="text-3xl font-bold text-gray-900">{summary.totalEvents}</div>
-                            <p className="text-[10px] text-gray-400 mt-1 font-bold italic">BU HAFTA</p>
+                            <p className="text-[10px] text-gray-400 mt-1 font-bold italic">DÖNEMLİK TOPLAM</p>
                         </CardContent>
                     </Card>
 
@@ -112,7 +112,7 @@ export default function WeeklyParticipationPage() {
 
                     <Card className="shadow-sm border-gray-200">
                         <CardHeader className="flex flex-row items-center justify-between pb-2">
-                            <CardTitle className="text-xs font-semibold text-gray-400 uppercase tracking-widest">Haftalık Ort. Katılım</CardTitle>
+                            <CardTitle className="text-xs font-semibold text-gray-400 uppercase tracking-widest">Genel Ort. Katılım</CardTitle>
                             <TrendingUp className="h-4 w-4 text-green-500" />
                         </CardHeader>
                         <CardContent>
@@ -140,7 +140,7 @@ export default function WeeklyParticipationPage() {
                     <CardHeader className="bg-white border-b border-gray-100 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                         <div className="flex items-center gap-2">
                             <Trophy className="h-5 w-5 text-amber-500" />
-                            <CardTitle className="text-lg font-bold text-gray-800">Haftalık Öğretmen Başarı Tablosu</CardTitle>
+                            <CardTitle className="text-lg font-bold text-gray-800">Genel Öğretmen Başarı Tablosu</CardTitle>
                         </div>
                         <div className="relative w-full sm:w-64">
                             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />

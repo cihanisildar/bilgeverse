@@ -23,9 +23,12 @@ export async function getWeeklyParticipationReport(): Promise<BaseReportResponse
             return { error: 'Yetkisiz erişim', data: null };
         }
 
-        const now = new Date();
-        const weekStart = startOfWeek(now, { weekStartsOn: 1 });
-        const weekEnd = endOfWeek(now, { weekStartsOn: 1 });
+        const activePeriod = await prisma.period.findFirst({
+            where: { status: 'ACTIVE' }
+        });
+
+        const startDate = activePeriod?.startDate || new Date(0);
+        const endDate = activePeriod?.endDate || new Date();
 
         // Get all tutors
         const tutors = await prisma.user.findMany({
@@ -47,7 +50,7 @@ export async function getWeeklyParticipationReport(): Promise<BaseReportResponse
                             { createdForTutorId: tutor.id },
                             { createdById: tutor.id }
                         ],
-                        startDateTime: { gte: weekStart, lte: weekEnd },
+                        startDateTime: { gte: startDate, lte: endDate },
                     },
                     select: {
                         id: true,
@@ -61,7 +64,7 @@ export async function getWeeklyParticipationReport(): Promise<BaseReportResponse
                 const part2Events = await prisma.part2Event.findMany({
                     where: {
                         createdById: tutor.id,
-                        eventDate: { gte: weekStart, lte: weekEnd },
+                        eventDate: { gte: startDate, lte: endDate },
                     },
                     select: {
                         id: true,
@@ -69,6 +72,38 @@ export async function getWeeklyParticipationReport(): Promise<BaseReportResponse
                         eventDate: true,
                         participants: { select: { status: true } },
                     },
+                });
+
+                // Fetch AttendanceSessions involving this tutor's students
+                const sessions = await prisma.attendanceSession.findMany({
+                    where: {
+                        OR: [
+                            { createdById: tutor.id },
+                            { createdBy: { assistedTutorId: tutor.id } },
+                            {
+                                attendances: {
+                                    some: {
+                                        student: { tutorId: tutor.id }
+                                    }
+                                }
+                            }
+                        ],
+                        sessionDate: { gte: startDate, lte: endDate },
+                    },
+                    select: {
+                        id: true,
+                        title: true,
+                        sessionDate: true,
+                        attendances: {
+                            where: { student: { tutorId: tutor.id } },
+                            select: { id: true }
+                        },
+                    },
+                });
+
+                // Get students for this tutor to calculate registration count for sessions
+                const studentsCount = await prisma.user.count({
+                    where: { tutorId: tutor.id, role: UserRole.STUDENT }
                 });
 
                 const weeklySessions = [
@@ -83,10 +118,18 @@ export async function getWeeklyParticipationReport(): Promise<BaseReportResponse
                     ...part2Events.map(e => ({
                         id: e.id,
                         title: e.title,
-                        type: 'ATÖLYE', // renamed from PART 2 for clarity
+                        type: 'ATÖLYE',
                         date: e.eventDate.toISOString(),
                         registered: e.participants.length,
                         attended: e.participants.filter(p => p.status === 'ATTENDED').length,
+                    })),
+                    ...sessions.map(s => ({
+                        id: s.id,
+                        title: s.title,
+                        type: 'OTURUM',
+                        date: s.sessionDate.toISOString(),
+                        registered: studentsCount,
+                        attended: s.attendances.length,
                     })),
                 ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
@@ -124,8 +167,8 @@ export async function getWeeklyParticipationReport(): Promise<BaseReportResponse
         return {
             error: null,
             data: {
-                weekStart: weekStart.toISOString(),
-                weekEnd: weekEnd.toISOString(),
+                weekStart: startDate.toISOString(),
+                weekEnd: endDate.toISOString(),
                 summary: {
                     totalEvents,
                     totalAttendance,
@@ -509,37 +552,80 @@ export async function getEventsOverviewReport(): Promise<BaseReportResponse<Even
                 },
             });
 
+            // Get Attendance Sessions involving this tutor's students
+            const sessions = await prisma.attendanceSession.findMany({
+                where: {
+                    OR: [
+                        { createdById: tutor.id },
+                        { createdBy: { assistedTutorId: tutor.id } },
+                        {
+                            attendances: {
+                                some: {
+                                    student: { tutorId: tutor.id }
+                                }
+                            }
+                        }
+                    ],
+                },
+                select: {
+                    id: true,
+                    sessionDate: true,
+                    attendances: {
+                        where: { student: { tutorId: tutor.id } },
+                        select: { id: true }
+                    }
+                }
+            });
+
+            // Get students for this tutor
+            const studentsCount = await prisma.user.count({
+                where: { tutorId: tutor.id, role: UserRole.STUDENT }
+            });
+
             // Combine events for unified analysis
             const allEvents = [
                 ...regularEvents.map(e => ({
                     id: e.id,
-                    title: "Normal Etkinlik", // Default or fetch title if available
                     type: 'REGULAR',
                     date: e.startDateTime,
-                    participants: e.participants
+                    participantsCount: e.participants.length,
+                    attendedCount: e.participants.filter(p => p.status === 'ATTENDED').length
                 })),
                 ...part2Events.map(e => ({
                     id: e.id,
-                    title: "Part 2 Etkinlik", // Default or fetch title if available
                     type: 'PART2',
                     date: e.eventDate,
-                    participants: e.participants
+                    participantsCount: e.participants.length,
+                    attendedCount: e.participants.filter(p => p.status === 'ATTENDED').length
                 })),
+                ...sessions.map(s => ({
+                    id: s.id,
+                    type: 'SESSION',
+                    date: s.sessionDate,
+                    participantsCount: studentsCount,
+                    attendedCount: s.attendances.length
+                }))
             ];
 
-            // Re-fetch with titles for the detail list (more efficient than full include earlier for all)
+            // Re-fetch with titles for the detail list
             const detailedEvents = await Promise.all([
                 prisma.event.findMany({
                     where: { id: { in: regularEvents.map(e => e.id) } },
                     select: { id: true, title: true, startDateTime: true, participants: { select: { status: true } } },
                     orderBy: { startDateTime: 'desc' },
-                    take: 15
+                    take: 10
                 }),
                 prisma.part2Event.findMany({
                     where: { id: { in: part2Events.map(e => e.id) } },
                     select: { id: true, title: true, eventDate: true, participants: { select: { status: true } } },
                     orderBy: { eventDate: 'desc' },
-                    take: 15
+                    take: 10
+                }),
+                prisma.attendanceSession.findMany({
+                    where: { id: { in: sessions.map(s => s.id) } },
+                    select: { id: true, title: true, sessionDate: true, attendances: { select: { id: true } } },
+                    orderBy: { sessionDate: 'desc' },
+                    take: 10
                 })
             ]);
 
@@ -559,20 +645,27 @@ export async function getEventsOverviewReport(): Promise<BaseReportResponse<Even
                     date: e.eventDate.toISOString(),
                     registered: e.participants.length,
                     attended: e.participants.filter(p => p.status === 'ATTENDED').length
+                })),
+                ...detailedEvents[2].map(s => ({
+                    id: s.id,
+                    title: s.title,
+                    type: 'OTURUM',
+                    date: s.sessionDate.toISOString(),
+                    registered: studentsCount,
+                    attended: s.attendances.length
                 }))
-            ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+            ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).slice(0, 15);
 
             const totalEvents = allEvents.length;
             const eventsThisWeek = allEvents.filter(e => e.date >= weekStart).length;
             const eventsThisMonth = allEvents.filter(e => e.date >= monthStart).length;
 
-            // Calculate participation metrics
             let totalRegistered = 0;
             let totalAttended = 0;
 
             allEvents.forEach(e => {
-                totalRegistered += e.participants.length;
-                totalAttended += e.participants.filter(p => p.status === 'ATTENDED').length;
+                totalRegistered += e.participantsCount;
+                totalAttended += e.attendedCount;
             });
 
             const participationRate = totalRegistered > 0
@@ -596,9 +689,25 @@ export async function getEventsOverviewReport(): Promise<BaseReportResponse<Even
         // Global Summary Metrics
         const sortedTutors = tutorsData.sort((a, b) => b.totalEvents - a.totalEvents);
 
+        // Fetch Global Events & Sessions (those not assigned to a specific tutor in tutorsData)
+        const [globalEventsCount, globalSessionsCount] = await Promise.all([
+            prisma.event.count({
+                where: {
+                    createdForTutorId: null,
+                    createdBy: { role: UserRole.ADMIN }
+                }
+            }),
+            prisma.attendanceSession.count({
+                where: {
+                    createdBy: { role: UserRole.ADMIN },
+                    attendances: { none: {} } // Sessions with no attendances yet or general ones
+                }
+            })
+        ]);
+
         const summary = {
             totalTutors: tutors.length,
-            totalEvents: tutorsData.reduce((sum, t) => sum + t.totalEvents, 0),
+            totalEvents: tutorsData.reduce((sum, t) => sum + t.totalEvents, 0) + globalEventsCount + globalSessionsCount,
             avgParticipation: tutorsData.length > 0
                 ? Math.round(tutorsData.reduce((sum, t) => sum + t.participationRate, 0) / tutorsData.length)
                 : 0,
