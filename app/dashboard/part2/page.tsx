@@ -1,4 +1,3 @@
-import { redirect } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { ArrowLeft, FileText, Calendar, BookOpen, ArrowRight, PartyPopper, Network } from 'lucide-react';
 import { PARTS } from '@/app/lib/parts';
@@ -11,14 +10,11 @@ import { authOptions } from '@/app/api/auth/[...nextauth]/auth.config';
 export default async function Part2Page() {
   const session = await getServerSession(authOptions);
 
-  if (!session?.user) {
-    redirect('/login');
-  }
-
+  // Note: Session is guaranteed by Part2Layout
   const part = PARTS.find(p => p.id === 2);
-  const isAdmin = session.user.role === 'ADMIN';
-  const isTutor = session.user.role === 'TUTOR';
-  const isAsistan = session.user.role === 'ASISTAN';
+  const isAdmin = session?.user?.role === 'ADMIN';
+  const isTutor = session?.user?.role === 'TUTOR';
+  const isAsistan = session?.user?.role === 'ASISTAN';
   const canManage = isAdmin || isTutor || isAsistan;
 
   return (

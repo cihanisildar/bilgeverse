@@ -13,16 +13,16 @@ export async function GET(
 ) {
   try {
     const session = await getServerSession(authOptions);
-    
+
     if (!session?.user) {
       return NextResponse.json(
         { error: 'Unauthorized' },
         { status: 401 }
       );
     }
-    
+
     const requestId = params.id;
-    
+
     const itemRequest = await prisma.itemRequest.findUnique({
       where: { id: requestId },
       include: {
@@ -46,18 +46,19 @@ export async function GET(
         item: true
       }
     });
-    
+
     if (!itemRequest) {
       return NextResponse.json(
         { error: 'Request not found' },
         { status: 404 }
       );
     }
-    
-    // Check permissions: admin can see all, tutor only their students, student only their own
+
+    // Check permissions: admin can see all, tutor only their students, assistant only their assisted tutor's students, student only their own
     if (
-      session.user.role !== UserRole.ADMIN && 
+      session.user.role !== UserRole.ADMIN &&
       !(session.user.role === UserRole.TUTOR && itemRequest.tutorId === session.user.id) &&
+      !(session.user.role === UserRole.ASISTAN && itemRequest.tutorId === (session.user as any).assistedTutorId) &&
       !(itemRequest.studentId === session.user.id)
     ) {
       return NextResponse.json(
@@ -65,7 +66,7 @@ export async function GET(
         { status: 403 }
       );
     }
-    
+
     return NextResponse.json({ request: itemRequest }, { status: 200 });
   } catch (error) {
     console.error('Get request error:', error);
@@ -83,14 +84,14 @@ export async function PUT(
 ) {
   try {
     const session = await getServerSession(authOptions);
-    
-    if (!session?.user || (session.user.role !== UserRole.ADMIN && session.user.role !== UserRole.TUTOR)) {
+
+    if (!session?.user || (session.user.role !== UserRole.ADMIN && session.user.role !== UserRole.TUTOR && session.user.role !== UserRole.ASISTAN)) {
       return NextResponse.json(
-        { error: 'Unauthorized: Only admin or tutor can update requests' },
+        { error: 'Unauthorized: Only admin, tutor or assistant can update requests' },
         { status: 403 }
       );
     }
-    
+
     const requestId = params.id;
     const body = await request.json();
     const { status, note } = body;
@@ -158,6 +159,14 @@ export async function PUT(
     if (session.user.role === UserRole.TUTOR && itemRequest.tutorId !== session.user.id) {
       return NextResponse.json(
         { error: 'Unauthorized: This request belongs to another tutor' },
+        { status: 403 }
+      );
+    }
+
+    // Assistant can only process their assisted tutor's students' requests
+    if (session.user.role === UserRole.ASISTAN && itemRequest.tutorId !== (session.user as any).assistedTutorId) {
+      return NextResponse.json(
+        { error: 'Unauthorized: This request belongs to a tutor you do not assist' },
         { status: 403 }
       );
     }

@@ -12,10 +12,10 @@ export const dynamic = 'force-dynamic';
 export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-    
-    if (!session?.user || session.user.role !== UserRole.TUTOR) {
+
+    if (!session?.user || (session.user.role !== UserRole.TUTOR && session.user.role !== UserRole.ASISTAN)) {
       return NextResponse.json(
-        { error: 'Unauthorized: Only tutors can access notes' },
+        { error: 'Unauthorized: Only tutors and asistans can access notes' },
         { status: 403 }
       );
     }
@@ -63,10 +63,10 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-    
-    if (!session?.user || session.user.role !== UserRole.TUTOR) {
+
+    if (!session?.user || (session.user.role !== UserRole.TUTOR && session.user.role !== UserRole.ASISTAN)) {
       return NextResponse.json(
-        { error: 'Unauthorized: Only tutors can create notes' },
+        { error: 'Unauthorized: Only tutors and asistans can create notes' },
         { status: 403 }
       );
     }
@@ -119,10 +119,10 @@ export async function POST(request: NextRequest) {
 export async function PUT(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-    
-    if (!session?.user || session.user.role !== UserRole.TUTOR) {
+
+    if (!session?.user || (session.user.role !== UserRole.TUTOR && session.user.role !== UserRole.ASISTAN)) {
       return NextResponse.json(
-        { error: 'Unauthorized: Only tutors can update notes' },
+        { error: 'Unauthorized: Only tutors and asistans can update notes' },
         { status: 403 }
       );
     }
@@ -149,9 +149,9 @@ export async function PUT(request: NextRequest) {
       );
     }
 
-    if (existingNote.tutorId !== session.user.id) {
+    if (existingNote.tutorId !== session.user.id && !(session.user.role === UserRole.ASISTAN && existingNote.tutorId === (session.user as any).assistedTutorId)) {
       return NextResponse.json(
-        { error: 'Unauthorized: You can only update your own notes' },
+        { error: 'Unauthorized: You can only update your own or your assisted tutor\'s notes' },
         { status: 403 }
       );
     }
@@ -188,10 +188,10 @@ export async function PUT(request: NextRequest) {
 export async function DELETE(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-    
-    if (!session?.user || session.user.role !== UserRole.TUTOR) {
+
+    if (!session?.user || (session.user.role !== UserRole.TUTOR && session.user.role !== UserRole.ASISTAN)) {
       return NextResponse.json(
-        { error: 'Unauthorized: Only tutors can delete notes' },
+        { error: 'Unauthorized: Only tutors and asistans can delete notes' },
         { status: 403 }
       );
     }
@@ -218,9 +218,9 @@ export async function DELETE(request: NextRequest) {
       );
     }
 
-    if (existingNote.tutorId !== session.user.id) {
+    if (existingNote.tutorId !== session.user.id && !(session.user.role === UserRole.ASISTAN && existingNote.tutorId === (session.user as any).assistedTutorId)) {
       return NextResponse.json(
-        { error: 'Unauthorized: You can only delete your own notes' },
+        { error: 'Unauthorized: You can only delete your own or your assisted tutor\'s notes' },
         { status: 403 }
       );
     }

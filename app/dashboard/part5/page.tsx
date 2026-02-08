@@ -1,4 +1,3 @@
-import { redirect } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { ArrowLeft, FileText } from 'lucide-react';
 import { PARTS } from '@/app/lib/parts';
@@ -11,9 +10,7 @@ import PartDocuments from '@/app/components/PartDocuments';
 export default async function Part5Page() {
   const session = await getServerSession(authOptions);
 
-  if (!session?.user) {
-    redirect('/login');
-  }
+  // Note: Session is guaranteed by Part5Layout
 
   // Fetch students - using a dynamic import or checking if we can reuse an existing action or direct prisma call
   // Since we are in a server component, we can use Prisma directly

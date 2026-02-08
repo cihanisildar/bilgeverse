@@ -44,18 +44,7 @@ export default function Part1Page() {
   const [pendingDecisions, setPendingDecisions] = useState<any[]>([]);
   const [loadingDecisions, setLoadingDecisions] = useState(true);
 
-  useEffect(() => {
-    if (!loading && !user) {
-      router.push('/login');
-    }
-  }, [loading, user, router]);
-
-  // Redirect non-admin users to part 7
-  useEffect(() => {
-    if (!loading && user && !isAdmin) {
-      router.replace(getRoleBasedPath(user.role));
-    }
-  }, [loading, user, isAdmin, router]);
+  // Protection is now handled server-side by Part1Layout
 
   useEffect(() => {
     if (user) {

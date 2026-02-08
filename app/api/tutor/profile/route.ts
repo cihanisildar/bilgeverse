@@ -9,11 +9,23 @@ export const dynamic = 'force-dynamic';
 export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-    
+
     if (!session?.user || (session.user.role !== UserRole.TUTOR && session.user.role !== UserRole.ASISTAN)) {
       return NextResponse.json(
         { error: 'Unauthorized: Only tutors and asistans can access this endpoint' },
         { status: 403 }
+      );
+    }
+
+    // Get the ID of the tutor to fetch stats for
+    const targetTutorId = session.user.role === UserRole.ASISTAN
+      ? (session.user as any).assistedTutorId
+      : session.user.id;
+
+    if (!targetTutorId) {
+      return NextResponse.json(
+        { error: 'Tutor ID not found for this user' },
+        { status: 400 }
       );
     }
 
@@ -27,31 +39,31 @@ export async function GET(request: NextRequest) {
       // Count students
       prisma.user.count({
         where: {
-          tutorId: session.user.id
+          tutorId: targetTutorId
         }
       }),
-      
+
       // Count events
       prisma.event.count({
         where: {
-          createdById: session.user.id
+          createdById: targetTutorId
         }
       }),
-      
+
       // Sum points awarded
       prisma.pointsTransaction.aggregate({
         where: {
-          tutorId: session.user.id
+          tutorId: targetTutorId
         },
         _sum: {
           points: true
         }
       }),
-      
+
       // Count completed events
       prisma.event.count({
         where: {
-          createdById: session.user.id,
+          createdById: targetTutorId,
           status: EventStatus.TAMAMLANDI
         }
       })

@@ -10,7 +10,7 @@ export const dynamic = 'force-dynamic';
 export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-    
+
     if (!session?.user || (session.user.role !== UserRole.TUTOR && session.user.role !== UserRole.ASISTAN)) {
       return NextResponse.json(
         { error: 'Unauthorized: Only tutors and asistans can create events' },
@@ -19,7 +19,7 @@ export async function POST(request: NextRequest) {
     }
 
     const data = await request.json();
-    
+
     // Validate required fields
     if (!data.title || !data.description || !data.startDateTime) {
       return NextResponse.json(
@@ -106,7 +106,7 @@ export async function POST(request: NextRequest) {
       }
     });
 
-    return NextResponse.json({ 
+    return NextResponse.json({
       message: 'Event created successfully',
       event: newEvent
     }, { status: 201 });
@@ -118,14 +118,14 @@ export async function POST(request: NextRequest) {
       code: error.code,
       stack: error.stack
     });
-    
+
     if (error.code === 'P2002') {
       return NextResponse.json(
         { error: 'An event with this title already exists' },
         { status: 409 }
       );
     }
-    
+
     return NextResponse.json(
       { error: error.message || 'Internal server error', details: error.code },
       { status: 500 }
@@ -160,18 +160,29 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Get all events created by this tutor AND global events created by admins
-    console.log('Fetching events for tutor:', session.user.id);
+    // Get the ID of the tutor to fetch events for (if asistan)
+    const assistedTutorId = session.user.role === UserRole.ASISTAN
+      ? (session.user as any).assistedTutorId
+      : null;
+
+    // Get all events created by this tutor/asistan AND global events created by admins
+    console.log('Fetching events for user:', session.user.id, assistedTutorId ? `(assisted tutor: ${assistedTutorId})` : '');
     const events = await prisma.event.findMany({
       where: {
         periodId: activePeriod.id,
         OR: [
-          // Events created by this tutor
+          // Events created by this user
           { createdById: session.user.id },
           // Global events (created by admins, visible to all tutors)
           { eventScope: EventScope.GLOBAL },
-          // Group events specifically created for this tutor
-          { createdForTutorId: session.user.id }
+          // If asistan, also show events created by/for their assisted tutor
+          ...(assistedTutorId ? [
+            { createdById: assistedTutorId },
+            { createdForTutorId: assistedTutorId }
+          ] : [
+            // Group events specifically created for this tutor
+            { createdForTutorId: session.user.id }
+          ])
         ]
       },
       orderBy: {

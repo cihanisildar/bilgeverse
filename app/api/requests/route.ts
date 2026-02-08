@@ -12,7 +12,7 @@ export const dynamic = 'force-dynamic';
 export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-    
+
     if (!session?.user) {
       return NextResponse.json(
         { error: 'Unauthorized' },
@@ -22,20 +22,23 @@ export async function GET(request: NextRequest) {
 
     const searchParams = request.nextUrl.searchParams;
     const status = searchParams.get('status');
-    
+
     let where: any = {};
-    
+
     // Add status filter if provided
     if (status && Object.values(RequestStatus).includes(status as RequestStatus)) {
       where.status = status;
     }
-    
+
     // Filter based on user role
     if (session.user.role === UserRole.ADMIN) {
       // Admin can see all requests
     } else if (session.user.role === UserRole.TUTOR) {
       // Tutor can only see requests from their students
       where.tutorId = session.user.id;
+    } else if (session.user.role === UserRole.ASISTAN) {
+      // Assistant can only see requests from their assisted tutor's students
+      where.tutorId = (session.user as any).assistedTutorId;
     } else if (session.user.role === UserRole.STUDENT) {
       // Student can only see their own requests
       where.studentId = session.user.id;
@@ -81,7 +84,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-    
+
     if (!session?.user || session.user.role !== UserRole.STUDENT) {
       return NextResponse.json(
         { error: 'Unauthorized: Only students can request items' },
@@ -181,42 +184,42 @@ export async function POST(request: NextRequest) {
     );
   } catch (error: any) {
     console.error('Create request error:', error);
-    
+
     if (error.message === 'Student not found') {
       return NextResponse.json(
         { error: 'Student not found' },
         { status: 404 }
       );
     }
-    
+
     if (error.message === 'Student does not have an assigned tutor') {
       return NextResponse.json(
         { error: error.message },
         { status: 400 }
       );
     }
-    
+
     if (error.message === 'Item not found') {
       return NextResponse.json(
         { error: 'Item not found' },
         { status: 404 }
       );
     }
-    
+
     if (error.message === 'Item is out of stock') {
       return NextResponse.json(
         { error: error.message },
         { status: 400 }
       );
     }
-    
+
     if (error.message === 'Not enough points to request this item') {
       return NextResponse.json(
         { error: error.message },
         { status: 400 }
       );
     }
-    
+
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

@@ -116,6 +116,9 @@ model User {
   workshopAttendances           WorkshopAttendance[]      @relation("WorkshopAttendances")
   workshopJoinRequests          WorkshopJoinRequest[]     @relation("StudentJoinRequests")
   reviewedWorkshopJoinRequests  WorkshopJoinRequest[]     @relation("ReviewedJoinRequests")
+  tutorPromotions               TutorPromotion[]          @relation("UserTutorPromotions")
+  createdTutorPromotions        TutorPromotion[]          @relation("CreatedTutorPromotions")
+  reviewedTutorPromotions       TutorPromotion[]          @relation("ReviewedTutorPromotions")
 
   @@index([tutorId])
 }
@@ -994,6 +997,34 @@ model WorkshopJoinRequest {
 }
 
 enum WorkshopJoinRequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+model TutorPromotion {
+  id              String                @id @default(uuid())
+  userId          String
+  requestedRole   UserRole
+  status          TutorPromotionStatus  @default(PENDING)
+  notes           String?
+  rejectionReason String?
+  createdAt       DateTime              @default(now())
+  updatedAt       DateTime              @updatedAt
+  createdById     String
+  reviewedById    String?
+  reviewedAt      DateTime?
+  
+  user            User                  @relation("UserTutorPromotions", fields: [userId], references: [id], onDelete: Cascade)
+  createdBy       User                  @relation("CreatedTutorPromotions", fields: [createdById], references: [id])
+  reviewedBy      User?                 @relation("ReviewedTutorPromotions", fields: [reviewedById], references: [id])
+  
+  @@index([userId])
+  @@index([status])
+  @@index([createdById])
+}
+
+enum TutorPromotionStatus {
   PENDING
   APPROVED
   REJECTED

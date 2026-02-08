@@ -56,6 +56,7 @@ export const authOptions: AuthOptions = {
             username: user.username,
             role: user.role,
             tutorId: user.tutorId || undefined,
+            assistedTutorId: user.assistedTutorId || undefined,
             tutor: user.tutor ? {
               id: user.tutor.id,
               username: user.tutor.username,
@@ -81,6 +82,7 @@ export const authOptions: AuthOptions = {
         token.email = user.email;
         token.role = user.role;
         token.tutorId = user.tutorId ?? undefined;
+        token.assistedTutorId = (user as any).assistedTutorId ?? undefined;
         token.tutor = user.tutor;
       }
       return token;
@@ -92,6 +94,7 @@ export const authOptions: AuthOptions = {
         session.user.email = token.email as string;
         session.user.role = token.role as UserRole;
         session.user.tutorId = token.tutorId as string | undefined;
+        session.user.assistedTutorId = token.assistedTutorId as string | undefined;
         session.user.tutor = token.tutor;
       }
       return session;

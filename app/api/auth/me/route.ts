@@ -29,6 +29,7 @@ export async function GET(request: NextRequest) {
         lastName: true,
         points: true,
         tutorId: true,
+        assistedTutorId: true,
         tutor: {
           select: {
             id: true,

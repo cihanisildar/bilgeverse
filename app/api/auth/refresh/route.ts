@@ -29,6 +29,7 @@ export async function POST(request: NextRequest) {
         points: true,
         experience: true,
         tutorId: true,
+        assistedTutorId: true,
         tutor: {
           select: {
             id: true,

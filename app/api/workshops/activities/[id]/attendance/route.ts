@@ -145,10 +145,11 @@ export async function POST(
             });
         }
 
-        // Manual Check-in Logic (Requires Tutor/Board/Admin)
+        // Manual Check-in Logic (Requires Tutor/Board/Admin or Assistant of a Tutor)
         const isAuthorized = session.user.role === UserRole.ADMIN || session.user.role === UserRole.BOARD_MEMBER;
 
         if (!isAuthorized) {
+            // Check if the user themselves is assigned
             const assignment = await prisma.workshopAssignment.findUnique({
                 where: {
                     workshopId_userId: {
@@ -157,7 +158,26 @@ export async function POST(
                     },
                 },
             });
-            if (!assignment || assignment.role !== UserRole.TUTOR) {
+
+            let hasTutorAssignment = assignment && assignment.role === UserRole.TUTOR;
+
+            // If not assigned directly, check if their assisted tutor is assigned (for assistants)
+            if (!hasTutorAssignment && session.user.role === UserRole.ASISTAN) {
+                const assistedTutorId = (session.user as any).assistedTutorId;
+                if (assistedTutorId) {
+                    const tutorAssignment = await prisma.workshopAssignment.findUnique({
+                        where: {
+                            workshopId_userId: {
+                                workshopId: activity.workshopId,
+                                userId: assistedTutorId,
+                            },
+                        },
+                    });
+                    hasTutorAssignment = tutorAssignment && tutorAssignment.role === UserRole.TUTOR;
+                }
+            }
+
+            if (!hasTutorAssignment) {
                 return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
             }
         }

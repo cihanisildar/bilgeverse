@@ -1,19 +1,12 @@
-import { redirect } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { ArrowLeft, FileText } from 'lucide-react';
 import { PARTS } from '@/app/lib/parts';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
-import { getServerSession } from 'next-auth/next';
-import { authOptions } from '@/app/api/auth/[...nextauth]/auth.config';
 import PartDocuments from '@/app/components/PartDocuments';
 
 export default async function Part10Page() {
-  const session = await getServerSession(authOptions);
-
-  if (!session?.user) {
-    redirect('/login');
-  }
+  // Session check is handled by Part10Layout
 
   const part = PARTS.find(p => p.id === 10);
 

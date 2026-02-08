@@ -1,4 +1,3 @@
-import { redirect } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { ArrowLeft, FileText, Plus, BarChart2, LayoutGrid } from 'lucide-react';
 import { PARTS } from '@/app/lib/parts';
@@ -23,17 +22,14 @@ export default async function Part4Page({
 }) {
   const session = await getServerSession(authOptions);
 
-  if (!session?.user) {
-    redirect('/login');
-  }
-
+  // Note: Session is guaranteed by Part4Layout
   const activeTab = searchParams.tab || 'workshops';
   const part = PARTS.find(p => p.id === 4);
-  const isPrivileged = [UserRole.ADMIN, UserRole.BOARD_MEMBER, UserRole.TUTOR, UserRole.ASISTAN].includes(session.user.role as any);
-  const isAdminOrBoard = [UserRole.ADMIN, UserRole.BOARD_MEMBER].includes(session.user.role as any);
+  const isPrivileged = [UserRole.ADMIN, UserRole.BOARD_MEMBER, UserRole.TUTOR, UserRole.ASISTAN].includes(session?.user?.role as any);
+  const isAdminOrBoard = [UserRole.ADMIN, UserRole.BOARD_MEMBER].includes(session?.user?.role as any);
 
   // Fetch Workshops via Service Layer
-  const workshops = await getWorkshops(session.user.id, session.user.role);
+  const workshops = await getWorkshops(session?.user?.id || '', session?.user?.role || '' as any);
 
   // Fetch Report Data if admin/board
   let reportData = null;
@@ -135,7 +131,7 @@ export default async function Part4Page({
           </div>
 
           <TabsContent value="workshops" className="mt-0 outline-none">
-            <WorkshopList workshops={workshops as any} role={session.user.role} userId={session.user.id} />
+            <WorkshopList workshops={workshops as any} role={session?.user?.role as any} userId={session?.user?.id || ''} />
           </TabsContent>
 
           {isAdminOrBoard && reportData && (

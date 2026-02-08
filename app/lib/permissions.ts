@@ -31,3 +31,13 @@ export function canAccessPart(role: UserRole, partId: number): boolean {
 export function getAllowedParts(role: UserRole): number[] {
     return ROLE_PART_PERMISSIONS[role] || [];
 }
+
+/**
+ * Higher-level helper for server components to check if a user is authorized for a part
+ * @param session - The NextAuth session
+ * @param partId - The part ID to check
+ */
+export function isAuthorized(session: any, partId: number): boolean {
+    if (!session?.user?.role) return false;
+    return canAccessPart(session.user.role as UserRole, partId);
+}
