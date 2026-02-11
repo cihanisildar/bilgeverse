@@ -1,67 +1,187 @@
+'use client';
+
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { ArrowLeft, FileText } from 'lucide-react';
-import { PARTS } from '@/app/lib/parts';
+import { ArrowLeft, Plus, Search, Users, Heart, Wallet, Activity } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
-import PartDocuments from '@/app/components/PartDocuments';
+import { Input } from '@/components/ui/input';
+import DonorTable from './components/DonorTable';
+import DonorDialog from './components/DonorDialog';
+import DonationDialog from './components/DonationDialog';
+import DonorDetailsDrawer from './components/DonorDetailsDrawer';
+import { getDonors } from '@/app/actions/donations';
+import { useQuery } from '@tanstack/react-query';
 
-export default async function Part8Page() {
-  // Session check is handled by Part8Layout
+import { Donor } from '@/types/donations';
 
-  const part = PARTS.find(p => p.id === 8);
+export default function Part8Page() {
+  const [search, setSearch] = useState('');
+
+  // Dialog/Drawer states
+  const [isDonorDialogOpen, setIsDonorDialogOpen] = useState(false);
+  const [isDonationDialogOpen, setIsDonationDialogOpen] = useState(false);
+  const [isDetailsOpen, setIsDetailsOpen] = useState(false);
+  const [selectedDonor, setSelectedDonor] = useState<Donor | null>(null);
+
+  const { data: donorsResult, isLoading: loading } = useQuery({
+    queryKey: ['donors', search],
+    queryFn: async () => {
+      const res = await getDonors(search);
+      if (res.error) throw new Error(res.error);
+      return res.data || [];
+    },
+  });
+
+  const donors = donorsResult || [];
+
+  const handleOpenAddDonation = (donor: Donor) => {
+    setSelectedDonor(donor);
+    setIsDonationDialogOpen(true);
+  };
+
+  const handleOpenEditDonor = (donor: Donor) => {
+    setSelectedDonor(donor);
+    setIsDonorDialogOpen(true);
+  };
+
+  const handleOpenDetails = (donor: Donor) => {
+    setSelectedDonor(donor);
+    setIsDetailsOpen(true);
+  };
+
+  const handleCloseDialogs = () => {
+    setIsDonorDialogOpen(false);
+    setIsDonationDialogOpen(false);
+    setSelectedDonor(null);
+  };
+
+  // Safety cleanup for Radix UI focus trap/pointer-events issues
+  useEffect(() => {
+    if (!isDonorDialogOpen && !isDonationDialogOpen && !isDetailsOpen) {
+      document.body.style.pointerEvents = 'auto';
+    }
+  }, [isDonorDialogOpen, isDonationDialogOpen, isDetailsOpen]);
+
+  const totalDonations = donors.reduce((acc, curr) => acc + curr.totalDonated, 0);
+  const inactiveCount = donors.filter(d => d.isInactive).length;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-rose-50 via-white to-pink-50 p-6 lg:p-8">
+    <div className="min-h-screen bg-gray-50 p-6 lg:p-8">
       <div className="max-w-7xl mx-auto">
-        <Link href="/dashboard">
-          <Button variant="ghost" className="mb-6 hover:bg-gray-100 transition-all duration-200">
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Ana Sayfaya Dön
-          </Button>
-        </Link>
-
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-800 mb-2">
-            <span className="bg-clip-text text-transparent bg-gradient-to-r from-rose-600 to-pink-600">
-              {part?.name}
-            </span>
-          </h1>
-          <p className="text-gray-600">{part?.description}</p>
-        </div>
-
-        <div className="mb-8">
-          <div className="flex items-center justify-between mb-6">
-            <div>
-              <h2 className="text-2xl font-bold text-gray-800 mb-1">Belgeler</h2>
-              <p className="text-gray-600">Bu bölüm için paylaşılan belgeler</p>
-            </div>
-            <Link href="/dashboard/pdfs">
-              <Button variant="outline" className="border-rose-200 text-rose-600 hover:bg-rose-50">
-                <FileText className="h-4 w-4 mr-2" />
-                Tüm Belgeleri Görüntüle
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
+          <div>
+            <Link href="/dashboard">
+              <Button variant="ghost" className="mb-4 -ml-2 text-gray-500 hover:text-rose-600">
+                <ArrowLeft className="h-4 w-4 mr-2" />
+                Ana Sayfaya Dön
               </Button>
             </Link>
+            <h1 className="text-3xl font-bold text-gray-900 tracking-tight">Bağışçı Yönetimi</h1>
+            <p className="text-gray-500">Bağışçıları takip edin, yeni bağışlar ekleyin ve durumu izleyin.</p>
           </div>
-          <PartDocuments partId={8} gradientFrom="from-rose-600" gradientTo="to-pink-600" />
+          <Button
+            onClick={() => {
+              setSelectedDonor(null);
+              setIsDonorDialogOpen(true);
+            }}
+            className="bg-rose-600 hover:bg-rose-700 text-white shadow-lg shadow-rose-200"
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            Yeni Bağışçı Ekle
+          </Button>
         </div>
 
-        <Card className="border-0 shadow-lg rounded-2xl overflow-hidden">
-          <div className="h-2 bg-gradient-to-r from-rose-500 to-pink-500"></div>
+        {/* Stats Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+          <Card className="border-none shadow-sm bg-white">
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground italic">Toplam Bağışçı</CardTitle>
+              <Users className="h-4 w-4 text-rose-600" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{donors.length}</div>
+            </CardContent>
+          </Card>
+          <Card className="border-none shadow-sm bg-white">
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground italic">Toplam Toplanan</CardTitle>
+              <Wallet className="h-4 w-4 text-emerald-600" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{totalDonations.toLocaleString('tr-TR')} ₺</div>
+            </CardContent>
+          </Card>
+          <Card className="border-none shadow-sm bg-white border-l-4 border-l-rose-500">
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground italic">Hareketsiz Bağışçı</CardTitle>
+              <Activity className="h-4 w-4 text-rose-500" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-rose-600">{inactiveCount}</div>
+              <p className="text-xs text-muted-foreground mt-1">2 aydır bağış yapmayanlar</p>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Main Content */}
+        <Card className="border-none shadow-sm">
           <CardHeader>
-            <CardTitle className="text-2xl">Geliştirme Aşamasında</CardTitle>
-            <CardDescription>Bu bölüm yakında kullanıma açılacaktır</CardDescription>
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div>
+                <CardTitle>Bağışçı Listesi</CardTitle>
+                <CardDescription>Sisteme kayıtlı tüm bağışçılar</CardDescription>
+              </div>
+              <div className="relative w-full md:w-72">
+                <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Bağışçı ara..."
+                  className="pl-9"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                />
+              </div>
+            </div>
           </CardHeader>
           <CardContent>
-            <div className="text-center py-12">
-              <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-gradient-to-br from-rose-100 to-pink-100 mb-6">
-                <FileText className="h-10 w-10 text-rose-600" />
+            {loading ? (
+              <div className="flex items-center justify-center py-20">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-rose-600"></div>
               </div>
-              <p className="text-gray-600 mb-4">Maliye yönetim sistemi üzerinde çalışıyoruz.</p>
-              <p className="text-sm text-gray-500">Bu bölüm tamamlandığında gelir-gider takibi, bütçe yönetimi ve mali raporlama özellikleri sunacaktır.</p>
-            </div>
+            ) : (
+              <DonorTable
+                donors={donors}
+                onViewDetails={handleOpenDetails}
+                onAddDonation={handleOpenAddDonation}
+                onEdit={handleOpenEditDonor}
+              />
+            )}
           </CardContent>
         </Card>
       </div>
+
+      <DonorDialog
+        isOpen={isDonorDialogOpen}
+        onClose={handleCloseDialogs}
+        donor={selectedDonor}
+      />
+
+      {selectedDonor && (
+        <DonationDialog
+          isOpen={isDonationDialogOpen}
+          onClose={handleCloseDialogs}
+          donor={selectedDonor}
+        />
+      )}
+
+      <DonorDetailsDrawer
+        isOpen={isDetailsOpen}
+        onClose={() => {
+          setIsDetailsOpen(false);
+          setSelectedDonor(null);
+        }}
+        donorId={selectedDonor?.id ?? null}
+      />
     </div>
   );
 }

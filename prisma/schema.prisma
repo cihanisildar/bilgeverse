@@ -121,6 +121,7 @@ model User {
   reviewedTutorPromotions       TutorPromotion[]          @relation("ReviewedTutorPromotions")
   createdIngredients            ContentIngredient[]       @relation("IngredientCreator")
   createdSocialPosts            SocialPost[]              @relation("PostCreator")
+  donor                         Donor?                    @relation("UserDonor")
 
   @@index([tutorId])
 }
@@ -758,6 +759,7 @@ enum UserRole {
   STUDENT
   ASISTAN
   BOARD_MEMBER
+  DONOR
 }
 
 enum RequestStatus {
@@ -1079,4 +1081,36 @@ enum PostStatus {
   APPROVED
   PUBLISHED
   ARCHIVED
+}
+
+model Donor {
+  id              String     @id @default(uuid())
+  firstName       String
+  lastName        String
+  email           String?    @unique
+  phone           String?
+  address         String?
+  notes           String?
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+  donations       Donation[] @relation("DonorDonations")
+  userId          String?    @unique
+  user            User?      @relation("UserDonor", fields: [userId], references: [id])
+
+  @@index([email])
+}
+
+model Donation {
+  id              String   @id @default(uuid())
+  amount          Decimal  @db.Decimal(10, 2)
+  currency        String   @default("TL")
+  donationDate    DateTime @default(now())
+  notes           String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  donorId         String
+  donor           Donor    @relation("DonorDonations", fields: [donorId], references: [id], onDelete: Cascade)
+
+  @@index([donorId])
+  @@index([donationDate])
 }

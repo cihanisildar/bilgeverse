@@ -10,6 +10,7 @@ export const ROLE_PART_PERMISSIONS: Record<UserRole, number[]> = {
     [UserRole.TUTOR]: [2, 4, 7], // Tutor can see Part 2, Part 4 and Part 7 on dashboard
     [UserRole.ASISTAN]: [2, 4, 7], // Asistan can see Part 2, Part 4 and Part 7 on dashboard
     [UserRole.STUDENT]: [4, 7], // Students can access Part 4 (Workshops) and Part 7 (Bilgeverse)
+    [UserRole.DONOR]: [], // Donors don't have dashboard access by default
 };
 
 /**

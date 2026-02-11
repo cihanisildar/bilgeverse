@@ -142,7 +142,7 @@ export async function middleware(request: NextRequest) {
 
     if (pathname.startsWith('/api/student/reports')) {
       // Allow ADMIN, TUTOR, ASISTAN, BOARD_MEMBER and STUDENT for /api/student/reports endpoints
-      if (![UserRole.ADMIN, UserRole.TUTOR, UserRole.ASISTAN, UserRole.BOARD_MEMBER, UserRole.STUDENT].includes(token.role as UserRole)) {
+      if (!([UserRole.ADMIN, UserRole.TUTOR, UserRole.ASISTAN, UserRole.BOARD_MEMBER, UserRole.STUDENT] as UserRole[]).includes(token.role as UserRole)) {
         console.log('Unauthorized user attempting to access student reports API');
         return isApiRoute
           ? NextResponse.json({ error: 'Forbidden: Admin, Tutor, Asistan, Board Member, or Student access required' }, { status: 403 })
