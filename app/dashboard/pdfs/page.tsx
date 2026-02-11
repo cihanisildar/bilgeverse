@@ -3,7 +3,7 @@
 import { useAuth } from '@/app/contexts/AuthContext';
 import { PARTS } from '@/app/lib/parts';
 import { FileText, ExternalLink, ArrowLeft, Plus, Edit2, Trash2, Loader2, Link2, Power } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/app/hooks/use-toast';
 import Loading from '@/app/components/Loading';
@@ -27,6 +27,8 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import { useAdminPdfs, useCreateAdminPdf, useUpdateAdminPdf, useDeleteAdminPdf } from '@/app/hooks/use-admin-pdfs';
+
 type PartPdf = {
   id: string;
   partId: number;
@@ -48,16 +50,18 @@ export default function PdfsPage() {
   const toast = useToast();
   const { user, loading: authLoading, isAdmin } = useAuth();
   const router = useRouter();
-  const [pdfs, setPdfs] = useState<Record<number, PartPdf[]>>({});
-  const [loading, setLoading] = useState(true);
+
+  // React Query Hooks
+  const { data: allPdfs = [], isLoading: loading } = useAdminPdfs();
+  const createPdfMutation = useCreateAdminPdf();
+  const updatePdfMutation = useUpdateAdminPdf();
+  const deletePdfMutation = useDeleteAdminPdf();
+
   const [selectedPart, setSelectedPart] = useState(0);
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [selectedPdf, setSelectedPdf] = useState<PartPdf | null>(null);
-  const [uploading, setUploading] = useState(false);
-  const [editing, setEditing] = useState(false);
-  const [deleting, setDeleting] = useState(false);
 
   const [uploadForm, setUploadForm] = useState({
     partId: 0,
@@ -76,40 +80,21 @@ export default function PdfsPage() {
     isActive: true,
   });
 
-  // Middleware already handles authentication - just fetch data on mount
-  useEffect(() => {
-    fetchPdfs();
-  }, []);
-
-  const fetchPdfs = async () => {
-    try {
-      setLoading(true);
-      const response = await fetch('/api/admin/pdfs');
-      if (!response.ok) throw new Error('Failed to fetch documents');
-      const data: PartPdf[] = await response.json();
-
-      // Group documents by partId (0 for dashboard, 1-10 for parts)
-      const grouped: Record<number, PartPdf[]> = {};
-      // Initialize dashboard (0) and all parts (1-10)
-      grouped[0] = [];
-      for (let i = 1; i <= 10; i++) {
-        grouped[i] = [];
-      }
-      data.forEach((pdf) => {
-        if (!grouped[pdf.partId]) {
-          grouped[pdf.partId] = [];
-        }
-        grouped[pdf.partId].push(pdf);
-      });
-
-      setPdfs(grouped);
-    } catch (error) {
-      console.error('Error fetching documents:', error);
-      toast.error('Belgeleri yüklerken bir hata oluştu');
-    } finally {
-      setLoading(false);
+  // Derived state: Group documents by partId
+  const pdfs = useMemo(() => {
+    const grouped: Record<number, PartPdf[]> = {};
+    grouped[0] = [];
+    for (let i = 1; i <= 10; i++) {
+      grouped[i] = [];
     }
-  };
+    allPdfs.forEach((pdf: any) => {
+      if (!grouped[pdf.partId]) {
+        grouped[pdf.partId] = [];
+      }
+      grouped[pdf.partId].push(pdf);
+    });
+    return grouped;
+  }, [allPdfs]);
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('tr-TR', {
@@ -125,48 +110,25 @@ export default function PdfsPage() {
       return;
     }
 
-    try {
-      setUploading(true);
-      const response = await fetch('/api/admin/pdfs', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          partId: uploadForm.partId,
-          title: uploadForm.title,
-          description: uploadForm.description || null,
-          driveLink: uploadForm.driveLink,
-          contentType: uploadForm.contentType || null,
-          isActive: uploadForm.isActive,
-        }),
-      });
+    await createPdfMutation.mutateAsync({
+      partId: uploadForm.partId,
+      title: uploadForm.title,
+      description: uploadForm.description || null,
+      driveLink: uploadForm.driveLink,
+      contentType: uploadForm.contentType || null,
+      isActive: uploadForm.isActive,
+    });
 
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || 'Creation failed');
-      }
-
-      toast.success('Belge başarıyla eklendi');
-      setShowUploadModal(false);
-      // Set selected part to the part where the document was added
-      setSelectedPart(uploadForm.partId);
-      setUploadForm({
-        partId: uploadForm.partId,
-        title: '',
-        description: '',
-        driveLink: '',
-        contentType: '',
-        isActive: true,
-      });
-      // Refresh the list to show the newly added document
-      await fetchPdfs();
-    } catch (error: any) {
-      console.error('Upload error:', error);
-      toast.error(error.message || 'Belge eklenirken bir hata oluştu');
-    } finally {
-      setUploading(false);
-    }
+    setShowUploadModal(false);
+    setSelectedPart(uploadForm.partId);
+    setUploadForm({
+      partId: uploadForm.partId,
+      title: '',
+      description: '',
+      driveLink: '',
+      contentType: '',
+      isActive: true,
+    });
   };
 
   const handleEdit = async () => {
@@ -175,63 +137,26 @@ export default function PdfsPage() {
       return;
     }
 
-    try {
-      setEditing(true);
-      const response = await fetch(`/api/admin/pdfs/${selectedPdf.id}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          title: editForm.title,
-          description: editForm.description || null,
-          driveLink: editForm.driveLink,
-          contentType: editForm.contentType || null,
-          isActive: editForm.isActive,
-        }),
-      });
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || 'Update failed');
+    await updatePdfMutation.mutateAsync({
+      id: selectedPdf.id,
+      data: {
+        title: editForm.title,
+        description: editForm.description || null,
+        driveLink: editForm.driveLink,
+        contentType: editForm.contentType || null,
+        isActive: editForm.isActive,
       }
+    });
 
-      toast.success('Belge başarıyla güncellendi');
-      setShowEditModal(false);
-      setSelectedPdf(null);
-      fetchPdfs();
-    } catch (error: any) {
-      console.error('Edit error:', error);
-      toast.error(error.message || 'Belge güncellenirken bir hata oluştu');
-    } finally {
-      setEditing(false);
-    }
+    setShowEditModal(false);
+    setSelectedPdf(null);
   };
 
   const handleDelete = async () => {
     if (!selectedPdf) return;
-
-    try {
-      setDeleting(true);
-      const response = await fetch(`/api/admin/pdfs/${selectedPdf.id}`, {
-        method: 'DELETE',
-      });
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || 'Delete failed');
-      }
-
-      toast.success('Belge başarıyla silindi');
-      setShowDeleteDialog(false);
-      setSelectedPdf(null);
-      fetchPdfs();
-    } catch (error: any) {
-      console.error('Delete error:', error);
-      toast.error(error.message || 'Belge silinirken bir hata oluştu');
-    } finally {
-      setDeleting(false);
-    }
+    await deletePdfMutation.mutateAsync(selectedPdf.id);
+    setShowDeleteDialog(false);
+    setSelectedPdf(null);
   };
 
   const openEditModal = (pdf: PartPdf) => {
@@ -744,10 +669,10 @@ export default function PdfsPage() {
                 </Button>
                 <Button
                   onClick={handleUpload}
-                  disabled={uploading || !uploadForm.title.trim() || !uploadForm.driveLink.trim()}
+                  disabled={createPdfMutation.isPending || !uploadForm.title.trim() || !uploadForm.driveLink.trim()}
                   className="bg-indigo-600 hover:bg-indigo-700 text-white"
                 >
-                  {uploading ? 'Ekleniyor...' : 'Ekle'}
+                  {createPdfMutation.isPending ? 'Ekleniyor...' : 'Ekle'}
                 </Button>
               </div>
             </div>
@@ -842,10 +767,10 @@ export default function PdfsPage() {
                 </Button>
                 <Button
                   onClick={handleEdit}
-                  disabled={editing || !editForm.title.trim() || !editForm.driveLink.trim()}
+                  disabled={updatePdfMutation.isPending || !editForm.title.trim() || !editForm.driveLink.trim()}
                   className="bg-indigo-600 hover:bg-indigo-700 text-white"
                 >
-                  {editing ? 'Güncelleniyor...' : 'Güncelle'}
+                  {updatePdfMutation.isPending ? 'Güncelleniyor...' : 'Güncelle'}
                 </Button>
               </div>
             </div>
@@ -858,7 +783,7 @@ export default function PdfsPage() {
         <AlertDialog
           open={showDeleteDialog}
           onOpenChange={(open) => {
-            if (!deleting) {
+            if (!deletePdfMutation.isPending) {
               setShowDeleteDialog(open);
             }
           }}
@@ -872,13 +797,13 @@ export default function PdfsPage() {
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
-              <AlertDialogCancel disabled={deleting}>İptal</AlertDialogCancel>
+              <AlertDialogCancel disabled={deletePdfMutation.isPending}>İptal</AlertDialogCancel>
               <AlertDialogAction
                 onClick={handleDelete}
-                disabled={deleting}
+                disabled={deletePdfMutation.isPending}
                 className="bg-red-600 hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed text-white"
               >
-                {deleting ? (
+                {deletePdfMutation.isPending ? (
                   <span className="flex items-center">
                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                     Siliniyor...

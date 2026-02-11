@@ -119,6 +119,8 @@ model User {
   tutorPromotions               TutorPromotion[]          @relation("UserTutorPromotions")
   createdTutorPromotions        TutorPromotion[]          @relation("CreatedTutorPromotions")
   reviewedTutorPromotions       TutorPromotion[]          @relation("ReviewedTutorPromotions")
+  createdIngredients            ContentIngredient[]       @relation("IngredientCreator")
+  createdSocialPosts            SocialPost[]              @relation("PostCreator")
 
   @@index([tutorId])
 }
@@ -1028,4 +1030,53 @@ enum TutorPromotionStatus {
   PENDING
   APPROVED
   REJECTED
+}
+
+model ContentIngredient {
+  id          String   @id @default(uuid())
+  title       String
+  content     String   @db.Text
+  type        String   // e.g., "hashtag", "caption-template", "media-reference"
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  createdById String
+  createdBy   User     @relation("IngredientCreator", fields: [createdById], references: [id])
+
+  @@index([createdById])
+}
+
+model SocialPost {
+  id            String         @id @default(uuid())
+  title         String
+  content       String         @db.Text
+  mediaUrl      String?
+  platform      SocialPlatform
+  status        PostStatus     @default(DRAFT)
+  scheduledDate DateTime?
+  hashtags      String[]
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  createdById   String
+  createdBy     User           @relation("PostCreator", fields: [createdById], references: [id])
+
+  @@index([createdById])
+  @@index([platform])
+  @@index([status])
+}
+
+enum SocialPlatform {
+  INSTAGRAM
+  TWITTER
+  FACEBOOK
+  LINKEDIN
+  YOUTUBE
+  TIKTOK
+}
+
+enum PostStatus {
+  DRAFT
+  PLANNED
+  APPROVED
+  PUBLISHED
+  ARCHIVED
 }
