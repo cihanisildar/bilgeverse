@@ -15,6 +15,7 @@ type AuthUser = {
   id: string;
   username: string;
   role: UserRole;
+  roles: UserRole[];
   firstName?: string;
   lastName?: string;
   points?: number;
@@ -117,7 +118,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     // Only update user state from session if it wasn't recently updated from API
     // and if it's actually different to prevent unnecessary re-renders
     if (session?.user && (!user || user.id !== session.user.id) && !userUpdatedFromAPI) {
-      setUser(session.user as AuthUser);
+      setUser(session.user as any as AuthUser);
     }
 
     setLoading(false);
@@ -220,10 +221,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  const isAdmin = user?.role === UserRole.ADMIN;
-  const isBoardMember = user?.role === UserRole.BOARD_MEMBER;
-  const isTutor = user?.role === UserRole.TUTOR || user?.role === UserRole.ASISTAN;
-  const isStudent = user?.role === UserRole.STUDENT;
+  const isAdmin = user?.roles?.includes(UserRole.ADMIN) || user?.role === UserRole.ADMIN;
+  const isBoardMember = user?.roles?.includes(UserRole.BOARD_MEMBER) || user?.role === UserRole.BOARD_MEMBER;
+  const isTutor = user?.roles?.some(r => r === UserRole.TUTOR || r === UserRole.ASISTAN) ||
+    user?.role === UserRole.TUTOR ||
+    user?.role === UserRole.ASISTAN;
+  const isStudent = user?.roles?.includes(UserRole.STUDENT) || user?.role === UserRole.STUDENT;
   const isAuthenticated = Boolean(user && !loading);
 
   return (

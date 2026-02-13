@@ -1,15 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth/next';
-import { authOptions } from '@/app/api/auth/[...nextauth]/auth.config';
+import { requireApiAuth } from '@/app/lib/auth-utils';
 import prisma from '@/lib/prisma';
 import { UserRole } from '@prisma/client';
 
 export async function GET(req: NextRequest) {
     try {
-        const session = await getServerSession(authOptions);
-        if (!session?.user) {
-            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-        }
+        const { errorResponse } = await requireApiAuth();
+        if (errorResponse) return errorResponse;
 
         const workshops = await prisma.workshop.findMany({
             include: {
@@ -45,10 +42,8 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
     try {
-        const session = await getServerSession(authOptions);
-        if (!session?.user || session.user.role !== UserRole.ADMIN) {
-            return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-        }
+        const { errorResponse } = await requireApiAuth([UserRole.ADMIN]);
+        if (errorResponse) return errorResponse;
 
         const body = await req.json();
         const { name, description, imageUrl } = body;

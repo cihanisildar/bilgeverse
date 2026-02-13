@@ -1,29 +1,60 @@
-'use server';
-
-import { getServerSession } from 'next-auth/next';
-import { authOptions } from '@/app/api/auth/[...nextauth]/auth.config';
+import { requireActionAuth, hasRole } from '@/app/lib/auth-utils';
 import prisma from '@/lib/prisma';
-import { Part2EventStatus, Part2ParticipantStatus, CheckInMethod } from '@prisma/client';
+import { Part2EventStatus, Part2ParticipantStatus, CheckInMethod, UserRole } from '@prisma/client';
 import crypto from 'crypto';
 
-type ActionResponse<T = any> = {
+export type ActionResponse<T = unknown> = {
     success: boolean;
     data?: T;
     error?: string;
 };
 
-// Get all Part2 events with optional filtering
-export async function getPart2Events(filters?: {
+export interface EventFilters {
     status?: Part2EventStatus;
     eventTypeId?: string;
-}): Promise<ActionResponse> {
-    try {
-        const session = await getServerSession(authOptions);
-        if (!session?.user) {
-            return { success: false, error: 'Unauthorized' };
-        }
+}
 
-        const where: any = {};
+export interface CreateEventData {
+    title: string;
+    description: string;
+    eventTypeId: string;
+    eventDate: string | Date;
+    location: string;
+    capacity?: number;
+    notes?: string;
+    status?: Part2EventStatus;
+    generateQR?: boolean;
+}
+
+export interface UpdateEventData {
+    title?: string;
+    description?: string;
+    eventTypeId?: string;
+    eventDate?: string | Date;
+    location?: string;
+    capacity?: number;
+    notes?: string;
+    status?: Part2EventStatus;
+}
+
+export interface CreateEventTypeData {
+    name: string;
+    description?: string;
+}
+
+export interface UpdateEventTypeData {
+    name?: string;
+    description?: string;
+    isActive?: boolean;
+}
+
+// Get all Part2 events with optional filtering
+export async function getPart2Events(filters?: EventFilters): Promise<ActionResponse> {
+    try {
+        const { error } = await requireActionAuth();
+        if (error) return { success: false, error };
+
+        const where: Record<string, any> = {};
 
         if (filters?.status) where.status = filters.status;
         if (filters?.eventTypeId) where.eventTypeId = filters.eventTypeId;
@@ -73,10 +104,8 @@ export async function getPart2Events(filters?: {
 // Get single Part2 event by ID
 export async function getPart2Event(eventId: string): Promise<ActionResponse> {
     try {
-        const session = await getServerSession(authOptions);
-        if (!session?.user) {
-            return { success: false, error: 'Unauthorized' };
-        }
+        const { error } = await requireActionAuth();
+        if (error) return { success: false, error };
 
         const event = await prisma.part2Event.findUnique({
             where: { id: eventId },
@@ -121,29 +150,12 @@ export async function getPart2Event(eventId: string): Promise<ActionResponse> {
 }
 
 // Create new Part2 event
-export async function createPart2Event(data: {
-    title: string;
-    description: string;
-    eventTypeId: string;
-    eventDate: string | Date;
-    location: string;
-    capacity?: number;
-    notes?: string;
-    status?: Part2EventStatus;
-    generateQR?: boolean;
-}): Promise<ActionResponse> {
+export async function createPart2Event(data: CreateEventData): Promise<ActionResponse> {
     try {
-        const session = await getServerSession(authOptions);
-        if (!session?.user) {
-            return { success: false, error: 'Unauthorized' };
-        }
+        const { session, error } = await requireActionAuth([UserRole.ADMIN, UserRole.TUTOR]);
+        if (error) return { success: false, error };
 
-        const isAdmin = session.user.role === 'ADMIN';
-        const isTutor = session.user.role === 'TUTOR';
-
-        if (!isAdmin && !isTutor) {
-            return { success: false, error: 'Only admins and tutors can create events' };
-        }
+        const user = session!.user;
 
         // Verify event type exists
         const eventType = await prisma.part2EventType.findUnique({
@@ -154,7 +166,7 @@ export async function createPart2Event(data: {
             return { success: false, error: 'Invalid event type' };
         }
 
-        const eventData: any = {
+        const eventData: Record<string, any> = {
             title: data.title,
             description: data.description,
             eventTypeId: data.eventTypeId,
@@ -163,7 +175,7 @@ export async function createPart2Event(data: {
             capacity: data.capacity || 30,
             notes: data.notes,
             status: data.status || 'YAKINDA',
-            createdById: session.user.id,
+            createdById: user.id,
         };
 
         // Generate QR code if requested
@@ -177,7 +189,7 @@ export async function createPart2Event(data: {
         }
 
         const event = await prisma.part2Event.create({
-            data: eventData,
+            data: eventData as any,
             include: {
                 eventType: true,
                 createdBy: {
@@ -201,24 +213,15 @@ export async function createPart2Event(data: {
 // Update Part2 event
 export async function updatePart2Event(
     eventId: string,
-    data: {
-        title?: string;
-        description?: string;
-        eventTypeId?: string;
-        eventDate?: string | Date;
-        location?: string;
-        capacity?: number;
-        notes?: string;
-        status?: Part2EventStatus;
-    }
+    data: UpdateEventData
 ): Promise<ActionResponse> {
     try {
-        const session = await getServerSession(authOptions);
-        if (!session?.user) {
-            return { success: false, error: 'Unauthorized' };
-        }
+        const { session, error } = await requireActionAuth();
+        if (error) return { success: false, error };
 
-        const isAdmin = session.user.role === 'ADMIN';
+        const user = session!.user;
+        const isAdmin = hasRole(session, [UserRole.ADMIN]);
+
         const event = await prisma.part2Event.findUnique({
             where: { id: eventId },
         });
@@ -228,12 +231,12 @@ export async function updatePart2Event(
         }
 
         // Only admin or event creator can update
-        if (!isAdmin && event.createdById !== session.user.id) {
+        if (!isAdmin && event.createdById !== user.id) {
             return { success: false, error: 'You do not have permission to update this event' };
         }
 
         // Convert eventDate string to Date if provided
-        const updateData: any = { ...data };
+        const updateData: Record<string, any> = { ...data };
         if (updateData.eventDate && typeof updateData.eventDate === 'string') {
             updateData.eventDate = new Date(updateData.eventDate);
         }
@@ -264,12 +267,11 @@ export async function updatePart2Event(
 // Delete Part2 event
 export async function deletePart2Event(eventId: string): Promise<ActionResponse> {
     try {
-        const session = await getServerSession(authOptions);
-        if (!session?.user) {
-            return { success: false, error: 'Unauthorized' };
-        }
+        const { session, error } = await requireActionAuth();
+        if (error) return { success: false, error };
 
-        const isAdmin = session.user.role === 'ADMIN';
+        const user = session!.user;
+        const isAdmin = hasRole(session, [UserRole.ADMIN]);
         const event = await prisma.part2Event.findUnique({
             where: { id: eventId },
         });
@@ -279,7 +281,7 @@ export async function deletePart2Event(eventId: string): Promise<ActionResponse>
         }
 
         // Only admin or event creator can delete
-        if (!isAdmin && event.createdById !== session.user.id) {
+        if (!isAdmin && event.createdById !== user.id) {
             return { success: false, error: 'You do not have permission to delete this event' };
         }
 
@@ -297,17 +299,8 @@ export async function deletePart2Event(eventId: string): Promise<ActionResponse>
 // Generate QR code for Part2 event
 export async function generateQRCodeForPart2Event(eventId: string): Promise<ActionResponse> {
     try {
-        const session = await getServerSession(authOptions);
-        if (!session?.user) {
-            return { success: false, error: 'Unauthorized' };
-        }
-
-        const isAdmin = session.user.role === 'ADMIN';
-        const isTutor = session.user.role === 'TUTOR';
-
-        if (!isAdmin && !isTutor) {
-            return { success: false, error: 'Only admins and tutors can generate QR codes' };
-        }
+        const { error } = await requireActionAuth([UserRole.ADMIN, UserRole.TUTOR]);
+        if (error) return { success: false, error };
 
         const event = await prisma.part2Event.findUnique({
             where: { id: eventId },
@@ -340,10 +333,9 @@ export async function generateQRCodeForPart2Event(eventId: string): Promise<Acti
 // Register for Part2 event
 export async function registerForPart2Event(eventId: string): Promise<ActionResponse> {
     try {
-        const session = await getServerSession(authOptions);
-        if (!session?.user) {
-            return { success: false, error: 'Unauthorized' };
-        }
+        const { session, error } = await requireActionAuth();
+        if (error) return { success: false, error };
+        const userNode = session!.user;
 
         const event = await prisma.part2Event.findUnique({
             where: { id: eventId },
@@ -363,7 +355,7 @@ export async function registerForPart2Event(eventId: string): Promise<ActionResp
             where: {
                 eventId_studentId: {
                     eventId,
-                    studentId: session.user.id,
+                    studentId: userNode.id,
                 },
             },
         });
@@ -380,7 +372,7 @@ export async function registerForPart2Event(eventId: string): Promise<ActionResp
         const participant = await prisma.part2EventParticipant.create({
             data: {
                 eventId,
-                studentId: session.user.id,
+                studentId: userNode.id,
                 status: 'REGISTERED',
             },
             include: {
@@ -405,10 +397,9 @@ export async function registerForPart2Event(eventId: string): Promise<ActionResp
 // Check in to Part2 event (QR or manual)
 export async function checkInToPart2Event(eventId: string, qrToken?: string): Promise<ActionResponse> {
     try {
-        const session = await getServerSession(authOptions);
-        if (!session?.user) {
-            return { success: false, error: 'Unauthorized' };
-        }
+        const { session, error } = await requireActionAuth();
+        if (error) return { success: false, error };
+        const userNode = session!.user;
 
         const event = await prisma.part2Event.findUnique({
             where: { id: eventId },
@@ -439,7 +430,7 @@ export async function checkInToPart2Event(eventId: string, qrToken?: string): Pr
             where: {
                 eventId_studentId: {
                     eventId,
-                    studentId: session.user.id,
+                    studentId: userNode.id,
                 },
             },
         });
@@ -449,7 +440,7 @@ export async function checkInToPart2Event(eventId: string, qrToken?: string): Pr
             const newParticipant = await prisma.part2EventParticipant.create({
                 data: {
                     eventId,
-                    studentId: session.user.id,
+                    studentId: session!.user.id,
                     status: 'ATTENDED',
                     checkInMethod: qrToken ? 'QR' : 'MANUAL',
                     checkInTime: new Date(),
@@ -473,7 +464,7 @@ export async function checkInToPart2Event(eventId: string, qrToken?: string): Pr
             where: {
                 eventId_studentId: {
                     eventId,
-                    studentId: session.user.id,
+                    studentId: session!.user.id,
                 },
             },
             data: {
@@ -503,10 +494,8 @@ export async function checkInToPart2Event(eventId: string, qrToken?: string): Pr
 // Get all Part2 event types
 export async function getPart2EventTypes(): Promise<ActionResponse> {
     try {
-        const session = await getServerSession(authOptions);
-        if (!session?.user) {
-            return { success: false, error: 'Unauthorized' };
-        }
+        const { error } = await requireActionAuth();
+        if (error) return { success: false, error };
 
         const eventTypes = await prisma.part2EventType.findMany({
             where: { isActive: true },
@@ -521,22 +510,10 @@ export async function getPart2EventTypes(): Promise<ActionResponse> {
 }
 
 // Create Part2 event type (admin/tutor only)
-export async function createPart2EventType(data: {
-    name: string;
-    description?: string;
-}): Promise<ActionResponse> {
+export async function createPart2EventType(data: CreateEventTypeData): Promise<ActionResponse> {
     try {
-        const session = await getServerSession(authOptions);
-        if (!session?.user) {
-            return { success: false, error: 'Unauthorized' };
-        }
-
-        const isAdmin = session.user.role === 'ADMIN';
-        const isTutor = session.user.role === 'TUTOR';
-
-        if (!isAdmin && !isTutor) {
-            return { success: false, error: 'Only admins and tutors can create event types' };
-        }
+        const { error } = await requireActionAuth([UserRole.ADMIN, UserRole.TUTOR]);
+        if (error) return { success: false, error };
 
         const eventType = await prisma.part2EventType.create({
             data: {
@@ -559,22 +536,11 @@ export async function createPart2EventType(data: {
 // Update Part2 event type
 export async function updatePart2EventType(
     eventTypeId: string,
-    data: {
-        name?: string;
-        description?: string;
-        isActive?: boolean;
-    }
+    data: UpdateEventTypeData
 ): Promise<ActionResponse> {
     try {
-        const session = await getServerSession(authOptions);
-        if (!session?.user) {
-            return { success: false, error: 'Unauthorized' };
-        }
-
-        const isAdmin = session.user.role === 'ADMIN';
-        if (!isAdmin) {
-            return { success: false, error: 'Only admins can update event types' };
-        }
+        const { error } = await requireActionAuth([UserRole.ADMIN]);
+        if (error) return { success: false, error };
 
         const eventType = await prisma.part2EventType.update({
             where: { id: eventTypeId },
@@ -591,15 +557,8 @@ export async function updatePart2EventType(
 // Delete Part2 event type
 export async function deletePart2EventType(eventTypeId: string): Promise<ActionResponse> {
     try {
-        const session = await getServerSession(authOptions);
-        if (!session?.user) {
-            return { success: false, error: 'Unauthorized' };
-        }
-
-        const isAdmin = session.user.role === 'ADMIN';
-        if (!isAdmin) {
-            return { success: false, error: 'Only admins can delete event types' };
-        }
+        const { error } = await requireActionAuth([UserRole.ADMIN]);
+        if (error) return { success: false, error };
 
         await prisma.part2EventType.delete({
             where: { id: eventTypeId },
@@ -615,17 +574,8 @@ export async function deletePart2EventType(eventTypeId: string): Promise<ActionR
 // Get all users for manual participant addition
 export async function getStudentsForEvent(): Promise<ActionResponse> {
     try {
-        const session = await getServerSession(authOptions);
-        if (!session?.user) {
-            return { success: false, error: 'Unauthorized' };
-        }
-
-        const isAdmin = session.user.role === 'ADMIN';
-        const isTutor = session.user.role === 'TUTOR';
-
-        if (!isAdmin && !isTutor) {
-            return { success: false, error: 'Only admins and tutors can access user list' };
-        }
+        const { error } = await requireActionAuth([UserRole.ADMIN, UserRole.TUTOR]);
+        if (error) return { success: false, error };
 
         const users = await prisma.user.findMany({
             select: {
@@ -656,17 +606,8 @@ export async function addParticipantToPart2Event(
     studentId: string
 ): Promise<ActionResponse> {
     try {
-        const session = await getServerSession(authOptions);
-        if (!session?.user) {
-            return { success: false, error: 'Unauthorized' };
-        }
-
-        const isAdmin = session.user.role === 'ADMIN';
-        const isTutor = session.user.role === 'TUTOR';
-
-        if (!isAdmin && !isTutor) {
-            return { success: false, error: 'Only admins and tutors can add participants' };
-        }
+        const { error } = await requireActionAuth([UserRole.ADMIN, UserRole.TUTOR]);
+        if (error) return { success: false, error };
 
         const event = await prisma.part2Event.findUnique({
             where: { id: eventId },
@@ -732,17 +673,8 @@ export async function removeParticipantFromPart2Event(
     studentId: string
 ): Promise<ActionResponse> {
     try {
-        const session = await getServerSession(authOptions);
-        if (!session?.user) {
-            return { success: false, error: 'Unauthorized' };
-        }
-
-        const isAdmin = session.user.role === 'ADMIN';
-        const isTutor = session.user.role === 'TUTOR';
-
-        if (!isAdmin && !isTutor) {
-            return { success: false, error: 'Only admins and tutors can remove participants' };
-        }
+        const { error } = await requireActionAuth([UserRole.ADMIN, UserRole.TUTOR]);
+        if (error) return { success: false, error };
 
         await prisma.part2EventParticipant.delete({
             where: {

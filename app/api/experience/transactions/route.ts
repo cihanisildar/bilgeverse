@@ -10,10 +10,15 @@ export const dynamic = 'force-dynamic';
 export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-    
-    if (!session?.user || (session.user.role !== UserRole.TUTOR && session.user.role !== UserRole.ASISTAN)) {
+    const user = session?.user as any;
+    const userRoles = user?.roles || [user?.role].filter(Boolean) as UserRole[];
+    const isTutor = userRoles.includes(UserRole.TUTOR);
+    const isAsistan = userRoles.includes(UserRole.ASISTAN);
+    const isAdmin = userRoles.includes(UserRole.ADMIN);
+
+    if (!session?.user || (!isTutor && !isAsistan && !isAdmin)) {
       return NextResponse.json(
-        { error: 'Unauthorized: Only tutors and asistans can access this endpoint' },
+        { error: 'Unauthorized: Only tutors, asistans and admins can access this endpoint' },
         { status: 403 }
       );
     }
@@ -27,13 +32,15 @@ export async function GET(request: NextRequest) {
       periodId: activePeriod.id
     };
 
-    if (session.user.role === UserRole.TUTOR) {
+    if (isAdmin) {
+      // Admins see all for now or filter by query (impl if needed)
+    } else if (isTutor) {
       // For tutors, get transactions for their students
-      whereClause.tutorId = session.user.id;
-    } else if (session.user.role === UserRole.ASISTAN) {
+      whereClause.tutorId = user.id;
+    } else if (isAsistan) {
       // For asistans, get transactions for students in the assisted tutor's classroom
       const asistan = await prisma.user.findUnique({
-        where: { id: session.user.id },
+        where: { id: user.id },
         select: { assistedTutorId: true }
       });
 
@@ -103,10 +110,15 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-    
-    if (!session?.user || (session.user.role !== UserRole.TUTOR && session.user.role !== UserRole.ASISTAN)) {
+    const user = session?.user as any;
+    const userRoles = user?.roles || [user?.role].filter(Boolean) as UserRole[];
+    const isTutor = userRoles.includes(UserRole.TUTOR);
+    const isAsistan = userRoles.includes(UserRole.ASISTAN);
+    const isAdmin = userRoles.includes(UserRole.ADMIN);
+
+    if (!session?.user || (!isTutor && !isAsistan && !isAdmin)) {
       return NextResponse.json(
-        { error: 'Unauthorized: Only tutors and asistans can create experience transactions' },
+        { error: 'Unauthorized: Only tutors, asistans and admins can create experience transactions' },
         { status: 403 }
       );
     }
@@ -123,14 +135,22 @@ export async function POST(request: NextRequest) {
 
     // Verify the student authorization based on role
     let student;
-    
-    if (session.user.role === UserRole.TUTOR) {
+
+    if (isAdmin) {
+      // Admins can do anything
+      student = await prisma.user.findFirst({
+        where: {
+          id: studentId,
+          roles: { has: UserRole.STUDENT }
+        }
+      });
+    } else if (isTutor) {
       // For tutors, check if student is assigned to them
       student = await prisma.user.findFirst({
         where: {
           id: studentId,
-          tutorId: session.user.id,
-          role: UserRole.STUDENT
+          tutorId: user.id,
+          roles: { has: UserRole.STUDENT }
         }
       });
 
@@ -140,10 +160,10 @@ export async function POST(request: NextRequest) {
           { status: 404 }
         );
       }
-    } else if (session.user.role === UserRole.ASISTAN) {
+    } else if (isAsistan) {
       // For asistans, check if student is in the same classroom as assisted tutor
       const asistan = await prisma.user.findUnique({
-        where: { id: session.user.id },
+        where: { id: user.id },
         select: { assistedTutorId: true }
       });
 
@@ -172,7 +192,7 @@ export async function POST(request: NextRequest) {
         where: {
           id: studentId,
           studentClassroomId: assistedTutor.classroom.id,
-          role: UserRole.STUDENT
+          roles: { has: UserRole.STUDENT }
         }
       });
 
@@ -192,7 +212,7 @@ export async function POST(request: NextRequest) {
       data: {
         amount,
         studentId,
-        tutorId: session.user.id,
+        tutorId: user.id,
         periodId: activePeriod.id
       },
       include: {

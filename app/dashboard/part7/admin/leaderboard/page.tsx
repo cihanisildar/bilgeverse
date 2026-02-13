@@ -18,6 +18,7 @@ interface User {
   firstName: string | null;
   lastName: string | null;
   role: string;
+  roles: string[];
 }
 
 interface Tutor extends User {
@@ -46,9 +47,8 @@ interface WeeklyTopEarner {
   tutor: Tutor | null;
 }
 
-// Function to check if a user is a tutor
 const isTutor = (user: User): user is Tutor => {
-  return user.role === 'TUTOR';
+  return (user.roles && user.roles.includes('TUTOR')) || user.role === 'TUTOR';
 };
 
 export default function AdminLeaderboardPage() {
@@ -67,7 +67,7 @@ export default function AdminLeaderboardPage() {
     const fetchData = async () => {
       try {
         setLoading(true);
-        
+
         // Fetch all students for the leaderboard
         const leaderboardResponse = await fetch('/api/leaderboard?limit=1000');
         if (!leaderboardResponse.ok) {
@@ -76,14 +76,14 @@ export default function AdminLeaderboardPage() {
         const leaderboardData = await leaderboardResponse.json();
         setLeaderboard(leaderboardData.leaderboard);
         setFilteredLeaderboard(leaderboardData.leaderboard);
-        
+
         // Fetch weekly top earners
         const weeklyResponse = await fetch('/api/leaderboard/weekly-top-earners');
         if (weeklyResponse.ok) {
           const weeklyData = await weeklyResponse.json();
           setWeeklyTopEarners(weeklyData.weeklyLeaderboard);
         }
-        
+
         // Fetch tutors for filtering
         const tutorsResponse = await fetch('/api/users?role=tutor');
         if (!tutorsResponse.ok) {
@@ -106,31 +106,31 @@ export default function AdminLeaderboardPage() {
   // Apply filters when search term or selected tutor changes
   useEffect(() => {
     let filtered = [...leaderboard];
-    
+
     // Filter by search term
     if (searchTerm) {
       const lowerSearchTerm = searchTerm.toLowerCase();
-      filtered = filtered.filter(entry => 
-        entry.username.toLowerCase().includes(lowerSearchTerm) || 
+      filtered = filtered.filter(entry =>
+        entry.username.toLowerCase().includes(lowerSearchTerm) ||
         (entry.firstName && entry.firstName.toLowerCase().includes(lowerSearchTerm)) ||
         (entry.lastName && entry.lastName.toLowerCase().includes(lowerSearchTerm))
       );
     }
-    
+
     // Filter by selected tutor
     if (selectedTutor && selectedTutor !== 'all') {
       filtered = filtered.filter(entry => entry.tutor && entry.tutor.id === selectedTutor);
     }
-    
+
     // Apply sort
     filtered = sortStudents(filtered, sortDirection);
-    
+
     // Update ranks
     filtered = filtered.map((entry, index) => ({
       ...entry,
       rank: index + 1
     }));
-    
+
     setFilteredLeaderboard(filtered);
   }, [searchTerm, selectedTutor, leaderboard, sortDirection]);
 
@@ -193,30 +193,30 @@ export default function AdminLeaderboardPage() {
     const csvContent = csvData
       .map(row => row.map(cell => escapeCSV(cell)).join(';'))
       .join('\r\n');
-    
+
     // Add BOM for proper UTF-8 encoding in Excel
     const BOM = '\uFEFF';
     const csvWithBOM = BOM + csvContent;
-    
+
     // Create blob with proper MIME type for Excel
-    const blob = new Blob([csvWithBOM], { 
-      type: 'text/csv;charset=utf-8;' 
+    const blob = new Blob([csvWithBOM], {
+      type: 'text/csv;charset=utf-8;'
     });
-    
+
     // Create download link
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.setAttribute('href', url);
-    
+
     // Generate Turkish filename with current date
     const currentDate = new Date().toLocaleDateString('tr-TR').replace(/\./g, '-');
     link.setAttribute('download', `liderlik-tablosu-${currentDate}.csv`);
-    
+
     link.style.visibility = 'hidden';
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-    
+
     // Clean up
     URL.revokeObjectURL(url);
   };
@@ -224,15 +224,15 @@ export default function AdminLeaderboardPage() {
   // Calculate statistics
   const calculateStats = () => {
     if (!filteredLeaderboard.length) return { avg: 0, max: 0, min: 0, median: 0 };
-    
+
     const sortedExperience = [...filteredLeaderboard].map(entry => entry.experience).sort((a, b) => a - b);
     const sum = sortedExperience.reduce((acc, exp) => acc + exp, 0);
-    
+
     return {
       avg: Math.round(sum / sortedExperience.length),
       max: sortedExperience[sortedExperience.length - 1],
       min: sortedExperience[0],
-      median: sortedExperience.length % 2 === 0 
+      median: sortedExperience.length % 2 === 0
         ? (sortedExperience[sortedExperience.length / 2 - 1] + sortedExperience[sortedExperience.length / 2]) / 2
         : sortedExperience[Math.floor(sortedExperience.length / 2)]
     };
@@ -241,7 +241,7 @@ export default function AdminLeaderboardPage() {
   // Function to group students by tutor
   const getStudentsByTutor = () => {
     const tutorMap: Record<string, { tutor: Tutor, count: number, totalExperience: number }> = {};
-    
+
     filteredLeaderboard.forEach(entry => {
       if (entry.tutor) {
         const tutorId = entry.tutor.id;
@@ -256,7 +256,7 @@ export default function AdminLeaderboardPage() {
         tutorMap[tutorId].totalExperience += entry.experience;
       }
     });
-    
+
     return Object.values(tutorMap).sort((a, b) => b.count - a.count);
   };
 
@@ -264,14 +264,14 @@ export default function AdminLeaderboardPage() {
   const getPointsDistribution = () => {
     const experienceRanges: Record<string, number> = {};
     const rangeSize = 50;
-    
+
     filteredLeaderboard.forEach(entry => {
       const rangeStart = Math.floor(entry.experience / rangeSize) * rangeSize;
       const rangeKey = `${rangeStart}-${rangeStart + rangeSize - 1}`;
-      
+
       experienceRanges[rangeKey] = (experienceRanges[rangeKey] || 0) + 1;
     });
-    
+
     return Object.entries(experienceRanges)
       .map(([range, count]) => ({ range, count }))
       .sort((a, b) => {
@@ -289,7 +289,7 @@ export default function AdminLeaderboardPage() {
     return (
       <div className="space-y-6 p-4 sm:p-6 lg:p-8">
         <HeaderSkeleton />
-        
+
         {/* Stats Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {[1, 2, 3, 4].map((i) => (
@@ -367,9 +367,9 @@ export default function AdminLeaderboardPage() {
             </h1>
             <p className="mt-1 text-sm sm:text-base text-gray-600">Öğrencilerin deneyim sıralamasını ve performansını görüntüleyin</p>
           </div>
-          
-          <Button 
-            onClick={exportToCSV} 
+
+          <Button
+            onClick={exportToCSV}
             className="w-full sm:w-auto bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white flex items-center gap-2 shadow-md"
           >
             <Download className="h-4 w-4" />
@@ -401,7 +401,7 @@ export default function AdminLeaderboardPage() {
                   />
                 </div>
               </div>
-              
+
               <div className="w-full">
                 <label className="text-sm font-medium mb-1 block text-gray-700">Öğretmen Filtresi</label>
                 <Select defaultValue="all" onValueChange={setSelectedTutor}>
@@ -418,10 +418,10 @@ export default function AdminLeaderboardPage() {
                   </SelectContent>
                 </Select>
               </div>
-              
+
               <div>
                 <label className="text-sm font-medium mb-1 block text-gray-700">Gösterilen Öğrenci Sayısı</label>
-                <select 
+                <select
                   className="w-full px-3 py-2 border border-gray-200 rounded-md focus:outline-none focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
                   value={displayLimit}
                   onChange={(e) => setDisplayLimit(Number(e.target.value))}
@@ -439,9 +439,9 @@ export default function AdminLeaderboardPage() {
               <div className="text-sm text-gray-600">
                 Toplam <span className="font-medium">{filteredLeaderboard.length}</span> öğrenci gösteriliyor
               </div>
-              <Button 
-                variant="outline" 
-                size="sm" 
+              <Button
+                variant="outline"
+                size="sm"
                 className="w-full sm:w-auto border-gray-200 hover:bg-gray-100 hover:text-gray-700 text-gray-600"
                 onClick={() => {
                   setSearchTerm('');
@@ -470,7 +470,7 @@ export default function AdminLeaderboardPage() {
               </div>
             </CardContent>
           </Card>
-          
+
           <Card className="border-0 shadow-lg rounded-xl overflow-hidden transition-all duration-200 hover:shadow-xl hover:-translate-y-1">
             <div className="h-1 bg-gradient-to-r from-blue-500 to-purple-500"></div>
             <CardContent className="p-6">
@@ -485,7 +485,7 @@ export default function AdminLeaderboardPage() {
               </div>
             </CardContent>
           </Card>
-          
+
           <Card className="border-0 shadow-lg rounded-xl overflow-hidden transition-all duration-200 hover:shadow-xl hover:-translate-y-1">
             <div className="h-1 bg-gradient-to-r from-yellow-400 to-amber-500"></div>
             <CardContent className="p-6">
@@ -500,7 +500,7 @@ export default function AdminLeaderboardPage() {
               </div>
             </CardContent>
           </Card>
-          
+
           <Card className="border-0 shadow-lg rounded-xl overflow-hidden transition-all duration-200 hover:shadow-xl hover:-translate-y-1">
             <div className="h-1 bg-gradient-to-r from-green-500 to-teal-500"></div>
             <CardContent className="p-6">
@@ -717,7 +717,7 @@ export default function AdminLeaderboardPage() {
                       {weeklyTopEarners.slice(3, 5).map((earner, index) => (
                         <div key={earner.id} className="flex flex-col items-center relative transform hover:scale-105 transition-all duration-500">
                           {/* Floating star */}
-                          <div className="absolute -top-6 left-1/2 transform -translate-x-1/2 animate-bounce" style={{animationDelay: `${index * 200}ms`}}>
+                          <div className="absolute -top-6 left-1/2 transform -translate-x-1/2 animate-bounce" style={{ animationDelay: `${index * 200}ms` }}>
                             <Award className="h-6 w-6 text-indigo-500" />
                           </div>
 
@@ -816,10 +816,10 @@ export default function AdminLeaderboardPage() {
                     <div key={item.range} className="flex items-center">
                       <div className="w-24 text-sm font-medium text-gray-700">{item.range}</div>
                       <div className="flex-1 mx-2">
-                        <div 
+                        <div
                           className="h-2 bg-indigo-100 rounded-full overflow-hidden"
                         >
-                          <div 
+                          <div
                             className="h-full bg-gradient-to-r from-indigo-500 to-purple-500 rounded-full"
                             style={{ width: `${(item.count / filteredLeaderboard.length) * 100}%` }}
                           ></div>
@@ -832,7 +832,7 @@ export default function AdminLeaderboardPage() {
               </CardContent>
             </Card>
           )}
-          
+
           {/* Tutor Stats Card */}
           {tutorStats.length > 0 && (
             <Card className="border-0 shadow-lg rounded-xl overflow-hidden">
@@ -893,7 +893,7 @@ export default function AdminLeaderboardPage() {
                         Öğretmen
                       </th>
                       <th scope="col" className="px-3 py-2 sm:px-4 sm:py-3 text-xs font-medium text-gray-500 uppercase tracking-wider w-20 sm:w-24 text-right">
-                        <button 
+                        <button
                           onClick={toggleSortDirection}
                           className="flex items-center justify-end w-full"
                         >
@@ -907,13 +907,13 @@ export default function AdminLeaderboardPage() {
                   <tbody className="divide-y divide-gray-100 bg-white">
                     {filteredLeaderboard.slice(0, displayLimit).map((entry) => {
                       return (
-                        <tr 
+                        <tr
                           key={entry.id}
                           className={`
-                            ${entry.rank <= 3 ? 
-                              entry.rank === 1 ? 'bg-yellow-50' : 
-                              entry.rank === 2 ? 'bg-gray-50' : 
-                              'bg-amber-50' : ''}
+                            ${entry.rank <= 3 ?
+                              entry.rank === 1 ? 'bg-yellow-50' :
+                                entry.rank === 2 ? 'bg-gray-50' :
+                                  'bg-amber-50' : ''}
                             hover:bg-gray-50 transition-colors
                           `}
                         >
@@ -948,7 +948,7 @@ export default function AdminLeaderboardPage() {
                                 <span className="text-sm font-medium text-gray-900 truncate">
                                   {getDisplayName(entry)}
                                 </span>
-                                <LevelBadge 
+                                <LevelBadge
                                   points={entry.experience}
                                   className="mt-0.5 sm:mt-1"
                                 />
@@ -961,8 +961,8 @@ export default function AdminLeaderboardPage() {
                           <td className="px-3 py-2 sm:px-4 sm:py-3 whitespace-nowrap hidden md:table-cell">
                             {entry.tutor && (
                               <span className="text-sm text-gray-700 truncate block max-w-[200px]">
-                                {entry.tutor.firstName && entry.tutor.lastName 
-                                  ? `${entry.tutor.firstName} ${entry.tutor.lastName}` 
+                                {entry.tutor.firstName && entry.tutor.lastName
+                                  ? `${entry.tutor.firstName} ${entry.tutor.lastName}`
                                   : entry.tutor.username}
                               </span>
                             )}
@@ -988,7 +988,7 @@ export default function AdminLeaderboardPage() {
             </div>
           </CardFooter>
         </Card>
-        
+
         {/* Footer */}
         <div className="text-center mt-6 sm:mt-8 text-xs text-gray-500">
           © {new Date().getFullYear()} Öğrenci Takip Sistemi. Tüm hakları saklıdır.

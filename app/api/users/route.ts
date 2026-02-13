@@ -12,6 +12,7 @@ type UserWithTutor = {
   id: string;
   username: string;
   role: UserRole;
+  roles: UserRole[];
   firstName: string | null;
   lastName: string | null;
   points: number;
@@ -43,14 +44,21 @@ export async function GET(request: NextRequest) {
     const activePeriod = await requireActivePeriod();
 
     let users: any[] = [];
+    const user = session.user as any;
+    const userRoles = user.roles || [user.role].filter(Boolean) as UserRole[];
+    const isAdmin = userRoles.includes(UserRole.ADMIN);
+    const isBoardMember = userRoles.includes(UserRole.BOARD_MEMBER);
+    const isTutor = userRoles.includes(UserRole.TUTOR);
+    const isAsistan = userRoles.includes(UserRole.ASISTAN);
 
     // If admin or board member, return all users
-    if (session.user.role === UserRole.ADMIN || session.user.role === UserRole.BOARD_MEMBER) {
+    if (isAdmin || isBoardMember) {
       users = await prisma.user.findMany({
         select: {
           id: true,
           username: true,
           role: true,
+          roles: true,
           firstName: true,
           lastName: true,
           tutorId: true,
@@ -72,17 +80,20 @@ export async function GET(request: NextRequest) {
         }
       });
     }
-    // If tutor, return only their students
-    else if (session.user.role === UserRole.TUTOR) {
+    // If tutor or asistan, return only their students
+    else if (isTutor || isAsistan) {
+      const targetTutorId = isAsistan ? (user.assistedTutorId || user.id) : user.id;
+
       users = await prisma.user.findMany({
         where: {
-          tutorId: session.user.id,
-          role: UserRole.STUDENT
+          tutorId: targetTutorId,
+          roles: { has: UserRole.STUDENT }
         },
         select: {
           id: true,
           username: true,
           role: true,
+          roles: true,
           firstName: true,
           lastName: true,
           tutorId: true,

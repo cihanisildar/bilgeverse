@@ -3,8 +3,7 @@ import { ArrowLeft, FileText, Plus, BarChart2, LayoutGrid } from 'lucide-react';
 import { PARTS } from '@/app/lib/parts';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
-import { getServerSession } from 'next-auth/next';
-import { authOptions } from '@/app/api/auth/[...nextauth]/auth.config';
+import { requireAuth } from '@/app/lib/auth-utils';
 import PartDocuments from '@/app/components/PartDocuments';
 import { WorkshopList } from '@/components/workshops/WorkshopList';
 import { WorkshopReports } from '@/components/workshops/WorkshopReports';
@@ -12,7 +11,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import prisma from '@/lib/prisma';
 import { UserRole } from '@prisma/client';
 import { CreateWorkshopModal } from '@/components/workshops/CreateWorkshopModal';
-
 import { getWorkshops } from '@/lib/workshops';
 
 export default async function Part4Page({
@@ -20,7 +18,7 @@ export default async function Part4Page({
 }: {
   searchParams: { tab?: string };
 }) {
-  const session = await getServerSession(authOptions);
+  const session = await requireAuth({ partId: 4 });
 
   // Note: Session is guaranteed by Part4Layout
   const activeTab = searchParams.tab || 'workshops';

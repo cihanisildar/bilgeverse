@@ -51,8 +51,9 @@ export default function WeeklyReportDetailPage() {
   // ✨ ONE LINE replaces all the useState + useEffect + fetch logic!
   const { data: report, isLoading, error } = useWeeklyReport(reportId);
 
-  const isTutor = user?.role === "TUTOR";
-  const isAsistan = user?.role === "ASISTAN";
+  const userRoles = (user as any)?.roles || (user?.role ? [user.role] : []);
+  const isTutor = userRoles.includes("TUTOR");
+  const isAsistan = userRoles.includes("ASISTAN");
 
   const getStatusBadge = (status: string) => {
     const variants = {
@@ -208,8 +209,11 @@ export default function WeeklyReportDetailPage() {
   }
 
   const isOwner = report.user.id === user?.id;
-  const fixedCriteria = report.user.role === "TUTOR" ? tutorFixedCriteria : asistanFixedCriteria;
-  const filteredVariableCriteria = report.user.role === "TUTOR" ? variableCriteria : variableCriteria.filter(c => c.key !== "parentMeeting");
+  const reportUserRoles = (report.user as any).roles || [report.user.role];
+  const isReportFromTutor = reportUserRoles.includes("TUTOR");
+
+  const fixedCriteria = isReportFromTutor ? tutorFixedCriteria : asistanFixedCriteria;
+  const filteredVariableCriteria = isReportFromTutor ? variableCriteria : variableCriteria.filter(c => c.key !== "parentMeeting");
   const attendanceScore = calculateAttendanceScore();
 
   return (
@@ -230,7 +234,7 @@ export default function WeeklyReportDetailPage() {
                     <div className="w-2 h-8 bg-gradient-to-b from-indigo-500 to-purple-600 rounded-full"></div>
                     <h1 className="text-4xl font-bold text-gray-900">
                       <span className="bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 bg-clip-text text-transparent">
-                        {report.weekNumber}. Hafta {report.user.role === "TUTOR" ? "Rehber" : "Lider"} Raporu
+                        {report.weekNumber}. Hafta {isReportFromTutor ? "Rehber" : "Lider"} Raporu
                       </span>
                     </h1>
                   </div>

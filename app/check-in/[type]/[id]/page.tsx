@@ -57,9 +57,9 @@ export default function UnifiedCheckInPage() {
 
     // Derive resource from hooks - no useEffect needed
     const resource: Resource | null = useMemo(() => {
-        if (type === 'attendance') return attendanceSession || null;
-        if (type === 'meeting') return meeting || null;
-        if (type === 'event') return eventData || null;
+        if (type === 'attendance') return (attendanceSession as Resource) || null;
+        if (type === 'meeting') return (meeting as Resource) || null;
+        if (type === 'event') return (eventData as Resource) || null;
         return null;
     }, [type, attendanceSession, meeting, eventData]);
 

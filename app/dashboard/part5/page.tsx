@@ -3,14 +3,13 @@ import { ArrowLeft, FileText } from 'lucide-react';
 import { PARTS } from '@/app/lib/parts';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
-import { getServerSession } from 'next-auth/next';
-import { authOptions } from '@/app/api/auth/[...nextauth]/auth.config';
+import { requireAuth } from '@/app/lib/auth-utils';
 import PartDocuments from '@/app/components/PartDocuments';
 
 export default async function Part5Page() {
-  const session = await getServerSession(authOptions);
+  const session = await requireAuth({ partId: 5 });
 
-  // Note: Session is guaranteed by Part5Layout
+  // Session and basic Part 5 access are guaranteed here
 
   // Fetch students - using a dynamic import or checking if we can reuse an existing action or direct prisma call
   // Since we are in a server component, we can use Prisma directly

@@ -15,22 +15,22 @@ export async function getAttendanceSessions() {
       return { error: 'Yetkisiz erişim', data: null };
     }
 
+    const userNode = session.user as any;
+    const userRoles = userNode.roles || [userNode.role].filter(Boolean) as UserRole[];
+    const isTutor = userRoles.includes(UserRole.TUTOR);
+    const isAsistan = userRoles.includes(UserRole.ASISTAN);
+    const isAdmin = userRoles.includes(UserRole.ADMIN);
+
     // Build where clause based on user role
     let where = {};
 
-    if (session.user.role === UserRole.TUTOR) {
+    if (isTutor) {
       // Tutors see only their own sessions
-      where = { createdById: session.user.id };
-    } else if (session.user.role === UserRole.ASISTAN) {
-      // Get the current user's data to find their tutor
-      const currentUser = await prisma.user.findUnique({
-        where: { id: session.user.id },
-        select: { assistedTutorId: true },
-      });
-
-      if (currentUser?.assistedTutorId) {
+      where = { createdById: userNode.id };
+    } else if (isAsistan) {
+      if (userNode.assistedTutorId) {
         // Assistants see sessions created by their tutor
-        where = { createdById: currentUser.assistedTutorId };
+        where = { createdById: userNode.assistedTutorId };
       } else {
         // If no tutor assigned, show no sessions
         where = { createdById: 'none' };
@@ -160,9 +160,13 @@ export async function createAttendanceSession(data: {
 }) {
   try {
     const session = await getServerSession(authOptions);
+    const userNode = session?.user as any;
+    const userRoles = userNode?.roles || [userNode?.role].filter(Boolean) as string[];
+    const isAdmin = userRoles.includes('ADMIN');
+    const isTutor = userRoles.includes('TUTOR');
 
-    if (!session?.user || (session.user.role !== UserRole.ADMIN && session.user.role !== UserRole.TUTOR)) {
-      return { error: 'Yetkisiz erişim: Sadece öğretmenler ve yöneticiler oturum oluşturabilir', data: null };
+    if (!session?.user || (!isAdmin && !isTutor)) {
+      throw new Error('Unauthorized');
     }
 
     // Convert string to Date
@@ -189,7 +193,7 @@ export async function createAttendanceSession(data: {
         sessionDate: sessionDate,
         qrCodeToken,
         qrCodeExpiresAt,
-        createdById: session.user.id,
+        createdById: userNode.id,
       },
       include: {
         createdBy: {
@@ -228,7 +232,12 @@ export async function updateAttendanceSession(sessionId: string, data: {
   try {
     const session = await getServerSession(authOptions);
 
-    if (!session?.user || (session.user.role !== UserRole.ADMIN && session.user.role !== UserRole.TUTOR)) {
+    const userNode = session?.user as any;
+    const userRoles = userNode?.roles || [userNode?.role].filter(Boolean) as UserRole[];
+    const isAdmin = userRoles.includes(UserRole.ADMIN);
+    const isTutor = userRoles.includes(UserRole.TUTOR);
+
+    if (!session?.user || (!isAdmin && !isTutor)) {
       return { error: 'Yetkisiz erişim', data: null };
     }
 
@@ -290,7 +299,12 @@ export async function generateQRCodeForSession(sessionId: string) {
   try {
     const session = await getServerSession(authOptions);
 
-    if (!session?.user || (session.user.role !== UserRole.ADMIN && session.user.role !== UserRole.TUTOR)) {
+    const userNode = session?.user as any;
+    const userRoles = userNode?.roles || [userNode?.role].filter(Boolean) as UserRole[];
+    const isAdmin = userRoles.includes(UserRole.ADMIN);
+    const isTutor = userRoles.includes(UserRole.TUTOR);
+
+    if (!session?.user || (!isAdmin && !isTutor)) {
       return { error: 'Yetkisiz erişim', data: null };
     }
 
@@ -439,40 +453,40 @@ export async function checkInToSession(sessionId: string) {
 export async function manualCheckInToSession(sessionId: string, studentId: string, notes?: string) {
   try {
     const session = await getServerSession(authOptions);
+    const userNode = session?.user as any;
+    const userRoles = userNode?.roles || [userNode?.role].filter(Boolean) as UserRole[];
+    const isTutor = userRoles.includes(UserRole.TUTOR);
+    const isAsistan = userRoles.includes(UserRole.ASISTAN);
+    const isAdmin = userRoles.includes(UserRole.ADMIN);
 
-    if (!session?.user || (session.user.role !== UserRole.ADMIN && session.user.role !== UserRole.TUTOR && session.user.role !== UserRole.ASISTAN)) {
+    if (!session?.user || (!isAdmin && !isTutor && !isAsistan)) {
       return { error: 'Yetkisiz erişim: Sadece öğretmenler, asistanlar ve yöneticiler manuel giriş yapabilir', data: null };
     }
 
     // Validate that tutors/assistants can only check in their own students
-    if (session.user.role === UserRole.TUTOR) {
+    if (isTutor && !isAdmin) {
       const student = await prisma.user.findFirst({
         where: {
           id: studentId,
-          tutorId: session.user.id,
-          role: UserRole.STUDENT,
+          tutorId: userNode.id,
+          roles: { has: UserRole.STUDENT },
         },
       });
 
       if (!student) {
         return { error: 'Bu öğrenci sizin grubunuzda değil', data: null };
       }
-    } else if (session.user.role === UserRole.ASISTAN) {
+    } else if (isAsistan && !isAdmin && !isTutor) {
       // Check if the student belongs to the assistant's tutor
-      const currentUser = await prisma.user.findUnique({
-        where: { id: session.user.id },
-        select: { assistedTutorId: true },
-      });
-
-      if (!currentUser?.assistedTutorId) {
+      if (!userNode.assistedTutorId) {
         return { error: 'Size atanmış bir öğretmen bulunamadı', data: null };
       }
 
       const student = await prisma.user.findFirst({
         where: {
           id: studentId,
-          tutorId: currentUser.assistedTutorId,
-          role: UserRole.STUDENT,
+          tutorId: userNode.assistedTutorId,
+          roles: { has: UserRole.STUDENT },
         },
       });
 
@@ -533,7 +547,7 @@ export async function manualCheckInToSession(sessionId: string, studentId: strin
       await tx.pointsTransaction.create({
         data: {
           studentId,
-          tutorId: session.user.id,
+          tutorId: userNode.id,
           points: 30,
           type: TransactionType.AWARD,
           reason: 'Haftalık Yoklama Katılımı',
@@ -576,39 +590,39 @@ export async function manualCheckInToSession(sessionId: string, studentId: strin
 export async function removeAttendanceFromSession(sessionId: string, studentId: string) {
   try {
     const session = await getServerSession(authOptions);
+    const userNode = session?.user as any;
+    const userRoles = userNode?.roles || [userNode?.role].filter(Boolean) as UserRole[];
+    const isTutor = userRoles.includes(UserRole.TUTOR);
+    const isAsistan = userRoles.includes(UserRole.ASISTAN);
+    const isAdmin = userRoles.includes(UserRole.ADMIN);
 
-    if (!session?.user || (session.user.role !== UserRole.ADMIN && session.user.role !== UserRole.TUTOR && session.user.role !== UserRole.ASISTAN)) {
+    if (!session?.user || (!isAdmin && !isTutor && !isAsistan)) {
       return { error: 'Yetkisiz erişim: Sadece öğretmenler, asistanlar ve yöneticiler yoklama geri alabilir', data: null };
     }
 
     // Validate that tutors/assistants can only remove attendance for their own students
-    if (session.user.role === UserRole.TUTOR) {
+    if (isTutor && !isAdmin) {
       const student = await prisma.user.findFirst({
         where: {
           id: studentId,
-          tutorId: session.user.id,
-          role: UserRole.STUDENT,
+          tutorId: userNode.id,
+          roles: { has: UserRole.STUDENT },
         },
       });
 
       if (!student) {
         return { error: 'Bu öğrenci sizin grubunuzda değil', data: null };
       }
-    } else if (session.user.role === UserRole.ASISTAN) {
-      const currentUser = await prisma.user.findUnique({
-        where: { id: session.user.id },
-        select: { assistedTutorId: true },
-      });
-
-      if (!currentUser?.assistedTutorId) {
+    } else if (isAsistan && !isAdmin && !isTutor) {
+      if (!userNode.assistedTutorId) {
         return { error: 'Size atanmış bir öğretmen bulunamadı', data: null };
       }
 
       const student = await prisma.user.findFirst({
         where: {
           id: studentId,
-          tutorId: currentUser.assistedTutorId,
-          role: UserRole.STUDENT,
+          tutorId: userNode.assistedTutorId,
+          roles: { has: UserRole.STUDENT },
         },
       });
 
@@ -696,7 +710,12 @@ export async function deleteAttendanceSession(sessionId: string) {
   try {
     const session = await getServerSession(authOptions);
 
-    if (!session?.user || (session.user.role !== UserRole.ADMIN && session.user.role !== UserRole.TUTOR)) {
+    const userNode = session?.user as any;
+    const userRoles = userNode?.roles || [userNode?.role].filter(Boolean) as UserRole[];
+    const isAdmin = userRoles.includes(UserRole.ADMIN);
+    const isTutor = userRoles.includes(UserRole.TUTOR);
+
+    if (!session?.user || (!isAdmin && !isTutor)) {
       return { error: 'Yetkisiz erişim', data: null };
     }
 
@@ -716,6 +735,12 @@ export async function getTutorStudents() {
   try {
     const session = await getServerSession(authOptions);
 
+    const userNode = session?.user as any;
+    const userRoles = userNode?.roles || [userNode?.role].filter(Boolean) as UserRole[];
+    const isTutor = userRoles.includes(UserRole.TUTOR);
+    const isAsistan = userRoles.includes(UserRole.ASISTAN);
+    const isAdmin = userRoles.includes(UserRole.ADMIN);
+
     if (!session?.user) {
       return { error: 'Yetkisiz erişim', data: null };
     }
@@ -732,12 +757,12 @@ export async function getTutorStudents() {
       } | null;
     }> = [];
 
-    if (session.user.role === UserRole.ADMIN || session.user.role === UserRole.TUTOR) {
+    if (isTutor || isAdmin) {
       // Both admins and tutors see only THEIR own students (where they are the tutor)
       students = await prisma.user.findMany({
         where: {
-          tutorId: session.user.id,
-          role: UserRole.STUDENT,
+          tutorId: userNode.id,
+          roles: { has: UserRole.STUDENT },
           isActive: true,
         },
         select: {
@@ -758,18 +783,13 @@ export async function getTutorStudents() {
           { lastName: 'asc' },
         ],
       });
-    } else if (session.user.role === UserRole.ASISTAN) {
+    } else if (isAsistan) {
       // Assistants see students of their tutor
-      const currentUser = await prisma.user.findUnique({
-        where: { id: session.user.id },
-        select: { assistedTutorId: true },
-      });
-
-      if (currentUser?.assistedTutorId) {
+      if (userNode.assistedTutorId) {
         students = await prisma.user.findMany({
           where: {
-            tutorId: currentUser.assistedTutorId,
-            role: UserRole.STUDENT,
+            tutorId: userNode.assistedTutorId,
+            roles: { has: UserRole.STUDENT },
             isActive: true,
           },
           select: {

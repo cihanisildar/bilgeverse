@@ -11,8 +11,13 @@ export const dynamic = 'force-dynamic';
 export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-    
-    if (!session?.user || (session.user.role !== UserRole.ADMIN && session.user.role !== UserRole.TUTOR && session.user.role !== UserRole.ASISTAN)) {
+    const user = session?.user as any;
+    const userRoles = user.roles || [user.role].filter(Boolean) as UserRole[];
+    const isAdmin = userRoles.includes(UserRole.ADMIN);
+    const isTutor = userRoles.includes(UserRole.TUTOR);
+    const isAsistan = userRoles.includes(UserRole.ASISTAN);
+
+    if (!session?.user || (!isAdmin && !isTutor && !isAsistan)) {
       return NextResponse.json(
         { error: 'Unauthorized: Only admin, tutor or asistan can award points' },
         { status: 403 }
@@ -57,12 +62,12 @@ export async function POST(request: NextRequest) {
       }
 
       // If tutor, check if the student is assigned to this tutor
-      if (session.user.role === UserRole.TUTOR && student.tutorId !== session.user.id) {
+      if (isTutor && !isAdmin && student.tutorId !== user.id) {
         throw new Error('Unauthorized: Student not assigned to this tutor');
       }
 
       // If asistan, check if the student is in the same classroom as the assisted tutor
-      if (session.user.role === UserRole.ASISTAN) {
+      if (isAsistan && !isAdmin && !isTutor) {
         // Get the asistan's assisted tutor
         const asistan = await tx.user.findUnique({
           where: { id: session.user.id },
@@ -160,7 +165,7 @@ export async function POST(request: NextRequest) {
     );
   } catch (error: unknown) {
     console.error('Points operation error:', error);
-    
+
     if (error instanceof Error) {
       if (error.message === 'Student not found') {
         return NextResponse.json(
@@ -168,7 +173,7 @@ export async function POST(request: NextRequest) {
           { status: 404 }
         );
       }
-      
+
       if (error.message === 'Unauthorized: Student not assigned to this tutor') {
         return NextResponse.json(
           { error: error.message },
@@ -182,13 +187,13 @@ export async function POST(request: NextRequest) {
           { status: 400 }
         );
       }
-      
+
       return NextResponse.json(
         { error: 'Internal server error', details: error.message },
         { status: 500 }
       );
     }
-    
+
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }
@@ -200,7 +205,6 @@ export async function POST(request: NextRequest) {
 export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-    
     if (!session?.user) {
       return NextResponse.json(
         { error: 'Unauthorized' },
@@ -208,9 +212,15 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    const user = session.user as any;
+    const userRoles = user.roles || [user.role].filter(Boolean) as UserRole[];
+    const isAdmin = userRoles.includes(UserRole.ADMIN);
+    const isTutor = userRoles.includes(UserRole.TUTOR);
+    const isAsistan = userRoles.includes(UserRole.ASISTAN);
+
     const searchParams = request.nextUrl.searchParams;
     const studentId = searchParams.get('studentId');
-    
+
     let where: any = {};
 
     // If admin, can see all transactions (optionally filtered by student)
@@ -218,7 +228,7 @@ export async function GET(request: NextRequest) {
       if (studentId) {
         where.studentId = studentId;
       }
-    } 
+    }
     // If tutor, can only see transactions for their students
     else if (session.user.role === UserRole.TUTOR) {
       if (studentId) {
@@ -229,14 +239,14 @@ export async function GET(request: NextRequest) {
             tutorId: session.user.id
           }
         });
-        
+
         if (!student) {
           return NextResponse.json(
             { error: 'Student not found or not assigned to this tutor' },
             { status: 404 }
           );
         }
-        
+
         where.studentId = studentId;
       } else {
         // Get all transactions for tutor's students
@@ -282,14 +292,14 @@ export async function GET(request: NextRequest) {
             role: UserRole.STUDENT
           }
         });
-        
+
         if (!student) {
           return NextResponse.json(
             { error: 'Student not found or not in the assisted tutor\'s classroom' },
             { status: 404 }
           );
         }
-        
+
         where.studentId = studentId;
       } else {
         // Get all transactions for students in the classroom

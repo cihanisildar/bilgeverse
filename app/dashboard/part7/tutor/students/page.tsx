@@ -1,7 +1,5 @@
 "use client";
 
-import { StudentListSkeleton } from "@/app/components/ui/StudentListSkeleton";
-import { HeaderSkeleton } from "@/app/components/ui/skeleton-shimmer";
 import { useAuth } from "@/app/contexts/AuthContext";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -26,22 +24,9 @@ import {
   Trophy
 } from "lucide-react";
 import Link from "next/link";
-import { useEffect, useState } from "react";
-
-type Student = {
-  id: string;
-  username: string;
-  firstName?: string;
-  lastName?: string;
-  points: number;
-};
-
-type PaginationInfo = {
-  total: number;
-  page: number;
-  limit: number;
-  totalPages: number;
-};
+import { useState, useMemo } from "react";
+import { Student } from "@/types/student";
+import { useTutorStudents } from "@/app/hooks/use-tutor-students";
 
 // Static Header Component
 function StudentsHeader() {
@@ -127,7 +112,7 @@ function StudentsFilter({
             <span>{sortOrder === "desc" ? "Azalan" : "Artan"}</span>
           </Button>
 
-          <Button 
+          <Button
             variant="outline"
             size="sm"
             className="flex-1 sm:flex-none items-center gap-1 text-xs sm:text-sm"
@@ -224,77 +209,27 @@ function LoadingStudents() {
 
 // Dynamic Students List Component
 function StudentsList() {
-  const { user } = useAuth();
-  const [students, setStudents] = useState<Student[]>([]);
-  const [filteredStudents, setFilteredStudents] = useState<Student[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+  const { data, isLoading, error: queryError } = useTutorStudents();
+
   const [searchQuery, setSearchQuery] = useState("");
   const [sortBy, setSortBy] = useState<"points" | "name">("points");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
   const [activeTab, setActiveTab] = useState("all");
-  const [pagination, setPagination] = useState<PaginationInfo>({
-    total: 0,
-    page: 1,
-    limit: 10,
-    totalPages: 0,
-  });
 
-  useEffect(() => {
-    fetchStudents();
-  }, []);
+  const students = data?.students || [];
 
-  useEffect(() => {
-    applyFilters();
-  }, [students, searchQuery, sortBy, sortOrder, activeTab]);
-
-  const fetchStudents = async () => {
-    try {
-      setLoading(true);
-      const response = await fetch(`/api/tutor/students`);
-      
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to fetch students');
-      }
-      
-      const data = await response.json();
-      setStudents(data.students || []);
-      setPagination({
-        total: data.total || 0,
-        page: data.page || 1,
-        limit: data.limit || 10,
-        totalPages: data.totalPages || 0
-      });
-    } catch (err: any) {
-      console.error('Error fetching students:', err);
-      setError(err.message || 'Öğrenci bilgilerini yüklerken bir hata oluştu. Lütfen daha sonra tekrar deneyin.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const applyFilters = () => {
+  const filteredStudents = useMemo(() => {
     let result = [...students];
-    
+
     // Apply search filter
     if (searchQuery) {
-      result = result.filter(student => 
+      result = result.filter(student =>
         student.username.toLowerCase().includes(searchQuery.toLowerCase()) ||
         (student.firstName && student.firstName.toLowerCase().includes(searchQuery.toLowerCase())) ||
         (student.lastName && student.lastName.toLowerCase().includes(searchQuery.toLowerCase()))
       );
     }
-    
-    // Apply tab filter (future implementation for active/inactive students)
-    if (activeTab === 'active') {
-      // Filter for active students (if we had such status)
-      // result = result.filter(student => student.status === 'active');
-    } else if (activeTab === 'inactive') {
-      // Filter for inactive students
-      // result = result.filter(student => student.status === 'inactive');
-    }
-    
+
     // Apply sorting
     result.sort((a, b) => {
       if (sortBy === 'points') {
@@ -308,9 +243,11 @@ function StudentsList() {
           : nameB.localeCompare(nameA);
       }
     });
-    
-    setFilteredStudents(result);
-  };
+
+    return result;
+  }, [students, searchQuery, sortBy, sortOrder]);
+
+  const error = queryError instanceof Error ? queryError.message : "";
 
   const getFullName = (student: Student) => {
     if (student.firstName && student.lastName) {
@@ -319,34 +256,41 @@ function StudentsList() {
       return student.firstName;
     } else if (student.lastName) {
       return student.lastName;
-    } else {
-      return student.username;
     }
+    return student.username;
   };
 
   const getInitials = (student: Student) => {
     if (student.firstName && student.lastName) {
       return `${student.firstName[0]}${student.lastName[0]}`.toUpperCase();
-    } else if (student.firstName) {
-      return student.firstName[0].toUpperCase();
-    } else if (student.lastName) {
-      return student.lastName[0].toUpperCase();
-    } else {
-      return student.username[0].toUpperCase();
     }
+    return student.username.substring(0, 2).toUpperCase();
   };
 
-  if (loading) {
-    return <StudentListSkeleton />;
+  if (isLoading) {
+    return (
+      <div className="space-y-4 sm:space-y-8">
+        <StudentsFilterSkeleton />
+        <LoadingStudents />
+      </div>
+    );
   }
 
   if (error) {
     return (
-      <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg shadow-sm">
-        {error}
+      <div className="p-8 text-center bg-red-50 rounded-xl border border-red-100">
+        <p className="text-red-600">{error}</p>
+        <Button className="mt-4" onClick={() => window.location.reload()}>Tekrar Dene</Button>
       </div>
     );
   }
+
+  const pagination = {
+    total: data?.total || 0,
+    page: data?.page || 1,
+    limit: data?.limit || 10,
+    totalPages: data?.totalPages || 0
+  };
 
   return (
     <div className="space-y-4 sm:space-y-8">
@@ -374,7 +318,7 @@ function StudentsList() {
             </div>
           </CardContent>
         </Card>
-        
+
         <Card className="border border-green-100 shadow-sm hover:shadow-md transition-shadow">
           <CardHeader className="pb-2 space-y-0">
             <CardTitle className="text-lg sm:text-xl text-gray-700">Ortalama Puan</CardTitle>
@@ -388,7 +332,7 @@ function StudentsList() {
             </div>
           </CardContent>
         </Card>
-        
+
         <Card className="border border-purple-100 shadow-sm hover:shadow-md transition-shadow sm:col-span-2 lg:col-span-1">
           <CardHeader className="pb-2 space-y-0">
             <CardTitle className="text-lg sm:text-xl text-gray-700">En Yüksek Puan</CardTitle>
@@ -422,26 +366,26 @@ function StudentsList() {
                       <div className="text-xs sm:text-sm text-gray-500">{student.username}</div>
                     </div>
                   </div>
-                  
+
                   <div className="flex items-center justify-between sm:justify-end w-full sm:w-auto gap-4">
                     <div className="text-center">
                       <div className="text-xs sm:text-sm text-gray-500">Puan</div>
                       <div className="font-bold text-xl sm:text-2xl text-gray-800">{student.points}</div>
                     </div>
-                    
+
                     <div className="flex gap-2">
                       <Link href={`/dashboard/part7/tutor/students/${student.id}`}>
-                        <Button 
-                          variant="outline" 
-                          size="sm" 
+                        <Button
+                          variant="outline"
+                          size="sm"
                           className="border-blue-100 text-blue-600 hover:bg-blue-50 text-xs sm:text-sm h-8 sm:h-9"
                         >
                           Detaylar
                         </Button>
                       </Link>
                       <Link href={`/dashboard/part7/tutor/points/award?studentId=${student.id}`}>
-                        <Button 
-                          size="sm" 
+                        <Button
+                          size="sm"
                           className="bg-gradient-to-r from-blue-500 to-indigo-600 text-white text-xs sm:text-sm h-8 sm:h-9"
                         >
                           Puan Ver
@@ -474,31 +418,19 @@ function StudentsList() {
             Toplam <span className="font-medium">{filteredStudents.length}</span> öğrenci gösteriliyor
           </div>
           <div className="flex gap-2 w-full sm:w-auto order-1 sm:order-2">
-            <Button 
+            <Button
               variant="outline"
               size="sm"
               className="flex-1 sm:flex-none text-xs sm:text-sm"
               disabled={pagination.page <= 1}
-              onClick={() => {
-                if (pagination.page > 1) {
-                  //setPagination(prev => ({ ...prev, page: prev.page - 1 }));
-                  //fetchStudents();
-                }
-              }}
             >
               Önceki
             </Button>
-            <Button 
+            <Button
               variant="outline"
               size="sm"
               className="flex-1 sm:flex-none text-xs sm:text-sm"
               disabled={pagination.page >= pagination.totalPages}
-              onClick={() => {
-                if (pagination.page < pagination.totalPages) {
-                  //setPagination(prev => ({ ...prev, page: prev.page + 1 }));
-                  //fetchStudents();
-                }
-              }}
             >
               Sonraki
             </Button>
@@ -510,28 +442,12 @@ function StudentsList() {
 }
 
 export default function TutorStudentsPage() {
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    // Simulate initial load
-    const timer = setTimeout(() => setLoading(false), 500);
-    return () => clearTimeout(timer);
-  }, []);
-
   return (
     <div className="px-3 sm:px-4 py-4 sm:py-8">
-      {loading ? (
-        <div className="space-y-4 sm:space-y-8">
-          <HeaderSkeleton />
-          <StudentsFilterSkeleton />
-          <LoadingStudents />
-        </div>
-      ) : (
-        <div className="space-y-4 sm:space-y-8">
-          <StudentsHeader />
-          <StudentsList />
-        </div>
-      )}
+      <div className="space-y-4 sm:space-y-8">
+        <StudentsHeader />
+        <StudentsList />
+      </div>
     </div>
   );
-} 
+}

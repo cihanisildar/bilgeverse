@@ -54,7 +54,8 @@ export const authOptions: AuthOptions = {
           return {
             id: user.id,
             username: user.username,
-            role: user.role,
+            role: user.role, // Keeping for backwards compatibility during migration if needed
+            roles: user.roles,
             tutorId: user.tutorId || undefined,
             assistedTutorId: user.assistedTutorId || undefined,
             tutor: user.tutor ? {
@@ -81,6 +82,7 @@ export const authOptions: AuthOptions = {
         token.username = user.username;
         token.email = user.email;
         token.role = user.role;
+        token.roles = (user as any).roles;
         token.tutorId = user.tutorId ?? undefined;
         token.assistedTutorId = (user as any).assistedTutorId ?? undefined;
         token.tutor = user.tutor;
@@ -93,6 +95,7 @@ export const authOptions: AuthOptions = {
         session.user.username = token.username as string;
         session.user.email = token.email as string;
         session.user.role = token.role as UserRole;
+        session.user.roles = token.roles as UserRole[];
         session.user.tutorId = token.tutorId as string | undefined;
         session.user.assistedTutorId = token.assistedTutorId as string | undefined;
         session.user.tutor = token.tutor;

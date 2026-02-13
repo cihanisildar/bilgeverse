@@ -3,6 +3,7 @@
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
 import prisma from '@/lib/prisma';
+import { UserRole } from '@prisma/client';
 
 // Get all weekly reports for the current user (based on role)
 export async function getWeeklyReports() {
@@ -14,8 +15,12 @@ export async function getWeeklyReports() {
     try {
         const where: any = {};
 
+        const user = session?.user as any;
+        const userRoles = user?.roles || [user?.role].filter(Boolean) as UserRole[];
+        const isAdmin = userRoles.includes('ADMIN' as any);
+
         // Admin sees all reports
-        if (session.user.role !== 'ADMIN') {
+        if (!isAdmin) {
             where.userId = session.user.id;
         }
 
@@ -125,8 +130,12 @@ export async function getWeeklyReportById(id: string) {
             return { error: 'Report not found', data: null };
         }
 
+        const user = session?.user as any;
+        const userRoles = user?.roles || [user?.role].filter(Boolean) as UserRole[];
+        const isAdmin = userRoles.includes(UserRole.ADMIN);
+
         // Check authorization
-        if (session.user.role !== 'ADMIN' && report.userId !== session.user.id) {
+        if (!isAdmin && report.userId !== session.user.id) {
             return { error: 'Unauthorized access', data: null };
         }
 
@@ -165,7 +174,9 @@ export async function updateWeeklyReport(
         }
 
         // Check authorization
-        const isAdmin = session.user.role === 'ADMIN';
+        const sessionUser = session?.user as any;
+        const userRoles = sessionUser?.roles || [sessionUser?.role].filter(Boolean) as UserRole[];
+        const isAdmin = userRoles.includes(UserRole.ADMIN);
         const isOwner = existingReport.userId === session.user.id;
 
         if (!isAdmin && !isOwner) {
@@ -184,7 +195,7 @@ export async function updateWeeklyReport(
         // Set review date and reviewer if admin is approving/rejecting
         if (isAdmin && (data.status === 'APPROVED' || data.status === 'REJECTED')) {
             updateData.reviewDate = new Date();
-            updateData.reviewedById = session.user.id;
+            updateData.reviewedById = sessionUser.id;
         }
 
         const report = await prisma.weeklyReport.update({
@@ -241,7 +252,9 @@ export async function deleteWeeklyReport(id: string) {
         }
 
         // Only admin or owner can delete
-        const isAdmin = session.user.role === 'ADMIN';
+        const sessionUser = session?.user as any;
+        const userRoles = sessionUser?.roles || [sessionUser?.role].filter(Boolean) as UserRole[];
+        const isAdmin = userRoles.includes(UserRole.ADMIN);
         const isOwner = report.userId === session.user.id;
 
         if (!isAdmin && !isOwner) {

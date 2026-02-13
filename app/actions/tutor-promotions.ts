@@ -9,7 +9,11 @@ export async function getTutorPromotions() {
     try {
         const session = await getServerSession(authOptions);
 
-        if (!session?.user || session.user.role !== UserRole.ADMIN) {
+        const sessionUser = session?.user as any;
+        const userRoles = sessionUser?.roles || [sessionUser?.role].filter(Boolean) as UserRole[];
+        const isAdmin = userRoles.includes(UserRole.ADMIN);
+
+        if (!session?.user || !isAdmin) {
             return { error: 'Yetkisiz erişim', data: null };
         }
 
@@ -90,7 +94,11 @@ export async function getTutorPromotionById(id: string) {
     try {
         const session = await getServerSession(authOptions);
 
-        if (!session?.user || session.user.role !== UserRole.ADMIN) {
+        const sessionUser = session?.user as any;
+        const userRoles = sessionUser?.roles || [sessionUser?.role].filter(Boolean) as UserRole[];
+        const isAdmin = userRoles.includes(UserRole.ADMIN);
+
+        if (!session?.user || !isAdmin) {
             return { error: 'Yetkisiz erişim', data: null };
         }
 
@@ -175,14 +183,18 @@ export async function getEligibleUsers() {
     try {
         const session = await getServerSession(authOptions);
 
-        if (!session?.user || session.user.role !== UserRole.ADMIN) {
+        const sessionUser = session?.user as any;
+        const userRoles = sessionUser?.roles || [sessionUser?.role].filter(Boolean) as UserRole[];
+        const isAdmin = userRoles.includes(UserRole.ADMIN);
+
+        if (!session?.user || !isAdmin) {
             return { error: 'Yetkisiz erişim', data: null };
         }
 
         const users = await prisma.user.findMany({
             where: {
-                role: {
-                    in: [UserRole.STUDENT, UserRole.ASISTAN],
+                roles: {
+                    hasSome: [UserRole.STUDENT, UserRole.ASISTAN],
                 },
             },
             select: {
@@ -220,7 +232,11 @@ export async function createTutorPromotion(data: CreateTutorPromotionInput) {
     try {
         const session = await getServerSession(authOptions);
 
-        if (!session?.user || session.user.role !== UserRole.ADMIN) {
+        const sessionUser = session?.user as any;
+        const userRoles = sessionUser?.roles || [sessionUser?.role].filter(Boolean) as UserRole[];
+        const isAdmin = userRoles.includes(UserRole.ADMIN);
+
+        if (!session?.user || !isAdmin) {
             return { error: 'Yetkisiz erişim', data: null };
         }
 
@@ -233,7 +249,8 @@ export async function createTutorPromotion(data: CreateTutorPromotionInput) {
             return { error: 'Kullanıcı bulunamadı', data: null };
         }
 
-        if (user.role !== UserRole.STUDENT && user.role !== UserRole.ASISTAN) {
+        const targetUserRoles = user.roles || [user.role].filter(Boolean) as UserRole[];
+        if (!targetUserRoles.includes(UserRole.STUDENT) && !targetUserRoles.includes(UserRole.ASISTAN)) {
             return { error: 'Sadece öğrenci ve asistanlar terfi ettirilebilir', data: null };
         }
 
@@ -254,7 +271,7 @@ export async function createTutorPromotion(data: CreateTutorPromotionInput) {
                 userId: data.userId,
                 requestedRole: UserRole.TUTOR,
                 notes: data.notes || null,
-                createdById: session.user.id,
+                createdById: sessionUser.id,
                 status: TutorPromotionStatus.PENDING,
             },
             include: {
@@ -296,7 +313,11 @@ export async function updateTutorPromotion(id: string, data: UpdateTutorPromotio
     try {
         const session = await getServerSession(authOptions);
 
-        if (!session?.user || session.user.role !== UserRole.ADMIN) {
+        const sessionUser = session?.user as any;
+        const userRoles = sessionUser?.roles || [sessionUser?.role].filter(Boolean) as UserRole[];
+        const isAdmin = userRoles.includes(UserRole.ADMIN);
+
+        if (!session?.user || !isAdmin) {
             return { error: 'Yetkisiz erişim', data: null };
         }
 
@@ -314,14 +335,19 @@ export async function updateTutorPromotion(id: string, data: UpdateTutorPromotio
             await prisma.$transaction([
                 prisma.user.update({
                     where: { id: promotion.userId },
-                    data: { role: UserRole.TUTOR },
+                    data: {
+                        role: UserRole.TUTOR,
+                        roles: {
+                            set: Array.from(new Set([...(promotion.user as any).roles, UserRole.TUTOR])),
+                        },
+                    },
                 }),
                 prisma.tutorPromotion.update({
                     where: { id },
                     data: {
                         status: TutorPromotionStatus.APPROVED,
                         notes: data.notes,
-                        reviewedById: session.user.id,
+                        reviewedById: sessionUser.id,
                         reviewedAt: new Date(),
                     },
                 }),
@@ -345,7 +371,7 @@ export async function updateTutorPromotion(id: string, data: UpdateTutorPromotio
                     status: TutorPromotionStatus.REJECTED,
                     notes: data.notes,
                     rejectionReason: data.rejectionReason,
-                    reviewedById: session.user.id,
+                    reviewedById: sessionUser.id,
                     reviewedAt: new Date(),
                 },
             });

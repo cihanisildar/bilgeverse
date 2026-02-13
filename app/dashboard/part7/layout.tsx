@@ -89,17 +89,22 @@ export default function AuthenticatedLayout({
   // Determine which set of links to show based on user role AND path
   let navLinks: NavLink[] = [];
 
-  if (isAdmin && pathname?.startsWith('/dashboard/part7/admin')) {
+  const userRoles = user?.roles || [];
+  const hasAdmin = userRoles.includes(UserRole.ADMIN) || user?.role === UserRole.ADMIN;
+  const hasTutor = userRoles.some(r => r === UserRole.TUTOR || r === UserRole.ASISTAN) || user?.role === UserRole.TUTOR || user?.role === UserRole.ASISTAN;
+  const hasStudent = userRoles.includes(UserRole.STUDENT) || user?.role === UserRole.STUDENT;
+
+  if (hasAdmin && pathname?.startsWith('/dashboard/part7/admin')) {
     navLinks = adminLinks;
-  } else if (isTutor && pathname?.startsWith('/dashboard/part7/tutor')) {
+  } else if (hasTutor && pathname?.startsWith('/dashboard/part7/tutor')) {
     navLinks = tutorLinks;
-  } else if (isStudent && pathname?.startsWith('/dashboard/part7/student')) {
+  } else if (hasStudent && pathname?.startsWith('/dashboard/part7/student')) {
     navLinks = studentLinks;
-  } else if (isAdmin) {
+  } else if (hasAdmin) {
     navLinks = adminLinks;
-  } else if (isTutor) {
+  } else if (hasTutor) {
     navLinks = tutorLinks;
-  } else if (isStudent) {
+  } else if (hasStudent) {
     navLinks = studentLinks;
   }
 
@@ -188,7 +193,14 @@ export default function AuthenticatedLayout({
           <div className="ml-3 overflow-hidden">
             <p className="text-sm font-medium text-gray-800 truncate tracking-wide">{user?.username}</p>
             <p className="text-xs text-gray-500 tracking-wide">
-              {user?.role === UserRole.ADMIN ? 'Yönetici' : user?.role === UserRole.TUTOR ? 'Rehber' : user?.role === UserRole.ASISTAN ? 'Lider' : 'Öğrenci'}
+              {(() => {
+                const roles = user?.roles || [user?.role].filter(Boolean) as UserRole[];
+                if (roles.includes(UserRole.ADMIN)) return 'Yönetici';
+                if (roles.includes(UserRole.TUTOR)) return 'Rehber';
+                if (roles.includes(UserRole.ASISTAN)) return 'Lider';
+                if (roles.includes((UserRole as any).ATHLETE)) return 'Sporcu';
+                return 'Öğrenci';
+              })()}
             </p>
           </div>
           <Button
@@ -238,7 +250,14 @@ export default function AuthenticatedLayout({
                   <div className="ml-3 overflow-hidden">
                     <p className="text-sm font-medium text-gray-800 truncate tracking-wide">{user?.username}</p>
                     <p className="text-xs text-gray-500 tracking-wide">
-                      {user?.role === UserRole.ADMIN ? 'Yönetici' : user?.role === UserRole.TUTOR ? 'Rehber' : user?.role === UserRole.ASISTAN ? 'Lider' : 'Öğrenci'}
+                      {(() => {
+                        const roles = user?.roles || [user?.role].filter(Boolean) as UserRole[];
+                        if (roles.includes(UserRole.ADMIN)) return 'Yönetici';
+                        if (roles.includes(UserRole.TUTOR)) return 'Rehber';
+                        if (roles.includes(UserRole.ASISTAN)) return 'Lider';
+                        if (roles.includes((UserRole as any).ATHLETE)) return 'Sporcu';
+                        return 'Öğrenci';
+                      })()}
                     </p>
                   </div>
                   <Button

@@ -224,7 +224,11 @@ export async function createMeeting(data: unknown) {
   try {
     const session = await getServerSession(authOptions);
 
-    if (!session?.user || session.user.role !== UserRole.ADMIN) {
+    const sessionUser = session?.user as any;
+    const userRoles = sessionUser?.roles || [sessionUser?.role].filter(Boolean) as UserRole[];
+    const isAdmin = userRoles.includes(UserRole.ADMIN);
+
+    if (!session?.user || !isAdmin) {
       return { error: 'Yetkisiz erişim: Sadece yöneticiler toplantı oluşturabilir', data: null };
     }
 
@@ -238,7 +242,7 @@ export async function createMeeting(data: unknown) {
 
     // Get all admin users to auto-add as attendees
     const adminUsers = await prisma.user.findMany({
-      where: { role: UserRole.ADMIN },
+      where: { roles: { has: UserRole.ADMIN } },
       select: { id: true },
     });
 
@@ -313,7 +317,11 @@ export async function updateMeeting(id: string, data: unknown) {
   try {
     const session = await getServerSession(authOptions);
 
-    if (!session?.user || session.user.role !== UserRole.ADMIN) {
+    const sessionUser = session?.user as any;
+    const userRoles = sessionUser?.roles || [sessionUser?.role].filter(Boolean) as UserRole[];
+    const isAdmin = userRoles.includes(UserRole.ADMIN);
+
+    if (!session?.user || !isAdmin) {
       return { error: 'Yetkisiz erişim: Sadece yöneticiler toplantı güncelleyebilir', data: null };
     }
 
@@ -382,7 +390,11 @@ export async function deleteMeeting(id: string) {
   try {
     const session = await getServerSession(authOptions);
 
-    if (!session?.user || session.user.role !== UserRole.ADMIN) {
+    const sessionUser = session?.user as any;
+    const userRoles = sessionUser?.roles || [sessionUser?.role].filter(Boolean) as UserRole[];
+    const isAdmin = userRoles.includes(UserRole.ADMIN);
+
+    if (!session?.user || !isAdmin) {
       return { error: 'Yetkisiz erişim: Sadece yöneticiler toplantı silebilir', data: null };
     }
 
@@ -425,7 +437,11 @@ export async function generateQRCode(meetingId: string) {
   try {
     const session = await getServerSession(authOptions);
 
-    if (!session?.user || session.user.role !== UserRole.ADMIN) {
+    const sessionUser = session?.user as any;
+    const userRoles = sessionUser?.roles || [sessionUser?.role].filter(Boolean) as UserRole[];
+    const isAdmin = userRoles.includes(UserRole.ADMIN);
+
+    if (!session?.user || !isAdmin) {
       return { error: 'Yetkisiz erişim: Sadece yöneticiler QR kod oluşturabilir', data: null };
     }
 

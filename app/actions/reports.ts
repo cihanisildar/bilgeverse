@@ -19,7 +19,11 @@ export async function getWeeklyParticipationReport(): Promise<BaseReportResponse
     try {
         const session = await getServerSession(authOptions);
 
-        if (!session?.user || session.user.role !== UserRole.ADMIN) {
+        const sessionUser = session?.user as any;
+        const userRoles = sessionUser?.roles || [sessionUser?.role].filter(Boolean) as UserRole[];
+        const isAdmin = userRoles.includes(UserRole.ADMIN);
+
+        if (!session?.user || !isAdmin) {
             return { error: 'Yetkisiz erişim', data: null };
         }
 
@@ -32,7 +36,7 @@ export async function getWeeklyParticipationReport(): Promise<BaseReportResponse
 
         // Get all tutors
         const tutors = await prisma.user.findMany({
-            where: { role: UserRole.TUTOR },
+            where: { roles: { has: UserRole.TUTOR } },
             select: {
                 id: true,
                 firstName: true,
@@ -103,7 +107,7 @@ export async function getWeeklyParticipationReport(): Promise<BaseReportResponse
 
                 // Get students for this tutor to calculate registration count for sessions
                 const studentsCount = await prisma.user.count({
-                    where: { tutorId: tutor.id, role: UserRole.STUDENT }
+                    where: { tutorId: tutor.id, roles: { has: UserRole.STUDENT } }
                 });
 
                 const weeklySessions = [
@@ -190,7 +194,11 @@ export async function getSyllabusTrackingReport(): Promise<BaseReportResponse<Sy
     try {
         const session = await getServerSession(authOptions);
 
-        if (!session?.user || session.user.role !== UserRole.ADMIN) {
+        const sessionUser = session?.user as any;
+        const userRoles = sessionUser?.roles || [sessionUser?.role].filter(Boolean) as UserRole[];
+        const isAdmin = userRoles.includes(UserRole.ADMIN);
+
+        if (!session?.user || !isAdmin) {
             return { error: 'Yetkisiz erişim', data: null };
         }
 
@@ -355,7 +363,11 @@ export async function getAttendanceAlertsReport(): Promise<BaseReportResponse<At
     try {
         const session = await getServerSession(authOptions);
 
-        if (!session?.user || session.user.role !== UserRole.ADMIN) {
+        const sessionUser = session?.user as any;
+        const userRoles = sessionUser?.roles || [sessionUser?.role].filter(Boolean) as UserRole[];
+        const isAdmin = userRoles.includes(UserRole.ADMIN);
+
+        if (!session?.user || !isAdmin) {
             return { error: 'Yetkisiz erişim', data: null };
         }
 
@@ -375,7 +387,7 @@ export async function getAttendanceAlertsReport(): Promise<BaseReportResponse<At
 
         // Get all students with their participation data
         const students = await prisma.user.findMany({
-            where: { role: UserRole.STUDENT },
+            where: { roles: { has: UserRole.STUDENT } },
             select: {
                 id: true,
                 firstName: true,
@@ -499,7 +511,11 @@ export async function getEventsOverviewReport(): Promise<BaseReportResponse<Even
     try {
         const session = await getServerSession(authOptions);
 
-        if (!session?.user || session.user.role !== UserRole.ADMIN) {
+        const sessionUser = session?.user as any;
+        const userRoles = sessionUser?.roles || [sessionUser?.role].filter(Boolean) as UserRole[];
+        const isAdmin = userRoles.includes(UserRole.ADMIN);
+
+        if (!session?.user || !isAdmin) {
             return { error: 'Yetkisiz erişim', data: null };
         }
 
@@ -509,7 +525,7 @@ export async function getEventsOverviewReport(): Promise<BaseReportResponse<Even
 
         // Fetch all tutors
         const tutors = await prisma.user.findMany({
-            where: { role: UserRole.TUTOR },
+            where: { roles: { has: UserRole.TUTOR } },
             select: {
                 id: true,
                 firstName: true,
@@ -579,7 +595,7 @@ export async function getEventsOverviewReport(): Promise<BaseReportResponse<Even
 
             // Get students for this tutor
             const studentsCount = await prisma.user.count({
-                where: { tutorId: tutor.id, role: UserRole.STUDENT }
+                where: { tutorId: tutor.id, roles: { has: UserRole.STUDENT } }
             });
 
             // Combine events for unified analysis
@@ -694,12 +710,12 @@ export async function getEventsOverviewReport(): Promise<BaseReportResponse<Even
             prisma.event.count({
                 where: {
                     createdForTutorId: null,
-                    createdBy: { role: UserRole.ADMIN }
+                    createdBy: { roles: { has: UserRole.ADMIN } }
                 }
             }),
             prisma.attendanceSession.count({
                 where: {
-                    createdBy: { role: UserRole.ADMIN },
+                    createdBy: { roles: { has: UserRole.ADMIN } },
                     attendances: { none: {} } // Sessions with no attendances yet or general ones
                 }
             })

@@ -86,7 +86,11 @@ export async function updateSocialPost(id: string, data: Partial<SocialPost>) {
         const existingPost = await prisma.socialPost.findUnique({ where: { id } });
         if (!existingPost) return { error: 'Post not found' };
 
-        if (existingPost.createdById !== session.user.id && session.user.role !== UserRole.ADMIN) {
+        const userNode = session.user as any;
+        const userRoles = userNode.roles || [userNode.role].filter(Boolean) as UserRole[];
+        const isAdmin = userRoles.includes(UserRole.ADMIN);
+
+        if (existingPost.createdById !== userNode.id && !isAdmin) {
             return { error: 'Unauthorized to update this post' };
         }
 
@@ -129,7 +133,11 @@ export async function deleteSocialPost(id: string) {
         const existingPost = await prisma.socialPost.findUnique({ where: { id } });
         if (!existingPost) return { error: 'Post not found' };
 
-        if (existingPost.createdById !== session.user.id && session.user.role !== UserRole.ADMIN) {
+        const userNode = session.user as any;
+        const userRoles = userNode.roles || [userNode.role].filter(Boolean) as UserRole[];
+        const isAdmin = userRoles.includes(UserRole.ADMIN);
+
+        if (existingPost.createdById !== userNode.id && !isAdmin) {
             return { error: 'Unauthorized to delete this post' };
         }
 
@@ -213,7 +221,11 @@ export async function updateSocialIngredient(id: string, data: Partial<ContentIn
         const existingIngredient = await prisma.contentIngredient.findUnique({ where: { id } });
         if (!existingIngredient) return { error: 'Ingredient not found' };
 
-        if (existingIngredient.createdById !== session.user.id && session.user.role !== UserRole.ADMIN) {
+        const userNode = session.user as any;
+        const userRoles = userNode.roles || [userNode.role].filter(Boolean) as UserRole[];
+        const isAdmin = userRoles.includes(UserRole.ADMIN);
+
+        if (existingIngredient.createdById !== userNode.id && !isAdmin) {
             return { error: 'Unauthorized to update this ingredient' };
         }
 
@@ -252,7 +264,11 @@ export async function deleteSocialIngredient(id: string) {
         const existingIngredient = await prisma.contentIngredient.findUnique({ where: { id } });
         if (!existingIngredient) return { error: 'Ingredient not found' };
 
-        if (existingIngredient.createdById !== session.user.id && session.user.role !== UserRole.ADMIN) {
+        const userNode = session.user as any;
+        const userRoles = userNode.roles || [userNode.role].filter(Boolean) as UserRole[];
+        const isAdmin = userRoles.includes(UserRole.ADMIN);
+
+        if (existingIngredient.createdById !== userNode.id && !isAdmin) {
             return { error: 'Unauthorized to delete this ingredient' };
         }
 

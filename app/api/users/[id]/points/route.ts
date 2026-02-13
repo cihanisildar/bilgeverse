@@ -17,18 +17,23 @@ export async function POST(
 ) {
   try {
     const session = await getServerSession(authOptions);
-    
-    if (!session?.user || !ALLOWED_ROLES.includes(session.user.role)) {
+    const userNode = session?.user as any;
+    const userRoles = userNode?.roles || [userNode?.role].filter(Boolean) as UserRole[];
+    const isAdmin = userRoles.includes(UserRole.ADMIN);
+    const isTutor = userRoles.includes(UserRole.TUTOR);
+    const isAsistan = userRoles.includes(UserRole.ASISTAN);
+
+    if (!session?.user || (!isAdmin && !isTutor && !isAsistan)) {
       return NextResponse.json(
         { error: 'Unauthorized: Only admin, tutor or asistan can modify points' },
         { status: 403 }
       );
     }
-    
+
     const userId = params.id;
     const body = await request.json();
     const { points, action } = body;
-    
+
     // Validate points
     const pointsValue = parseInt(points);
     if (isNaN(pointsValue) || pointsValue < 0) {
@@ -37,7 +42,7 @@ export async function POST(
         { status: 400 }
       );
     }
-    
+
     // Validate action
     if (!action || !['add', 'subtract', 'set'].includes(action)) {
       return NextResponse.json(
@@ -68,11 +73,25 @@ export async function POST(
     }
 
     // If tutor or asistan, verify the user is their student
-    if ((session.user.role === UserRole.TUTOR || session.user.role === UserRole.ASISTAN) && user.tutorId !== session.user.id) {
+    if (isTutor && !isAdmin && user.tutorId !== userNode.id) {
       return NextResponse.json(
         { error: 'Unauthorized: Can only modify points for your own students' },
         { status: 403 }
       );
+    }
+
+    if (isAsistan && !isAdmin && !isTutor) {
+      const asistan = await prisma.user.findUnique({
+        where: { id: userNode.id },
+        select: { assistedTutorId: true }
+      });
+
+      if (!asistan?.assistedTutorId || user.tutorId !== asistan.assistedTutorId) {
+        return NextResponse.json(
+          { error: 'Unauthorized: Can only modify points for students of the tutor you assist' },
+          { status: 403 }
+        );
+      }
     }
 
     // Get current points from period-aware calculation

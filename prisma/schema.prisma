@@ -122,6 +122,8 @@ model User {
   createdIngredients            ContentIngredient[]       @relation("IngredientCreator")
   createdSocialPosts            SocialPost[]              @relation("PostCreator")
   donor                         Donor?                    @relation("UserDonor")
+  athleteProfile                AthleteProfile?           @relation("UserAthleteProfile")
+  roles                         UserRole[]                @default([STUDENT])
 
   @@index([tutorId])
 }
@@ -760,6 +762,7 @@ enum UserRole {
   ASISTAN
   BOARD_MEMBER
   DONOR
+  ATHLETE
 }
 
 enum RequestStatus {
@@ -852,6 +855,7 @@ enum NotificationType {
   ABSENCE_ALERT
   SYLLABUS_FEEDBACK
   GENERAL
+  HEALTH_REPORT_EXPIRY
 }
 
 enum Part2EventStatus {
@@ -1113,4 +1117,85 @@ model Donation {
 
   @@index([donorId])
   @@index([donationDate])
+}
+
+model SportBranch {
+  id          String            @id @default(uuid())
+  name        String            @unique
+  description String?
+  isActive    Boolean           @default(true)
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+  athletes    AthleteProfile[]  @relation("BranchAthletes")
+  trainings   AthleteTraining[] @relation("BranchTrainings")
+}
+
+model AthleteProfile {
+  id                 String               @id @default(uuid())
+  userId             String               @unique
+  user               User                 @relation("UserAthleteProfile", fields: [userId], references: [id], onDelete: Cascade)
+  healthReportExpiry DateTime?
+  createdAt          DateTime             @default(now())
+  updatedAt          DateTime             @updatedAt
+  branches           SportBranch[]        @relation("BranchAthletes")
+  attendances        AthleteAttendance[]  @relation("AthleteAttendances")
+  performances       AthletePerformance[] @relation("AthletePerformances")
+}
+
+model AthleteTraining {
+  id            String              @id @default(uuid())
+  branchId      String
+  title         String
+  description   String?
+  date          DateTime
+  startTime     String?
+  endTime       String?
+  location      String?             @default("Spor Salonu")
+  type          AthleteTrainingType @default(TRAINING)
+  createdAt     DateTime            @default(now())
+  updatedAt     DateTime            @updatedAt
+  branch        SportBranch         @relation("BranchTrainings", fields: [branchId], references: [id], onDelete: Cascade)
+  attendances   AthleteAttendance[] @relation("TrainingAttendances")
+  performances  AthletePerformance[] @relation("TrainingPerformances")
+
+  @@index([branchId])
+  @@index([date])
+}
+
+model AthleteAttendance {
+  id         String            @id @default(uuid())
+  trainingId String
+  athleteId  String
+  status     AttendanceStatus  @default(YOKTU)
+  markedAt   DateTime          @default(now())
+  training   AthleteTraining   @relation("TrainingAttendances", fields: [trainingId], references: [id], onDelete: Cascade)
+  athlete    AthleteProfile    @relation("AthleteAttendances", fields: [athleteId], references: [id], onDelete: Cascade)
+
+  @@unique([trainingId, athleteId])
+}
+
+model AthletePerformance {
+  id         String             @id @default(uuid())
+  trainingId String
+  athleteId  String
+  metricType AthleteMetricType
+  value      String             // "10", "45.5s", "5km"
+  notes      String?
+  training   AthleteTraining    @relation("TrainingPerformances", fields: [trainingId], references: [id], onDelete: Cascade)
+  athlete    AthleteProfile     @relation("AthletePerformances", fields: [athleteId], references: [id], onDelete: Cascade)
+
+  @@index([trainingId])
+  @@index([athleteId])
+}
+
+enum AthleteTrainingType {
+  TRAINING
+  MATCH
+}
+
+enum AthleteMetricType {
+  SCORE
+  TIME
+  DISTANCE
+  OTHER
 }

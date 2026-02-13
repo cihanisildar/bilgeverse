@@ -8,19 +8,7 @@ import { Edit2, FileText, Plus, Trash2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useToast } from '@/app/hooks/use-toast';
 
-type Report = {
-  id: string;
-  title: string;
-  content: string;
-  createdAt: string;
-  updatedAt: string;
-  tutor: {
-    id: string;
-    username: string;
-    firstName?: string;
-    lastName?: string;
-  };
-};
+import { StudentReport as Report } from '@/types/student-records';
 
 type ReportsManagerProps = {
   studentId: string;

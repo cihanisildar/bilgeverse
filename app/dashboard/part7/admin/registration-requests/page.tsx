@@ -94,23 +94,23 @@ function RegistrationRequestsContent() {
 
   useEffect(() => {
     let filtered = [...requests];
-    
+
     // Apply search filter
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
-      filtered = filtered.filter(request => 
+      filtered = filtered.filter(request =>
         request.username.toLowerCase().includes(query) ||
         request.email.toLowerCase().includes(query) ||
         (request.firstName && request.firstName.toLowerCase().includes(query)) ||
         (request.lastName && request.lastName.toLowerCase().includes(query))
       );
     }
-    
+
     // Apply status filter
     if (statusFilter !== 'all') {
       filtered = filtered.filter(request => request.status === statusFilter as RequestStatus);
     }
-    
+
     setFilteredRequests(filtered);
   }, [searchQuery, statusFilter, requests]);
 
@@ -118,7 +118,7 @@ function RegistrationRequestsContent() {
     try {
       setActionLoading(true);
       setError(null);
-      
+
       const response = await fetch('/api/admin/registration-requests', {
         method: 'POST',
         headers: {
@@ -126,11 +126,11 @@ function RegistrationRequestsContent() {
           'Cache-Control': 'no-cache'
         },
         credentials: 'include',
-        body: JSON.stringify({ 
-          requestId, 
-          action, 
+        body: JSON.stringify({
+          requestId,
+          action,
           rejectionReason,
-          status: action === 'approve' ? RequestStatus.APPROVED : RequestStatus.REJECTED 
+          status: action === 'approve' ? RequestStatus.APPROVED : RequestStatus.REJECTED
         })
       });
 
@@ -252,7 +252,7 @@ function RegistrationRequestsContent() {
               <div className="text-center">
                 <UserPlus className="h-10 w-10 sm:h-12 sm:w-12 mx-auto text-gray-400 mb-4" />
                 <h3 className="text-base sm:text-lg font-medium text-gray-900 mb-1">
-                  {searchQuery || statusFilter !== 'all' 
+                  {searchQuery || statusFilter !== 'all'
                     ? 'Arama kriterlerine uygun istek bulunamadı'
                     : 'Henüz kayıt isteği bulunmuyor'}
                 </h3>
@@ -273,13 +273,13 @@ function RegistrationRequestsContent() {
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 sm:gap-0">
                     <div className="flex items-center space-x-3 sm:space-x-4">
                       <div className="h-10 w-10 sm:h-12 sm:w-12 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 font-semibold text-base sm:text-lg flex-shrink-0">
-                        {request.firstName 
+                        {request.firstName
                           ? request.firstName.charAt(0).toUpperCase()
                           : request.username.charAt(0).toUpperCase()}
                       </div>
                       <div>
                         <CardTitle className="text-lg sm:text-xl font-semibold">
-                          {request.firstName && request.lastName 
+                          {request.firstName && request.lastName
                             ? `${request.firstName} ${request.lastName}`
                             : request.username}
                         </CardTitle>
@@ -297,8 +297,10 @@ function RegistrationRequestsContent() {
                       <div>
                         <p className="text-xs sm:text-sm font-medium text-gray-500">İstenilen Rol</p>
                         <p className="mt-1 text-sm sm:text-base font-medium">
-                          {request.requestedRole === UserRole.STUDENT ? 'Öğrenci' : 
-                           request.requestedRole === UserRole.TUTOR ? 'Öğretmen' : 'Yönetici'}
+                          {request.requestedRole === UserRole.STUDENT ? 'Öğrenci' :
+                            request.requestedRole === UserRole.TUTOR ? 'Öğretmen' :
+                              request.requestedRole === (UserRole as any).ATHLETE ? 'Sporcu' :
+                                request.requestedRole === UserRole.ADMIN ? 'Yönetici' : request.requestedRole}
                         </p>
                       </div>
                       <div>
@@ -308,7 +310,7 @@ function RegistrationRequestsContent() {
                         </p>
                       </div>
                     </div>
-                    
+
                     {request.status === RequestStatus.REJECTED && request.rejectionReason && (
                       <div className="p-3 sm:p-4 bg-red-50 rounded-lg border border-red-100">
                         <p className="text-xs sm:text-sm font-medium text-red-800 mb-1">Red Nedeni</p>

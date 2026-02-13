@@ -10,6 +10,14 @@ export async function getAdminPdfs(partId?: number) {
         const session = await getServerSession(authOptions);
         if (!session?.user) return { error: 'Unauthorized' };
 
+        const userNode = session.user as any;
+        const userRoles = userNode.roles || [userNode.role].filter(Boolean) as string[];
+        const isAdmin = userRoles.includes('ADMIN');
+
+        if (!isAdmin) {
+            return { error: 'Unauthorized: Only admin can view all PDFs' };
+        }
+
         const where = partId !== undefined ? { partId } : {};
 
         const pdfs = await prisma.partPdf.findMany({
@@ -46,14 +54,22 @@ export async function createAdminPdf(data: {
 }) {
     try {
         const session = await getServerSession(authOptions);
-        if (!session?.user || session.user.role !== 'ADMIN') {
+        if (!session?.user) {
+            return { error: 'Unauthorized: Only admin can create PDF entries' };
+        }
+
+        const userNode = session.user as any;
+        const userRoles = userNode.roles || [userNode.role].filter(Boolean) as string[];
+        const isAdmin = userRoles.includes('ADMIN');
+
+        if (!isAdmin) {
             return { error: 'Unauthorized: Only admin can create PDF entries' };
         }
 
         const pdf = await prisma.partPdf.create({
             data: {
                 ...data,
-                uploadedById: session.user.id,
+                uploadedById: userNode.id,
             },
             include: {
                 uploadedBy: {
@@ -84,7 +100,15 @@ export async function updateAdminPdf(id: string, data: {
 }) {
     try {
         const session = await getServerSession(authOptions);
-        if (!session?.user || session.user.role !== 'ADMIN') {
+        if (!session?.user) {
+            return { error: 'Unauthorized: Only admin can update PDF entries' };
+        }
+
+        const userNode = session.user as any;
+        const userRoles = userNode.roles || [userNode.role].filter(Boolean) as string[];
+        const isAdmin = userRoles.includes('ADMIN');
+
+        if (!isAdmin) {
             return { error: 'Unauthorized: Only admin can update PDF entries' };
         }
 
@@ -114,7 +138,15 @@ export async function updateAdminPdf(id: string, data: {
 export async function deleteAdminPdf(id: string) {
     try {
         const session = await getServerSession(authOptions);
-        if (!session?.user || session.user.role !== 'ADMIN') {
+        if (!session?.user) {
+            return { error: 'Unauthorized: Only admin can delete PDF entries' };
+        }
+
+        const userNode = session.user as any;
+        const userRoles = userNode.roles || [userNode.role].filter(Boolean) as string[];
+        const isAdmin = userRoles.includes('ADMIN');
+
+        if (!isAdmin) {
             return { error: 'Unauthorized: Only admin can delete PDF entries' };
         }
 

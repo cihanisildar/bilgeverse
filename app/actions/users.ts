@@ -8,8 +8,11 @@ import { UserRole } from '@prisma/client';
 export async function getAllUsers() {
   try {
     const session = await getServerSession(authOptions);
-    
-    if (!session?.user || session.user.role !== UserRole.ADMIN) {
+    const userNode = session?.user as any;
+    const userRoles = userNode?.roles || [userNode?.role].filter(Boolean) as UserRole[];
+    const isAdmin = userRoles.includes(UserRole.ADMIN);
+
+    if (!session?.user || !isAdmin) {
       return { error: 'Unauthorized: Only admin can view all users', data: null };
     }
 
@@ -36,7 +39,7 @@ export async function getAllUsers() {
 export async function getAdminUsers() {
   try {
     const session = await getServerSession(authOptions);
-    
+
     if (!session?.user) {
       return { error: 'Unauthorized', data: null };
     }

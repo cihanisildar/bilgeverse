@@ -27,6 +27,7 @@ export default function NewUserPage() {
     password: '',
     confirmPassword: '',
     role: '',
+    roles: [] as string[],
     tutorId: '',
     assistedTutorId: '',
   });
@@ -52,7 +53,9 @@ export default function NewUserPage() {
         }
 
         const data = await response.json();
-        setTutors(data.users.filter((user: any) => user.role === 'TUTOR').map((tutor: any) => ({
+        setTutors(data.users.filter((user: any) =>
+          (user.roles && user.roles.includes('TUTOR')) || user.role === 'TUTOR'
+        ).map((tutor: any) => ({
           id: tutor.id,
           username: tutor.username,
           firstName: tutor.firstName,
@@ -76,6 +79,29 @@ export default function NewUserPage() {
     // Clear error when field is edited
     if (formErrors[name as keyof typeof formErrors]) {
       setFormErrors(prev => ({ ...prev, [name]: '' }));
+    }
+  };
+
+  const handleRoleToggle = (role: string) => {
+    setFormData(prev => {
+      const isSelected = prev.roles.includes(role);
+      let newRoles = [...prev.roles];
+
+      if (isSelected) {
+        newRoles = newRoles.filter(r => r !== role);
+      } else {
+        newRoles.push(role);
+      }
+
+      return {
+        ...prev,
+        roles: newRoles,
+        role: newRoles.length > 0 ? newRoles[0] : ''
+      };
+    });
+
+    if (formErrors.role) {
+      setFormErrors(prev => ({ ...prev, role: '' }));
     }
   };
 
@@ -124,17 +150,17 @@ export default function NewUserPage() {
       isValid = false;
     }
 
-    if (!formData.role) {
+    if (formData.roles.length === 0 && !formData.role) {
       errors.role = 'Kullanıcı rolü gereklidir';
       isValid = false;
     }
 
-    if (formData.role === UserRole.STUDENT && !formData.tutorId) {
+    if ((formData.roles.includes(UserRole.STUDENT) || formData.role === UserRole.STUDENT) && !formData.tutorId) {
       errors.tutorId = 'Öğrenci için rehber atanması gereklidir';
       isValid = false;
     }
 
-    if (formData.role === UserRole.ASISTAN && !formData.assistedTutorId) {
+    if ((formData.roles.includes(UserRole.ASISTAN) || formData.role === UserRole.ASISTAN) && !formData.assistedTutorId) {
       errors.assistedTutorId = 'Lider için yardım edeceği rehber atanması gereklidir';
       isValid = false;
     }
@@ -167,10 +193,11 @@ export default function NewUserPage() {
           email,
           password: formData.password,
           role: formData.role,
+          roles: formData.roles,
           firstName: formData.firstName || undefined,
           lastName: formData.lastName || undefined,
-          tutorId: formData.role === UserRole.STUDENT ? formData.tutorId : undefined,
-          assistedTutorId: formData.role === UserRole.ASISTAN ? formData.assistedTutorId : undefined,
+          tutorId: (formData.roles.includes(UserRole.STUDENT) || formData.role === UserRole.STUDENT) ? formData.tutorId : undefined,
+          assistedTutorId: (formData.roles.includes(UserRole.ASISTAN) || formData.role === UserRole.ASISTAN) ? formData.assistedTutorId : undefined,
           adminCreated: true, // Flag to bypass email verification
         }),
       });
@@ -370,33 +397,40 @@ export default function NewUserPage() {
               )}
             </div>
 
-            {/* Role */}
-            <div className="space-y-2">
-              <label htmlFor="role" className="block text-sm font-medium text-gray-700 flex items-center">
+            {/* Roles */}
+            <div className="space-y-3 md:col-span-2">
+              <label className="block text-sm font-medium text-gray-700 flex items-center">
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
                 </svg>
-                Rol<span className="text-indigo-600 ml-0.5">*</span>
+                Roller<span className="text-indigo-600 ml-0.5">*</span>
               </label>
-              <div className="relative">
-                <select
-                  id="role"
-                  name="role"
-                  value={formData.role}
-                  onChange={handleChange}
-                  className={`block w-full border ${formErrors.role ? 'border-red-300 bg-red-50' : 'border-gray-300'} rounded-lg shadow-sm py-3 px-4 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm transition duration-150 appearance-none`}
-                >
-                  <option value="">Rol Seçin</option>
-                  <option value={UserRole.ADMIN}>Yönetici</option>
-                  <option value={UserRole.TUTOR}>Rehber</option>
-                  <option value={UserRole.ASISTAN}>Lider</option>
-                  <option value={UserRole.STUDENT}>Öğrenci</option>
-                </select>
-                <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700">
-                  <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
-                    <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z" />
-                  </svg>
-                </div>
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 bg-gray-50 p-4 rounded-xl border border-gray-100">
+                {[
+                  { id: UserRole.ADMIN, label: 'Yönetici' },
+                  { id: UserRole.TUTOR, label: 'Rehber' },
+                  { id: UserRole.ASISTAN, label: 'Lider' },
+                  { id: UserRole.STUDENT, label: 'Öğrenci' },
+                  { id: (UserRole as any).ATHLETE, label: 'Sporcu' },
+                  { id: UserRole.BOARD_MEMBER, label: 'Yönetim Kurulu' },
+                  { id: UserRole.DONOR, label: 'Bağışçı' },
+                ].map((role) => (
+                  <label
+                    key={role.id}
+                    className={`flex items-center space-x-3 p-2 rounded-lg cursor-pointer transition-all duration-200 border ${formData.roles.includes(role.id)
+                      ? 'bg-indigo-50 border-indigo-200 text-indigo-700 shadow-sm'
+                      : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'
+                      }`}
+                  >
+                    <input
+                      type="checkbox"
+                      className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
+                      checked={formData.roles.includes(role.id)}
+                      onChange={() => handleRoleToggle(role.id)}
+                    />
+                    <span className="text-sm font-medium">{role.label}</span>
+                  </label>
+                ))}
               </div>
               {formErrors.role && (
                 <p className="mt-1 text-sm text-red-600 flex items-center">
@@ -409,7 +443,7 @@ export default function NewUserPage() {
             </div>
 
             {/* Tutor (only for students) */}
-            {formData.role === UserRole.STUDENT && (
+            {(formData.roles.includes(UserRole.STUDENT) || formData.role === UserRole.STUDENT) && (
               <div className="space-y-2">
                 <label htmlFor="tutorId" className="block text-sm font-medium text-gray-700 flex items-center">
                   <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -461,7 +495,7 @@ export default function NewUserPage() {
             )}
 
             {/* Assisted Tutor (only for asistans) */}
-            {formData.role === UserRole.ASISTAN && (
+            {(formData.roles.includes(UserRole.ASISTAN) || formData.role === UserRole.ASISTAN) && (
               <div className="space-y-2">
                 <label htmlFor="assistedTutorId" className="block text-sm font-medium text-gray-700 flex items-center">
                   <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">

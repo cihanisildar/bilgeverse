@@ -34,110 +34,43 @@ import TagTemplateManager from '@/app/components/admin/TagTemplateManager';
 import QuickTagAssigner from '@/app/components/student/QuickTagAssigner';
 import FavoriteActivitiesDialog from '@/app/components/sociometric/FavoriteActivitiesDialog';
 
+import {
+    SociometricData,
+    GroupLeader,
+    IsolatedStudent,
+    FriendGroup,
+    ActivityStats
+} from '@/types/sociometric';
+
 interface SociometricAnalysisProps {
     userId: string;
     userRole: string;
 }
 
-interface ClassroomOption {
-    id: string;
-    name: string;
-    tutorName: string;
-}
-
-interface SociometricData {
-    groupLeaders: GroupLeader[];
-    isolatedStudents: IsolatedStudent[];
-    friendGroups: FriendGroup[];
-    activityStats: ActivityStats;
-    students: any[];
-    classroomInfo: {
-        name: string;
-        totalStudents: number;
-        tutorName: string;
-    };
-}
-
-interface GroupLeader {
-    id: string;
-    name: string;
-    avatarUrl?: string;
-    attendanceCount: number;
-    participationCount: number;
-    participationRate: number;
-}
-
-interface IsolatedStudent {
-    id: string;
-    name: string;
-    avatarUrl?: string;
-    attendanceCount: number;
-    participationCount: number;
-    lastActivityDate?: string;
-}
-
-interface FriendGroup {
-    students: {
-        id: string;
-        name: string;
-        avatarUrl?: string;
-    }[];
-    commonActivities: number;
-    activityNames: string[];
-}
-
-interface ActivityStats {
-    totalActivities: number;
-    totalParticipations: number;
-    averageParticipationRate: number;
-    mostPopularActivity?: string;
-    leastPopularActivity?: string;
-    topActivities: { name: string; participationCount: number }[];
-    weeklyTrend: { week: string; count: number }[];
-}
+import { useClassrooms } from '@/app/hooks/use-classrooms';
+import { useSociometricData } from '@/app/hooks/use-sociometric-data';
 
 export default function SociometricAnalysis({ userId, userRole }: SociometricAnalysisProps) {
-    const [classrooms, setClassrooms] = useState<ClassroomOption[]>([]);
+    const { data: classroomsData, isLoading: classroomsLoading } = useClassrooms();
+    const classrooms = classroomsData?.classrooms || [];
+
     const [selectedClassroom, setSelectedClassroom] = useState<string>('');
-    const [data, setData] = useState<SociometricData | null>(null);
-    const [loading, setLoading] = useState(false);
 
+    // Auto-select first classroom if not selected and data is available
     useEffect(() => {
-        loadClassrooms();
-    }, []);
-
-    useEffect(() => {
-        if (selectedClassroom) {
-            loadSociometricData(selectedClassroom);
+        if (!selectedClassroom && classrooms.length > 0) {
+            setSelectedClassroom(classrooms[0].id);
         }
-    }, [selectedClassroom]);
+    }, [classrooms, selectedClassroom]);
 
-    const loadClassrooms = async () => {
-        try {
-            const response = await fetch('/api/classrooms');
-            const result = await response.json();
-            setClassrooms(result.classrooms || []);
+    const {
+        data: sociometricData,
+        isLoading: sociometricLoading,
+        refetch: refetchSociometric
+    } = useSociometricData(selectedClassroom);
 
-            // Auto-select first classroom for tutors
-            if (userRole === 'TUTOR' && result.classrooms?.length > 0) {
-                setSelectedClassroom(result.classrooms[0].id);
-            }
-        } catch (error) {
-            console.error('Error loading classrooms:', error);
-        }
-    };
-
-    const loadSociometricData = async (classroomId: string) => {
-        setLoading(true);
-        try {
-            const result = await getSociometricData(classroomId);
-            setData(result);
-        } catch (error) {
-            console.error('Error loading sociometric data:', error);
-        } finally {
-            setLoading(false);
-        }
-    };
+    const loading = classroomsLoading || sociometricLoading;
+    const data = sociometricData;
 
     const getInitials = (name: string) => {
         return name
@@ -184,8 +117,8 @@ export default function SociometricAnalysis({ userId, userRole }: SociometricAna
                     {selectedClassroom && data?.students && (
                         <QuickTagAssigner
                             classroomId={selectedClassroom}
-                            students={data.students}
-                            onTagsChange={() => loadSociometricData(selectedClassroom)}
+                            students={data.students as any}
+                            onTagsChange={refetchSociometric}
                         />
                     )}
                 </div>
@@ -200,8 +133,8 @@ export default function SociometricAnalysis({ userId, userRole }: SociometricAna
                     {data.students && (
                         <QuickTagAssigner
                             classroomId={selectedClassroom}
-                            students={data.students}
-                            onTagsChange={() => loadSociometricData(selectedClassroom)}
+                            students={data.students as any}
+                            onTagsChange={refetchSociometric}
                         />
                     )}
                 </div>

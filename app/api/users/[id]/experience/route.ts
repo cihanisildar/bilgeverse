@@ -16,8 +16,13 @@ export async function POST(
 ) {
   try {
     const session = await getServerSession(authOptions);
-    
-    if (!session?.user || !ALLOWED_ROLES.includes(session.user.role)) {
+    const userNode = session?.user as any;
+    const userRoles = userNode?.roles || [userNode?.role].filter(Boolean) as UserRole[];
+    const isAdmin = userRoles.includes(UserRole.ADMIN);
+    const isTutor = userRoles.includes(UserRole.TUTOR);
+    const isAsistan = userRoles.includes(UserRole.ASISTAN);
+
+    if (!session?.user || (!isAdmin && !isTutor && !isAsistan)) {
       return NextResponse.json(
         { error: 'Unauthorized: Only admin, tutor or asistan can modify experience' },
         { status: 403 }
@@ -56,11 +61,24 @@ export async function POST(
       );
     }
 
-    // If tutor or asistan, can only modify experience of their students
-    if (session.user.role === UserRole.TUTOR || session.user.role === UserRole.ASISTAN) {
-      if (user.tutorId !== session.user.id) {
+    // If tutor, verify student is assigned to them
+    if (isTutor && !isAdmin && user.tutorId !== userNode.id) {
+      return NextResponse.json(
+        { error: 'You can only modify experience for your own students' },
+        { status: 403 }
+      );
+    }
+
+    // If asistan, verify student is assigned to assisted tutor
+    if (isAsistan && !isAdmin && !isTutor) {
+      const asistan = await prisma.user.findUnique({
+        where: { id: userNode.id },
+        select: { assistedTutorId: true }
+      });
+
+      if (!asistan?.assistedTutorId || user.tutorId !== asistan.assistedTutorId) {
         return NextResponse.json(
-          { error: 'You can only modify experience for your own students' },
+          { error: 'You can only modify experience for students of the tutor you assist' },
           { status: 403 }
         );
       }
@@ -82,7 +100,7 @@ export async function POST(
       data: {
         amount,
         studentId: userId,
-        tutorId: session.user.id,
+        tutorId: userNode.id,
         periodId: activePeriod.id
       }
     });

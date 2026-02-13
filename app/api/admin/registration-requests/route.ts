@@ -13,14 +13,14 @@ export async function GET(request: NextRequest) {
     if (!session?.user || session.user.role !== UserRole.ADMIN) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
-    
+
     // Fetch all registration requests
     const requests = await prisma.registrationRequest.findMany({
       orderBy: {
         createdAt: 'desc'
       }
     });
-     
+
     return NextResponse.json({ requests }, { status: 200 });
   } catch (error: any) {
     console.error('Error fetching registration requests:', error);
@@ -36,27 +36,27 @@ export async function POST(request: NextRequest) {
     if (!session?.user || session.user.role !== UserRole.ADMIN) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
-    
+
     const data = await request.json();
     const { requestId, action, rejectionReason } = data;
-    
+
     if (!requestId || !action || (action !== 'approve' && action !== 'reject')) {
       return NextResponse.json({ error: 'Invalid request parameters' }, { status: 400 });
     }
-    
+
     if (action === 'reject' && !rejectionReason) {
       return NextResponse.json({ error: 'Rejection reason is required' }, { status: 400 });
     }
-    
+
     // Find the registration request
     const registrationRequest = await prisma.registrationRequest.findUnique({
       where: { id: requestId }
     });
-    
+
     if (!registrationRequest) {
       return NextResponse.json({ error: 'Registration request not found' }, { status: 404 });
     }
-    
+
     // Handle based on action
     if (action === 'approve') {
       // Create a new user from the registration request
@@ -68,24 +68,26 @@ export async function POST(request: NextRequest) {
           firstName: registrationRequest.firstName || null,
           lastName: registrationRequest.lastName || null,
           role: registrationRequest.requestedRole,
+          roles: [registrationRequest.requestedRole] as any,
         }
       });
-      
+
       // Update the registration request status
       await prisma.registrationRequest.update({
         where: { id: requestId },
-        data: { 
+        data: {
           status: 'APPROVED'
         }
       });
-      
-      return NextResponse.json({ 
+
+      return NextResponse.json({
         message: 'Registration request approved successfully',
-        user: { 
+        user: {
           id: newUser.id,
           username: newUser.username,
           email: newUser.email,
-          role: newUser.role
+          role: newUser.role,
+          roles: (newUser as any).roles
         }
       }, { status: 200 });
     } else {
@@ -97,8 +99,8 @@ export async function POST(request: NextRequest) {
           rejectionReason
         }
       });
-      
-      return NextResponse.json({ 
+
+      return NextResponse.json({
         message: 'Registration request rejected successfully'
       }, { status: 200 });
     }

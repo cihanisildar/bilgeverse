@@ -7,18 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Edit2, Trash2, Plus } from 'lucide-react';
 import { useToast } from '@/app/hooks/use-toast';
 
-type Note = {
-  id: string;
-  content: string;
-  createdAt: string;
-  updatedAt: string;
-  tutor: {
-    id: string;
-    username: string;
-    firstName?: string;
-    lastName?: string;
-  };
-};
+import { StudentNote as Note } from '@/types/student-records';
 
 type NotesManagerProps = {
   studentId: string;

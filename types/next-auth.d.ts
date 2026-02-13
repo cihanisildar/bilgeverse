@@ -13,7 +13,9 @@ declare module 'next-auth' {
     id: string;
     username: string;
     role: UserRole;
+    roles?: UserRole[];
     tutorId?: string | null;
+    assistedTutorId?: string | null;
     tutor?: TutorInfo;
   }
 

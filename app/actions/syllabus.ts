@@ -1,29 +1,76 @@
 'use server';
 
-import { getServerSession } from 'next-auth/next';
-import { authOptions } from '@/app/api/auth/[...nextauth]/auth.config';
+import { requireActionAuth, hasRole } from '@/app/lib/auth-utils';
 import prisma from '@/lib/prisma';
 import { UserRole, FeedbackRating, NotificationType } from '@prisma/client';
 import crypto from 'crypto';
 
+interface ProgressRecord {
+  isTaught: boolean;
+  taughtDate: Date | null;
+  notes: string | null;
+}
+
+export interface CreateSyllabusData {
+  title: string;
+  description?: string;
+  driveLink?: string;
+  isGlobal?: boolean;
+  lessons: Array<{
+    title: string;
+    description?: string;
+    driveLink?: string;
+  }>;
+}
+
+export interface UpdateSyllabusData {
+  title?: string;
+  description?: string;
+  isPublished?: boolean;
+}
+
+export interface UpdateSyllabusLessonData {
+  title?: string;
+  description?: string;
+  isTaught?: boolean;
+  notes?: string;
+}
+
+export interface SubmitFeedbackData {
+  syllabusId: string;
+  parentName?: string;
+  parentEmail?: string;
+  overallRating?: FeedbackRating;
+  contentQuality?: FeedbackRating;
+  effectiveness?: FeedbackRating;
+  engagement?: FeedbackRating;
+}
+
+export interface UpdateClassroomProgressData {
+  classroomId: string;
+  syllabusId: string;
+  lessonId: string;
+  isTaught: boolean;
+  notes?: string;
+}
+
 export async function getSyllabi() {
   try {
-    const session = await getServerSession(authOptions);
+    const { session, error } = await requireActionAuth();
+    if (error) return { error, data: null };
 
-    if (!session?.user) {
-      return { error: 'Yetkisiz erişim', data: null };
-    }
+    const user = session!.user;
+    const isTutor = hasRole(session, [UserRole.TUTOR]);
+    const isAdmin = hasRole(session, [UserRole.ADMIN]);
 
-    // For tutors: show global syllabi + their own
-    // For admins: show all
-    const where = session.user.role === UserRole.TUTOR
+    const where = isTutor && !isAdmin
       ? {
         OR: [
-          { createdById: session.user.id },
+          { createdById: user.id },
           { isGlobal: true },
         ],
       }
-      : {}; // Admins can see all
+      : {};
 
     const syllabi = await prisma.syllabus.findMany({
       where,
@@ -77,7 +124,7 @@ export async function getSyllabi() {
 
 export async function getSyllabus(syllabusId: string) {
   try {
-    const session = await getServerSession(authOptions);
+    const { session } = await requireActionAuth();
 
     const syllabus = await prisma.syllabus.findUnique({
       where: { id: syllabusId },
@@ -107,11 +154,14 @@ export async function getSyllabus(syllabusId: string) {
       return { error: 'Müfredat bulunamadı', data: null };
     }
 
-    // Get classroom progress if user is a tutor
-    let progressMap: { [lessonId: string]: any } = {};
+    let progressMap: Record<string, ProgressRecord> = {};
     if (session?.user) {
+      const userNode = session.user;
+      const isAsistan = hasRole(session, [UserRole.ASISTAN]);
+      const targetUserId = isAsistan ? (userNode.assistedTutorId || userNode.id) : userNode.id;
+
       const userWithClassroom = await prisma.user.findUnique({
-        where: { id: session.user.id },
+        where: { id: targetUserId },
         include: { classroom: true },
       });
 
@@ -124,7 +174,11 @@ export async function getSyllabus(syllabusId: string) {
         });
 
         progress.forEach((p) => {
-          progressMap[p.lessonId] = p;
+          progressMap[p.lessonId] = {
+            isTaught: p.isTaught,
+            taughtDate: p.taughtDate,
+            notes: p.notes
+          };
         });
       }
     }
@@ -211,31 +265,20 @@ export async function getSyllabusByShareToken(shareToken: string) {
   }
 }
 
-export async function createSyllabus(data: {
-  title: string;
-  description?: string;
-  driveLink?: string;
-  isGlobal?: boolean;
-  lessons: Array<{
-    title: string;
-    description?: string;
-    driveLink?: string;
-  }>;
-}) {
+export async function createSyllabus(data: CreateSyllabusData) {
   try {
-    const session = await getServerSession(authOptions);
-
-    if (!session?.user || session.user.role !== UserRole.ADMIN) {
-      return { error: 'Yetkisiz erişim: Sadece yöneticiler müfredat oluşturabilir', data: null };
-    }
+    const { session, error } = await requireActionAuth([UserRole.ADMIN]);
+    if (error) return { error, data: null };
+    const user = session!.user;
+    const isAdmin = hasRole(session, [UserRole.ADMIN]);
 
     const syllabus = await prisma.syllabus.create({
       data: {
         title: data.title,
         description: data.description,
         driveLink: data.driveLink,
-        isGlobal: session.user.role === UserRole.ADMIN ? (data.isGlobal ?? false) : false,
-        createdById: session.user.id,
+        isGlobal: isAdmin ? (data.isGlobal ?? false) : false,
+        createdById: user.id,
         lessons: {
           create: data.lessons.map((lesson, index) => ({
             title: lesson.title,
@@ -281,17 +324,10 @@ export async function createSyllabus(data: {
   }
 }
 
-export async function updateSyllabus(syllabusId: string, data: {
-  title?: string;
-  description?: string;
-  isPublished?: boolean;
-}) {
+export async function updateSyllabus(syllabusId: string, data: UpdateSyllabusData) {
   try {
-    const session = await getServerSession(authOptions);
-
-    if (!session?.user || (session.user.role !== UserRole.ADMIN && session.user.role !== UserRole.TUTOR)) {
-      return { error: 'Yetkisiz erişim', data: null };
-    }
+    const { error } = await requireActionAuth([UserRole.ADMIN, UserRole.TUTOR]);
+    if (error) return { error, data: null };
 
     const syllabus = await prisma.syllabus.update({
       where: { id: syllabusId },
@@ -334,11 +370,8 @@ export async function updateSyllabus(syllabusId: string, data: {
 
 export async function generateShareTokenForSyllabus(syllabusId: string) {
   try {
-    const session = await getServerSession(authOptions);
-
-    if (!session?.user || (session.user.role !== UserRole.ADMIN && session.user.role !== UserRole.TUTOR)) {
-      return { error: 'Yetkisiz erişim', data: null };
-    }
+    const { error } = await requireActionAuth([UserRole.ADMIN, UserRole.TUTOR]);
+    if (error) return { error, data: null };
 
     const shareToken = crypto.randomBytes(32).toString('hex');
 
@@ -363,18 +396,10 @@ export async function generateShareTokenForSyllabus(syllabusId: string) {
   }
 }
 
-export async function updateSyllabusLesson(lessonId: string, data: {
-  title?: string;
-  description?: string;
-  isTaught?: boolean;
-  notes?: string;
-}) {
+export async function updateSyllabusLesson(lessonId: string, data: UpdateSyllabusLessonData) {
   try {
-    const session = await getServerSession(authOptions);
-
-    if (!session?.user || (session.user.role !== UserRole.ADMIN && session.user.role !== UserRole.TUTOR)) {
-      return { error: 'Yetkisiz erişim', data: null };
-    }
+    const { session, error } = await requireActionAuth([UserRole.ADMIN, UserRole.TUTOR]);
+    if (error) return { error, data: null };
 
     // For lesson metadata (title, description), update the lesson directly
     if (data.title !== undefined || data.description !== undefined) {
@@ -398,9 +423,8 @@ export async function updateSyllabusLesson(lessonId: string, data: {
 
     // For progress tracking (isTaught, notes), use classroom-based progress
     if (data.isTaught !== undefined || data.notes !== undefined) {
-      // Get the user's classroom
       const userWithClassroom = await prisma.user.findUnique({
-        where: { id: session.user.id },
+        where: { id: session!.user.id },
         include: { classroom: true },
       });
 
@@ -408,7 +432,6 @@ export async function updateSyllabusLesson(lessonId: string, data: {
         return { error: 'Sınıf bulunamadı', data: null };
       }
 
-      // Get the lesson to find syllabusId
       const lesson = await prisma.syllabusLesson.findUnique({
         where: { id: lessonId },
       });
@@ -417,7 +440,6 @@ export async function updateSyllabusLesson(lessonId: string, data: {
         return { error: 'Ders bulunamadı', data: null };
       }
 
-      // Update classroom progress
       const progress = await prisma.classroomLessonProgress.upsert({
         where: {
           classroomId_lessonId: {
@@ -466,13 +488,9 @@ export async function addLessonToSyllabus(syllabusId: string, data: {
   driveLink?: string;
 }) {
   try {
-    const session = await getServerSession(authOptions);
+    const { error } = await requireActionAuth([UserRole.ADMIN, UserRole.TUTOR]);
+    if (error) return { error, data: null };
 
-    if (!session?.user || (session.user.role !== UserRole.ADMIN && session.user.role !== UserRole.TUTOR)) {
-      return { error: 'Yetkisiz erişim', data: null };
-    }
-
-    // Get the max order index
     const maxLesson = await prisma.syllabusLesson.findFirst({
       where: { syllabusId },
       orderBy: { orderIndex: 'desc' },
@@ -506,11 +524,8 @@ export async function addLessonToSyllabus(syllabusId: string, data: {
 
 export async function deleteSyllabusLesson(lessonId: string) {
   try {
-    const session = await getServerSession(authOptions);
-
-    if (!session?.user || (session.user.role !== UserRole.ADMIN && session.user.role !== UserRole.TUTOR)) {
-      return { error: 'Yetkisiz erişim', data: null };
-    }
+    const { error } = await requireActionAuth([UserRole.ADMIN, UserRole.TUTOR]);
+    if (error) return { error, data: null };
 
     await prisma.syllabusLesson.delete({
       where: { id: lessonId },
@@ -525,11 +540,8 @@ export async function deleteSyllabusLesson(lessonId: string) {
 
 export async function deleteSyllabus(syllabusId: string) {
   try {
-    const session = await getServerSession(authOptions);
-
-    if (!session?.user || (session.user.role !== UserRole.ADMIN && session.user.role !== UserRole.TUTOR)) {
-      return { error: 'Yetkisiz erişim', data: null };
-    }
+    const { error } = await requireActionAuth([UserRole.ADMIN, UserRole.TUTOR]);
+    if (error) return { error, data: null };
 
     await prisma.syllabus.delete({
       where: { id: syllabusId },
@@ -542,22 +554,12 @@ export async function deleteSyllabus(syllabusId: string) {
   }
 }
 
-export async function submitParentFeedback(data: {
-  syllabusId: string;
-  parentName?: string;
-  parentEmail?: string;
-  overallRating?: FeedbackRating;
-  contentQuality?: FeedbackRating;
-  effectiveness?: FeedbackRating;
-  engagement?: FeedbackRating;
-}) {
+export async function submitParentFeedback(data: SubmitFeedbackData) {
   try {
-    // No authentication required - parents can submit via shareable link
     const feedback = await prisma.parentFeedback.create({
       data,
     });
 
-    // Get the syllabus to notify the tutor
     const syllabus = await prisma.syllabus.findUnique({
       where: { id: data.syllabusId },
       include: {
@@ -566,7 +568,6 @@ export async function submitParentFeedback(data: {
     });
 
     if (syllabus) {
-      // Create notification for tutor
       await prisma.notification.create({
         data: {
           userId: syllabus.createdById,
@@ -590,15 +591,10 @@ export async function submitParentFeedback(data: {
   }
 }
 
-// ===== CLASSROOM LESSON PROGRESS (NEW) =====
-
 export async function getClassroomLessonProgress(classroomId: string, syllabusId: string) {
   try {
-    const session = await getServerSession(authOptions);
-
-    if (!session?.user || (session.user.role !== UserRole.ADMIN && session.user.role !== UserRole.TUTOR)) {
-      return { error: 'Yetkisiz erişim', data: null };
-    }
+    const { error } = await requireActionAuth([UserRole.ADMIN, UserRole.TUTOR]);
+    if (error) return { error, data: null };
 
     const progress = await prisma.classroomLessonProgress.findMany({
       where: {
@@ -630,27 +626,20 @@ export async function getClassroomLessonProgress(classroomId: string, syllabusId
   }
 }
 
-export async function updateClassroomLessonProgress(data: {
-  classroomId: string;
-  syllabusId: string;
-  lessonId: string;
-  isTaught: boolean;
-  notes?: string;
-}) {
+export async function updateClassroomLessonProgress(data: UpdateClassroomProgressData) {
   try {
-    const session = await getServerSession(authOptions);
+    const { session, error } = await requireActionAuth([UserRole.ADMIN, UserRole.TUTOR]);
+    if (error) return { error, data: null };
+    const userNode = session!.user;
+    const isAdmin = hasRole(session, [UserRole.ADMIN]);
+    const isTutor = hasRole(session, [UserRole.TUTOR]);
 
-    if (!session?.user || (session.user.role !== UserRole.ADMIN && session.user.role !== UserRole.TUTOR)) {
-      return { error: 'Yetkisiz erişim', data: null };
-    }
-
-    // Verify the user has access to this classroom
-    if (session.user.role === UserRole.TUTOR) {
+    if (isTutor && !isAdmin) {
       const classroom = await prisma.classroom.findUnique({
         where: { id: data.classroomId },
       });
 
-      if (!classroom || classroom.tutorId !== session.user.id) {
+      if (!classroom || classroom.tutorId !== userNode.id) {
         return { error: 'Bu sınıfa erişim yetkiniz yok', data: null };
       }
     }
@@ -694,11 +683,8 @@ export async function updateClassroomLessonProgress(data: {
 
 export async function toggleGlobalStatus(syllabusId: string) {
   try {
-    const session = await getServerSession(authOptions);
-
-    if (!session?.user || session.user.role !== UserRole.ADMIN) {
-      return { error: 'Sadece yöneticiler müfredatı global yapabilir', data: null };
-    }
+    const { error } = await requireActionAuth([UserRole.ADMIN]);
+    if (error) return { error: 'Sadece yöneticiler müfredatı global yapabilir', data: null };
 
     const currentSyllabus = await prisma.syllabus.findUnique({
       where: { id: syllabusId },
@@ -731,18 +717,14 @@ export async function toggleGlobalStatus(syllabusId: string) {
 
 export async function getGlobalSyllabusProgress(params?: { search?: string, page?: number, pageSize?: number }) {
   try {
-    const session = await getServerSession(authOptions);
-
-    if (!session?.user || session.user.role !== UserRole.ADMIN) {
-      return { error: 'Yetkisiz erişim', data: null };
-    }
+    const { error } = await requireActionAuth([UserRole.ADMIN]);
+    if (error) return { error, data: null };
 
     const page = params?.page || 1;
     const pageSize = params?.pageSize || 10;
     const skip = (page - 1) * pageSize;
     const search = params?.search?.toLowerCase() || '';
 
-    // 1. Fetch all global syllabi
     const globalSyllabi = await prisma.syllabus.findMany({
       where: { isGlobal: true },
       include: {
@@ -752,7 +734,6 @@ export async function getGlobalSyllabusProgress(params?: { search?: string, page
       },
     });
 
-    // 2. Fetch all classrooms with filters and pagination
     const totalClassrooms = await prisma.classroom.count({
       where: search ? {
         OR: [
@@ -788,7 +769,6 @@ export async function getGlobalSyllabusProgress(params?: { search?: string, page
       include: {
         tutor: {
           select: {
-            id: true,
             firstName: true,
             lastName: true,
             username: true,
@@ -800,7 +780,6 @@ export async function getGlobalSyllabusProgress(params?: { search?: string, page
       orderBy: { name: 'asc' },
     });
 
-    // 3. Fetch all progress records for these syllabi and selected classrooms
     const progressRecords = await prisma.classroomLessonProgress.findMany({
       where: {
         syllabusId: { in: globalSyllabi.map(s => s.id) },
@@ -808,7 +787,6 @@ export async function getGlobalSyllabusProgress(params?: { search?: string, page
       },
     });
 
-    // 4. Map the data structure: Map Classrooms -> Syllabi Progress
     const reportData = classrooms.map(classroom => {
       const syllabusProgress = globalSyllabi.map(syllabus => {
         const syllabusLessonsCount = syllabus.lessons.length;
@@ -861,11 +839,8 @@ export async function getGlobalSyllabusProgress(params?: { search?: string, page
 
 export async function getClassroomSyllabusDetail(classroomId: string, syllabusId: string) {
   try {
-    const session = await getServerSession(authOptions);
-
-    if (!session?.user || session.user.role !== UserRole.ADMIN) {
-      return { error: 'Yetkisiz erişim', data: null };
-    }
+    const { error } = await requireActionAuth([UserRole.ADMIN]);
+    if (error) return { error, data: null };
 
     const syllabus = await prisma.syllabus.findUnique({
       where: { id: syllabusId },

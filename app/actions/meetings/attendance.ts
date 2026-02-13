@@ -73,6 +73,8 @@ export async function checkInWithQR(meetingId: string) {
       return { error: 'Yetkisiz erişim', data: null };
     }
 
+    const userNode = session.user as any;
+
     // Find meeting with valid QR token (token is stored in meeting, not passed as parameter)
     const meeting = await prisma.managerMeeting.findFirst({
       where: {
@@ -95,7 +97,7 @@ export async function checkInWithQR(meetingId: string) {
       where: {
         meetingId_userId: {
           meetingId,
-          userId: session.user.id,
+          userId: userNode.id,
         },
       },
     });
@@ -108,7 +110,7 @@ export async function checkInWithQR(meetingId: string) {
     const attendance = await prisma.meetingAttendance.create({
       data: {
         meetingId,
-        userId: session.user.id,
+        userId: userNode.id,
         checkInMethod: CheckInMethod.QR,
       },
       include: {
@@ -155,7 +157,15 @@ export async function manualCheckIn(meetingId: string, userId: string) {
   try {
     const session = await getServerSession(authOptions);
 
-    if (!session?.user || session.user.role !== UserRole.ADMIN) {
+    if (!session?.user) {
+      return { error: 'Yetkisiz erişim: Sadece yöneticiler manuel giriş yapabilir', data: null };
+    }
+
+    const userNode = session.user as any;
+    const userRoles = userNode.roles || [userNode.role].filter(Boolean) as UserRole[];
+    const isAdmin = userRoles.includes(UserRole.ADMIN);
+
+    if (!isAdmin) {
       return { error: 'Yetkisiz erişim: Sadece yöneticiler manuel giriş yapabilir', data: null };
     }
 
@@ -224,7 +234,15 @@ export async function removeAttendance(attendanceId: string) {
   try {
     const session = await getServerSession(authOptions);
 
-    if (!session?.user || session.user.role !== UserRole.ADMIN) {
+    if (!session?.user) {
+      return { error: 'Yetkisiz erişim: Sadece yöneticiler katılım kaydını silebilir', data: null };
+    }
+
+    const userNode = session.user as any;
+    const userRoles = userNode.roles || [userNode.role].filter(Boolean) as UserRole[];
+    const isAdmin = userRoles.includes(UserRole.ADMIN);
+
+    if (!isAdmin) {
       return { error: 'Yetkisiz erişim: Sadece yöneticiler katılım kaydını silebilir', data: null };
     }
 
@@ -243,7 +261,15 @@ export async function markAttendance(attendanceId: string, attended: boolean) {
   try {
     const session = await getServerSession(authOptions);
 
-    if (!session?.user || session.user.role !== UserRole.ADMIN) {
+    if (!session?.user) {
+      return { error: 'Yetkisiz erişim: Sadece yöneticiler katılımı işaretleyebilir', data: null };
+    }
+
+    const userNode = session.user as any;
+    const userRoles = userNode.roles || [userNode.role].filter(Boolean) as UserRole[];
+    const isAdmin = userRoles.includes(UserRole.ADMIN);
+
+    if (!isAdmin) {
       return { error: 'Yetkisiz erişim: Sadece yöneticiler katılımı işaretleyebilir', data: null };
     }
 
@@ -252,7 +278,7 @@ export async function markAttendance(attendanceId: string, attended: boolean) {
       where: { id: attendanceId },
       data: {
         attended,
-        markedBy: session.user.id,
+        markedBy: userNode.id,
         markedAt: new Date(),
       },
       include: {

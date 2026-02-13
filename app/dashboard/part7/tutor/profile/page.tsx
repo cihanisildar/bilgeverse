@@ -43,6 +43,8 @@ type TutorProfile = {
     pointsAwarded: number;
     completedEvents: number;
   };
+  roles: string[];
+  role: string;
 };
 
 // Static Header Component
@@ -205,10 +207,12 @@ function ProfileContent() {
         setProfile({
           id: user?.id || "",
           username: user?.username || "",
-  
+
           firstName: user?.firstName || "",
           lastName: user?.lastName || "",
           joinDate: user?.createdAt || new Date().toISOString(),
+          roles: (user as any)?.roles || (user?.role ? [user.role] : []),
+          role: user?.role || "",
           stats: data.stats || {
             studentsCount: 0,
             eventsCount: 0,
@@ -253,6 +257,19 @@ function ProfileContent() {
     return format(new Date(dateString), "dd MMMM yyyy", { locale: tr });
   };
 
+  const getRoleTranslation = (role: string) => {
+    switch (role?.toUpperCase()) {
+      case 'ADMIN': return 'Yönetici';
+      case 'TUTOR': return 'Rehber';
+      case 'STUDENT': return 'Öğrenci';
+      case 'ASISTAN': return 'Lider';
+      case 'ATHLETE': return 'Sporcu';
+      case 'BOARD_MEMBER': return 'Yönetim Kurulu';
+      case 'DONOR': return 'Bağışçı';
+      default: return role;
+    }
+  };
+
   return (
     <div className="flex flex-col lg:flex-row gap-8">
       {/* Left Column - Profile Card */}
@@ -263,25 +280,31 @@ function ProfileContent() {
             <div className="h-32 bg-gradient-to-r from-indigo-500 to-purple-600"></div>
             <div className="absolute -bottom-16 left-0 w-full flex justify-center">
               <div className="ring-4 ring-white rounded-full overflow-hidden h-32 w-32">
-                <img 
-                  src={profile.profileImage} 
+                <img
+                  src={profile.profileImage}
                   alt={`${profile.firstName} ${profile.lastName}`}
                   className="h-full w-full object-cover"
                 />
               </div>
             </div>
           </div>
-          
+
           {/* Profile Info */}
           <div className="pt-20 pb-8 px-6 text-center">
             <h1 className="text-2xl font-bold text-gray-800">
               {profile.firstName} {profile.lastName}
             </h1>
-            <p className="text-indigo-600 font-medium">{profile.specialization}</p>
-            <p className="text-gray-500 text-sm mt-1">
+            <div className="flex flex-wrap justify-center gap-1 mt-1">
+              {(profile.roles && profile.roles.length > 0 ? profile.roles : [profile.role]).map((role, idx) => (
+                <span key={idx} className="bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full text-xs font-medium">
+                  {getRoleTranslation(role)}
+                </span>
+              ))}
+            </div>
+            <p className="text-gray-500 text-sm mt-2">
               Katılım: {formatDate(profile.joinDate)}
             </p>
-            
+
             <Link
               href="/dashboard/part7/tutor/settings"
               className="mt-6 inline-flex items-center justify-center px-4 py-2 border border-indigo-300 text-sm font-medium rounded-md text-indigo-700 bg-white hover:bg-indigo-50 transition-colors"
@@ -290,7 +313,7 @@ function ProfileContent() {
               Profili Düzenle
             </Link>
           </div>
-          
+
           {/* Contact Info */}
           <div className="border-t border-gray-100 px-6 py-4">
             <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3">
@@ -309,7 +332,7 @@ function ProfileContent() {
               </li>
             </ul>
           </div>
-          
+
           {/* Stats */}
           <div className="border-t border-gray-100 px-6 py-4">
             <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3">
@@ -336,7 +359,7 @@ function ProfileContent() {
           </div>
         </div>
       </div>
-      
+
       {/* Right Column - Content Tabs */}
       <div className="lg:w-2/3">
         <div className="bg-white rounded-xl shadow-md border border-gray-100 overflow-hidden">
@@ -345,51 +368,47 @@ function ProfileContent() {
             <nav className="flex -mb-px">
               <button
                 onClick={() => setActiveTab("about")}
-                className={`py-4 px-6 inline-flex items-center ${
-                  activeTab === "about"
+                className={`py-4 px-6 inline-flex items-center ${activeTab === "about"
                     ? "border-b-2 border-indigo-500 text-indigo-600 font-medium"
                     : "text-gray-500 hover:text-gray-700 hover:border-b-2 hover:border-gray-300"
-                }`}
+                  }`}
               >
                 <User className={`mr-2 h-5 w-5 ${activeTab === "about" ? "text-indigo-500" : "text-gray-400"}`} />
                 Hakkımda
               </button>
               <button
                 onClick={() => setActiveTab("subjects")}
-                className={`py-4 px-6 inline-flex items-center ${
-                  activeTab === "subjects"
+                className={`py-4 px-6 inline-flex items-center ${activeTab === "subjects"
                     ? "border-b-2 border-indigo-500 text-indigo-600 font-medium"
                     : "text-gray-500 hover:text-gray-700 hover:border-b-2 hover:border-gray-300"
-                }`}
+                  }`}
               >
                 <BookOpen className={`mr-2 h-5 w-5 ${activeTab === "subjects" ? "text-indigo-500" : "text-gray-400"}`} />
                 Dersler
               </button>
               <button
                 onClick={() => setActiveTab("education")}
-                className={`py-4 px-6 inline-flex items-center ${
-                  activeTab === "education"
+                className={`py-4 px-6 inline-flex items-center ${activeTab === "education"
                     ? "border-b-2 border-indigo-500 text-indigo-600 font-medium"
                     : "text-gray-500 hover:text-gray-700 hover:border-b-2 hover:border-gray-300"
-                }`}
+                  }`}
               >
                 <Layers className={`mr-2 h-5 w-5 ${activeTab === "education" ? "text-indigo-500" : "text-gray-400"}`} />
                 Eğitim
               </button>
               <button
                 onClick={() => setActiveTab("certifications")}
-                className={`py-4 px-6 inline-flex items-center ${
-                  activeTab === "certifications"
+                className={`py-4 px-6 inline-flex items-center ${activeTab === "certifications"
                     ? "border-b-2 border-indigo-500 text-indigo-600 font-medium"
                     : "text-gray-500 hover:text-gray-700 hover:border-b-2 hover:border-gray-300"
-                }`}
+                  }`}
               >
                 <Award className={`mr-2 h-5 w-5 ${activeTab === "certifications" ? "text-indigo-500" : "text-gray-400"}`} />
                 Sertifikalar
               </button>
             </nav>
           </div>
-          
+
           {/* Tab Content */}
           <div className="p-6">
             {activeTab === "about" && (
@@ -398,13 +417,13 @@ function ProfileContent() {
                 <p className="text-gray-600 leading-relaxed">{profile.bio}</p>
               </div>
             )}
-            
+
             {activeTab === "subjects" && (
               <div>
                 <h2 className="text-xl font-bold text-gray-800 mb-4">Verilen Dersler</h2>
                 <div className="flex flex-wrap gap-2">
                   {profile.subjects?.map((subject, index) => (
-                    <span 
+                    <span
                       key={index}
                       className="px-3 py-1 bg-indigo-50 text-indigo-700 rounded-full text-sm font-medium"
                     >
@@ -414,7 +433,7 @@ function ProfileContent() {
                 </div>
               </div>
             )}
-            
+
             {activeTab === "education" && (
               <div>
                 <h2 className="text-xl font-bold text-gray-800 mb-4">Eğitim Geçmişi</h2>
@@ -433,7 +452,7 @@ function ProfileContent() {
                 </div>
               </div>
             )}
-            
+
             {activeTab === "certifications" && (
               <div>
                 <h2 className="text-xl font-bold text-gray-800 mb-4">Sertifikalar</h2>

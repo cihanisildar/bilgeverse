@@ -1,10 +1,8 @@
-import { redirect } from 'next/navigation';
+import { requireAuth } from '@/app/lib/auth-utils';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, BookOpen, GraduationCap, CheckCircle2, Clock, Users, ChevronLeft, ChevronRight } from 'lucide-react';
 import Link from 'next/link';
-import { getServerSession } from 'next-auth/next';
-import { authOptions } from '@/app/api/auth/[...nextauth]/auth.config';
 import { getGlobalSyllabusProgress } from '@/app/actions/syllabus';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
@@ -16,11 +14,7 @@ export default async function SyllabusTrackingPage({
 }: {
     searchParams: { q?: string; p?: string };
 }) {
-    const session = await getServerSession(authOptions);
-
-    if (!session?.user || session.user.role !== 'ADMIN') {
-        redirect('/dashboard/part2/syllabus');
-    }
+    const session = await requireAuth({ roles: ['ADMIN'], redirectTo: '/dashboard/part2/syllabus' });
 
     const query = searchParams.q || '';
     const page = parseInt(searchParams.p || '1');

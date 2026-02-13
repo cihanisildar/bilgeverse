@@ -15,7 +15,10 @@ export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
 
-    if (!session?.user || (session.user.role !== UserRole.TUTOR && session.user.role !== UserRole.ASISTAN)) {
+    const userRoles = (session?.user as any)?.roles || (session?.user?.role ? [session.user.role] : []);
+    const isTutorOrAsistan = userRoles.includes(UserRole.TUTOR) || userRoles.includes(UserRole.ASISTAN);
+
+    if (!session?.user || !isTutorOrAsistan) {
       return NextResponse.json(
         { error: 'Unauthorized: Only tutors and asistans can access this endpoint' },
         { status: 403 }
@@ -26,8 +29,9 @@ export async function GET(request: NextRequest) {
     const activePeriod = await requireActivePeriod();
 
     let tutorClassroom;
+    const isTutor = userRoles.includes(UserRole.TUTOR);
 
-    if (session.user.role === UserRole.TUTOR) {
+    if (isTutor) {
       // If user is a tutor, get their own classroom
       tutorClassroom = await prisma.classroom.findUnique({
         where: {
@@ -135,7 +139,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-    
+
     if (!session?.user || (session.user.role !== UserRole.TUTOR && session.user.role !== UserRole.ASISTAN)) {
       return NextResponse.json(
         { error: 'Unauthorized: Only tutors and asistans can create students' },
@@ -221,6 +225,7 @@ export async function POST(request: NextRequest) {
         email: email,
         password: hashedPassword,
         role: UserRole.STUDENT,
+        roles: [UserRole.STUDENT] as any,
         firstName,
         lastName,
         tutorId: tutorIdForStudent,
@@ -256,14 +261,14 @@ export async function POST(request: NextRequest) {
     });
   } catch (error: any) {
     console.error('Error creating student:', error);
-    
+
     if (error.code === 'P2002') {
       return NextResponse.json(
         { error: 'Username already exists' },
         { status: 409 }
       );
     }
-    
+
     return NextResponse.json(
       { error: error.message || 'Internal server error' },
       { status: 500 }

@@ -65,7 +65,15 @@ export async function createDecision(meetingId: string, data: unknown) {
   try {
     const session = await getServerSession(authOptions);
 
-    if (!session?.user || session.user.role !== UserRole.ADMIN) {
+    if (!session?.user) {
+      return { error: 'Yetkisiz erişim: Sadece yöneticiler karar oluşturabilir', data: null };
+    }
+
+    const userNode = session.user as any;
+    const userRoles = userNode.roles || [userNode.role].filter(Boolean) as UserRole[];
+    const isAdmin = userRoles.includes(UserRole.ADMIN);
+
+    if (!isAdmin) {
       return { error: 'Yetkisiz erişim: Sadece yöneticiler karar oluşturabilir', data: null };
     }
 
@@ -132,7 +140,15 @@ export async function updateDecision(id: string, data: unknown) {
   try {
     const session = await getServerSession(authOptions);
 
-    if (!session?.user || session.user.role !== UserRole.ADMIN) {
+    if (!session?.user) {
+      return { error: 'Yetkisiz erişim: Sadece yöneticiler karar güncelleyebilir', data: null };
+    }
+
+    const userNode = session.user as any;
+    const userRoles = userNode.roles || [userNode.role].filter(Boolean) as UserRole[];
+    const isAdmin = userRoles.includes(UserRole.ADMIN);
+
+    if (!isAdmin) {
       return { error: 'Yetkisiz erişim: Sadece yöneticiler karar güncelleyebilir', data: null };
     }
 
@@ -210,7 +226,15 @@ export async function updateDecisionStatus(id: string, status: DecisionStatus) {
   try {
     const session = await getServerSession(authOptions);
 
-    if (!session?.user || session.user.role !== UserRole.ADMIN) {
+    if (!session?.user) {
+      return { error: 'Yetkisiz erişim: Sadece yöneticiler karar durumunu güncelleyebilir', data: null };
+    }
+
+    const userNode = session.user as any;
+    const userRoles = userNode.roles || [userNode.role].filter(Boolean) as UserRole[];
+    const isAdmin = userRoles.includes(UserRole.ADMIN);
+
+    if (!isAdmin) {
       return { error: 'Yetkisiz erişim: Sadece yöneticiler karar durumunu güncelleyebilir', data: null };
     }
 
@@ -263,7 +287,15 @@ export async function deleteDecision(id: string) {
   try {
     const session = await getServerSession(authOptions);
 
-    if (!session?.user || session.user.role !== UserRole.ADMIN) {
+    if (!session?.user) {
+      return { error: 'Yetkisiz erişim: Sadece yöneticiler karar silebilir', data: null };
+    }
+
+    const userNode = session.user as any;
+    const userRoles = userNode.roles || [userNode.role].filter(Boolean) as UserRole[];
+    const isAdmin = userRoles.includes(UserRole.ADMIN);
+
+    if (!isAdmin) {
       return { error: 'Yetkisiz erişim: Sadece yöneticiler karar silebilir', data: null };
     }
 

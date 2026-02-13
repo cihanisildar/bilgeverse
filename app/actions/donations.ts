@@ -17,7 +17,16 @@ import {
 
 async function checkAuth() {
     const session = await getServerSession(authOptions);
-    if (!session?.user || (session.user.role !== UserRole.ADMIN && session.user.role !== UserRole.ASISTAN)) {
+    if (!session?.user) {
+        throw new Error('Unauthorized');
+    }
+
+    const user = session.user as any;
+    const userRoles = user.roles || [user.role].filter(Boolean) as UserRole[];
+    const isAdmin = userRoles.includes(UserRole.ADMIN);
+    const isAsistan = userRoles.includes(UserRole.ASISTAN);
+
+    if (!isAdmin && !isAsistan) {
         throw new Error('Unauthorized');
     }
     return session;

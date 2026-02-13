@@ -20,6 +20,7 @@ type User = {
   id: string;
   username: string;
   role: string;
+  roles: string[];
   firstName?: string;
   lastName?: string;
   points: number;
@@ -67,7 +68,7 @@ export default function AdminUsersPage() {
           (user.firstName?.toLowerCase() || '').includes(lowercaseQuery) ||
           (user.lastName?.toLowerCase() || '').includes(lowercaseQuery);
 
-        const matchesRole = !role || user.role.toLowerCase() === role.toLowerCase();
+        const matchesRole = !role || (user.roles && user.roles.some(r => r.toLowerCase() === role.toLowerCase())) || user.role.toLowerCase() === role.toLowerCase();
         const matchesStatus = !status || (status === 'active' ? user.isActive : !user.isActive);
 
         return matchesSearch && matchesRole && matchesStatus;
@@ -215,7 +216,7 @@ export default function AdminUsersPage() {
   };
 
   const getRoleBadgeClass = (role: string) => {
-    switch (role) {
+    switch (role.toLowerCase()) {
       case 'admin':
         return 'bg-red-100 text-red-800';
       case 'tutor':
@@ -224,6 +225,8 @@ export default function AdminUsersPage() {
         return 'bg-purple-100 text-purple-800';
       case 'student':
         return 'bg-green-100 text-green-800';
+      case 'athlete':
+        return 'bg-orange-100 text-orange-800';
       default:
         return 'bg-gray-100 text-gray-800';
     }
@@ -239,6 +242,8 @@ export default function AdminUsersPage() {
         return 'Lider';
       case 'student':
         return 'Öğrenci';
+      case 'athlete':
+        return 'Sporcu';
       default:
         return role;
     }
@@ -356,6 +361,7 @@ export default function AdminUsersPage() {
                 <option value={UserRole.TUTOR}>Rehber</option>
                 <option value={UserRole.ASISTAN}>Lider</option>
                 <option value={UserRole.STUDENT}>Öğrenci</option>
+                <option value={(UserRole as any).ATHLETE}>Sporcu</option>
               </select>
             </div>
           </div>
@@ -461,17 +467,21 @@ export default function AdminUsersPage() {
                       </div>
                     </td>
                     <td className="px-4 sm:px-6 py-4 sm:py-5 whitespace-nowrap hidden sm:table-cell">
-                      <span className={`px-2.5 sm:px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${getRoleBadgeClass(user.role)}`}>
-                        {getRoleTranslation(user.role)}
-                      </span>
+                      <div className="flex flex-wrap gap-1">
+                        {(user.roles && user.roles.length > 0 ? user.roles : [user.role]).map((r, i) => (
+                          <span key={i} className={`px-2.5 sm:px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${getRoleBadgeClass(r)}`}>
+                            {getRoleTranslation(r)}
+                          </span>
+                        ))}
+                      </div>
                     </td>
                     <td className="px-4 sm:px-6 py-4 sm:py-5 whitespace-nowrap hidden sm:table-cell">
                       <button
                         onClick={() => handleStatusToggle(user.id, user.isActive)}
                         disabled={statusUpdateLoading === user.id}
                         className={`group relative px-3 sm:px-4 py-1.5 inline-flex items-center text-xs leading-5 font-semibold rounded-lg transition-all duration-200 transform ${user.isActive
-                            ? 'bg-green-100 text-green-800 hover:bg-green-200 hover:shadow-md border-2 border-green-200 hover:border-green-300'
-                            : 'bg-red-100 text-red-800 hover:bg-red-200 hover:shadow-md border-2 border-red-200 hover:border-red-300'
+                          ? 'bg-green-100 text-green-800 hover:bg-green-200 hover:shadow-md border-2 border-green-200 hover:border-green-300'
+                          : 'bg-red-100 text-red-800 hover:bg-red-200 hover:shadow-md border-2 border-red-200 hover:border-red-300'
                           } ${statusUpdateLoading === user.id ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:scale-105'}`}
                       >
                         {statusUpdateLoading === user.id ? (
@@ -504,7 +514,7 @@ export default function AdminUsersPage() {
                       </button>
                     </td>
                     <td className="px-4 sm:px-6 py-4 sm:py-5 whitespace-nowrap text-xs sm:text-sm text-gray-500 hidden md:table-cell">
-                      {user.role && user.role.toLowerCase() === 'student' && user.tutor ? (
+                      {((user.roles && user.roles.includes('STUDENT')) || user.role.toLowerCase() === 'student') && user.tutor ? (
                         user.tutor.firstName && user.tutor.lastName
                           ? `${user.tutor.firstName} ${user.tutor.lastName}`
                           : user.tutor.username
@@ -600,45 +610,57 @@ export default function AdminUsersPage() {
               </ul>
 
               {/* Tutor/Asistan-specific consequences */}
-              {userToDelete?.id && (users.find(u => u.id === userToDelete.id)?.role === 'tutor' || users.find(u => u.id === userToDelete.id)?.role === 'asistan') && (
-                <div className="bg-red-50 border-l-4 border-red-400 p-4 rounded-r-lg">
-                  <h4 className="font-semibold text-red-800 mb-2">🎓 Öğretmen/Asistan Silme - Özel Durumlar:</h4>
-                  <ul className="list-disc pl-5 space-y-2 text-sm text-red-700">
-                    <li><strong>Öğrenciler yetim kalacak:</strong> Bu kişinin tüm öğrencileri danışmansız kalacak ve manuel olarak yeni bir danışmana atanmaları gerekecek</li>
-                    <li><strong>Sınıf tamamen silinecek:</strong> Bu kişinin sınıfı sistemden kalıcı olarak kaldırılacak</li>
-                    <li><strong>Mağaza ürünleri silinecek:</strong> Bu kişinin oluşturduğu tüm mağaza ürünleri silinecek</li>
-                    <li><strong>Öğrenci geçmişi kaybolacak:</strong> Öğrencilerin bu kişiyle olan tüm puan/deneyim geçmişi silinecek</li>
-                    <li><strong>Öğrenci notları kaybolacak:</strong> Bu kişinin öğrenciler hakkında yazdığı tüm notlar ve raporlar silinecek</li>
-                  </ul>
-                  <p className="mt-3 text-sm text-red-800 font-medium">
-                    💡 <strong>Öneri:</strong> Silmeden önce öğrencileri başka bir danışmana atamayı düşünün.
-                  </p>
-                </div>
-              )}
+              {userToDelete?.id && (() => {
+                const target = users.find(u => u.id === userToDelete.id);
+                const r = target?.roles || [target?.role];
+                return r.some(v => v?.toLowerCase() === 'tutor' || v?.toLowerCase() === 'asistan');
+              })() && (
+                  <div className="bg-red-50 border-l-4 border-red-400 p-4 rounded-r-lg">
+                    <h4 className="font-semibold text-red-800 mb-2">🎓 Öğretmen/Asistan Silme - Özel Durumlar:</h4>
+                    <ul className="list-disc pl-5 space-y-2 text-sm text-red-700">
+                      <li><strong>Öğrenciler yetim kalacak:</strong> Bu kişinin tüm öğrencileri danışmansız kalacak ve manuel olarak yeni bir danışmana atanmaları gerekecek</li>
+                      <li><strong>Sınıf tamamen silinecek:</strong> Bu kişinin sınıfı sistemden kalıcı olarak kaldırılacak</li>
+                      <li><strong>Mağaza ürünleri silinecek:</strong> Bu kişinin oluşturduğu tüm mağaza ürünleri silinecek</li>
+                      <li><strong>Öğrenci geçmişi kaybolacak:</strong> Öğrencilerin bu kişiyle olan tüm puan/deneyim geçmişi silinecek</li>
+                      <li><strong>Öğrenci notları kaybolacak:</strong> Bu kişinin öğrenciler hakkında yazdığı tüm notlar ve raporlar silinecek</li>
+                    </ul>
+                    <p className="mt-3 text-sm text-red-800 font-medium">
+                      💡 <strong>Öneri:</strong> Silmeden önce öğrencileri başka bir danışmana atamayı düşünün.
+                    </p>
+                  </div>
+                )}
 
               {/* Student-specific consequences */}
-              {userToDelete?.id && users.find(u => u.id === userToDelete.id)?.role === 'student' && (
-                <div className="bg-orange-50 border-l-4 border-orange-400 p-4 rounded-r-lg">
-                  <h4 className="font-semibold text-orange-800 mb-2">📚 Öğrenci Silme - Özel Durumlar:</h4>
-                  <ul className="list-disc pl-5 space-y-2 text-sm text-orange-700">
-                    <li>Öğrencinin tüm akademik geçmişi ve progress kayıtları silinecek</li>
-                    <li>Öğrencinin dilek listesindeki tüm istekler silinecek</li>
-                    <li>Öğrencinin katıldığı etkinlik kayıtları silinecek</li>
-                  </ul>
-                </div>
-              )}
+              {userToDelete?.id && (() => {
+                const target = users.find(u => u.id === userToDelete.id);
+                const r = target?.roles || [target?.role];
+                return r.some(v => v?.toLowerCase() === 'student');
+              })() && (
+                  <div className="bg-orange-50 border-l-4 border-orange-400 p-4 rounded-r-lg">
+                    <h4 className="font-semibold text-orange-800 mb-2">📚 Öğrenci Silme - Özel Durumlar:</h4>
+                    <ul className="list-disc pl-5 space-y-2 text-sm text-orange-700">
+                      <li>Öğrencinin tüm akademik geçmişi ve progress kayıtları silinecek</li>
+                      <li>Öğrencinin dilek listesindeki tüm istekler silinecek</li>
+                      <li>Öğrencinin katıldığı etkinlik kayıtları silinecek</li>
+                    </ul>
+                  </div>
+                )}
 
               {/* Admin-specific consequences */}
-              {userToDelete?.id && users.find(u => u.id === userToDelete.id)?.role === 'admin' && (
-                <div className="bg-purple-50 border-l-4 border-purple-400 p-4 rounded-r-lg">
-                  <h4 className="font-semibold text-purple-800 mb-2">👑 Yönetici Silme - Özel Durumlar:</h4>
-                  <ul className="list-disc pl-5 space-y-2 text-sm text-purple-700">
-                    <li>Bu yöneticinin oluşturduğu puan kartları silinecek</li>
-                    <li>Bu yöneticinin işlediği kayıt istekleri kayıtları temizlenecek</li>
-                    <li>Sistem yönetim geçmişi etkilenebilir</li>
-                  </ul>
-                </div>
-              )}
+              {userToDelete?.id && (() => {
+                const target = users.find(u => u.id === userToDelete.id);
+                const r = target?.roles || [target?.role];
+                return r.some(v => v?.toLowerCase() === 'admin');
+              })() && (
+                  <div className="bg-purple-50 border-l-4 border-purple-400 p-4 rounded-r-lg">
+                    <h4 className="font-semibold text-purple-800 mb-2">👑 Yönetici Silme - Özel Durumlar:</h4>
+                    <ul className="list-disc pl-5 space-y-2 text-sm text-purple-700">
+                      <li>Bu yöneticinin oluşturduğu puan kartları silinecek</li>
+                      <li>Bu yöneticinin işlediği kayıt istekleri kayıtları temizlenecek</li>
+                      <li>Sistem yönetim geçmişi etkilenebilir</li>
+                    </ul>
+                  </div>
+                )}
 
               <div className="bg-gray-100 p-4 rounded-lg">
                 <p className="text-red-600 font-bold text-center">

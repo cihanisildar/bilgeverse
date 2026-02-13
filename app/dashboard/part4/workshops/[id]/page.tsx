@@ -1,6 +1,5 @@
 import { redirect } from 'next/navigation';
-import { getServerSession } from 'next-auth/next';
-import { authOptions } from '@/app/api/auth/[...nextauth]/auth.config';
+import { requireAuth } from '@/app/lib/auth-utils';
 import { UserRole } from '@prisma/client';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, Calendar, Users, Briefcase, Plus, ShieldCheck, List, UserCircle2 } from 'lucide-react';
@@ -19,11 +18,7 @@ import { JoinRequestsTab } from '@/components/workshops/JoinRequestsTab';
 import { getWorkshopById, getWorkshopJoinRequest, getPendingJoinRequests } from '@/lib/workshops';
 
 export default async function WorkshopDetailsPage({ params }: { params: { id: string } }) {
-    const session = await getServerSession(authOptions);
-
-    if (!session?.user) {
-        redirect('/login');
-    }
+    const session = await requireAuth({ partId: 4 });
 
     const workshop = await getWorkshopById(params.id);
 

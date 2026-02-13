@@ -3,6 +3,7 @@
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/app/api/auth/[...nextauth]/auth.config';
 import prisma from '@/lib/prisma';
+import { UserRole } from '@prisma/client';
 
 const API_URL = 'https://meslekkocu.com/api/partner/v1/students';
 
@@ -24,7 +25,11 @@ export async function registerStudentsToMeslekkocu(
 ): Promise<RegisterStudentResult[]> {
     const session = await getServerSession(authOptions);
 
-    if (!session?.user || session.user.role !== 'ADMIN') {
+    const userNode = session?.user as any;
+    const userRoles = userNode?.roles || [userNode?.role].filter(Boolean) as UserRole[];
+    const isAdmin = userRoles.includes('ADMIN' as any);
+
+    if (!session?.user || !isAdmin) {
         throw new Error('Unauthorized');
     }
 

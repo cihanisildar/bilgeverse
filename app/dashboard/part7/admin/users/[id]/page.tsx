@@ -12,6 +12,7 @@ type User = {
   id: string;
   username: string;
   role: string;
+  roles: string[];
   firstName?: string;
   lastName?: string;
   points: number;
@@ -39,6 +40,7 @@ export default function EditUserPage() {
   const [formData, setFormData] = useState({
     username: "",
     role: "",
+    roles: [] as string[],
     firstName: "",
     lastName: "",
     tutorId: "",
@@ -68,7 +70,8 @@ export default function EditUserPage() {
         setUser(data.user);
         setFormData({
           username: data.user.username,
-          role: data.user.role,
+          role: data.user.role || "",
+          roles: data.user.roles || (data.user.role ? [data.user.role] : []),
           firstName: data.user.firstName || "",
           lastName: data.user.lastName || "",
           tutorId: data.user.tutorId || "",
@@ -125,6 +128,30 @@ export default function EditUserPage() {
     }
   };
 
+  const handleRoleToggle = (role: string) => {
+    setFormData((prev) => {
+      const isSelected = prev.roles.includes(role);
+      let newRoles = [...prev.roles];
+
+      if (isSelected) {
+        newRoles = newRoles.filter((r) => r !== role);
+      } else {
+        newRoles.push(role);
+      }
+
+      return {
+        ...prev,
+        roles: newRoles,
+        // Also keep 'role' field in sync (primary role)
+        role: newRoles.length > 0 ? newRoles[0] : "",
+      };
+    });
+
+    if (formErrors.role) {
+      setFormErrors((prev) => ({ ...prev, role: "" }));
+    }
+  };
+
   const validateForm = () => {
     const errors = {
       username: "",
@@ -143,12 +170,12 @@ export default function EditUserPage() {
 
 
 
-    if (!formData.role) {
-      errors.role = "Kullanıcı rolü gereklidir";
+    if (formData.roles.length === 0) {
+      errors.role = "En az bir kullanıcı rolü seçilmelidir";
       isValid = false;
     }
 
-    if (formData.role === UserRole.STUDENT && !formData.tutorId) {
+    if (formData.roles.includes(UserRole.STUDENT) && !formData.tutorId) {
       errors.tutorId = "Öğrenci için öğretmen atanması gereklidir";
       isValid = false;
     }
@@ -192,10 +219,11 @@ export default function EditUserPage() {
         body: JSON.stringify({
           username: formData.username,
           role: formData.role,
+          roles: formData.roles,
           firstName: formData.firstName || undefined,
           lastName: formData.lastName || undefined,
           tutorId:
-            formData.role === UserRole.STUDENT ? formData.tutorId : undefined,
+            formData.roles.includes(UserRole.STUDENT) ? formData.tutorId : undefined,
           points: formData.points,
         }),
       });
@@ -326,11 +354,10 @@ export default function EditUserPage() {
                 name="username"
                 value={formData.username}
                 onChange={handleChange}
-                className={`mt-1 block w-full border ${
-                  formErrors.username
-                    ? "border-red-300 ring-1 ring-red-300"
-                    : "border-gray-300"
-                } rounded-lg shadow-sm py-2 px-3 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm transition-all`}
+                className={`mt-1 block w-full border ${formErrors.username
+                  ? "border-red-300 ring-1 ring-red-300"
+                  : "border-gray-300"
+                  } rounded-lg shadow-sm py-2 px-3 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm transition-all`}
               />
               {formErrors.username && (
                 <p className="text-sm text-red-600">{formErrors.username}</p>
@@ -375,37 +402,45 @@ export default function EditUserPage() {
               />
             </div>
 
-            {/* Role */}
-            <div className="space-y-2">
-              <label
-                htmlFor="role"
-                className="block text-sm font-medium text-gray-700"
-              >
-                Rol
+            {/* Roles */}
+            <div className="space-y-3 md:col-span-2">
+              <label className="block text-sm font-medium text-gray-700">
+                Kullanıcı Rolleri
               </label>
-              <select
-                id="role"
-                name="role"
-                value={formData.role}
-                onChange={handleChange}
-                className={`mt-1 block w-full border ${
-                  formErrors.role
-                    ? "border-red-300 ring-1 ring-red-300"
-                    : "border-gray-300"
-                } rounded-lg shadow-sm py-2 px-3 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm transition-all appearance-none bg-white`}
-              >
-                <option value="">Rol Seçin</option>
-                <option value={UserRole.ADMIN}>Yönetici</option>
-                <option value={UserRole.TUTOR}>Öğretmen</option>
-                <option value={UserRole.STUDENT}>Öğrenci</option>
-              </select>
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 bg-gray-50 p-4 rounded-xl border border-gray-100">
+                {[
+                  { id: UserRole.ADMIN, label: "Yönetici" },
+                  { id: UserRole.TUTOR, label: "Öğretmen" },
+                  { id: UserRole.ASISTAN, label: "Lider" },
+                  { id: UserRole.STUDENT, label: "Öğrenci" },
+                  { id: (UserRole as any).ATHLETE, label: "Sporcu" },
+                  { id: UserRole.BOARD_MEMBER, label: "Yönetim Kurulu" },
+                  { id: UserRole.DONOR, label: "Bağışçı" },
+                ].map((role) => (
+                  <label
+                    key={role.id}
+                    className={`flex items-center space-x-3 p-2 rounded-lg cursor-pointer transition-all duration-200 border ${formData.roles.includes(role.id)
+                      ? "bg-indigo-50 border-indigo-200 text-indigo-700 shadow-sm"
+                      : "bg-white border-gray-200 text-gray-600 hover:bg-gray-50"
+                      }`}
+                  >
+                    <input
+                      type="checkbox"
+                      className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
+                      checked={formData.roles.includes(role.id)}
+                      onChange={() => handleRoleToggle(role.id)}
+                    />
+                    <span className="text-sm font-medium">{role.label}</span>
+                  </label>
+                ))}
+              </div>
               {formErrors.role && (
                 <p className="text-sm text-red-600">{formErrors.role}</p>
               )}
             </div>
 
             {/* Tutor (only for students) */}
-            {formData.role === UserRole.STUDENT && (
+            {(formData.roles.includes(UserRole.STUDENT) || formData.role === UserRole.STUDENT) && (
               <div className="space-y-2">
                 <label
                   htmlFor="tutorId"
@@ -418,11 +453,10 @@ export default function EditUserPage() {
                   name="tutorId"
                   value={formData.tutorId}
                   onChange={handleChange}
-                  className={`mt-1 block w-full border ${
-                    formErrors.tutorId
-                      ? "border-red-300 ring-1 ring-red-300"
-                      : "border-gray-300"
-                  } rounded-lg shadow-sm py-2 px-3 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm transition-all appearance-none bg-white`}
+                  className={`mt-1 block w-full border ${formErrors.tutorId
+                    ? "border-red-300 ring-1 ring-red-300"
+                    : "border-gray-300"
+                    } rounded-lg shadow-sm py-2 px-3 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm transition-all appearance-none bg-white`}
                 >
                   <option value="">Öğretmen Seçin</option>
                   {tutors.map((tutor) => (
@@ -453,11 +487,10 @@ export default function EditUserPage() {
                 name="password"
                 value={formData.password}
                 onChange={handleChange}
-                className={`mt-1 block w-full border ${
-                  formErrors.password
-                    ? "border-red-300 ring-1 ring-red-300"
-                    : "border-gray-300"
-                } rounded-lg shadow-sm py-2 px-3 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm transition-all`}
+                className={`mt-1 block w-full border ${formErrors.password
+                  ? "border-red-300 ring-1 ring-red-300"
+                  : "border-gray-300"
+                  } rounded-lg shadow-sm py-2 px-3 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm transition-all`}
                 placeholder="Boş bırakırsanız şifre değişmez"
               />
               {formErrors.password && (
@@ -479,11 +512,10 @@ export default function EditUserPage() {
                 name="confirmPassword"
                 value={formData.confirmPassword}
                 onChange={handleChange}
-                className={`mt-1 block w-full border ${
-                  formErrors.confirmPassword
-                    ? "border-red-300 ring-1 ring-red-300"
-                    : "border-gray-300"
-                } rounded-lg shadow-sm py-2 px-3 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm transition-all`}
+                className={`mt-1 block w-full border ${formErrors.confirmPassword
+                  ? "border-red-300 ring-1 ring-red-300"
+                  : "border-gray-300"
+                  } rounded-lg shadow-sm py-2 px-3 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm transition-all`}
                 placeholder="Boş bırakırsanız şifre değişmez"
               />
               {formErrors.confirmPassword && (
@@ -536,7 +568,7 @@ export default function EditUserPage() {
                   {new Date(user.createdAt).toLocaleDateString("tr-TR")}
                 </dd>
               </div>
-              {user.role === UserRole.STUDENT && user.tutorId && (
+              {((user.roles && user.roles.includes(UserRole.STUDENT)) || user.role === UserRole.STUDENT) && user.tutorId && (
                 <div className="bg-gray-50 rounded-lg p-4 sm:col-span-2">
                   <dt className="text-sm font-medium text-gray-500">
                     Mevcut Öğretmen

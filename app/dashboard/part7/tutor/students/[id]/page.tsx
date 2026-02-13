@@ -27,88 +27,20 @@ import NotesManager from '@/app/components/student/NotesManager';
 import ReportsManager from '@/app/components/student/ReportsManager';
 import StudentTagManager from '@/app/components/student/StudentTagManager';
 
-type Student = {
-  id: string;
-  username: string;
-  firstName?: string;
-  lastName?: string;
-  email?: string;
-  points: number;
-  experience: number;
-  rank?: number;
-  totalStudents?: number;
-  createdAt?: string;
-};
+import { StudentDetails as Student, PointTransaction as PointHistory } from '@/types/student';
 
-type PointHistory = {
-  id: string;
-  points: number;
-  type: string;
-  reason: string;
-  createdAt: string;
-  tutor?: {
-    id: string;
-    username: string;
-    firstName?: string;
-    lastName?: string;
-  };
-};
+import { useStudentDetails } from '@/app/hooks/use-student-details';
 
 export default function StudentDetailPage() {
-  const { user } = useAuth();
   const router = useRouter();
   const params = useParams();
-  const [student, setStudent] = useState<Student | null>(null);
-  const [pointHistory, setPointHistory] = useState<PointHistory[]>([]);
   const [activeTab, setActiveTab] = useState('overview');
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-
   const studentId = params.id as string;
 
-  useEffect(() => {
-    fetchStudentDetails();
-  }, [studentId]);
-
-  const fetchStudentDetails = async () => {
-    try {
-      setLoading(true);
-
-      // Fetch student details
-      const studentRes = await fetch(`/api/users/${studentId}`);
-      if (!studentRes.ok) {
-        throw new Error('Failed to fetch student details');
-      }
-      const studentData = await studentRes.json();
-
-      // Fetch student rank
-      const rankRes = await fetch(`/api/leaderboard?userId=${studentId}`);
-      if (!rankRes.ok) {
-        throw new Error('Failed to fetch rank information');
-      }
-      const rankData = await rankRes.json();
-
-      // Fetch point history
-      const pointsRes = await fetch(`/api/points?studentId=${studentId}`);
-      if (!pointsRes.ok) {
-        throw new Error('Failed to fetch points history');
-      }
-      const pointsData = await pointsRes.json();
-
-      setStudent({
-        ...studentData.user,
-        rank: rankData.rank,
-        totalStudents: rankData.totalStudents
-      });
-
-      setPointHistory(pointsData.transactions || []);
-    } catch (err) {
-      console.error('Error fetching student details:', err);
-      setError('Öğrenci bilgilerini yüklerken bir hata oluştu. Lütfen daha sonra tekrar deneyin.');
-    } finally {
-      setLoading(false);
-    }
-  };
+  const { data, isLoading: loading, error: queryError } = useStudentDetails(studentId);
+  const student = data?.student || null;
+  const pointHistory = data?.pointHistory || [];
+  const error = queryError instanceof Error ? queryError.message : "";
 
   const getFullName = (person: { firstName?: string; lastName?: string; username: string }) => {
     if (person.firstName && person.lastName) {

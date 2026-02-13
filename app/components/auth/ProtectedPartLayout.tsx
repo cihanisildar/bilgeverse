@@ -1,6 +1,4 @@
-import { redirect } from 'next/navigation';
-import { getServerSession } from 'next-auth/next';
-import { authOptions } from '@/app/api/auth/[...nextauth]/auth.config';
+import { requireAuth } from '@/app/lib/auth-utils';
 import { isAuthorized } from '@/app/lib/permissions';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -21,11 +19,7 @@ export default async function ProtectedPartLayout({
     children,
     partId,
 }: ProtectedPartLayoutProps) {
-    const session = await getServerSession(authOptions);
-
-    if (!session?.user) {
-        redirect('/login');
-    }
+    const session = await requireAuth();
 
     // Check permissions using the centralized utility
     if (!isAuthorized(session, partId)) {

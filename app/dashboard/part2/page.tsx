@@ -4,17 +4,16 @@ import { PARTS } from '@/app/lib/parts';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import PartDocuments from '@/app/components/PartDocuments';
-import { getServerSession } from 'next-auth/next';
-import { authOptions } from '@/app/api/auth/[...nextauth]/auth.config';
+import { requireAuth } from '@/app/lib/auth-utils';
 
 export default async function Part2Page() {
-  const session = await getServerSession(authOptions);
+  const session = await requireAuth({ partId: 2 });
 
-  // Note: Session is guaranteed by Part2Layout
+  // Session and basic Part 2 access are guaranteed here
   const part = PARTS.find(p => p.id === 2);
-  const isAdmin = session?.user?.role === 'ADMIN';
-  const isTutor = session?.user?.role === 'TUTOR';
-  const isAsistan = session?.user?.role === 'ASISTAN';
+  const isAdmin = session.user.role === 'ADMIN';
+  const isTutor = session.user.role === 'TUTOR';
+  const isAsistan = session.user.role === 'ASISTAN';
   const canManage = isAdmin || isTutor || isAsistan;
 
   return (

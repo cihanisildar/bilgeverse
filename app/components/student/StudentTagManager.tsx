@@ -30,19 +30,7 @@ import {
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
-interface TagTemplate {
-    id: string;
-    name: string;
-    color: string;
-    description?: string;
-    icon?: string;
-}
-
-interface StudentTag {
-    id: string;
-    template: TagTemplate;
-    createdAt: string;
-}
+import { TagTemplate, StudentTag } from '@/types/tag';
 
 interface StudentTagManagerProps {
     studentId: string;
@@ -68,6 +56,8 @@ const iconMap: Record<string, React.ReactNode> = {
     'hand-helping': <HandHelping className="h-3 w-3" />,
 };
 
+import { useStudentTags, useTagTemplates, useAddStudentTag, useRemoveStudentTag } from '@/app/hooks/use-student-tags';
+
 export default function StudentTagManager({
     studentId,
     studentName,
@@ -79,71 +69,25 @@ export default function StudentTagManager({
     showTags = true,
 }: StudentTagManagerProps) {
     const { toast } = useToast();
-    const [tags, setTags] = useState<StudentTag[]>([]);
-    const [templates, setTemplates] = useState<TagTemplate[]>([]);
-    const [loading, setLoading] = useState(false);
-    const [loadingTemplates, setLoadingTemplates] = useState(false);
     const [internalOpen, setInternalOpen] = useState(false);
 
     const isOpen = externalOpen !== undefined ? externalOpen : internalOpen;
     const setIsOpen = setExternalOpen !== undefined ? setExternalOpen : setInternalOpen;
 
-    useEffect(() => {
-        fetchTags();
-    }, [studentId]);
+    const { data: tagsData, isLoading: loadingTags } = useStudentTags(studentId);
+    const tags = tagsData?.tags || [];
 
-    useEffect(() => {
-        if (isOpen) {
-            fetchTemplates();
-        }
-    }, [isOpen]);
+    const { data: templatesData, isLoading: loadingTemplates } = useTagTemplates();
+    const templates = templatesData?.templates || [];
 
-    const fetchTags = async () => {
-        try {
-            const response = await fetch(`/api/student-tags?studentId=${studentId}`);
-            if (response.ok) {
-                const data = await response.json();
-                setTags(data.tags || []);
-            }
-        } catch (error) {
-            console.error('Error fetching tags:', error);
-        }
-    };
+    const addTagMutation = useAddStudentTag();
+    const removeTagMutation = useRemoveStudentTag();
 
-    const fetchTemplates = async () => {
-        try {
-            setLoadingTemplates(true);
-            const response = await fetch('/api/tag-templates');
-            if (response.ok) {
-                const data = await response.json();
-                setTemplates(data.templates || []);
-            }
-        } catch (error) {
-            console.error('Error fetching templates:', error);
-        } finally {
-            setLoadingTemplates(false);
-        }
-    };
+    const loading = addTagMutation.isPending || removeTagMutation.isPending;
 
     const addTag = async (templateId: string) => {
         try {
-            setLoading(true);
-            const response = await fetch('/api/student-tags', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    studentId,
-                    templateId,
-                }),
-            });
-
-            if (!response.ok) {
-                const error = await response.json();
-                throw new Error(error.error || 'Etiket eklenemedi');
-            }
-
-            const data = await response.json();
-            setTags((prev) => [...prev, data.tag]);
+            await addTagMutation.mutateAsync({ studentId, templateId });
             toast({
                 title: 'Başarılı',
                 description: 'Etiket eklendi',
@@ -155,22 +99,12 @@ export default function StudentTagManager({
                 description: error.message || 'Etiket eklenirken bir hata oluştu',
                 variant: 'destructive',
             });
-        } finally {
-            setLoading(false);
         }
     };
 
     const removeTag = async (tagId: string) => {
         try {
-            const response = await fetch(`/api/student-tags/${tagId}`, {
-                method: 'DELETE',
-            });
-
-            if (!response.ok) {
-                throw new Error('Etiket silinemedi');
-            }
-
-            setTags((prev) => prev.filter((t) => t.id !== tagId));
+            await removeTagMutation.mutateAsync({ tagId, studentId });
             toast({
                 title: 'Başarılı',
                 description: 'Etiket kaldırıldı',

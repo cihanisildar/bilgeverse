@@ -1,19 +1,47 @@
-'use server';
-
-import { getServerSession } from 'next-auth/next';
-import { authOptions } from '@/app/api/auth/[...nextauth]/auth.config';
+import { requireActionAuth, hasRole } from '@/app/lib/auth-utils';
 import prisma from '@/lib/prisma';
 import { createBoardMemberSchema, updateBoardMemberSchema } from '@/lib/validations/board-members';
 import { UserRole } from '@prisma/client';
 import bcrypt from 'bcryptjs';
 
+export interface BoardMemberStats {
+    attendedMeetings: number;
+    totalMeetings: number;
+    attendanceRate: number;
+}
+
+export interface BoardMemberWithUser {
+    id: string;
+    userId: string;
+    title: string | null;
+    isActive: boolean;
+    createdAt: string;
+    updatedAt: string;
+    user: {
+        id: string;
+        username: string;
+        firstName: string | null;
+        lastName: string | null;
+        email: string | null;
+        phone: string | null;
+    };
+    stats?: BoardMemberStats;
+}
+
+export interface UserSummary {
+    id: string;
+    username: string;
+    firstName: string | null;
+    lastName: string | null;
+    email: string | null;
+    role: UserRole;
+    displayName: string;
+}
+
 export async function getBoardMembers() {
     try {
-        const session = await getServerSession(authOptions);
-
-        if (!session?.user) {
-            return { error: 'Yetkisiz erişim', data: null };
-        }
+        const { error } = await requireActionAuth([UserRole.ADMIN]);
+        if (error) return { error, data: null };
 
         // Get total number of relevant meetings (Completed, Ongoing, or Planned but past/current)
         const now = new Date();
@@ -60,7 +88,7 @@ export async function getBoardMembers() {
                                                 }
                                             ]
                                         },
-                                    } as any,
+                                    },
                                 },
                             },
                         },
@@ -75,7 +103,8 @@ export async function getBoardMembers() {
         return {
             error: null,
             data: boardMembers.map((member) => {
-                const user = member.user as any;
+                const user = member.user;
+                const attendedCount = user._count?.meetingAttendances || 0;
                 return {
                     id: member.id,
                     userId: member.userId,
@@ -92,13 +121,13 @@ export async function getBoardMembers() {
                         phone: member.user.phone,
                     },
                     stats: {
-                        attendedMeetings: user._count?.meetingAttendances || 0,
+                        attendedMeetings: attendedCount,
                         totalMeetings: totalMeetings,
                         attendanceRate: totalMeetings > 0
-                            ? ((user._count?.meetingAttendances || 0) / totalMeetings) * 100
+                            ? (attendedCount / totalMeetings) * 100
                             : 0,
                     },
-                };
+                } satisfies BoardMemberWithUser;
             }),
         };
     } catch (error) {
@@ -109,11 +138,8 @@ export async function getBoardMembers() {
 
 export async function getBoardMemberById(id: string) {
     try {
-        const session = await getServerSession(authOptions);
-
-        if (!session?.user) {
-            return { error: 'Yetkisiz erişim', data: null };
-        }
+        const { error } = await requireActionAuth([UserRole.ADMIN]);
+        if (error) return { error, data: null };
 
         const boardMember = await prisma.boardMember.findUnique({
             where: { id },
@@ -152,7 +178,7 @@ export async function getBoardMemberById(id: string) {
                     email: boardMember.user.email,
                     phone: boardMember.user.phone,
                 },
-            },
+            } satisfies BoardMemberWithUser,
         };
     } catch (error) {
         console.error('Error fetching board member:', error);
@@ -162,11 +188,8 @@ export async function getBoardMemberById(id: string) {
 
 export async function createBoardMember(data: unknown) {
     try {
-        const session = await getServerSession(authOptions);
-
-        if (!session?.user || session.user.role !== UserRole.ADMIN) {
-            return { error: 'Yetkisiz erişim: Sadece yöneticiler yönetim kurulu üyesi ekleyebilir', data: null };
-        }
+        const { error } = await requireActionAuth([UserRole.ADMIN]);
+        if (error) return { error, data: null };
 
         const validated = createBoardMemberSchema.parse(data);
         let targetUserId = validated.userId;
@@ -198,7 +221,8 @@ export async function createBoardMember(data: unknown) {
                     password: hashedPassword,
                     firstName: validated.firstName,
                     lastName: validated.lastName,
-                    role: 'BOARD_MEMBER' as any, // Cast to any because prisma client might not be refreshed yet
+                    role: UserRole.BOARD_MEMBER,
+                    roles: [UserRole.BOARD_MEMBER],
                 },
             });
             targetUserId = newUser.id;
@@ -249,11 +273,11 @@ export async function createBoardMember(data: unknown) {
                     email: boardMember.user.email,
                     phone: boardMember.user.phone,
                 },
-            },
+            } satisfies BoardMemberWithUser,
         };
-    } catch (error: any) {
-        if (error.name === 'ZodError') {
-            return { error: error.errors[0].message, data: null };
+    } catch (error) {
+        if ((error as any).name === 'ZodError') {
+            return { error: (error as any).errors[0].message, data: null };
         }
         console.error('Error creating board member:', error);
         return { error: 'Yönetim kurulu üyesi oluşturulurken bir hata oluştu', data: null };
@@ -262,15 +286,12 @@ export async function createBoardMember(data: unknown) {
 
 export async function updateBoardMember(id: string, data: unknown) {
     try {
-        const session = await getServerSession(authOptions);
-
-        if (!session?.user || session.user.role !== UserRole.ADMIN) {
-            return { error: 'Yetkisiz erişim: Sadece yöneticiler yönetim kurulu üyesi güncelleyebilir', data: null };
-        }
+        const { error } = await requireActionAuth([UserRole.ADMIN]);
+        if (error) return { error, data: null };
 
         const validated = updateBoardMemberSchema.parse(data);
 
-        const updateData: any = {};
+        const updateData: Record<string, any> = {};
         if (validated.title !== undefined) updateData.title = validated.title;
         if (validated.isActive !== undefined) updateData.isActive = validated.isActive;
 
@@ -308,11 +329,11 @@ export async function updateBoardMember(id: string, data: unknown) {
                     email: boardMember.user.email,
                     phone: boardMember.user.phone,
                 },
-            },
+            } satisfies BoardMemberWithUser,
         };
-    } catch (error: any) {
-        if (error.name === 'ZodError') {
-            return { error: error.errors[0].message, data: null };
+    } catch (error) {
+        if ((error as any).name === 'ZodError') {
+            return { error: (error as any).errors[0].message, data: null };
         }
         console.error('Error updating board member:', error);
         return { error: 'Yönetim kurulu üyesi güncellenirken bir hata oluştu', data: null };
@@ -321,11 +342,8 @@ export async function updateBoardMember(id: string, data: unknown) {
 
 export async function deleteBoardMember(id: string) {
     try {
-        const session = await getServerSession(authOptions);
-
-        if (!session?.user || session.user.role !== UserRole.ADMIN) {
-            return { error: 'Yetkisiz erişim: Sadece yöneticiler yönetim kurulu üyesi silebilir', data: null };
-        }
+        const { error } = await requireActionAuth([UserRole.ADMIN]);
+        if (error) return { error, data: null };
 
         if (!id || typeof id !== 'string') {
             return { error: 'Geçersiz üye ID', data: null };
@@ -358,11 +376,8 @@ export async function deleteBoardMember(id: string) {
 
 export async function toggleBoardMemberStatus(id: string) {
     try {
-        const session = await getServerSession(authOptions);
-
-        if (!session?.user || session.user.role !== UserRole.ADMIN) {
-            return { error: 'Yetkisiz erişim: Sadece yöneticiler üye durumunu değiştirebilir', data: null };
-        }
+        const { error } = await requireActionAuth([UserRole.ADMIN]);
+        if (error) return { error, data: null };
 
         const boardMember = await prisma.boardMember.findUnique({
             where: { id },
@@ -420,7 +435,7 @@ export async function toggleBoardMemberStatus(id: string) {
                     email: updated.user.email,
                     phone: updated.user.phone,
                 },
-            },
+            } satisfies BoardMemberWithUser,
         };
     } catch (error) {
         console.error('Error toggling board member status:', error);
@@ -431,11 +446,8 @@ export async function toggleBoardMemberStatus(id: string) {
 // Helper function to get all users (for selection in UI)
 export async function getAllUsers() {
     try {
-        const session = await getServerSession(authOptions);
-
-        if (!session?.user || session.user.role !== UserRole.ADMIN) {
-            return { error: 'Yetkisiz erişim', data: null };
-        }
+        const { error } = await requireActionAuth([UserRole.ADMIN]);
+        if (error) return { error, data: null };
 
         const users = await prisma.user.findMany({
             select: {
@@ -461,7 +473,7 @@ export async function getAllUsers() {
                 email: user.email,
                 role: user.role,
                 displayName: `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.username,
-            })),
+            })) satisfies UserSummary[],
         };
     } catch (error) {
         console.error('Error fetching users:', error);

@@ -32,6 +32,8 @@ type StudentProfile = {
     completedEvents: number;
     approvedRequests: number;
   };
+  roles: string[];
+  role: string;
   joinDate: string;
 };
 
@@ -60,11 +62,11 @@ function ProfileContent() {
     const fetchProfile = async () => {
       try {
         setLoading(true);
-        
+
         // Get leaderboard to determine rank
         const leaderboardRes = await fetch('/api/leaderboard');
         const leaderboardData = await leaderboardRes.json();
-        
+
         // Find user's rank
         const userRank = leaderboardData.leaderboard.findIndex(
           (student: any) => student.id === user?.id
@@ -84,6 +86,8 @@ function ProfileContent() {
           totalStudents: leaderboardData.leaderboard.length,
           tutor: user?.tutor,
           stats: statsData.stats,
+          roles: (user as any)?.roles || (user?.role ? [user.role] : []),
+          role: user?.role || "",
           joinDate: user?.createdAt || new Date().toISOString()
         });
       } catch (err) {
@@ -112,7 +116,7 @@ function ProfileContent() {
                 <SkeletonShimmer className="ring-4 ring-white rounded-full h-24 w-24 sm:h-32 sm:w-32" />
               </div>
             </div>
-            
+
             {/* Profile Info Loading */}
             <div className="pt-16 sm:pt-20 pb-6 sm:pb-8 px-4 sm:px-6 text-center space-y-3">
               <SkeletonShimmer className="h-6 sm:h-8 rounded w-32 sm:w-40 mx-auto" />
@@ -120,7 +124,7 @@ function ProfileContent() {
               <SkeletonShimmer className="h-3 sm:h-4 rounded w-28 mx-auto" />
               <SkeletonShimmer className="h-8 sm:h-10 rounded w-full sm:w-32 mx-auto mt-4 sm:mt-6" />
             </div>
-            
+
             {/* Contact Info Loading */}
             <div className="border-t border-gray-100 px-4 sm:px-6 py-3 sm:py-4">
               <SkeletonShimmer className="h-4 rounded w-24 mb-2 sm:mb-3" />
@@ -129,7 +133,7 @@ function ProfileContent() {
                 <SkeletonShimmer className="h-4 rounded w-32" />
               </div>
             </div>
-            
+
             {/* Stats Loading */}
             <div className="border-t border-gray-100 px-4 sm:px-6 py-3 sm:py-4">
               <SkeletonShimmer className="h-4 rounded w-20 mb-2 sm:mb-3" />
@@ -154,7 +158,7 @@ function ProfileContent() {
             </div>
           </div>
         </div>
-        
+
         {/* Right Column - Content Loading */}
         <div className="w-full lg:w-2/3">
           <div className="bg-white rounded-xl shadow-md border border-gray-100 overflow-hidden">
@@ -240,6 +244,19 @@ function ProfileContent() {
     return format(new Date(dateString), "dd MMMM yyyy", { locale: tr });
   };
 
+  const getRoleTranslation = (role: string) => {
+    switch (role?.toUpperCase()) {
+      case 'ADMIN': return 'Yönetici';
+      case 'TUTOR': return 'Rehber';
+      case 'STUDENT': return 'Öğrenci';
+      case 'ASISTAN': return 'Lider';
+      case 'ATHLETE': return 'Sporcu';
+      case 'BOARD_MEMBER': return 'Yönetim Kurulu';
+      case 'DONOR': return 'Bağışçı';
+      default: return role;
+    }
+  };
+
   return (
     <div className="flex flex-col lg:flex-row gap-4 sm:gap-6 lg:gap-8">
       {/* Left Column - Profile Card */}
@@ -257,17 +274,23 @@ function ProfileContent() {
               </div>
             </div>
           </div>
-          
+
           {/* Profile Info */}
           <div className="pt-16 sm:pt-20 pb-6 sm:pb-8 px-4 sm:px-6 text-center">
             <h1 className="text-xl sm:text-2xl font-bold text-gray-800">
               {profile.firstName} {profile.lastName}
             </h1>
-            <p className="text-indigo-600 font-medium text-sm sm:text-base">Öğrenci</p>
-            <p className="text-gray-500 text-xs sm:text-sm mt-1">
+            <div className="flex flex-wrap justify-center gap-1 mt-1">
+              {(profile.roles && profile.roles.length > 0 ? profile.roles : [profile.role]).map((role, idx) => (
+                <span key={idx} className="bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full text-xs font-medium">
+                  {getRoleTranslation(role)}
+                </span>
+              ))}
+            </div>
+            <p className="text-gray-500 text-xs sm:text-sm mt-2">
               Katılım: {formatDate(profile.joinDate)}
             </p>
-            
+
             <Link
               href="/dashboard/part7/student/settings"
               className="mt-4 sm:mt-6 inline-flex items-center justify-center px-3 sm:px-4 py-1.5 sm:py-2 border border-indigo-300 text-xs sm:text-sm font-medium rounded-md text-indigo-700 bg-white hover:bg-indigo-50 transition-colors w-full sm:w-auto"
@@ -276,7 +299,7 @@ function ProfileContent() {
               Profili Düzenle
             </Link>
           </div>
-          
+
           {/* Contact Info */}
           <div className="border-t border-gray-100 px-4 sm:px-6 py-3 sm:py-4">
             <h2 className="text-xs sm:text-sm font-semibold text-gray-500 uppercase tracking-wider mb-2 sm:mb-3">
@@ -289,7 +312,7 @@ function ProfileContent() {
               </li>
             </ul>
           </div>
-          
+
           {/* Stats */}
           <div className="border-t border-gray-100 px-4 sm:px-6 py-3 sm:py-4">
             <h2 className="text-xs sm:text-sm font-semibold text-gray-500 uppercase tracking-wider mb-2 sm:mb-3">
@@ -316,7 +339,7 @@ function ProfileContent() {
           </div>
         </div>
       </div>
-      
+
       {/* Right Column - Content */}
       <div className="w-full lg:w-2/3">
         <div className="bg-white rounded-xl shadow-md border border-gray-100 overflow-hidden">
@@ -352,10 +375,10 @@ function ProfileContent() {
                     <div>
                       <h3 className="font-semibold text-gray-800 text-sm sm:text-base">Sıralama</h3>
                       <p className="text-xs sm:text-sm text-gray-600">
-                        {profile.rank <= 3 ? "🏆 Tebrikler! İlk 3'tesin!" : 
-                         profile.rank <= 10 ? "👏 Harika! İlk 10'dasın!" :
-                         profile.rank <= Math.ceil(profile.totalStudents * 0.25) ? "💪 İlk %25'tesin!" :
-                         "Sıralamada yükselmek için puan topla!"}
+                        {profile.rank <= 3 ? "🏆 Tebrikler! İlk 3'tesin!" :
+                          profile.rank <= 10 ? "👏 Harika! İlk 10'dasın!" :
+                            profile.rank <= Math.ceil(profile.totalStudents * 0.25) ? "💪 İlk %25'tesin!" :
+                              "Sıralamada yükselmek için puan topla!"}
                       </p>
                     </div>
                   </div>
@@ -418,7 +441,7 @@ function LoadingProfile() {
                   <SkeletonShimmer className="ring-4 ring-white rounded-full h-24 w-24 sm:h-32 sm:w-32" />
                 </div>
               </div>
-              
+
               {/* Profile Info Loading */}
               <div className="pt-16 sm:pt-20 pb-6 sm:pb-8 px-4 sm:px-6 text-center space-y-3">
                 <SkeletonShimmer className="h-6 sm:h-8 rounded w-32 sm:w-40 mx-auto" />
@@ -426,7 +449,7 @@ function LoadingProfile() {
                 <SkeletonShimmer className="h-3 sm:h-4 rounded w-28 mx-auto" />
                 <SkeletonShimmer className="h-8 sm:h-10 rounded w-full sm:w-32 mx-auto mt-4 sm:mt-6" />
               </div>
-              
+
               {/* Contact Info Loading */}
               <div className="border-t border-gray-100 px-4 sm:px-6 py-3 sm:py-4">
                 <SkeletonShimmer className="h-4 rounded w-24 mb-2 sm:mb-3" />
@@ -435,7 +458,7 @@ function LoadingProfile() {
                   <SkeletonShimmer className="h-4 rounded w-32" />
                 </div>
               </div>
-              
+
               {/* Stats Loading */}
               <div className="border-t border-gray-100 px-4 sm:px-6 py-3 sm:py-4">
                 <SkeletonShimmer className="h-4 rounded w-20 mb-2 sm:mb-3" />
@@ -460,7 +483,7 @@ function LoadingProfile() {
               </div>
             </div>
           </div>
-          
+
           {/* Right Column - Content Loading */}
           <div className="w-full lg:w-2/3">
             <div className="bg-white rounded-xl shadow-md border border-gray-100 overflow-hidden">

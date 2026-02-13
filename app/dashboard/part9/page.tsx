@@ -1,9 +1,10 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { ArrowLeft, FileText } from 'lucide-react';
+import { ArrowLeft, FileText, Trophy, Users } from 'lucide-react';
 import { PARTS } from '@/app/lib/parts';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import PartDocuments from '@/app/components/PartDocuments';
+import DashboardContainer from './DashboardContainer';
 
 export default async function Part9Page() {
   // Session check is handled by Part9Layout
@@ -13,27 +14,50 @@ export default async function Part9Page() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-gray-50 p-6 lg:p-8">
       <div className="max-w-7xl mx-auto">
-        <Link href="/dashboard">
-          <Button variant="ghost" className="mb-6 hover:bg-gray-100 transition-all duration-200">
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Ana Sayfaya Dön
-          </Button>
-        </Link>
-
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-800 mb-2">
-            <span className="bg-clip-text text-transparent bg-gradient-to-r from-slate-600 to-gray-600">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
+          <div>
+            <Link href="/dashboard">
+              <Button variant="ghost" className="mb-4 -ml-2 text-gray-500 hover:text-gray-800">
+                <ArrowLeft className="h-4 w-4 mr-2" /> Panoya Dön
+              </Button>
+            </Link>
+            <h1 className="text-4xl font-extrabold text-gray-900 tracking-tight">
               {part?.name}
-            </span>
-          </h1>
-          <p className="text-gray-600">{part?.description}</p>
+            </h1>
+            <p className="text-gray-500 mt-1">{part?.description}</p>
+          </div>
+
+          <div className="flex gap-2">
+            <Card className="bg-white shadow-sm border-gray-100 flex items-center p-3 gap-3">
+              <div className="w-10 h-10 rounded-full bg-amber-50 flex items-center justify-center">
+                <Trophy className="h-5 w-5 text-amber-600" />
+              </div>
+              <div className="pr-4">
+                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-tight">Durum</p>
+                <p className="text-sm font-bold text-green-600 leading-none">Canlı</p>
+              </div>
+            </Card>
+            <Card className="bg-white shadow-sm border-gray-100 flex items-center p-3 gap-3">
+              <div className="w-10 h-10 rounded-full bg-indigo-50 flex items-center justify-center">
+                <Users className="h-5 w-5 text-indigo-600" />
+              </div>
+              <div className="pr-4">
+                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-tight">Yetki</p>
+                <p className="text-sm font-bold text-gray-800 leading-none">Yönetici</p>
+              </div>
+            </Card>
+          </div>
+        </div>
+
+        <div className="mb-12">
+          <DashboardContainer />
         </div>
 
         <div className="mb-8">
           <div className="flex items-center justify-between mb-6">
             <div>
               <h2 className="text-2xl font-bold text-gray-800 mb-1">Belgeler</h2>
-              <p className="text-gray-600">Bu bölüm için paylaşılan belgeler</p>
+              <p className="text-gray-600">Bu bölüm için paylaşılan belgeler ve kaynaklar</p>
             </div>
             <Link href="/dashboard/pdfs">
               <Button variant="outline" className="border-slate-200 text-slate-600 hover:bg-slate-50">
@@ -44,23 +68,6 @@ export default async function Part9Page() {
           </div>
           <PartDocuments partId={9} gradientFrom="from-slate-600" gradientTo="to-gray-600" />
         </div>
-
-        <Card className="border-0 shadow-lg rounded-2xl overflow-hidden">
-          <div className="h-2 bg-gradient-to-r from-slate-500 to-gray-500"></div>
-          <CardHeader>
-            <CardTitle className="text-2xl">Geliştirme Aşamasında</CardTitle>
-            <CardDescription>Bu bölüm yakında kullanıma açılacaktır</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="text-center py-12">
-              <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-gradient-to-br from-slate-100 to-gray-100 mb-6">
-                <FileText className="h-10 w-10 text-slate-600" />
-              </div>
-              <p className="text-gray-600 mb-4">Bilge Spor Kulübü yönetim sistemi üzerinde çalışıyoruz.</p>
-              <p className="text-sm text-gray-500">Bu bölüm tamamlandığında üye yönetimi, etkinlik planlaması ve katılım takibi özellikleri sunacaktır.</p>
-            </div>
-          </CardContent>
-        </Card>
       </div>
     </div>
   );

@@ -1,27 +1,20 @@
-import { redirect } from 'next/navigation';
+import { requireAuth } from '@/app/lib/auth-utils';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, Plus, BookOpen, Share2, MessageSquare } from 'lucide-react';
 import Link from 'next/link';
-import { getServerSession } from 'next-auth/next';
-import { authOptions } from '@/app/api/auth/[...nextauth]/auth.config';
 import { getSyllabi } from '@/app/actions/syllabus';
 import SyllabusList from './SyllabusList';
 
 export default async function SyllabusPage() {
-  const session = await getServerSession(authOptions);
-
-  if (!session?.user) {
-    redirect('/login');
-  }
+  const session = await requireAuth({
+    roles: ['ADMIN', 'TUTOR'],
+    redirectTo: '/dashboard/part7/student'
+  });
 
   const isAdmin = session.user.role === 'ADMIN';
   const isTutor = session.user.role === 'TUTOR';
   const canManage = isAdmin || isTutor;
-
-  if (!canManage) {
-    redirect('/dashboard/part7/student');
-  }
 
   const result = await getSyllabi();
   const syllabi = result.data || [];

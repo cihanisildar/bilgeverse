@@ -1,20 +1,21 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import { useAuth } from '@/app/contexts/AuthContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { ArrowRight, LogOut } from 'lucide-react';
+import { ArrowRight, LogOut, Settings, User as UserIcon } from 'lucide-react';
 import { PARTS } from '@/app/lib/parts';
 import { getRoleBasedPath } from '@/app/lib/navigation';
 import { getAllowedParts } from '@/app/lib/permissions';
-import { useEffect } from 'react';
-import { usePathname } from 'next/navigation';
+import { useEffect, useState } from 'react';
 import { cn } from '@/lib/utils';
+import UserSettingsDialog from '@/app/components/UserSettingsDialog';
 
 export default function DashboardPage() {
   const router = useRouter();
   const pathname = usePathname();
   const { user, loading, isAdmin, isBoardMember, isStudent, logout } = useAuth();
+  const [profileOpen, setProfileOpen] = useState(false);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -42,15 +43,17 @@ export default function DashboardPage() {
 
   const handlePartClick = (partId: number, partPath: string) => {
     if (partId === 7 && user) {
-      // For Part 7 (Bilgeverse), redirect based on role
-      router.push(getRoleBasedPath(user.role));
+      // For Part 7 (Bilgeverse), redirect based on role(s)
+      const roles = user.roles && user.roles.length > 0 ? user.roles : [user.role];
+      router.push(getRoleBasedPath(roles));
     } else {
       router.push(partPath);
     }
   };
 
   // Filter parts based on user's role permissions
-  const allowedPartIds = getAllowedParts(user.role);
+  const roles = user.roles && user.roles.length > 0 ? user.roles : [user.role];
+  const allowedPartIds = getAllowedParts(roles);
   const visibleParts = PARTS.filter(part => allowedPartIds.includes(part.id));
 
   // Only show sidebar on dashboard page
@@ -61,8 +64,8 @@ export default function DashboardPage() {
       <div className="flex h-screen">
         {/* Sidebar - Only visible on dashboard page */}
         {isDashboardPage && (
-          <aside className="w-80 bg-white border-r border-gray-200 overflow-y-auto shadow-sm">
-            <div className="p-6">
+          <aside className="w-80 bg-white border-r border-gray-200 overflow-y-auto shadow-sm flex flex-col">
+            <div className="p-6 flex-1">
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-xl font-semibold text-gray-800">
                   <span className="bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-purple-600">
@@ -122,6 +125,23 @@ export default function DashboardPage() {
                 )}
               </div>
             </div>
+
+            {/* Profile Sidebar Footer */}
+            <div className="p-4 border-t border-gray-100 bg-gray-50/50">
+              <div
+                onClick={() => setProfileOpen(true)}
+                className="flex items-center gap-3 p-3 rounded-xl cursor-pointer hover:bg-white hover:shadow-sm border border-transparent hover:border-gray-200 transition-all group"
+              >
+                <div className="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 border border-indigo-200 shadow-inner group-hover:scale-110 transition-transform">
+                  <UserIcon className="h-5 w-5" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-bold text-gray-800 truncate">{user.firstName} {user.lastName}</p>
+                  <p className="text-xs text-gray-500 truncate">@{user.username}</p>
+                </div>
+                <Settings className="h-4 w-4 text-gray-400 group-hover:text-indigo-600 group-hover:rotate-90 transition-all duration-300" />
+              </div>
+            </div>
           </aside>
         )}
 
@@ -168,7 +188,8 @@ export default function DashboardPage() {
           </div>
         </main>
       </div>
+
+      <UserSettingsDialog open={profileOpen} onOpenChange={setProfileOpen} />
     </div>
   );
 }
-

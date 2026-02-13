@@ -105,8 +105,8 @@ const StatsCards = ({ stats }: { stats: Stats }) => {
               {card.subtitle}
             </CardContent>
             <CardFooter className="border-t border-gray-100 pt-3">
-              <Link 
-                href={card.href} 
+              <Link
+                href={card.href}
                 className={`flex items-center text-sm font-medium ${card.linkColor} transition-colors duration-200`}
               >
                 {card.linkText}
@@ -130,10 +130,10 @@ export default function AdminDashboard() {
     const fetchStats = async () => {
       // Don't fetch if we already have stats (prevents refetch on tab focus)
       if (stats) return;
-      
+
       try {
         setLoading(true);
-        
+
         // Initialize default stats
         const defaultStats = {
           totalUsers: 0,
@@ -143,7 +143,7 @@ export default function AdminDashboard() {
           totalStoreItems: 0,
           pendingRequests: 0,
         };
-        
+
         // Use Promise.allSettled for better error handling and parallel requests
         const requests = [
           fetch('/api/users').then(res => res.json()),
@@ -153,30 +153,35 @@ export default function AdminDashboard() {
         ];
 
         const results = await Promise.allSettled(requests);
-        
+
         // Process users data
         if (results[0].status === 'fulfilled' && results[0].value?.users) {
           const users = results[0].value.users;
           defaultStats.totalUsers = users.length;
-          defaultStats.totalStudents = users.filter((u: any) => u.role === UserRole.STUDENT).length;
-          defaultStats.totalTutors = users.filter((u: any) => u.role === UserRole.TUTOR).length;
+          defaultStats.totalStudents = users.filter((u: any) =>
+            (u.roles && u.roles.includes(UserRole.STUDENT)) || u.role === UserRole.STUDENT
+          ).length;
+          defaultStats.totalTutors = users.filter((u: any) =>
+            (u.roles && (u.roles.includes(UserRole.TUTOR) || u.roles.includes(UserRole.ASISTAN))) ||
+            u.role === UserRole.TUTOR || u.role === UserRole.ASISTAN
+          ).length;
         }
-        
+
         // Process events data
         if (results[1].status === 'fulfilled' && results[1].value?.events) {
           defaultStats.totalEvents = results[1].value.events.length;
         }
-        
+
         // Process store data
         if (results[2].status === 'fulfilled' && results[2].value?.items) {
           defaultStats.totalStoreItems = results[2].value.items.length;
         }
-        
+
         // Process requests data
         if (results[3].status === 'fulfilled' && results[3].value?.requests) {
           defaultStats.pendingRequests = results[3].value.requests.filter((req: any) => req.status === 'PENDING').length;
         }
-        
+
         setStats(defaultStats);
       } catch (err) {
         console.error('Error fetching stats:', err);
@@ -186,10 +191,13 @@ export default function AdminDashboard() {
       }
     };
 
-    if (session?.user?.role === UserRole.ADMIN) {
+    const userRoles = (session?.user as any)?.roles || [];
+    const isAdmin = userRoles.includes(UserRole.ADMIN) || session?.user?.role === UserRole.ADMIN;
+
+    if (isAdmin) {
       fetchStats();
     }
-  }, [session?.user?.role]); // Only depend on the role, not the entire session object
+  }, [session?.user]); // Depend on session object to catch role changes
 
   // Memoized date calculation
   const todayFormatted = useMemo(() => {
@@ -205,7 +213,7 @@ export default function AdminDashboard() {
       <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50 p-6 lg:p-8">
         <div className="space-y-6">
           <HeaderSkeleton />
-          
+
           {/* Stats Cards */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {[1, 2, 3].map((i) => (
@@ -218,13 +226,13 @@ export default function AdminDashboard() {
             <div className="h-4 w-32 bg-gray-200 rounded mb-4" />
             <Separator className="mb-6 bg-gray-200" />
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
-              <div key={i} className="border border-gray-200 rounded-xl p-5 bg-white">
-                <div className="w-12 h-12 rounded-full bg-gray-100 mb-4" />
-                <div className="h-4 w-24 bg-gray-200 rounded mb-2" />
-                <div className="h-3 w-32 bg-gray-100 rounded" />
-              </div>
-            ))}
+              {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
+                <div key={i} className="border border-gray-200 rounded-xl p-5 bg-white">
+                  <div className="w-12 h-12 rounded-full bg-gray-100 mb-4" />
+                  <div className="h-4 w-24 bg-gray-200 rounded mb-2" />
+                  <div className="h-3 w-32 bg-gray-100 rounded" />
+                </div>
+              ))}
             </div>
           </div>
         </div>
@@ -265,7 +273,7 @@ export default function AdminDashboard() {
           <CurrentPeriod />
 
           {stats && <StatsCards stats={stats} />}
-          
+
           {stats && stats.pendingRequests > 0 && (
             <Card className="border-0 shadow-lg rounded-xl overflow-hidden bg-gradient-to-r from-amber-50 to-orange-50">
               <div className="h-2 bg-gradient-to-r from-amber-400 to-orange-400"></div>
@@ -294,7 +302,7 @@ export default function AdminDashboard() {
               </CardContent>
             </Card>
           )}
-          
+
           <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-100">
             <h2 className="text-xl font-bold text-gray-800 mb-4">
               Hızlı Erişim
@@ -315,7 +323,7 @@ export default function AdminDashboard() {
             </Suspense>
           </div>
         </div>
-        
+
         <div className="text-center mt-12 text-xs text-gray-500">
           © {new Date().getFullYear()} Öğrenci Takip Sistemi. Tüm hakları saklıdır.
         </div>

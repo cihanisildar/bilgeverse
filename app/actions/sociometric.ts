@@ -3,6 +3,7 @@
 import prisma from '@/lib/prisma';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/app/api/auth/[...nextauth]/auth.config';
+import { UserRole } from '@prisma/client';
 
 interface GroupLeader {
     id: string;
@@ -50,11 +51,12 @@ export async function getSociometricData(classroomId: string) {
             throw new Error('Unauthorized');
         }
 
-        // Check if user has access to this classroom
-        const isAdmin = session.user.role === 'ADMIN';
-        const isTutor = session.user.role === 'TUTOR';
+        const userNode = session?.user as any;
+        const userRoles = userNode?.roles || [userNode?.role].filter(Boolean) as string[];
+        const isAdmin = userRoles.includes('ADMIN');
+        const isTutor = userRoles.includes('TUTOR');
 
-        if (!isAdmin && !isTutor) {
+        if (!session?.user || (!isAdmin && !isTutor)) {
             throw new Error('Unauthorized');
         }
 
@@ -90,7 +92,7 @@ export async function getSociometricData(classroomId: string) {
                         avatarUrl: true,
                     },
                     where: {
-                        role: 'STUDENT',
+                        roles: { has: 'STUDENT' as any },
                     },
                 },
             },
