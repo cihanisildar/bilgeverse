@@ -15,12 +15,15 @@ type UserWithTutor = {
   roles: UserRole[];
   firstName: string | null;
   lastName: string | null;
-  points: number;
+  points?: number;
   tutorId: string | null;
   createdAt: Date;
   isActive: boolean;
   statusChangedAt: Date | null;
   statusChangedBy: string | null;
+  email?: string;
+  updatedAt?: Date;
+  avatarUrl?: string | null;
   tutor?: {
     id: string;
     username: string;
@@ -43,8 +46,8 @@ export async function GET(request: NextRequest) {
     // Get active period for period-aware points calculation
     const activePeriod = await requireActivePeriod();
 
-    let users: any[] = [];
-    const user = session.user as any;
+    let users: UserWithTutor[] = [];
+    const user = session.user;
     const userRoles = user.roles || [user.role].filter(Boolean) as UserRole[];
     const isAdmin = userRoles.includes(UserRole.ADMIN);
     const isBoardMember = userRoles.includes(UserRole.BOARD_MEMBER);
@@ -131,10 +134,11 @@ export async function GET(request: NextRequest) {
     }));
 
     return NextResponse.json({ users: usersWithCalculatedPoints }, { status: 200 });
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Get users error:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Internal server error';
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: errorMessage },
       { status: 500 }
     );
   }

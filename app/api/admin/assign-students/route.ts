@@ -8,7 +8,17 @@ export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
 
-    if (!session?.user || session.user.role !== UserRole.ADMIN) {
+    if (!session?.user) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
+
+    const userRoles = session.user.roles || [session.user.role].filter(Boolean) as UserRole[];
+    const isAdmin = userRoles.includes(UserRole.ADMIN);
+
+    if (!isAdmin) {
       return NextResponse.json(
         { error: 'Unauthorized: Only admins can assign students to tutors' },
         { status: 403 }
@@ -25,17 +35,17 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Verify that the tutor exists and is actually a tutor
+    // Verify that the tutor exists and has a tutor-like role
     const tutor = await prisma.user.findFirst({
       where: {
         id: tutorId,
-        role: { in: [UserRole.TUTOR, UserRole.ASISTAN, UserRole.BOARD_MEMBER] }
+        roles: { hasSome: [UserRole.TUTOR, UserRole.ASISTAN, UserRole.BOARD_MEMBER] }
       }
     });
 
     if (!tutor) {
       return NextResponse.json(
-        { error: 'Tutor not found' },
+        { error: 'Tutor not found or doesn\'t have a valid teaching role' },
         { status: 404 }
       );
     }
@@ -44,13 +54,13 @@ export async function POST(request: NextRequest) {
     const student = await prisma.user.findFirst({
       where: {
         id: studentId,
-        role: UserRole.STUDENT
+        roles: { has: UserRole.STUDENT }
       }
     });
 
     if (!student) {
       return NextResponse.json(
-        { error: 'Student not found' },
+        { error: 'Student not found or doesn\'t have the student role' },
         { status: 404 }
       );
     }
@@ -116,10 +126,11 @@ export async function POST(request: NextRequest) {
       },
       { status: 200 }
     );
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error assigning student to tutor:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Internal server error';
     return NextResponse.json(
-      { error: error.message || 'Internal server error' },
+      { error: errorMessage },
       { status: 500 }
     );
   }
@@ -130,7 +141,17 @@ export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
 
-    if (!session?.user || session.user.role !== UserRole.ADMIN) {
+    if (!session?.user) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
+
+    const userRoles = session.user.roles || [session.user.role].filter(Boolean) as UserRole[];
+    const isAdmin = userRoles.includes(UserRole.ADMIN);
+
+    if (!isAdmin) {
       return NextResponse.json(
         { error: 'Unauthorized: Only admins can view assignment data' },
         { status: 403 }
@@ -140,7 +161,7 @@ export async function GET(request: NextRequest) {
     // Get unassigned students
     const unassignedStudents = await prisma.user.findMany({
       where: {
-        role: UserRole.STUDENT,
+        roles: { has: UserRole.STUDENT },
         tutorId: null
       },
       select: {
@@ -154,7 +175,7 @@ export async function GET(request: NextRequest) {
     // Get all tutors
     const tutors = await prisma.user.findMany({
       where: {
-        role: { in: [UserRole.TUTOR, UserRole.ASISTAN, UserRole.BOARD_MEMBER] }
+        roles: { hasSome: [UserRole.TUTOR, UserRole.ASISTAN, UserRole.BOARD_MEMBER] }
       },
       select: {
         id: true,
@@ -182,11 +203,12 @@ export async function GET(request: NextRequest) {
         studentCount: t._count.students
       }))
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error fetching assignment data:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Internal server error';
     return NextResponse.json(
-      { error: error.message || 'Internal server error' },
+      { error: errorMessage },
       { status: 500 }
     );
   }
-} 
+}

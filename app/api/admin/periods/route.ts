@@ -12,10 +12,22 @@ export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
 
-    // Allow ADMIN, TUTOR, and ASISTAN to read periods (needed for event creation)
-    if (!session?.user || (session.user.role !== UserRole.ADMIN && session.user.role !== UserRole.TUTOR && session.user.role !== UserRole.ASISTAN)) {
+    if (!session?.user) {
       return NextResponse.json(
         { error: 'Unauthorized: Authentication required' },
+        { status: 401 }
+      );
+    }
+
+    const userRoles = session.user.roles || [session.user.role].filter(Boolean) as UserRole[];
+    const isAdmin = userRoles.includes(UserRole.ADMIN);
+    const isTutor = userRoles.includes(UserRole.TUTOR);
+    const isAsistan = userRoles.includes(UserRole.ASISTAN);
+
+    // Allow ADMIN, TUTOR, and ASISTAN to read periods (needed for event creation)
+    if (!isAdmin && !isTutor && !isAsistan) {
+      return NextResponse.json(
+        { error: 'Unauthorized: You do not have permission to view periods' },
         { status: 403 }
       );
     }
@@ -47,7 +59,7 @@ export async function GET(request: NextRequest) {
     });
 
     return NextResponse.json({ periods }, { status: 200 });
-  } catch (error: any) {
+  } catch (error: unknown) {
     return handleDatabaseError(error, 'Fetching periods');
   }
 }
@@ -57,7 +69,17 @@ export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
 
-    if (!session?.user || session.user.role !== UserRole.ADMIN) {
+    if (!session?.user) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
+
+    const userRoles = session.user.roles || [session.user.role].filter(Boolean) as UserRole[];
+    const isAdmin = userRoles.includes(UserRole.ADMIN);
+
+    if (!isAdmin) {
       return NextResponse.json(
         { error: 'Unauthorized: Only admins can create periods' },
         { status: 403 }
@@ -108,7 +130,7 @@ export async function POST(request: NextRequest) {
     });
 
     return NextResponse.json({ period }, { status: 201 });
-  } catch (error: any) {
+  } catch (error: unknown) {
     return handleDatabaseError(error, 'Creating period');
   }
 }

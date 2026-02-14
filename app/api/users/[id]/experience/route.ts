@@ -16,13 +16,21 @@ export async function POST(
 ) {
   try {
     const session = await getServerSession(authOptions);
-    const userNode = session?.user as any;
-    const userRoles = userNode?.roles || [userNode?.role].filter(Boolean) as UserRole[];
+
+    if (!session?.user) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
+
+    const userNode = session.user as any;
+    const userRoles = userNode.roles || [userNode.role].filter(Boolean) as UserRole[];
     const isAdmin = userRoles.includes(UserRole.ADMIN);
     const isTutor = userRoles.includes(UserRole.TUTOR);
     const isAsistan = userRoles.includes(UserRole.ASISTAN);
 
-    if (!session?.user || (!isAdmin && !isTutor && !isAsistan)) {
+    if (!isAdmin && !isTutor && !isAsistan) {
       return NextResponse.json(
         { error: 'Unauthorized: Only admin, tutor or asistan can modify experience' },
         { status: 403 }

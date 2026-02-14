@@ -16,7 +16,14 @@ async function syncUserTableValues(studentId: string) {
 export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session?.user || session.user.role !== UserRole.ADMIN) {
+    if (!session?.user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const userRoles = session.user.roles || [session.user.role].filter(Boolean) as UserRole[];
+    const isAdmin = userRoles.includes(UserRole.ADMIN);
+
+    if (!isAdmin) {
       return NextResponse.json({ error: 'Unauthorized: Only admin can perform rollbacks' }, { status: 403 });
     }
 
@@ -102,16 +109,24 @@ export async function POST(request: NextRequest) {
     }
 
     return NextResponse.json({ success: true, ...rollbackResult });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Rollback error:', error);
-    return NextResponse.json({ error: error.message || 'Internal server error' }, { status: 500 });
+    const errorMessage = error instanceof Error ? error.message : 'Internal server error';
+    return NextResponse.json({ error: errorMessage }, { status: 500 });
   }
 }
 
 export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session?.user || session.user.role !== UserRole.ADMIN) {
+    if (!session?.user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const userRoles = session.user.roles || [session.user.role].filter(Boolean) as UserRole[];
+    const isAdmin = userRoles.includes(UserRole.ADMIN);
+
+    if (!isAdmin) {
       return NextResponse.json({ error: 'Unauthorized: Only admin can view rollback history' }, { status: 403 });
     }
 
@@ -129,8 +144,9 @@ export async function GET(request: NextRequest) {
       }
     });
     return NextResponse.json({ rollbacks }, { status: 200 });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Get rollback history error:', error);
-    return NextResponse.json({ error: error.message || 'Internal server error' }, { status: 500 });
+    const errorMessage = error instanceof Error ? error.message : 'Internal server error';
+    return NextResponse.json({ error: errorMessage }, { status: 500 });
   }
 } 

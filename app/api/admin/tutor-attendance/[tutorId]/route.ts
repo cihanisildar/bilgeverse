@@ -10,9 +10,15 @@ export async function GET(
 ) {
     try {
         const session = await getServerSession(authOptions);
-
-        if (!session?.user || session.user.role !== UserRole.ADMIN) {
+        if (!session?.user) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        }
+
+        const userRoles = session.user.roles || [session.user.role].filter(Boolean) as UserRole[];
+        const isAdmin = userRoles.includes(UserRole.ADMIN);
+
+        if (!isAdmin) {
+            return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
         }
 
         const { tutorId } = params;
@@ -21,9 +27,7 @@ export async function GET(
         const tutor = await prisma.user.findUnique({
             where: {
                 id: tutorId,
-                role: {
-                    in: [UserRole.TUTOR, UserRole.ASISTAN]
-                }
+                roles: { hasSome: [UserRole.TUTOR, UserRole.ASISTAN] }
             },
             select: {
                 id: true,
@@ -32,7 +36,7 @@ export async function GET(
                 students: {
                     where: {
                         isActive: true,
-                        role: UserRole.STUDENT,
+                        roles: { has: UserRole.STUDENT },
                     },
                     select: {
                         id: true,
@@ -103,7 +107,7 @@ export async function GET(
             }
         });
 
-    } catch (error) {
+    } catch (error: unknown) {
         console.error('Error fetching tutor attendance detail:', error);
         return NextResponse.json(
             { error: 'Failed to fetch tutor attendance detail' },

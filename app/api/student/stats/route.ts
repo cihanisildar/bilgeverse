@@ -9,8 +9,19 @@ export const dynamic = 'force-dynamic';
 export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-    
-    if (!session?.user || session.user.role !== UserRole.STUDENT) {
+
+    if (!session?.user) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
+
+    const { hasRole } = await import('@/app/lib/auth-utils');
+    const userRoles = (session.user as any)?.roles || [session.user.role].filter(Boolean) as UserRole[];
+    const isStudent = userRoles.includes(UserRole.STUDENT);
+
+    if (!isStudent) {
       return NextResponse.json(
         { error: 'Unauthorized: Only students can access this endpoint' },
         { status: 403 }
@@ -29,7 +40,7 @@ export async function GET(request: NextRequest) {
           status: ParticipantStatus.ATTENDED
         }
       }),
-      
+
       // Count approved requests
       prisma.itemRequest.count({
         where: {
@@ -52,4 +63,4 @@ export async function GET(request: NextRequest) {
       { status: 500 }
     );
   }
-} 
+}

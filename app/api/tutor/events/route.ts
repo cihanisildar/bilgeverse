@@ -11,7 +11,19 @@ export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
 
-    if (!session?.user || (session.user.role !== UserRole.TUTOR && session.user.role !== UserRole.ASISTAN)) {
+    if (!session?.user) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
+
+    const { hasRole } = await import('@/app/lib/auth-utils');
+    const userRoles = session.user.roles || [session.user.role].filter(Boolean) as UserRole[];
+    const isTutor = userRoles.includes(UserRole.TUTOR);
+    const isAsistan = userRoles.includes(UserRole.ASISTAN);
+
+    if (!isTutor && !isAsistan) {
       return NextResponse.json(
         { error: 'Unauthorized: Only tutors and asistans can create events' },
         { status: 403 }
@@ -75,16 +87,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // All event types are now specific catalog activities - no custom name validation needed
-
-    // Validate event scope
-    if (!data.eventScope || !Object.values(EventScope).includes(data.eventScope)) {
-      return NextResponse.json(
-        { error: `Invalid event scope. Must be one of: ${Object.values(EventScope).join(', ')}` },
-        { status: 400 }
-      );
-    }
-
     // Create new event
     const newEvent = await prisma.event.create({
       data: {
@@ -110,24 +112,19 @@ export async function POST(request: NextRequest) {
       message: 'Event created successfully',
       event: newEvent
     }, { status: 201 });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error creating event:', error);
-    console.error('Error details:', {
-      name: error.name,
-      message: error.message,
-      code: error.code,
-      stack: error.stack
-    });
 
-    if (error.code === 'P2002') {
+    if (error instanceof Error && (error as any).code === 'P2002') {
       return NextResponse.json(
         { error: 'An event with this title already exists' },
         { status: 409 }
       );
     }
 
+    const errorMessage = error instanceof Error ? error.message : 'Internal server error';
     return NextResponse.json(
-      { error: error.message || 'Internal server error', details: error.code },
+      { error: errorMessage },
       { status: 500 }
     );
   }
@@ -135,16 +132,21 @@ export async function POST(request: NextRequest) {
 
 export async function GET(request: NextRequest) {
   try {
-    console.log('GET /api/tutor/events - Starting request');
-
     const session = await getServerSession(authOptions);
-    console.log('Current user:', session?.user);
 
-    if (!session?.user || (session.user.role !== UserRole.TUTOR && session.user.role !== UserRole.ASISTAN)) {
-      console.log('Unauthorized access attempt:', {
-        isAuthenticated: !!session?.user,
-        role: session?.user?.role
-      });
+    if (!session?.user) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
+
+    const { hasRole } = await import('@/app/lib/auth-utils');
+    const userRoles = session.user.roles || [session.user.role].filter(Boolean) as UserRole[];
+    const isTutor = userRoles.includes(UserRole.TUTOR);
+    const isAsistan = userRoles.includes(UserRole.ASISTAN);
+
+    if (!isTutor && !isAsistan) {
       return NextResponse.json(
         { error: 'Unauthorized: Only tutors and asistans can view events' },
         { status: 403 }
@@ -161,12 +163,11 @@ export async function GET(request: NextRequest) {
     }
 
     // Get the ID of the tutor to fetch events for (if asistan)
-    const assistedTutorId = session.user.role === UserRole.ASISTAN
-      ? (session.user as any).assistedTutorId
+    const assistedTutorId = isAsistan
+      ? session.user.assistedTutorId
       : null;
 
     // Get all events created by this tutor/asistan AND global events created by admins
-    console.log('Fetching events for user:', session.user.id, assistedTutorId ? `(assisted tutor: ${assistedTutorId})` : '');
     const events = await prisma.event.findMany({
       where: {
         periodId: activePeriod.id,
@@ -203,7 +204,6 @@ export async function GET(request: NextRequest) {
         }
       }
     });
-    console.log('Found events:', events.length);
 
     // Add enrolledStudents count to each event
     const eventsWithCount = events.map(event => ({
@@ -214,17 +214,12 @@ export async function GET(request: NextRequest) {
     }));
 
     return NextResponse.json({ events: eventsWithCount }, { status: 200 });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error fetching events:', error);
-    console.error('Detailed error:', {
-      name: error.name,
-      message: error.message,
-      code: error.code,
-      stack: error.stack
-    });
+    const errorMessage = error instanceof Error ? error.message : 'Internal server error';
     return NextResponse.json(
-      { error: error.message || 'Internal server error' },
+      { error: errorMessage },
       { status: 500 }
     );
   }
-} 
+}

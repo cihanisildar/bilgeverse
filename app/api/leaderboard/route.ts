@@ -11,7 +11,7 @@ export const dynamic = 'force-dynamic';
 export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-    
+
     if (!session?.user) {
       return NextResponse.json(
         { error: 'Unauthorized' },
@@ -62,7 +62,7 @@ export async function GET(request: NextRequest) {
     // Calculate experience for all students efficiently using batch query
     const studentIds = studentsRaw.map(s => s.id);
     const experienceMap = await calculateMultipleUserExperience(studentIds, activePeriod.id);
-    
+
     // Map students with their experience
     const students = studentsRaw.map((student) => ({
       ...student,
@@ -84,7 +84,9 @@ export async function GET(request: NextRequest) {
     }));
 
     // Find current user's rank if they are a student
-    const userRank = session.user.role === UserRole.STUDENT
+    const userRoles = (session.user as any).roles || [session.user.role].filter(Boolean) as UserRole[];
+    const isStudent = userRoles.includes(UserRole.STUDENT);
+    const userRank = isStudent
       ? leaderboard.find(entry => entry.id === session.user.id)
       : null;
 

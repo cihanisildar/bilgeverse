@@ -9,8 +9,14 @@ export const dynamic = 'force-dynamic';
 export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-    
-    if (!session?.user || session.user.role !== UserRole.ADMIN) {
+    if (!session?.user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const userRoles = session.user.roles || [session.user.role].filter(Boolean) as UserRole[];
+    const isAdmin = userRoles.includes(UserRole.ADMIN);
+
+    if (!isAdmin) {
       return NextResponse.json(
         { error: 'Unauthorized: Only admins can access this endpoint' },
         { status: 403 }
@@ -20,7 +26,7 @@ export async function GET(request: NextRequest) {
     // Find students who have a tutor but no classroom
     const studentsWithIssues = await prisma.user.findMany({
       where: {
-        role: UserRole.STUDENT,
+        roles: { has: UserRole.STUDENT },
         tutorId: { not: null }, // Has a tutor
         studentClassroomId: null, // But no classroom
       },
@@ -53,11 +59,12 @@ export async function GET(request: NextRequest) {
       count: formattedStudents.length
     }, { status: 200 });
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error fetching students with assignment issues:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Internal server error';
     return NextResponse.json(
-      { error: error.message || 'Internal server error' },
+      { error: errorMessage },
       { status: 500 }
     );
   }
-} 
+}

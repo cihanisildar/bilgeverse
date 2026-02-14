@@ -5,6 +5,8 @@ import prisma from '@/lib/prisma';
 import { UserRole } from '@prisma/client';
 import crypto from 'crypto';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(
     req: NextRequest,
     { params }: { params: { id: string } }
@@ -37,7 +39,7 @@ export async function GET(
         });
 
         return NextResponse.json(activities);
-    } catch (error) {
+    } catch (error: unknown) {
         console.error('Error fetching activities:', error);
         return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
     }
@@ -53,8 +55,10 @@ export async function POST(
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
-        // Permission check: Admin, Board Member, or Assigned Tutor/Asistan
-        const isSpecialRole = session.user.role === UserRole.ADMIN || session.user.role === UserRole.BOARD_MEMBER;
+        const userRoles = session.user.roles || [session.user.role].filter(Boolean) as UserRole[];
+        const isAdmin = userRoles.includes(UserRole.ADMIN);
+        const isBoardMember = userRoles.includes(UserRole.BOARD_MEMBER);
+        const isSpecialRole = isAdmin || isBoardMember;
 
         if (!isSpecialRole) {
             const assignment = await prisma.workshopAssignment.findUnique({
@@ -66,8 +70,7 @@ export async function POST(
                 },
             });
 
-            const allowedRoles: UserRole[] = [UserRole.TUTOR, UserRole.ASISTAN];
-            if (!assignment || !allowedRoles.includes(assignment.role)) {
+            if (!assignment || (assignment.role !== UserRole.TUTOR && assignment.role !== UserRole.ASISTAN)) {
                 return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
             }
         }
@@ -94,7 +97,7 @@ export async function POST(
         });
 
         return NextResponse.json(activity, { status: 201 });
-    } catch (error) {
+    } catch (error: unknown) {
         console.error('Error creating activity:', error);
         return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
     }

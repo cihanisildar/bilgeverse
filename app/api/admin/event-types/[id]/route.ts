@@ -13,7 +13,14 @@ export async function PUT(
   try {
     const session = await getServerSession(authOptions);
 
-    if (!session?.user || session.user.role !== UserRole.ADMIN) {
+    if (!session?.user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const userRoles = session.user.roles || [session.user.role].filter(Boolean) as UserRole[];
+    const isAdmin = userRoles.includes(UserRole.ADMIN);
+
+    if (!isAdmin) {
       return NextResponse.json(
         { error: 'Unauthorized: Only admins can update event types' },
         { status: 403 }
@@ -71,18 +78,19 @@ export async function PUT(
       message: 'Event type updated successfully',
       eventType: updatedEventType
     }, { status: 200 });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error updating event type:', error);
 
-    if (error.code === 'P2002') {
+    if (error instanceof Error && (error as any).code === 'P2002') {
       return NextResponse.json(
         { error: 'An event type with this name already exists' },
         { status: 409 }
       );
     }
 
+    const errorMessage = error instanceof Error ? error.message : 'Internal server error';
     return NextResponse.json(
-      { error: error.message || 'Internal server error' },
+      { error: errorMessage },
       { status: 500 }
     );
   }
@@ -95,7 +103,14 @@ export async function DELETE(
   try {
     const session = await getServerSession(authOptions);
 
-    if (!session?.user || session.user.role !== UserRole.ADMIN) {
+    if (!session?.user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const userRoles = session.user.roles || [session.user.role].filter(Boolean) as UserRole[];
+    const isAdmin = userRoles.includes(UserRole.ADMIN);
+
+    if (!isAdmin) {
       return NextResponse.json(
         { error: 'Unauthorized: Only admins can delete event types' },
         { status: 403 }
@@ -139,10 +154,11 @@ export async function DELETE(
     return NextResponse.json({
       message: 'Event type deleted successfully'
     }, { status: 200 });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error deleting event type:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Internal server error';
     return NextResponse.json(
-      { error: error.message || 'Internal server error' },
+      { error: errorMessage },
       { status: 500 }
     );
   }

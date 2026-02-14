@@ -10,8 +10,15 @@ export async function GET(
 ) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session?.user || session.user.role !== UserRole.ADMIN) {
+    if (!session?.user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const userRoles = session.user.roles || [session.user.role].filter(Boolean) as UserRole[];
+    const isAdmin = userRoles.includes(UserRole.ADMIN);
+
+    if (!isAdmin) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
     const wish = await prisma.wish.findUnique({
@@ -51,8 +58,15 @@ export async function PATCH(
 ) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session?.user || session.user.role !== UserRole.ADMIN) {
+    if (!session?.user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const userRoles = session.user.roles || [session.user.role].filter(Boolean) as UserRole[];
+    const isAdmin = userRoles.includes(UserRole.ADMIN);
+
+    if (!isAdmin) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
     const { response, action } = await request.json();
@@ -91,9 +105,9 @@ export async function PATCH(
         },
       });
 
-      return NextResponse.json({ 
+      return NextResponse.json({
         message: 'Response deleted successfully',
-        wish: updatedWish 
+        wish: updatedWish
       });
     }
 
@@ -124,9 +138,9 @@ export async function PATCH(
       },
     });
 
-    return NextResponse.json({ 
+    return NextResponse.json({
       message: 'Response updated successfully',
-      wish: updatedWish 
+      wish: updatedWish
     });
   } catch (error) {
     console.error('Error updating wish response:', error);
@@ -143,8 +157,15 @@ export async function PUT(
 ) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session?.user || session.user.role !== UserRole.ADMIN) {
+    if (!session?.user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const userRoles = session.user.roles || [session.user.role].filter(Boolean) as UserRole[];
+    const isAdmin = userRoles.includes(UserRole.ADMIN);
+
+    if (!isAdmin) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
     const { response } = await request.json();
@@ -188,9 +209,9 @@ export async function PUT(
       },
     });
 
-    return NextResponse.json({ 
+    return NextResponse.json({
       message: 'Response edited successfully',
-      wish: updatedWish 
+      wish: updatedWish
     });
   } catch (error) {
     console.error('Error editing wish response:', error);
@@ -207,8 +228,15 @@ export async function DELETE(
 ) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session?.user || session.user.role !== UserRole.ADMIN) {
+    if (!session?.user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const userRoles = session.user.roles || [session.user.role].filter(Boolean) as UserRole[];
+    const isAdmin = userRoles.includes(UserRole.ADMIN);
+
+    if (!isAdmin) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
     const wish = await prisma.wish.findUnique({
@@ -235,4 +263,4 @@ export async function DELETE(
       { status: 500 }
     );
   }
-} 
+}

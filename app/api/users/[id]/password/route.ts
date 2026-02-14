@@ -13,14 +13,24 @@ export async function PUT(
 ) {
   try {
     const session = await getServerSession(authOptions);
-    
-    if (!session?.user || session.user.role !== UserRole.ADMIN) {
+
+    if (!session?.user) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
+
+    const userRoles = session.user.roles || [session.user.role].filter(Boolean) as UserRole[];
+    const isAdmin = userRoles.includes(UserRole.ADMIN);
+
+    if (!isAdmin) {
       return NextResponse.json(
         { error: 'Unauthorized: Admin access required' },
         { status: 403 }
       );
     }
-    
+
     const userId = params.id;
     const body = await request.json();
     const { password } = body;
@@ -57,11 +67,11 @@ export async function PUT(
     return NextResponse.json({
       message: 'Password updated successfully'
     }, { status: 200 });
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Update password error:', error);
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }
     );
   }
-} 
+}

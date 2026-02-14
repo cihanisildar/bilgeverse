@@ -4,13 +4,23 @@ import { authOptions } from '@/app/api/auth/[...nextauth]/auth.config';
 import prisma from '@/lib/prisma';
 import { UserRole } from '@prisma/client';
 
+export const dynamic = 'force-dynamic';
+
 export async function POST(
     req: NextRequest,
     { params }: { params: { id: string } }
 ) {
     try {
         const session = await getServerSession(authOptions);
-        if (!session?.user || (session.user.role !== UserRole.ADMIN && session.user.role !== UserRole.BOARD_MEMBER)) {
+        if (!session?.user) {
+            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        }
+
+        const userRoles = session.user.roles || [session.user.role].filter(Boolean) as UserRole[];
+        const isAdmin = userRoles.includes(UserRole.ADMIN);
+        const isBoardMember = userRoles.includes(UserRole.BOARD_MEMBER);
+
+        if (!isAdmin && !isBoardMember) {
             return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
         }
 
@@ -26,14 +36,15 @@ export async function POST(
         // Get users to determine their roles if role not explicitly provided
         const users = await prisma.user.findMany({
             where: { id: { in: idsToAssign } },
-            select: { id: true, role: true }
+            select: { id: true, role: true, roles: true }
         });
 
         // Validation: Only ADMIN can assign ADMIN or BOARD_MEMBER roles
-        if (session.user.role !== UserRole.ADMIN) {
-            const hasHighLevelRole = users.some(u =>
-                u.role === UserRole.ADMIN || u.role === UserRole.BOARD_MEMBER
-            );
+        if (!isAdmin) {
+            const hasHighLevelRole = users.some(u => {
+                const roles = u.roles || [u.role];
+                return roles.includes(UserRole.ADMIN) || roles.includes(UserRole.BOARD_MEMBER);
+            });
             if (hasHighLevelRole) {
                 return NextResponse.json({
                     error: 'Only administrators can assign Admin or Board Member roles.'
@@ -61,7 +72,7 @@ export async function POST(
         }));
 
         return NextResponse.json(results);
-    } catch (error) {
+    } catch (error: unknown) {
         console.error('Error assigning members:', error);
         return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
     }
@@ -73,7 +84,15 @@ export async function DELETE(
 ) {
     try {
         const session = await getServerSession(authOptions);
-        if (!session?.user || (session.user.role !== UserRole.ADMIN && session.user.role !== UserRole.BOARD_MEMBER)) {
+        if (!session?.user) {
+            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        }
+
+        const userRoles = session.user.roles || [session.user.role].filter(Boolean) as UserRole[];
+        const isAdmin = userRoles.includes(UserRole.ADMIN);
+        const isBoardMember = userRoles.includes(UserRole.BOARD_MEMBER);
+
+        if (!isAdmin && !isBoardMember) {
             return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
         }
 
@@ -94,7 +113,7 @@ export async function DELETE(
         });
 
         return NextResponse.json({ success: true });
-    } catch (error) {
+    } catch (error: unknown) {
         console.error('Error removing assignment:', error);
         return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
     }

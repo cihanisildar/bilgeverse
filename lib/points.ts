@@ -249,6 +249,7 @@ export async function getUserWithCalculatedStats(userId: string, periodId?: stri
         firstName: true,
         lastName: true,
         role: true,
+        roles: true,
         avatarUrl: true,
         tutor: {
           select: {

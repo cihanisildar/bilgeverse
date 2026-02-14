@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { authOptions } from "@/app/api/auth/[...nextauth]/auth.config";
 import { UserRole, PeriodStatus } from "@prisma/client";
 import prisma from "@/lib/prisma";
 import { requireActivePeriod } from "@/lib/periods";
@@ -9,9 +9,18 @@ import { requireActivePeriod } from "@/lib/periods";
 export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-    
-    if (!session?.user || (session.user.role !== UserRole.TUTOR && session.user.role !== UserRole.ASISTAN)) {
+
+    if (!session?.user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const { hasRole } = await import('@/app/lib/auth-utils');
+    const userRoles = session.user.roles || [session.user.role].filter(Boolean) as UserRole[];
+    const isTutor = userRoles.includes(UserRole.TUTOR);
+    const isAsistan = userRoles.includes(UserRole.ASISTAN);
+
+    if (!isTutor && !isAsistan) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
     }
 
     const userId = session.user.id;
@@ -75,10 +84,11 @@ export async function GET(request: NextRequest) {
     }));
 
     return NextResponse.json({ reports: transformedReports });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error fetching weekly reports:", error);
+    const errorMessage = error instanceof Error ? error.message : "Failed to fetch weekly reports";
     return NextResponse.json(
-      { error: error.message || "Failed to fetch weekly reports" },
+      { error: errorMessage },
       { status: 500 }
     );
   }
@@ -91,9 +101,19 @@ export async function POST(request: NextRequest) {
 
     const session = await getServerSession(authOptions);
 
-    if (!session?.user || (session.user.role !== UserRole.TUTOR && session.user.role !== UserRole.ASISTAN)) {
-      console.log('[Weekly Report POST] Auth failed');
+    if (!session?.user) {
+      console.log('[Weekly Report POST] Auth failed: no user');
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const { hasRole } = await import('@/app/lib/auth-utils');
+    const userRoles = session.user.roles || [session.user.role].filter(Boolean) as UserRole[];
+    const isTutor = userRoles.includes(UserRole.TUTOR);
+    const isAsistan = userRoles.includes(UserRole.ASISTAN);
+
+    if (!isTutor && !isAsistan) {
+      console.log('[Weekly Report POST] Auth failed: not tutor/asistan');
+      return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
     }
 
     const userId = session.user.id;
@@ -129,16 +149,6 @@ export async function POST(request: NextRequest) {
       where: { id: periodId },
     });
 
-    console.log('[Weekly Report] Period lookup result:', {
-      periodId,
-      found: !!period,
-      status: period?.status,
-      statusType: typeof period?.status,
-      periodData: period,
-      isStatusActive: period?.status === "ACTIVE",
-      isStatusActiveEnum: period?.status === PeriodStatus.ACTIVE
-    });
-
     if (!period) {
       console.error('[Weekly Report] Period not found:', periodId);
       return NextResponse.json(
@@ -147,12 +157,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (period.status !== "ACTIVE") {
+    if (period.status !== PeriodStatus.ACTIVE) {
       console.error('[Weekly Report] Period is not ACTIVE:', {
         periodId,
         currentStatus: period.status,
-        statusType: typeof period.status,
-        expectedStatus: "ACTIVE"
       });
       return NextResponse.json(
         { error: "Invalid or inactive period" },
@@ -249,10 +257,11 @@ export async function POST(request: NextRequest) {
       },
       { status: 201 }
     );
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error creating weekly report:", error);
+    const errorMessage = error instanceof Error ? error.message : "Failed to create weekly report";
     return NextResponse.json(
-      { error: error.message || "Failed to create weekly report" },
+      { error: errorMessage },
       { status: 500 }
     );
   }

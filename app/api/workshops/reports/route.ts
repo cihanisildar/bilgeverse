@@ -8,7 +8,15 @@ import { UserRole } from '@prisma/client';
 export async function GET(req: NextRequest) {
     try {
         const session = await getServerSession(authOptions);
-        if (!session?.user || (session.user.role !== UserRole.ADMIN && session.user.role !== UserRole.BOARD_MEMBER)) {
+        if (!session?.user) {
+            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        }
+
+        const userRoles = session.user.roles || [session.user.role].filter(Boolean) as UserRole[];
+        const isAdmin = userRoles.includes(UserRole.ADMIN);
+        const isBoardMember = userRoles.includes(UserRole.BOARD_MEMBER);
+
+        if (!isAdmin && !isBoardMember) {
             return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
         }
 
@@ -21,14 +29,14 @@ export async function GET(req: NextRequest) {
         });
 
         // Populate tutor names
-        const tutorIds = tutorActivityCounts.map((t: any) => t.tutorId);
+        const tutorIds = tutorActivityCounts.map((t) => t.tutorId);
         const tutors = await prisma.user.findMany({
             where: { id: { in: tutorIds } },
             select: { id: true, firstName: true, lastName: true },
         });
 
-        const tutorStats = tutorActivityCounts.map((stat: any) => {
-            const tutor = tutors.find((t: any) => t.id === stat.tutorId);
+        const tutorStats = tutorActivityCounts.map((stat) => {
+            const tutor = tutors.find((t) => t.id === stat.tutorId);
             return {
                 tutorName: tutor ? `${tutor.firstName} ${tutor.lastName}` : 'Unknown',
                 activityCount: stat._count.id,
@@ -54,9 +62,9 @@ export async function GET(req: NextRequest) {
             }
         });
 
-        const workshopReports = workshops.map((w: any) => {
+        const workshopReports = workshops.map((w) => {
             const totalPossibleAttendances = w._count.activities * w._count.students;
-            const actualAttendances = w.activities.reduce((acc: number, curr: any) => acc + (curr._count?.attendances || 0), 0);
+            const actualAttendances = w.activities.reduce((acc: number, curr) => acc + (curr._count?.attendances || 0), 0);
 
             return {
                 id: w.id,
@@ -71,7 +79,7 @@ export async function GET(req: NextRequest) {
             tutorStats,
             workshopReports,
         });
-    } catch (error) {
+    } catch (error: unknown) {
         console.error('Error fetching reports:', error);
         return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
     }

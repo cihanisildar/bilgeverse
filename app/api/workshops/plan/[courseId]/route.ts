@@ -4,8 +4,8 @@ import { authOptions } from '@/app/api/auth/[...nextauth]/auth.config';
 import prisma from '@/lib/prisma';
 import { UserRole } from '@prisma/client';
 
-async function checkPermissions(courseId: string, userId: string, userRole: string) {
-    if (userRole === UserRole.ADMIN || userRole === UserRole.BOARD_MEMBER) return true;
+async function checkPermissions(courseId: string, userId: string, roles: UserRole[]) {
+    if (roles.includes(UserRole.ADMIN) || roles.includes(UserRole.BOARD_MEMBER)) return true;
 
     const course = await prisma.workshopCourse.findUnique({
         where: { id: courseId },
@@ -36,7 +36,9 @@ export async function PUT(
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
-        const isAuthorized = await checkPermissions(params.courseId, session.user.id, session.user.role);
+        const userRoles = session.user.roles || [session.user.role].filter(Boolean) as UserRole[];
+
+        const isAuthorized = await checkPermissions(params.courseId, session.user.id, userRoles);
         if (!isAuthorized) {
             return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
         }
@@ -54,7 +56,7 @@ export async function PUT(
         });
 
         return NextResponse.json(course);
-    } catch (error) {
+    } catch (error: unknown) {
         console.error('Error updating workshop course:', error);
         return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
     }
@@ -70,7 +72,9 @@ export async function PATCH(
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
-        const isAuthorized = await checkPermissions(params.courseId, session.user.id, session.user.role);
+        const userRoles = session.user.roles || [session.user.role].filter(Boolean) as UserRole[];
+
+        const isAuthorized = await checkPermissions(params.courseId, session.user.id, userRoles);
         if (!isAuthorized) {
             return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
         }
@@ -84,7 +88,7 @@ export async function PATCH(
         });
 
         return NextResponse.json(course);
-    } catch (error) {
+    } catch (error: unknown) {
         console.error('Error toggling workshop course:', error);
         return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
     }
@@ -100,7 +104,9 @@ export async function DELETE(
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
-        const isAuthorized = await checkPermissions(params.courseId, session.user.id, session.user.role);
+        const userRoles = session.user.roles || [session.user.role].filter(Boolean) as UserRole[];
+
+        const isAuthorized = await checkPermissions(params.courseId, session.user.id, userRoles);
         if (!isAuthorized) {
             return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
         }
@@ -110,7 +116,7 @@ export async function DELETE(
         });
 
         return NextResponse.json({ success: true });
-    } catch (error) {
+    } catch (error: unknown) {
         console.error('Error deleting workshop course:', error);
         return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
     }

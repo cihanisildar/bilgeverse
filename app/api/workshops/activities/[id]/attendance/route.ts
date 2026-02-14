@@ -4,6 +4,8 @@ import { authOptions } from '@/app/api/auth/[...nextauth]/auth.config';
 import prisma from '@/lib/prisma';
 import { UserRole, CheckInMethod } from '@prisma/client';
 
+export const dynamic = 'force-dynamic';
+
 export async function POST(
     req: NextRequest,
     { params }: { params: { id: string } }
@@ -13,6 +15,11 @@ export async function POST(
         if (!session?.user) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
+
+        const userRoles = session.user.roles || [session.user.role].filter(Boolean) as UserRole[];
+        const isAdmin = userRoles.includes(UserRole.ADMIN);
+        const isBoardMember = userRoles.includes(UserRole.BOARD_MEMBER);
+        const isAsistan = userRoles.includes(UserRole.ASISTAN);
 
         const body = await req.json();
         const { studentId, qrToken, method = CheckInMethod.MANUAL } = body;
@@ -146,7 +153,7 @@ export async function POST(
         }
 
         // Manual Check-in Logic (Requires Tutor/Board/Admin or Assistant of a Tutor)
-        const isAuthorized = session.user.role === UserRole.ADMIN || session.user.role === UserRole.BOARD_MEMBER;
+        const isAuthorized = isAdmin || isBoardMember;
 
         if (!isAuthorized) {
             // Check if the user themselves is assigned
@@ -159,11 +166,11 @@ export async function POST(
                 },
             });
 
-            let hasTutorAssignment = assignment && assignment.role === UserRole.TUTOR;
+            let hasTutorAssignment = assignment && (assignment.role === UserRole.TUTOR || assignment.role === UserRole.ASISTAN);
 
             // If not assigned directly, check if their assisted tutor is assigned (for assistants)
-            if (!hasTutorAssignment && session.user.role === UserRole.ASISTAN) {
-                const assistedTutorId = (session.user as any).assistedTutorId;
+            if (!hasTutorAssignment && isAsistan) {
+                const assistedTutorId = session.user.assistedTutorId;
                 if (assistedTutorId) {
                     const tutorAssignment = await prisma.workshopAssignment.findUnique({
                         where: {
@@ -208,7 +215,7 @@ export async function POST(
         });
 
         return NextResponse.json(attendance);
-    } catch (error) {
+    } catch (error: unknown) {
         console.error('Error marking attendance:', error);
         return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
     }
@@ -266,7 +273,7 @@ export async function GET(
         });
 
         return NextResponse.json(results);
-    } catch (error) {
+    } catch (error: unknown) {
         console.error('Error fetching attendances:', error);
         return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
     }

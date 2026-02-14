@@ -1,3 +1,5 @@
+'use server';
+
 import { requireActionAuth, hasRole } from '@/app/lib/auth-utils';
 import prisma from '@/lib/prisma';
 import { Part2EventStatus, Part2ParticipantStatus, CheckInMethod, UserRole } from '@prisma/client';

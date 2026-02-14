@@ -15,10 +15,19 @@ export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
 
-    const userRoles = (session?.user as any)?.roles || (session?.user?.role ? [session.user.role] : []);
-    const isTutorOrAsistan = userRoles.includes(UserRole.TUTOR) || userRoles.includes(UserRole.ASISTAN);
+    if (!session?.user) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
 
-    if (!session?.user || !isTutorOrAsistan) {
+    const { hasRole } = await import('@/app/lib/auth-utils');
+    const userRoles = session.user.roles || [session.user.role].filter(Boolean) as UserRole[];
+    const isTutor = userRoles.includes(UserRole.TUTOR);
+    const isAsistan = userRoles.includes(UserRole.ASISTAN);
+
+    if (!isTutor && !isAsistan) {
       return NextResponse.json(
         { error: 'Unauthorized: Only tutors and asistans can access this endpoint' },
         { status: 403 }
@@ -29,7 +38,6 @@ export async function GET(request: NextRequest) {
     const activePeriod = await requireActivePeriod();
 
     let tutorClassroom;
-    const isTutor = userRoles.includes(UserRole.TUTOR);
 
     if (isTutor) {
       // If user is a tutor, get their own classroom
@@ -126,10 +134,11 @@ export async function GET(request: NextRequest) {
       students: studentsWithCalculatedStats,
       totalStudents: studentsWithCalculatedStats.length
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error fetching tutor students:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Internal server error';
     return NextResponse.json(
-      { error: error.message || 'Internal server error' },
+      { error: errorMessage },
       { status: 500 }
     );
   }
@@ -140,7 +149,19 @@ export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
 
-    if (!session?.user || (session.user.role !== UserRole.TUTOR && session.user.role !== UserRole.ASISTAN)) {
+    if (!session?.user) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
+
+    const { hasRole } = await import('@/app/lib/auth-utils');
+    const userRoles = session.user.roles || [session.user.role].filter(Boolean) as UserRole[];
+    const isTutor = userRoles.includes(UserRole.TUTOR);
+    const isAsistan = userRoles.includes(UserRole.ASISTAN);
+
+    if (!isTutor && !isAsistan) {
       return NextResponse.json(
         { error: 'Unauthorized: Only tutors and asistans can create students' },
         { status: 403 }
@@ -174,7 +195,7 @@ export async function POST(request: NextRequest) {
     let tutorClassroom;
     let tutorIdForStudent;
 
-    if (session.user.role === UserRole.TUTOR) {
+    if (isTutor) {
       // If user is a tutor, use their own classroom
       tutorClassroom = await prisma.classroom.findUnique({
         where: {
@@ -225,7 +246,7 @@ export async function POST(request: NextRequest) {
         email: email,
         password: hashedPassword,
         role: UserRole.STUDENT,
-        roles: [UserRole.STUDENT] as any,
+        roles: [UserRole.STUDENT],
         firstName,
         lastName,
         tutorId: tutorIdForStudent,
@@ -259,19 +280,20 @@ export async function POST(request: NextRequest) {
         name: tutorClassroom.name
       }
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error creating student:', error);
 
-    if (error.code === 'P2002') {
+    if (error instanceof Error && (error as any).code === 'P2002') {
       return NextResponse.json(
         { error: 'Username already exists' },
         { status: 409 }
       );
     }
 
+    const errorMessage = error instanceof Error ? error.message : 'Internal server error';
     return NextResponse.json(
-      { error: error.message || 'Internal server error' },
+      { error: errorMessage },
       { status: 500 }
     );
   }
-} 
+}

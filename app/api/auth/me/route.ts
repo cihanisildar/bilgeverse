@@ -25,6 +25,7 @@ export async function GET(request: NextRequest) {
         id: true,
         username: true,
         role: true,
+        roles: true,
         firstName: true,
         lastName: true,
         points: true,
@@ -48,8 +49,11 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    const userRoles = user.roles || [user.role].filter(Boolean) as UserRole[];
+    const isStudent = userRoles.includes(UserRole.STUDENT);
+
     // For students, calculate points from transactions in the active period
-    if (user.role === UserRole.STUDENT) {
+    if (isStudent) {
       const activePeriod = await getActivePeriod();
       const calculatedPoints = activePeriod
         ? await calculateUserPoints(user.id, activePeriod.id)

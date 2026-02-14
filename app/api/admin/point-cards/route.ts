@@ -2,13 +2,21 @@ import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { authOptions } from "../../auth/[...nextauth]/auth.config";
+import { UserRole } from "@prisma/client";
 
 // GET all point cards
 export async function GET() {
   try {
     const session = await getServerSession(authOptions);
-    if (!session || session.user.role !== "ADMIN") {
+    if (!session?.user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const userRoles = session.user.roles || [session.user.role].filter(Boolean) as UserRole[];
+    const isAdmin = userRoles.includes(UserRole.ADMIN);
+
+    if (!isAdmin) {
+      return NextResponse.json({ error: "Forbidden: Admin access required" }, { status: 403 });
     }
 
     const cards = await prisma.pointEarningCard.findMany({
@@ -22,9 +30,10 @@ export async function GET() {
       },
     });
     return NextResponse.json(cards);
-  } catch (error) {
+  } catch (error: unknown) {
     console.error("Error fetching cards:", error);
-    return NextResponse.json({ error: "Failed to fetch cards" }, { status: 500 });
+    const errorMessage = error instanceof Error ? error.message : "Failed to fetch cards";
+    return NextResponse.json({ error: errorMessage }, { status: 500 });
   }
 }
 
@@ -32,8 +41,15 @@ export async function GET() {
 export async function POST(req: Request) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session || session.user.role !== "ADMIN") {
+    if (!session?.user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const userRoles = session.user.roles || [session.user.role].filter(Boolean) as UserRole[];
+    const isAdmin = userRoles.includes(UserRole.ADMIN);
+
+    if (!isAdmin) {
+      return NextResponse.json({ error: "Forbidden: Admin access required" }, { status: 403 });
     }
 
     const { title, description, points, icon, minPoints, maxPoints } = await req.json();
@@ -51,8 +67,10 @@ export async function POST(req: Request) {
     });
 
     return NextResponse.json(card);
-  } catch (error) {
-    return NextResponse.json({ error: "Failed to create card" }, { status: 500 });
+  } catch (error: unknown) {
+    console.error("Error creating card:", error);
+    const errorMessage = error instanceof Error ? error.message : "Failed to create card";
+    return NextResponse.json({ error: errorMessage }, { status: 500 });
   }
 }
 
@@ -60,8 +78,15 @@ export async function POST(req: Request) {
 export async function PUT(req: Request) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session || session.user.role !== "ADMIN") {
+    if (!session?.user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const userRoles = session.user.roles || [session.user.role].filter(Boolean) as UserRole[];
+    const isAdmin = userRoles.includes(UserRole.ADMIN);
+
+    if (!isAdmin) {
+      return NextResponse.json({ error: "Forbidden: Admin access required" }, { status: 403 });
     }
 
     const { id, title, description, points, icon, isActive, minPoints, maxPoints } = await req.json();
@@ -80,8 +105,10 @@ export async function PUT(req: Request) {
     });
 
     return NextResponse.json(card);
-  } catch (error) {
-    return NextResponse.json({ error: "Failed to update card" }, { status: 500 });
+  } catch (error: unknown) {
+    console.error("Error updating card:", error);
+    const errorMessage = error instanceof Error ? error.message : "Failed to update card";
+    return NextResponse.json({ error: errorMessage }, { status: 500 });
   }
 }
 
@@ -89,8 +116,15 @@ export async function PUT(req: Request) {
 export async function DELETE(req: Request) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session || session.user.role !== "ADMIN") {
+    if (!session?.user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const userRoles = session.user.roles || [session.user.role].filter(Boolean) as UserRole[];
+    const isAdmin = userRoles.includes(UserRole.ADMIN);
+
+    if (!isAdmin) {
+      return NextResponse.json({ error: "Forbidden: Admin access required" }, { status: 403 });
     }
 
     const { id } = await req.json();
@@ -100,7 +134,9 @@ export async function DELETE(req: Request) {
     });
 
     return NextResponse.json({ success: true });
-  } catch (error) {
-    return NextResponse.json({ error: "Failed to delete card" }, { status: 500 });
+  } catch (error: unknown) {
+    console.error("Error deleting card:", error);
+    const errorMessage = error instanceof Error ? error.message : "Failed to delete card";
+    return NextResponse.json({ error: errorMessage }, { status: 500 });
   }
 } 

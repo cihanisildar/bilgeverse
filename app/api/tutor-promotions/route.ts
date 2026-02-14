@@ -9,8 +9,15 @@ export const dynamic = 'force-dynamic';
 export async function GET(request: NextRequest) {
     try {
         const session = await getServerSession(authOptions);
+        if (!session?.user) {
+            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        }
 
-        if (!session?.user || (session.user.role !== UserRole.ADMIN && session.user.role !== UserRole.BOARD_MEMBER)) {
+        const userRoles = session.user.roles || [session.user.role].filter(Boolean) as UserRole[];
+        const isAdmin = userRoles.includes(UserRole.ADMIN);
+        const isBoardMember = userRoles.includes(UserRole.BOARD_MEMBER);
+
+        if (!isAdmin && !isBoardMember) {
             return NextResponse.json(
                 { error: 'Unauthorized: Only admin and board members can access this endpoint' },
                 { status: 403 }
@@ -58,10 +65,11 @@ export async function GET(request: NextRequest) {
         });
 
         return NextResponse.json({ promotions }, { status: 200 });
-    } catch (error: any) {
+    } catch (error: unknown) {
         console.error('Fetch tutor promotions error:', error);
+        const errorMessage = error instanceof Error ? error.message : 'Internal server error';
         return NextResponse.json(
-            { error: error.message || 'Internal server error' },
+            { error: errorMessage },
             { status: 500 }
         );
     }
@@ -70,8 +78,15 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
     try {
         const session = await getServerSession(authOptions);
+        if (!session?.user) {
+            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        }
 
-        if (!session?.user || (session.user.role !== UserRole.ADMIN && session.user.role !== UserRole.BOARD_MEMBER)) {
+        const userRoles = session.user.roles || [session.user.role].filter(Boolean) as UserRole[];
+        const isAdmin = userRoles.includes(UserRole.ADMIN);
+        const isBoardMember = userRoles.includes(UserRole.BOARD_MEMBER);
+
+        if (!isAdmin && !isBoardMember) {
             return NextResponse.json(
                 { error: 'Unauthorized: Only admin and board members can create promotion requests' },
                 { status: 403 }
@@ -145,10 +160,11 @@ export async function POST(request: NextRequest) {
         });
 
         return NextResponse.json({ promotion }, { status: 201 });
-    } catch (error: any) {
+    } catch (error: unknown) {
         console.error('Create tutor promotion error:', error);
+        const errorMessage = error instanceof Error ? error.message : 'Internal server error';
         return NextResponse.json(
-            { error: error.message || 'Internal server error' },
+            { error: errorMessage },
             { status: 500 }
         );
     }

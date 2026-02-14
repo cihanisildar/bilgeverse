@@ -4,6 +4,8 @@ import { authOptions } from '@/app/api/auth/[...nextauth]/auth.config';
 import prisma from '@/lib/prisma';
 import { UserRole } from '@prisma/client';
 
+export const dynamic = 'force-dynamic';
+
 export async function POST(
     req: NextRequest,
     { params }: { params: { id: string } }
@@ -14,16 +16,16 @@ export async function POST(
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
+        const userRoles = session.user.roles || [session.user.role].filter(Boolean) as UserRole[];
+        const isAdmin = userRoles.includes(UserRole.ADMIN);
+        const isBoardMember = userRoles.includes(UserRole.BOARD_MEMBER);
+
         const body = await req.json();
         const { title, description, date } = body;
 
         if (!title || !date) {
             return NextResponse.json({ error: 'Title and date are required' }, { status: 400 });
         }
-
-        // Check permissions
-        const isAdmin = session.user.role === UserRole.ADMIN;
-        const isBoardMember = session.user.role === UserRole.BOARD_MEMBER;
 
         const assignment = await prisma.workshopAssignment.findUnique({
             where: {
@@ -48,7 +50,7 @@ export async function POST(
         });
 
         return NextResponse.json(course);
-    } catch (error) {
+    } catch (error: unknown) {
         console.error('Error creating workshop course:', error);
         return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
     }
@@ -70,7 +72,7 @@ export async function GET(
         });
 
         return NextResponse.json(courses);
-    } catch (error) {
+    } catch (error: unknown) {
         console.error('Error fetching workshop courses:', error);
         return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
     }

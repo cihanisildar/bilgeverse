@@ -9,8 +9,21 @@ export const dynamic = 'force-dynamic';
 export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-    
-    if (!session?.user || (session.user.role !== UserRole.ADMIN && session.user.role !== UserRole.TUTOR && session.user.role !== UserRole.ASISTAN)) {
+
+    if (!session?.user) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
+
+    const { hasRole } = await import('@/app/lib/auth-utils');
+    const userRoles = (session.user as any)?.roles || [session.user.role].filter(Boolean) as UserRole[];
+    const isAdmin = userRoles.includes(UserRole.ADMIN);
+    const isTutor = userRoles.includes(UserRole.TUTOR);
+    const isAsistan = userRoles.includes(UserRole.ASISTAN);
+
+    if (!isAdmin && !isTutor && !isAsistan) {
       return NextResponse.json(
         { error: 'Unauthorized: Only admins, tutors, and asistans can access overall statistics' },
         { status: 403 }
@@ -18,9 +31,12 @@ export async function GET(request: NextRequest) {
     }
 
     // Get all active students (filtered by tutor/asistan if tutor or asistan role)
-    const whereClause = (session.user.role === UserRole.TUTOR || session.user.role === UserRole.ASISTAN)
-      ? { role: UserRole.STUDENT, tutorId: session.user.id, isActive: true }
-      : { role: UserRole.STUDENT, isActive: true };
+    let whereClause: any = { roles: { has: UserRole.STUDENT }, isActive: true };
+
+    if (isTutor || isAsistan) {
+      const tutorIdToCheck = isAsistan ? (session.user as any).assistedTutorId : session.user.id;
+      whereClause.tutorId = tutorIdToCheck || session.user.id;
+    }
 
     const students = await prisma.user.findMany({
       where: whereClause,
@@ -56,7 +72,7 @@ export async function GET(request: NextRequest) {
 
     // Get all points transactions for these students
     const studentIds = students.map(s => s.id);
-    
+
     const pointsTransactions = await prisma.pointsTransaction.findMany({
       where: {
         studentId: { in: studentIds },
@@ -98,15 +114,15 @@ export async function GET(request: NextRequest) {
     });
 
     // Calculate total points and experience from transactions (not user table)
-    const totalPointsFromEvents = eventParticipations.reduce((sum, participation) => 
+    const totalPointsFromEvents = eventParticipations.reduce((sum, participation) =>
       sum + (participation.event.points || 0), 0
     );
-    
-    const totalPointsFromTransactions = pointsTransactions.reduce((sum, transaction) => 
+
+    const totalPointsFromTransactions = pointsTransactions.reduce((sum, transaction) =>
       sum + transaction.points, 0
     );
 
-    const totalExperienceFromTransactions = experienceTransactions.reduce((sum, transaction) => 
+    const totalExperienceFromTransactions = experienceTransactions.reduce((sum, transaction) =>
       sum + transaction.amount, 0
     );
 
@@ -180,8 +196,8 @@ export async function GET(request: NextRequest) {
       .map((student, index) => ({
         rank: index + 1,
         id: student.id,
-        name: student.firstName && student.lastName 
-          ? `${student.firstName} ${student.lastName}` 
+        name: student.firstName && student.lastName
+          ? `${student.firstName} ${student.lastName}`
           : student.username,
         points: student.points,
         experience: student.experience
@@ -193,8 +209,8 @@ export async function GET(request: NextRequest) {
       .map((student, index) => ({
         rank: index + 1,
         id: student.id,
-        name: student.firstName && student.lastName 
-          ? `${student.firstName} ${student.lastName}` 
+        name: student.firstName && student.lastName
+          ? `${student.firstName} ${student.lastName}`
           : student.username,
         points: student.points,
         experience: student.experience
@@ -241,8 +257,6 @@ function categorizeAllPointsByActivity(pointsTransactions: any[], eventParticipa
   });
   // Event participations logic remains as before
   eventParticipations.forEach(participation => {
-    const eventTitle = participation.event.title?.toLowerCase() || '';
-    const eventTags = participation.event.tags || [];
     const eventPoints = participation.event.points || 0;
     if (!categories['Etkinlik Katılımı']) {
       categories['Etkinlik Katılımı'] = { total: 0, count: 0 };
@@ -251,4 +265,4 @@ function categorizeAllPointsByActivity(pointsTransactions: any[], eventParticipa
     categories['Etkinlik Katılımı'].count += 1;
   });
   return categories;
-} 
+}

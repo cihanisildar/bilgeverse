@@ -5,6 +5,13 @@ import prisma from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 import { UserRole } from "@prisma/client";
 
+type TutorInfo = {
+  id: string;
+  username: string;
+  firstName?: string;
+  lastName?: string;
+}
+
 export const authOptions: AuthOptions = {
   adapter: PrismaAdapter(prisma),
   providers: [
@@ -82,15 +89,15 @@ export const authOptions: AuthOptions = {
         token.username = user.username;
         token.email = user.email;
         token.role = user.role;
-        token.roles = (user as any).roles;
+        token.roles = user.roles;
         token.tutorId = user.tutorId ?? undefined;
-        token.assistedTutorId = (user as any).assistedTutorId ?? undefined;
+        token.assistedTutorId = user.assistedTutorId ?? undefined;
         token.tutor = user.tutor;
       }
       return token;
     },
-    async session({ session, token }: { session: any, token: any }) {
-      if (token) {
+    async session({ session, token }) {
+      if (token && session.user) {
         session.user.id = token.id as string;
         session.user.username = token.username as string;
         session.user.email = token.email as string;
@@ -98,7 +105,7 @@ export const authOptions: AuthOptions = {
         session.user.roles = token.roles as UserRole[];
         session.user.tutorId = token.tutorId as string | undefined;
         session.user.assistedTutorId = token.assistedTutorId as string | undefined;
-        session.user.tutor = token.tutor;
+        session.user.tutor = token.tutor as TutorInfo; // Use proper TutorInfo type extension
       }
       return session;
     }

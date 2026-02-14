@@ -1,3 +1,5 @@
+'use server';
+
 import { requireActionAuth, hasRole } from '@/app/lib/auth-utils';
 import prisma from '@/lib/prisma';
 import { createBoardMemberSchema, updateBoardMemberSchema } from '@/lib/validations/board-members';

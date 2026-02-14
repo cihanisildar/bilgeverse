@@ -9,8 +9,20 @@ export const dynamic = 'force-dynamic';
 export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-    
-    if (!session?.user || (session.user.role !== UserRole.ADMIN && session.user.role !== UserRole.TUTOR && session.user.role !== UserRole.ASISTAN)) {
+
+    if (!session?.user) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
+
+    const userRoles = (session.user as any)?.roles || [session.user.role].filter(Boolean) as UserRole[];
+    const isAdmin = userRoles.includes(UserRole.ADMIN);
+    const isTutor = userRoles.includes(UserRole.TUTOR);
+    const isAsistan = userRoles.includes(UserRole.ASISTAN);
+
+    if (!isAdmin && !isTutor && !isAsistan) {
       return NextResponse.json(
         { error: 'Unauthorized: Only admins, tutors, and asistans can access student reports' },
         { status: 403 }
@@ -28,12 +40,15 @@ export async function GET(request: NextRequest) {
     }
 
     // If tutor or asistan, verify they have access to this student
-    if (session.user.role === UserRole.TUTOR || session.user.role === UserRole.ASISTAN) {
+    if (isTutor || isAsistan) {
+      // For asistan, we check if they assist the tutor who has this student
+      const tutorIdToCheck = isAsistan ? (session.user as any).assistedTutorId : session.user.id;
+
       const student = await prisma.user.findFirst({
         where: {
           id: studentId,
-          tutorId: session.user.id,
-          role: UserRole.STUDENT,
+          tutorId: tutorIdToCheck || session.user.id, // Fallback to current user if asistan doesn't have assistedTutorId
+          roles: { has: UserRole.STUDENT },
           isActive: true
         }
       });
@@ -50,7 +65,7 @@ export async function GET(request: NextRequest) {
     const student = await prisma.user.findFirst({
       where: {
         id: studentId,
-        role: UserRole.STUDENT,
+        roles: { has: UserRole.STUDENT },
         isActive: true
       },
       select: {
@@ -142,7 +157,7 @@ export async function GET(request: NextRequest) {
 
     // Categorize points by point reason
     const pointsByActivity = categorizePointsByActivity(pointsTransactions);
-    
+
     // Categorize experience by activity type
     const experienceByActivity = categorizeExperienceByActivity(experienceTransactions);
 
@@ -153,15 +168,15 @@ export async function GET(request: NextRequest) {
     }));
 
     // Calculate total points and experience from different sources
-    const totalPointsFromEvents = eventParticipations.reduce((sum, participation) => 
+    const totalPointsFromEvents = eventParticipations.reduce((sum, participation) =>
       sum + (participation.event.points || 0), 0
     );
-    
-    const totalPointsFromTransactions = pointsTransactions.reduce((sum, transaction) => 
+
+    const totalPointsFromTransactions = pointsTransactions.reduce((sum, transaction) =>
       sum + transaction.points, 0
     );
 
-    const totalExperienceFromTransactions = experienceTransactions.reduce((sum, transaction) => 
+    const totalExperienceFromTransactions = experienceTransactions.reduce((sum, transaction) =>
       sum + transaction.amount, 0
     );
 
@@ -232,34 +247,34 @@ function cleanTransactionReason(reason: string | null, points: number): string {
   if (!reason) return 'Puan İşlemi';
 
   const lowerReason = reason.toLowerCase();
-  
+
   // Handle specific activity types
   if (lowerReason.includes('karakter') && lowerReason.includes('eğitimi')) {
     return 'Sohbet (Karakter Eğitimi)';
   }
-  
+
   if (lowerReason.includes('atölye') && lowerReason.includes('faaliyeti')) {
     return 'Atölye Faaliyeti';
   }
-  
+
   if (lowerReason.includes('kitap') || lowerReason.includes('okuma')) {
     return 'Kitap Okuma Ödülü';
   }
-  
+
   if (lowerReason.includes('etkinlik') && lowerReason.includes('katılım')) {
     return reason; // Keep original as it already contains event title
   }
-  
+
   // Handle admin operations
   if (lowerReason.includes('puan') && (lowerReason.includes('eklendi') || lowerReason.includes('azaltıldı'))) {
     return points > 0 ? 'Admin Tarafından Puan Eklendi' : 'Admin Tarafından Puan Azaltıldı';
   }
-  
+
   // Default cases
   if (points > 0) {
     return 'Bilge Para Kazanımı';
   }
-  
+
   return 'Puan İşlemi';
 }
 
@@ -281,4 +296,4 @@ function categorizeExperienceByActivity(transactions: any[]) {
   });
 
   return categories;
-} 
+}

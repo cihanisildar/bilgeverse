@@ -1,15 +1,19 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { ArrowLeft, FileText, Trophy, Users } from 'lucide-react';
+import { ArrowLeft, FileText, Trophy, Users, Calendar, BarChart3, ArrowRight, Dumbbell } from 'lucide-react';
 import { PARTS } from '@/app/lib/parts';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import PartDocuments from '@/app/components/PartDocuments';
-import DashboardContainer from './DashboardContainer';
+import { requireAuth } from '@/app/lib/auth-utils';
 
 export default async function Part9Page() {
-  // Session check is handled by Part9Layout
-
+  const session = await requireAuth({ partId: 9 });
   const part = PARTS.find(p => p.id === 9);
+
+  const userRole = session.user.role;
+  const roles = session.user.roles || (userRole ? [userRole] : []);
+  const isAthlete = roles.includes('ATHLETE');
+  const isAdminOrCoach = roles.some(r => ['ADMIN', 'TUTOR', 'BOARD_MEMBER', 'ASISTAN'].includes(r));
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-gray-50 p-6 lg:p-8">
@@ -43,14 +47,95 @@ export default async function Part9Page() {
               </div>
               <div className="pr-4">
                 <p className="text-[10px] font-bold text-gray-400 uppercase tracking-tight">Yetki</p>
-                <p className="text-sm font-bold text-gray-800 leading-none">Yönetici</p>
+                <p className="text-sm font-bold text-gray-800 leading-none">
+                  {isAdminOrCoach ? 'Yönetici' : 'Sporcu'}
+                </p>
               </div>
             </Card>
           </div>
         </div>
 
-        <div className="mb-12">
-          <DashboardContainer />
+        {/* Dynamic Cards Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
+          {/* Schedule Card */}
+          <Link href="/dashboard/part9/schedule" className="block">
+            <Card className="h-full border-0 shadow-lg rounded-2xl overflow-hidden transition-all duration-300 hover:shadow-xl hover:-translate-y-1 cursor-pointer bg-white group">
+              <div className="h-2 bg-gradient-to-r from-indigo-500 to-purple-500"></div>
+              <CardHeader className="pb-4">
+                <div className="w-12 h-12 rounded-xl bg-indigo-50 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                  <Calendar className="h-6 w-6 text-indigo-600" />
+                </div>
+                <CardTitle className="text-xl">Takvim</CardTitle>
+                <CardDescription>Antrenman ve maç programını takip edin</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-center text-sm font-bold text-indigo-600">
+                  Görüntüle <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
+                </div>
+              </CardContent>
+            </Card>
+          </Link>
+
+          {/* Athletes Card (Admin/Coach only) */}
+          {isAdminOrCoach && (
+            <Link href="/dashboard/part9/athletes" className="block">
+              <Card className="h-full border-0 shadow-lg rounded-2xl overflow-hidden transition-all duration-300 hover:shadow-xl hover:-translate-y-1 cursor-pointer bg-white group">
+                <div className="h-2 bg-gradient-to-r from-blue-500 to-indigo-500"></div>
+                <CardHeader className="pb-4">
+                  <div className="w-12 h-12 rounded-xl bg-blue-50 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                    <Users className="h-6 w-6 text-blue-600" />
+                  </div>
+                  <CardTitle className="text-xl">Sporcular</CardTitle>
+                  <CardDescription>Sporcu listesi ve profil yönetimini yapın</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex items-center text-sm font-bold text-blue-600">
+                    Yönet <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
+                  </div>
+                </CardContent>
+              </Card>
+            </Link>
+          )}
+
+          {/* Branches Card (Admin/Coach only) */}
+          {isAdminOrCoach && (
+            <Link href="/dashboard/part9/branches" className="block">
+              <Card className="h-full border-0 shadow-lg rounded-2xl overflow-hidden transition-all duration-300 hover:shadow-xl hover:-translate-y-1 cursor-pointer bg-white group">
+                <div className="h-2 bg-gradient-to-r from-amber-500 to-orange-500"></div>
+                <CardHeader className="pb-4">
+                  <div className="w-12 h-12 rounded-xl bg-amber-50 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                    <Dumbbell className="h-6 w-6 text-amber-600" />
+                  </div>
+                  <CardTitle className="text-xl">Branşlar</CardTitle>
+                  <CardDescription>Spor branşlarını ve branş detaylarını yönetin</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex items-center text-sm font-bold text-amber-600">
+                    Branşları Gör <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
+                  </div>
+                </CardContent>
+              </Card>
+            </Link>
+          )}
+
+          {/* Analysis Card */}
+          <Link href="/dashboard/part9/stats" className="block">
+            <Card className="h-full border-0 shadow-lg rounded-2xl overflow-hidden transition-all duration-300 hover:shadow-xl hover:-translate-y-1 cursor-pointer bg-white group">
+              <div className="h-2 bg-gradient-to-r from-emerald-500 to-teal-500"></div>
+              <CardHeader className="pb-4">
+                <div className="w-12 h-12 rounded-xl bg-emerald-50 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                  <BarChart3 className="h-6 w-6 text-emerald-600" />
+                </div>
+                <CardTitle className="text-xl">{isAthlete ? 'Performansım' : 'Analiz'}</CardTitle>
+                <CardDescription>Gelişim grafiklerini ve verileri inceleyin</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-center text-sm font-bold text-emerald-600">
+                  Analize Git <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
+                </div>
+              </CardContent>
+            </Card>
+          </Link>
         </div>
 
         <div className="mb-8">

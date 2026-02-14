@@ -3,12 +3,21 @@ import prisma from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { authOptions } from "../../auth/[...nextauth]/auth.config";
 import { requireActivePeriod } from "@/lib/periods";
+import { UserRole } from "@prisma/client";
 
 export async function POST(request: Request) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session || session.user.role !== "ADMIN") {
+
+    if (!session?.user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const userRoles = session.user.roles || [session.user.role].filter(Boolean) as UserRole[];
+    const isAdmin = userRoles.includes(UserRole.ADMIN);
+
+    if (!isAdmin) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
     }
 
     const { title, content } = await request.json();
@@ -32,10 +41,11 @@ export async function POST(request: Request) {
     });
 
     return NextResponse.json(announcement);
-  } catch (error) {
+  } catch (error: unknown) {
     console.error("Error creating announcement:", error);
+    const errorMessage = error instanceof Error ? error.message : "Failed to create announcement";
     return NextResponse.json(
-      { error: "Failed to create announcement" },
+      { error: errorMessage },
       { status: 500 }
     );
   }
@@ -44,8 +54,16 @@ export async function POST(request: Request) {
 export async function PUT(request: Request) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session || session.user.role !== "ADMIN") {
+
+    if (!session?.user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const userRoles = session.user.roles || [session.user.role].filter(Boolean) as UserRole[];
+    const isAdmin = userRoles.includes(UserRole.ADMIN);
+
+    if (!isAdmin) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
     }
 
     const { id, title, content } = await request.json();
@@ -66,10 +84,11 @@ export async function PUT(request: Request) {
     });
 
     return NextResponse.json(announcement);
-  } catch (error) {
+  } catch (error: unknown) {
     console.error("Error updating announcement:", error);
+    const errorMessage = error instanceof Error ? error.message : "Failed to update announcement";
     return NextResponse.json(
-      { error: "Failed to update announcement" },
+      { error: errorMessage },
       { status: 500 }
     );
   }
@@ -92,10 +111,11 @@ export async function GET() {
     });
 
     return NextResponse.json(announcements);
-  } catch (error) {
+  } catch (error: unknown) {
     console.error("Error fetching announcements:", error);
+    const errorMessage = error instanceof Error ? error.message : "Failed to fetch announcements";
     return NextResponse.json(
-      { error: "Failed to fetch announcements" },
+      { error: errorMessage },
       { status: 500 }
     );
   }
@@ -104,8 +124,16 @@ export async function GET() {
 export async function DELETE(request: Request) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session || session.user.role !== "ADMIN") {
+
+    if (!session?.user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const userRoles = session.user.roles || [session.user.role].filter(Boolean) as UserRole[];
+    const isAdmin = userRoles.includes(UserRole.ADMIN);
+
+    if (!isAdmin) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
     }
 
     const { id } = await request.json();
@@ -121,11 +149,12 @@ export async function DELETE(request: Request) {
     });
 
     return NextResponse.json({ success: true });
-  } catch (error) {
+  } catch (error: unknown) {
     console.error("Error deleting announcement:", error);
+    const errorMessage = error instanceof Error ? error.message : "Failed to delete announcement";
     return NextResponse.json(
-      { error: "Failed to delete announcement" },
+      { error: errorMessage },
       { status: 500 }
     );
   }
-} 
+}

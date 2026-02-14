@@ -11,6 +11,7 @@ import {
 } from '@prisma/client';
 import { revalidatePath } from 'next/cache';
 import bcrypt from 'bcryptjs';
+import { hasRole } from '@/app/lib/auth-utils';
 
 // Sport Branch Actions
 export async function getSportBranches() {
@@ -34,8 +35,7 @@ export async function getSportBranches() {
 export async function upsertSportBranch(data: { id?: string; name: string; description?: string }) {
     try {
         const session = await getServerSession(authOptions);
-        const userRole = session?.user?.role as UserRole;
-        if (userRole !== UserRole.ADMIN) {
+        if (!hasRole(session, [UserRole.ADMIN])) {
             return { error: 'Yetkisiz erişim', data: null };
         }
 
@@ -59,8 +59,7 @@ export async function upsertSportBranch(data: { id?: string; name: string; descr
 export async function deleteSportBranch(id: string) {
     try {
         const session = await getServerSession(authOptions);
-        const userRole = session?.user?.role as UserRole;
-        if (userRole !== UserRole.ADMIN) {
+        if (!hasRole(session, [UserRole.ADMIN])) {
             return { error: 'Yetkisiz erişim', data: null };
         }
 
@@ -109,7 +108,7 @@ export async function upsertAthleteProfile(data: {
 }) {
     try {
         const session = await getServerSession(authOptions);
-        if (!([UserRole.ADMIN, UserRole.TUTOR, UserRole.ASISTAN] as UserRole[]).includes(session?.user?.role as UserRole)) {
+        if (!hasRole(session, [UserRole.ADMIN, UserRole.TUTOR, UserRole.ASISTAN])) {
             return { error: 'Yetkisiz erişim', data: null };
         }
 
@@ -195,7 +194,7 @@ export async function createTraining(data: {
 }) {
     try {
         const session = await getServerSession(authOptions);
-        if (!([UserRole.ADMIN, UserRole.TUTOR, UserRole.ASISTAN] as UserRole[]).includes(session?.user?.role as UserRole)) {
+        if (!hasRole(session, [UserRole.ADMIN, UserRole.TUTOR, UserRole.ASISTAN])) {
             return { error: 'Yetkisiz erişim', data: null };
         }
 
@@ -242,7 +241,7 @@ export async function getTrainingDetails(trainingId: string) {
 export async function recordAttendance(trainingId: string, attendances: { athleteId: string; status: AttendanceStatus }[]) {
     try {
         const session = await getServerSession(authOptions);
-        if (!([UserRole.ADMIN, UserRole.TUTOR, UserRole.ASISTAN] as UserRole[]).includes(session?.user?.role as UserRole)) {
+        if (!hasRole(session, [UserRole.ADMIN, UserRole.TUTOR, UserRole.ASISTAN])) {
             return { error: 'Yetkisiz erişim', data: null };
         }
 
@@ -272,7 +271,7 @@ export async function recordPerformance(trainingId: string, performances: {
 }[]) {
     try {
         const session = await getServerSession(authOptions);
-        if (!([UserRole.ADMIN, UserRole.TUTOR, UserRole.ASISTAN] as UserRole[]).includes(session?.user?.role as UserRole)) {
+        if (!hasRole(session, [UserRole.ADMIN, UserRole.TUTOR, UserRole.ASISTAN])) {
             return { error: 'Yetkisiz erişim', data: null };
         }
 
@@ -373,8 +372,7 @@ export async function registerNewAthlete(data: {
 }) {
     try {
         const session = await getServerSession(authOptions);
-        const userRole = session?.user?.role as UserRole;
-        if (userRole !== UserRole.ADMIN && userRole !== UserRole.TUTOR) {
+        if (!hasRole(session, [UserRole.ADMIN, UserRole.TUTOR])) {
             return { error: 'Yeni kullanıcı kaydı için yetkiniz yok', data: null };
         }
 
@@ -422,5 +420,42 @@ export async function registerNewAthlete(data: {
     } catch (error) {
         console.error('Error registering new athlete:', error);
         return { error: 'Sporcu kaydedilirken bir hata oluştu', data: null };
+    }
+}
+export async function deleteAthleteProfile(userId: string) {
+    try {
+        const session = await getServerSession(authOptions);
+        if (!hasRole(session, [UserRole.ADMIN, UserRole.TUTOR])) {
+            return { error: 'Sporcu profilini silmek için yetkiniz yok', data: null };
+        }
+
+        const user = await prisma.user.findUnique({
+            where: { id: userId },
+            select: { roles: true }
+        });
+
+        if (!user) return { error: 'Kullanıcı bulunamadı', data: null };
+
+        await prisma.$transaction(async (tx) => {
+            // Remove the profile
+            await tx.athleteProfile.delete({
+                where: { userId }
+            });
+
+            // Remove the ATHLETE role
+            const newRoles = user.roles.filter(r => r !== UserRole.ATHLETE);
+            await tx.user.update({
+                where: { id: userId },
+                data: {
+                    roles: { set: newRoles }
+                }
+            });
+        });
+
+        revalidatePath('/dashboard/part9');
+        return { error: null, data: { success: true } };
+    } catch (error) {
+        console.error('Error deleting athlete profile:', error);
+        return { error: 'Sporcu profili silinirken bir hata oluştu', data: null };
     }
 }

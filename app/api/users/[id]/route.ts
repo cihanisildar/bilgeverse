@@ -56,11 +56,11 @@ export async function GET(
     // 3. User is a tutor or asistan looking at their own student
     const isSelf = session.user.id === userId;
 
-    const userRoles = (session.user as any)?.roles || [session.user.role];
+    const userRoles = session.user.roles || [session.user.role];
     const isAdminUser = userRoles.includes(UserRole.ADMIN);
 
     const isTutorViewingStudent = (userRoles.includes(UserRole.TUTOR) || userRoles.includes(UserRole.ASISTAN)) &&
-      (((enrichedUser as any).roles && (enrichedUser as any).roles.includes(UserRole.STUDENT)) || enrichedUser.role === UserRole.STUDENT) &&
+      ((user.roles && user.roles.includes(UserRole.STUDENT)) || user.role === UserRole.STUDENT) &&
       enrichedUser.tutorId &&
       enrichedUser.tutorId === session.user.id;
 
@@ -72,10 +72,11 @@ export async function GET(
     }
 
     return NextResponse.json({ user: enrichedUser }, { status: 200 });
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Get user error:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Internal server error';
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: errorMessage },
       { status: 500 }
     );
   }
@@ -88,7 +89,7 @@ export async function PUT(
   try {
     const session = await getServerSession(authOptions);
 
-    if (!session?.user || session.user.role !== UserRole.ADMIN) {
+    if (!session?.user || !(session.user.roles || [session.user.role]).includes(UserRole.ADMIN)) {
       return NextResponse.json(
         { error: 'Unauthorized: Admin access required' },
         { status: 403 }
@@ -113,7 +114,7 @@ export async function PUT(
     }
 
     // sync role and roles
-    const updatedRoles: UserRole[] = roles || (role ? [role as UserRole] : (user as any).roles);
+    const updatedRoles: UserRole[] = roles || (role ? [role as UserRole] : user.roles);
     const primaryRole = role || (updatedRoles.length > 0 ? updatedRoles[0] : user.role);
 
     // Check for duplicate username if changing
@@ -142,7 +143,7 @@ export async function PUT(
           where: {
             id: tutorId,
             roles: { has: UserRole.TUTOR }
-          } as any
+          }
         });
 
         if (!tutor) {
@@ -210,7 +211,7 @@ export async function PUT(
           ...(lastName !== undefined && { lastName }),
           ...(points !== undefined && { points: parseInt(points) || 0 }),
           ...(tutorId && { tutorId, studentClassroomId: classroomId })
-        } as any,
+        },
         select: {
           id: true,
           username: true,
@@ -221,7 +222,7 @@ export async function PUT(
           lastName: true,
           points: true,
           tutorId: true
-        } as any
+        }
       });
     });
 
@@ -253,7 +254,18 @@ export async function PATCH(
   try {
     const session = await getServerSession(authOptions);
 
-    if (!session?.user || (session.user.role !== UserRole.ADMIN && session.user.role !== UserRole.TUTOR)) {
+    if (!session?.user) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
+
+    const userRoles = session.user.roles || [session.user.role].filter(Boolean) as UserRole[];
+    const isAdmin = userRoles.includes(UserRole.ADMIN);
+    const isTutor = userRoles.includes(UserRole.TUTOR);
+
+    if (!isAdmin && !isTutor) {
       return NextResponse.json(
         { error: 'Unauthorized: Admin or Tutor access required' },
         { status: 403 }
@@ -274,7 +286,7 @@ export async function PATCH(
     // Check if user exists
     const user = await prisma.user.findUnique({
       where: { id: userId },
-      select: { id: true, role: true, roles: (true as any), tutorId: true }
+      select: { id: true, role: true, roles: true, tutorId: true }
     });
 
     if (!user) {
@@ -285,12 +297,12 @@ export async function PATCH(
     }
 
     // For tutors, they can only update their own students' status
-    const sessionRoles = (session.user as any)?.roles || [session.user.role];
+    const sessionRoles = session.user.roles || [session.user.role];
     const isSessionTutor = sessionRoles.includes(UserRole.TUTOR);
     const isSessionAdmin = sessionRoles.includes(UserRole.ADMIN);
 
     if (isSessionTutor && !isSessionAdmin) {
-      const isStudent = ((user as any).roles && (user as any).roles.includes(UserRole.STUDENT)) || user.role === UserRole.STUDENT;
+      const isStudent = (user.roles && user.roles.includes(UserRole.STUDENT)) || user.role === UserRole.STUDENT;
       if (!isStudent || user.tutorId !== session.user.id) {
         return NextResponse.json(
           { error: 'Unauthorized: Can only update your own students' },
@@ -335,7 +347,7 @@ export async function DELETE(
   try {
     const session = await getServerSession(authOptions);
 
-    if (!session?.user || session.user.role !== UserRole.ADMIN) {
+    if (!session?.user || !(session.user.roles || [session.user.role]).includes(UserRole.ADMIN)) {
       return NextResponse.json(
         { error: 'Unauthorized: Admin access required' },
         { status: 403 }
@@ -488,18 +500,18 @@ export async function DELETE(
       { message: 'User deleted successfully' },
       { status: 200 }
     );
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Delete user error:', error);
 
     // Handle specific Prisma errors
-    if (error.code === 'P2025') {
+    if (error instanceof Error && (error as any).code === 'P2025') {
       return NextResponse.json(
         { error: 'User not found' },
         { status: 404 }
       );
     }
 
-    if (error.code === 'P2028') {
+    if (error instanceof Error && (error as any).code === 'P2028') {
       return NextResponse.json(
         { error: 'Database transaction failed. Please try again.' },
         { status: 500 }

@@ -10,17 +10,20 @@ export const dynamic = 'force-dynamic';
 
 export async function GET(request: NextRequest) {
   try {
-    console.log('Admin tutors endpoint - Starting request');
     const session = await getServerSession(authOptions);
-    console.log('Admin tutors endpoint - Current user:', { id: session?.user?.id, role: session?.user?.role });
-
-    if (!session?.user || session.user.role !== UserRole.ADMIN) {
-      console.log('Admin tutors endpoint - Unauthorized access:', {
-        isAuthenticated: !!session?.user,
-        isAdmin: session?.user?.role === UserRole.ADMIN
-      });
+    if (!session?.user) {
       return NextResponse.json(
-        { error: 'Unauthorized: Only admin can access this endpoint' },
+        { error: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
+
+    const userRoles = session.user.roles || [session.user.role].filter(Boolean) as UserRole[];
+    const isAdmin = userRoles.includes(UserRole.ADMIN);
+
+    if (!isAdmin) {
+      return NextResponse.json(
+        { error: 'Forbidden' },
         { status: 403 }
       );
     }
@@ -28,11 +31,10 @@ export async function GET(request: NextRequest) {
     // Get active period
     const activePeriod = await requireActivePeriod();
 
-    console.log('Admin tutors endpoint - Fetching tutors');
     // Fetch all tutors with their students and classroom (including classroom students)
     const tutors = await prisma.user.findMany({
       where: {
-        role: UserRole.TUTOR,
+        roles: { has: UserRole.TUTOR },
       },
       include: {
         students: {
@@ -61,8 +63,6 @@ export async function GET(request: NextRequest) {
       }
     });
 
-    console.log('Admin tutors endpoint - Found tutors:', tutors.length);
-
     // Collect all student IDs to calculate points in batch
     const allStudentIds = new Set<string>();
     tutors.forEach(tutor => {
@@ -76,7 +76,7 @@ export async function GET(request: NextRequest) {
     // Process tutors and their merged students
     const tutorsWithCalculatedData = tutors.map(tutor => {
       // Merge students from both sources (direct relation and classroom)
-      const mergedStudentsMap = new Map<string, any>();
+      const mergedStudentsMap = new Map<string, { id: string; username: string; firstName: string | null; lastName: string | null; points: number }>();
 
       // Add direct students
       tutor.students.forEach(s => {
@@ -106,18 +106,13 @@ export async function GET(request: NextRequest) {
       };
     });
 
-    const response = {
-      tutors: tutorsWithCalculatedData
-    };
-
-    console.log('Admin tutors endpoint - Response format:', JSON.stringify(response, null, 2));
-    return NextResponse.json(response, { status: 200 });
-  } catch (error: any) {
+    return NextResponse.json({ tutors: tutorsWithCalculatedData }, { status: 200 });
+  } catch (error: unknown) {
     console.error('Admin fetch tutors error:', error);
-    console.error('Error stack:', error.stack);
+    const errorMessage = error instanceof Error ? error.message : 'Internal server error';
     return NextResponse.json(
-      { error: error.message || 'Internal server error' },
+      { error: errorMessage },
       { status: 500 }
     );
   }
-} 
+}

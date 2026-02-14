@@ -9,8 +9,20 @@ export const dynamic = 'force-dynamic';
 export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-    
-    if (!session?.user || (session.user.role !== UserRole.TUTOR && session.user.role !== UserRole.ASISTAN)) {
+
+    if (!session?.user) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
+
+    const { hasRole } = await import('@/app/lib/auth-utils');
+    const userRoles = session.user.roles || [session.user.role].filter(Boolean) as UserRole[];
+    const isTutor = userRoles.includes(UserRole.TUTOR);
+    const isAsistan = userRoles.includes(UserRole.ASISTAN);
+
+    if (!isTutor && !isAsistan) {
       return NextResponse.json(
         { error: 'Unauthorized: Only tutors and asistans can access this endpoint' },
         { status: 403 }
@@ -40,10 +52,11 @@ export async function GET(request: NextRequest) {
     }
 
     return NextResponse.json({ tutor }, { status: 200 });
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Get tutor settings error:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Internal server error';
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: errorMessage },
       { status: 500 }
     );
   }
@@ -52,8 +65,20 @@ export async function GET(request: NextRequest) {
 export async function PUT(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-    
-    if (!session?.user || (session.user.role !== UserRole.TUTOR && session.user.role !== UserRole.ASISTAN)) {
+
+    if (!session?.user) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
+
+    const { hasRole } = await import('@/app/lib/auth-utils');
+    const userRoles = session.user.roles || [session.user.role].filter(Boolean) as UserRole[];
+    const isTutor = userRoles.includes(UserRole.TUTOR);
+    const isAsistan = userRoles.includes(UserRole.ASISTAN);
+
+    if (!isTutor && !isAsistan) {
       return NextResponse.json(
         { error: 'Unauthorized: Only tutors and asistans can update their settings' },
         { status: 403 }
@@ -61,13 +86,13 @@ export async function PUT(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { 
-      firstName, 
-      lastName, 
-      phone, 
-      specialization, 
+    const {
+      firstName,
+      lastName,
+      phone,
+      specialization,
       bio,
-      preferences 
+      preferences
     } = body;
 
     // Update tutor
@@ -98,11 +123,12 @@ export async function PUT(request: NextRequest) {
       message: 'Settings updated successfully',
       tutor: updatedTutor
     }, { status: 200 });
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Update tutor settings error:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Internal server error';
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: errorMessage },
       { status: 500 }
     );
   }
-} 
+}

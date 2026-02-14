@@ -12,8 +12,10 @@ export async function GET() {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
-        const isAdmin = session.user.role === 'ADMIN';
-        const isTutor = session.user.role === 'TUTOR';
+        const user = session.user as any;
+        const userRoles = user.roles || [user.role].filter(Boolean) as string[];
+        const isAdmin = userRoles.includes('ADMIN');
+        const isTutor = userRoles.includes('TUTOR');
 
         if (!isAdmin && !isTutor) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });

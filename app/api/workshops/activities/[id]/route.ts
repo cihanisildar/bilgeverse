@@ -4,6 +4,8 @@ import { authOptions } from '@/app/api/auth/[...nextauth]/auth.config';
 import prisma from '@/lib/prisma';
 import { UserRole } from '@prisma/client';
 
+export const dynamic = 'force-dynamic';
+
 export async function PATCH(
     req: NextRequest,
     { params }: { params: { id: string } }
@@ -24,8 +26,10 @@ export async function PATCH(
             return NextResponse.json({ error: 'Activity not found' }, { status: 404 });
         }
 
-        // Permission check: Admin, Board Member, or Assigned User
-        const isSpecialRole = session.user.role === UserRole.ADMIN || session.user.role === UserRole.BOARD_MEMBER;
+        const userRoles = session.user.roles || [session.user.role].filter(Boolean) as UserRole[];
+        const isAdmin = userRoles.includes(UserRole.ADMIN);
+        const isBoardMember = userRoles.includes(UserRole.BOARD_MEMBER);
+        const isSpecialRole = isAdmin || isBoardMember;
 
         if (!isSpecialRole) {
             const assignment = await prisma.workshopAssignment.findUnique({
@@ -78,7 +82,7 @@ export async function PATCH(
         });
 
         return NextResponse.json(updatedActivity);
-    } catch (error) {
+    } catch (error: unknown) {
         console.error('Error updating activity:', error);
         return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
     }
@@ -104,8 +108,10 @@ export async function DELETE(
             return NextResponse.json({ error: 'Activity not found' }, { status: 404 });
         }
 
-        // Permission check: Admin, Board Member, or Assigned User
-        const isSpecialRole = session.user.role === UserRole.ADMIN || session.user.role === UserRole.BOARD_MEMBER;
+        const userRoles = session.user.roles || [session.user.role].filter(Boolean) as UserRole[];
+        const isAdmin = userRoles.includes(UserRole.ADMIN);
+        const isBoardMember = userRoles.includes(UserRole.BOARD_MEMBER);
+        const isSpecialRole = isAdmin || isBoardMember;
 
         if (!isSpecialRole) {
             const assignment = await prisma.workshopAssignment.findUnique({
@@ -127,7 +133,7 @@ export async function DELETE(
         });
 
         return NextResponse.json({ success: true, message: 'Activity deleted successfully' });
-    } catch (error) {
+    } catch (error: unknown) {
         console.error('Error deleting activity:', error);
         return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
     }

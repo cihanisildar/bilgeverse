@@ -9,7 +9,7 @@ export const dynamic = 'force-dynamic';
 export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-    
+
     if (!session?.user) {
       return NextResponse.json(
         { error: 'Oturum açmanız gerekmektedir' },
@@ -17,14 +17,16 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    if (session.user.role !== UserRole.STUDENT) {
+    const { hasRole } = await import('@/app/lib/auth-utils');
+    const userRoles = (session.user as any)?.roles || [session.user.role].filter(Boolean) as UserRole[];
+    const isStudent = userRoles.includes(UserRole.STUDENT);
+
+    if (!isStudent) {
       return NextResponse.json(
         { error: 'Bu sayfaya erişim yetkiniz bulunmamaktadır' },
         { status: 403 }
       );
     }
-
-    console.log('Current user ID:', session.user.id);
 
     // Get student's classroom
     const student = await prisma.user.findUnique({
@@ -42,6 +44,7 @@ export async function GET(request: NextRequest) {
                 firstName: true,
                 lastName: true,
                 role: true,
+                roles: true,
                 avatarUrl: true,
               }
             },
@@ -52,6 +55,7 @@ export async function GET(request: NextRequest) {
                 firstName: true,
                 lastName: true,
                 role: true,
+                roles: true,
                 avatarUrl: true,
                 points: true
               },
@@ -63,15 +67,6 @@ export async function GET(request: NextRequest) {
           }
         }
       }
-    });
-
-    console.log('Student query result:', {
-      found: !!student,
-      username: student?.username,
-      studentClassroomId: student?.studentClassroomId,
-      hasClassroom: !!student?.classroomStudents,
-      totalStudentsInClassroom: student?.classroomStudents?.students?.length || 0,
-      studentsIds: student?.classroomStudents?.students?.map(s => ({ id: s.id, username: s.username })) || []
     });
 
     if (!student) {
@@ -91,13 +86,6 @@ export async function GET(request: NextRequest) {
     // Return all students except current user
     const otherStudents = student.classroomStudents.students.filter(s => s.id !== session.user.id);
 
-    console.log('Filtering result:', {
-      currentUserId: session.user.id,
-      totalStudents: student.classroomStudents.students.length,
-      otherStudents: otherStudents.length,
-      otherStudentIds: otherStudents.map(s => ({ id: s.id, username: s.username }))
-    });
-
     const response = {
       tutor: student.classroomStudents.tutor,
       students: otherStudents
@@ -111,4 +99,4 @@ export async function GET(request: NextRequest) {
       { status: 500 }
     );
   }
-} 
+}

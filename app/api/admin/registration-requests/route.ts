@@ -10,8 +10,16 @@ export async function GET(request: NextRequest) {
   try {
     // Check if user is authenticated and is an admin
     const session = await getServerSession(authOptions);
-    if (!session?.user || session.user.role !== UserRole.ADMIN) {
+
+    if (!session?.user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const userRoles = session.user.roles || [session.user.role].filter(Boolean) as UserRole[];
+    const isAdmin = userRoles.includes(UserRole.ADMIN);
+
+    if (!isAdmin) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
     }
 
     // Fetch all registration requests
@@ -22,9 +30,10 @@ export async function GET(request: NextRequest) {
     });
 
     return NextResponse.json({ requests }, { status: 200 });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error fetching registration requests:', error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    const errorMessage = error instanceof Error ? error.message : 'Internal server error';
+    return NextResponse.json({ error: errorMessage }, { status: 500 });
   }
 }
 
@@ -33,8 +42,16 @@ export async function POST(request: NextRequest) {
   try {
     // Check if user is authenticated and is an admin
     const session = await getServerSession(authOptions);
-    if (!session?.user || session.user.role !== UserRole.ADMIN) {
+
+    if (!session?.user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const userRoles = session.user.roles || [session.user.role].filter(Boolean) as UserRole[];
+    const isAdmin = userRoles.includes(UserRole.ADMIN);
+
+    if (!isAdmin) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
     }
 
     const data = await request.json();
@@ -68,7 +85,7 @@ export async function POST(request: NextRequest) {
           firstName: registrationRequest.firstName || null,
           lastName: registrationRequest.lastName || null,
           role: registrationRequest.requestedRole,
-          roles: [registrationRequest.requestedRole] as any,
+          roles: [registrationRequest.requestedRole],
         }
       });
 
@@ -87,7 +104,7 @@ export async function POST(request: NextRequest) {
           username: newUser.username,
           email: newUser.email,
           role: newUser.role,
-          roles: (newUser as any).roles
+          roles: newUser.roles
         }
       }, { status: 200 });
     } else {
@@ -104,8 +121,9 @@ export async function POST(request: NextRequest) {
         message: 'Registration request rejected successfully'
       }, { status: 200 });
     }
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error processing registration request:', error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    const errorMessage = error instanceof Error ? error.message : 'Internal server error';
+    return NextResponse.json({ error: errorMessage }, { status: 500 });
   }
-} 
+}

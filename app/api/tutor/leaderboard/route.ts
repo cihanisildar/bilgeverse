@@ -10,8 +10,20 @@ export const dynamic = 'force-dynamic';
 export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-    
-    if (!session?.user || (session.user.role !== UserRole.TUTOR && session.user.role !== UserRole.ASISTAN)) {
+
+    if (!session?.user) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
+
+    const { hasRole } = await import('@/app/lib/auth-utils');
+    const userRoles = session.user.roles || [session.user.role].filter(Boolean) as UserRole[];
+    const isTutor = userRoles.includes(UserRole.TUTOR);
+    const isAsistan = userRoles.includes(UserRole.ASISTAN);
+
+    if (!isTutor && !isAsistan) {
       return NextResponse.json(
         { error: 'Unauthorized: Only tutors and asistans can access this endpoint' },
         { status: 403 }
@@ -24,7 +36,7 @@ export async function GET(request: NextRequest) {
     // Get all active students with their basic information
     const studentsRaw = await prisma.user.findMany({
       where: {
-        role: UserRole.STUDENT,
+        roles: { has: UserRole.STUDENT },
         isActive: true
       },
       select: {
@@ -97,11 +109,12 @@ export async function GET(request: NextRequest) {
     }));
 
     return NextResponse.json({ leaderboard }, { status: 200 });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error fetching leaderboard:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Internal server error';
     return NextResponse.json(
-      { error: error.message || 'Internal server error' },
+      { error: errorMessage },
       { status: 500 }
     );
   }
-} 
+}

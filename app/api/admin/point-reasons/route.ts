@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "../../auth/[...nextauth]/auth.config";
 import prisma from "@/lib/prisma";
 import { getActivePeriod } from "@/lib/periods";
+import { UserRole } from "@prisma/client";
 
 export async function GET(request: NextRequest) {
   try {
@@ -12,19 +13,10 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Check if user is admin
-    const user = await prisma.user.findUnique({
-      where: { id: session.user.id },
-      select: { role: true },
-    });
+    const userRoles = session.user.roles || [session.user.role].filter(Boolean) as UserRole[];
+    const isAdmin = userRoles.includes(UserRole.ADMIN);
 
-    if (!user) {
-      return NextResponse.json({ 
-        error: "Session invalid - please log in again" 
-      }, { status: 401 });
-    }
-
-    if (user.role !== "ADMIN") {
+    if (!isAdmin) {
       return NextResponse.json({ error: "Forbidden - Admin access required" }, { status: 403 });
     }
 
@@ -94,13 +86,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Check if user is admin
-    const user = await prisma.user.findUnique({
-      where: { id: session.user.id },
-      select: { role: true },
-    });
+    const userRoles = session.user.roles || [session.user.role].filter(Boolean) as UserRole[];
+    const isAdmin = userRoles.includes(UserRole.ADMIN);
 
-    if (!user || user.role !== "ADMIN") {
+    if (!isAdmin) {
       return NextResponse.json({ error: "Forbidden - Admin access required" }, { status: 403 });
     }
 
@@ -153,10 +142,11 @@ export async function POST(request: NextRequest) {
       success: true,
       reason: newReason,
     }, { status: 201 });
-  } catch (error) {
+  } catch (error: unknown) {
     console.error("Error creating point reason:", error);
+    const errorMessage = error instanceof Error ? error.message : "Internal server error";
     return NextResponse.json(
-      { error: "Internal server error" },
+      { error: errorMessage },
       { status: 500 }
     );
   }

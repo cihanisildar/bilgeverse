@@ -22,8 +22,15 @@ export async function GET() {
     try {
         const session = await getServerSession(authOptions);
 
-        if (!session?.user || session.user.role !== UserRole.ADMIN) {
+        if (!session?.user) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        }
+
+        const userRoles = session.user.roles || [session.user.role].filter(Boolean) as UserRole[];
+        const isAdmin = userRoles.includes(UserRole.ADMIN);
+
+        if (!isAdmin) {
+            return NextResponse.json({ error: 'Forbidden: Admin access required' }, { status: 403 });
         }
 
         const currentWeek = getCurrentWeek();
@@ -108,10 +115,11 @@ export async function GET() {
             weekEnd: currentWeek.end.toISOString(),
         });
 
-    } catch (error) {
+    } catch (error: unknown) {
         console.error('Error fetching attendance overview:', error);
+        const errorMessage = error instanceof Error ? error.message : 'Failed to fetch attendance overview';
         return NextResponse.json(
-            { error: 'Failed to fetch attendance overview' },
+            { error: errorMessage },
             { status: 500 }
         );
     }

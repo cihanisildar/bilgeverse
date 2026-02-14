@@ -5,6 +5,8 @@ import prisma from '@/lib/prisma';
 import { UserRole } from '@prisma/client';
 import { getWorkshopById } from '@/lib/workshops';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(
     req: NextRequest,
     { params }: { params: { id: string } }
@@ -22,7 +24,7 @@ export async function GET(
         }
 
         return NextResponse.json(workshop);
-    } catch (error) {
+    } catch (error: unknown) {
         console.error('Error fetching workshop:', error);
         return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
     }
@@ -38,7 +40,10 @@ export async function PUT(
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
-        const isAdminOrBoard = session.user.role === UserRole.ADMIN || session.user.role === UserRole.BOARD_MEMBER;
+        const userRoles = session.user.roles || [session.user.role].filter(Boolean) as UserRole[];
+        const isAdmin = userRoles.includes(UserRole.ADMIN);
+        const isBoardMember = userRoles.includes(UserRole.BOARD_MEMBER);
+        const isAdminOrBoard = isAdmin || isBoardMember;
 
         let canUpdate = isAdminOrBoard;
         if (!canUpdate) {
@@ -70,7 +75,7 @@ export async function PUT(
         });
 
         return NextResponse.json(workshop);
-    } catch (error) {
+    } catch (error: unknown) {
         console.error('Error updating workshop:', error);
         return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
     }
@@ -86,7 +91,10 @@ export async function DELETE(
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
-        const isAdminOrBoard = session.user.role === UserRole.ADMIN || session.user.role === UserRole.BOARD_MEMBER;
+        const userRoles = session.user.roles || [session.user.role].filter(Boolean) as UserRole[];
+        const isAdmin = userRoles.includes(UserRole.ADMIN);
+        const isBoardMember = userRoles.includes(UserRole.BOARD_MEMBER);
+        const isAdminOrBoard = isAdmin || isBoardMember;
 
         let canDelete = isAdminOrBoard;
         if (!canDelete) {
@@ -110,7 +118,7 @@ export async function DELETE(
         });
 
         return NextResponse.json({ success: true });
-    } catch (error) {
+    } catch (error: unknown) {
         console.error('Error deleting workshop:', error);
         return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
     }

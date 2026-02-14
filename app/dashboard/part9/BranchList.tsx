@@ -1,11 +1,8 @@
-'use client';
-
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Plus, Trophy, Pencil, Trash2, AlertCircle } from 'lucide-react';
-import { getSportBranches, upsertSportBranch, deleteSportBranch } from '@/app/actions/athlete-actions';
+import { Plus, Trophy, Pencil, Trash2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -26,6 +23,7 @@ import {
     AlertDialogHeader,
     AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { useSportBranches, useUpsertSportBranch, useDeleteSportBranch } from '@/app/hooks/use-athlete-data';
 
 interface Branch {
     id: string;
@@ -37,8 +35,10 @@ interface Branch {
 }
 
 export default function BranchList() {
-    const [branches, setBranches] = useState<Branch[]>([]);
-    const [loading, setLoading] = useState(true);
+    const { data: branches = [], isLoading: loading } = useSportBranches();
+    const upsertBranchMutation = useUpsertSportBranch();
+    const deleteBranchMutation = useDeleteSportBranch();
+
     const [isDialogOpen, setIsDialogOpen] = useState(false);
     const [deleteId, setDeleteId] = useState<string | null>(null);
     const [currentBranch, setCurrentBranch] = useState<{ id?: string; name: string; description: string }>({
@@ -48,46 +48,25 @@ export default function BranchList() {
 
     const { toast } = useToast();
 
-    useEffect(() => {
-        fetchBranches();
-    }, []);
-
-    const fetchBranches = async () => {
-        setLoading(true);
-        const result = await getSportBranches();
-        if (result.data) {
-            setBranches(result.data as Branch[]);
-        }
-        setLoading(false);
-    };
-
     const handleSaveBranch = async () => {
         if (!currentBranch.name) {
             toast({ title: 'Hata', description: 'Grup adı boş olamaz', variant: 'destructive' });
             return;
         }
 
-        const result = await upsertSportBranch(currentBranch);
+        const result = await upsertBranchMutation.mutateAsync(currentBranch);
         if (!result.error) {
-            toast({ title: 'Başarılı', description: currentBranch.id ? 'Grup güncellendi' : 'Grup başarıyla eklendi' });
             setIsDialogOpen(false);
             setCurrentBranch({ name: '', description: '' });
-            fetchBranches();
-        } else {
-            toast({ title: 'Hata', description: result.error, variant: 'destructive' });
         }
     };
 
     const handleDelete = async () => {
         if (!deleteId) return;
-        const result = await deleteSportBranch(deleteId);
+        const result = await deleteBranchMutation.mutateAsync(deleteId);
         if (!result.error) {
-            toast({ title: 'Başarılı', description: 'Grup silindi' });
-            fetchBranches();
-        } else {
-            toast({ title: 'Hata', description: result.error, variant: 'destructive' });
+            setDeleteId(null);
         }
-        setDeleteId(null);
     };
 
     const openEditDialog = (branch: Branch) => {

@@ -1,8 +1,10 @@
-    import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/app/api/auth/[...nextauth]/auth.config';
 import prisma from '@/lib/prisma';
 import { UserRole } from '@prisma/client';
+
+export const dynamic = 'force-dynamic';
 
 export async function POST(
     req: NextRequest,
@@ -14,16 +16,16 @@ export async function POST(
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
+        const userRoles = session.user.roles || [session.user.role].filter(Boolean) as UserRole[];
+        const isAdmin = userRoles.includes(UserRole.ADMIN);
+        const isBoardMember = userRoles.includes(UserRole.BOARD_MEMBER);
+
         const body = await req.json();
         const { studentIds } = body;
 
         if (!studentIds || !Array.isArray(studentIds)) {
             return NextResponse.json({ error: 'Student IDs array is required' }, { status: 400 });
         }
-
-        // Check permissions
-        const isAdmin = session.user.role === UserRole.ADMIN;
-        const isBoardMember = session.user.role === UserRole.BOARD_MEMBER;
 
         // Check if user is an assigned tutor for this workshop
         const assignment = await prisma.workshopAssignment.findUnique({
@@ -72,7 +74,7 @@ export async function POST(
         }));
 
         return NextResponse.json({ success: true, count: enrollments.length });
-    } catch (error) {
+    } catch (error: unknown) {
         console.error('Error in bulk student enrollment:', error);
         return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
     }
@@ -88,11 +90,14 @@ export async function GET(
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
+        const userRoles = session.user.roles || [session.user.role].filter(Boolean) as UserRole[];
+        const isTutor = userRoles.includes(UserRole.TUTOR);
+
         // Return users that are NOT yet in this workshop
         // but are eligible to join (STUDENT role)
 
-        let whereClause: any = {
-            role: UserRole.STUDENT,
+        let whereClause: { roles: { has: UserRole }; workshopMemberships: { none: { workshopId: string } }; tutorId?: string } = {
+            roles: { has: UserRole.STUDENT },
             workshopMemberships: {
                 none: {
                     workshopId: params.id
@@ -101,7 +106,7 @@ export async function GET(
         };
 
         // If tutor, only show their students
-        if (session.user.role === UserRole.TUTOR) {
+        if (isTutor) {
             whereClause.tutorId = session.user.id;
         }
 
@@ -118,7 +123,7 @@ export async function GET(
         });
 
         return NextResponse.json(eligibleStudents);
-    } catch (error) {
+    } catch (error: unknown) {
         console.error('Error fetching eligible students:', error);
         return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
     }
@@ -134,16 +139,16 @@ export async function DELETE(
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
+        const userRoles = session.user.roles || [session.user.role].filter(Boolean) as UserRole[];
+        const isAdmin = userRoles.includes(UserRole.ADMIN);
+        const isBoardMember = userRoles.includes(UserRole.BOARD_MEMBER);
+
         const { searchParams } = new URL(req.url);
         const studentId = searchParams.get('studentId');
 
         if (!studentId) {
             return NextResponse.json({ error: 'Student ID is required' }, { status: 400 });
         }
-
-        // Check permissions
-        const isAdmin = session.user.role === UserRole.ADMIN;
-        const isBoardMember = session.user.role === UserRole.BOARD_MEMBER;
 
         const assignment = await prisma.workshopAssignment.findUnique({
             where: {
@@ -180,7 +185,7 @@ export async function DELETE(
         });
 
         return NextResponse.json({ success: true });
-    } catch (error) {
+    } catch (error: unknown) {
         console.error('Error removing student from workshop:', error);
         return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
     }

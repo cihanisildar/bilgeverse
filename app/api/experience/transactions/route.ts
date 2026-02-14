@@ -10,13 +10,21 @@ export const dynamic = 'force-dynamic';
 export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-    const user = session?.user as any;
-    const userRoles = user?.roles || [user?.role].filter(Boolean) as UserRole[];
+
+    if (!session?.user) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
+
+    const user = session.user as any;
+    const userRoles = user.roles || [user.role].filter(Boolean) as UserRole[];
     const isTutor = userRoles.includes(UserRole.TUTOR);
     const isAsistan = userRoles.includes(UserRole.ASISTAN);
     const isAdmin = userRoles.includes(UserRole.ADMIN);
 
-    if (!session?.user || (!isTutor && !isAsistan && !isAdmin)) {
+    if (!isTutor && !isAsistan && !isAdmin) {
       return NextResponse.json(
         { error: 'Unauthorized: Only tutors, asistans and admins can access this endpoint' },
         { status: 403 }
@@ -110,13 +118,21 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-    const user = session?.user as any;
-    const userRoles = user?.roles || [user?.role].filter(Boolean) as UserRole[];
+
+    if (!session?.user) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
+
+    const user = session.user as any;
+    const userRoles = user.roles || [user.role].filter(Boolean) as UserRole[];
     const isTutor = userRoles.includes(UserRole.TUTOR);
     const isAsistan = userRoles.includes(UserRole.ASISTAN);
     const isAdmin = userRoles.includes(UserRole.ADMIN);
 
-    if (!session?.user || (!isTutor && !isAsistan && !isAdmin)) {
+    if (!isTutor && !isAsistan && !isAdmin) {
       return NextResponse.json(
         { error: 'Unauthorized: Only tutors, asistans and admins can create experience transactions' },
         { status: 403 }
@@ -242,4 +258,4 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     );
   }
-} 
+}
