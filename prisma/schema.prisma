@@ -124,6 +124,11 @@ model User {
   donor                         Donor?                    @relation("UserDonor")
   athleteProfile                AthleteProfile?           @relation("UserAthleteProfile")
   roles                         UserRole[]                @default([STUDENT])
+  firstImpressionNotes          String?
+  orientationStatus             OrientationStatus         @default(NONE)
+  orientationProcess            OrientationProcess?       @relation("StudentOrientation")
+  decidedOrientations           OrientationProcess[]      @relation("DecidedOrientation")
+  expulsionRecords              ExpulsionRecord[]         @relation("ExpulsionResponsible")
 
   @@index([tutorId])
 }
@@ -800,6 +805,17 @@ enum ParticipantStatus {
   ABSENT
 }
 
+enum OrientationStatus {
+  NONE
+  ONGOING
+  COMPLETED
+}
+
+enum OrientationDecision {
+  ACCEPTED
+  REJECTED
+}
+
 enum WeeklyReportStatus {
   DRAFT
   SUBMITTED
@@ -1198,4 +1214,43 @@ enum AthleteMetricType {
   TIME
   DISTANCE
   OTHER
+}
+
+model OrientationProcess {
+  id            String               @id @default(cuid())
+  studentId     String               @unique
+  student       User                 @relation("StudentOrientation", fields: [studentId], references: [id], onDelete: Cascade)
+  startDate     DateTime             @default(now())
+  week1Notes    String?
+  week2Notes    String?
+  week3Notes    String?
+  status        OrientationStatus    @default(ONGOING)
+  decision      OrientationDecision?
+  decisionNotes String?
+  decisionDate  DateTime?
+  decidedById   String?
+  decidedBy     User?                @relation("DecidedOrientation", fields: [decidedById], references: [id])
+
+  @@index([studentId])
+  @@index([decidedById])
+}
+
+model ExpulsionRecord {
+  id             String   @id @default(cuid())
+  studentName    String
+  studentSurname String
+  username       String?
+  email          String?
+  phone          String?
+  expulsionDate  DateTime @default(now())
+  responsibleId  String
+  responsible    User     @relation("ExpulsionResponsible", fields: [responsibleId], references: [id])
+  reason         String
+  notes          String?
+  week1Notes     String?
+  week2Notes     String?
+  week3Notes     String?
+
+  @@index([responsibleId])
+  @@index([expulsionDate])
 }

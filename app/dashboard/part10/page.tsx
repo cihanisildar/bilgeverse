@@ -1,66 +1,39 @@
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { ArrowLeft, FileText } from 'lucide-react';
-import { PARTS } from '@/app/lib/parts';
-import { Button } from '@/components/ui/button';
-import Link from 'next/link';
-import PartDocuments from '@/app/components/PartDocuments';
+'use client';
 
-export default async function Part10Page() {
-  // Session check is handled by Part10Layout
+import { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { useSession } from 'next-auth/react';
+import { UserRole } from '@prisma/client';
+import { Loader2 } from 'lucide-react';
 
-  const part = PARTS.find(p => p.id === 10);
+export default function Part10Page() {
+  const router = useRouter();
+  const { data: session, status } = useSession();
+
+  useEffect(() => {
+    if (status === 'unauthenticated') {
+      router.push('/auth/login');
+      return;
+    }
+
+    if (status === 'authenticated' && session?.user) {
+      const user = session.user as any;
+      const roles = user.roles || [user.role];
+
+      if (roles.includes(UserRole.ADMIN) || roles.includes(UserRole.BOARD_MEMBER)) {
+        router.replace('/dashboard/part10/admin');
+      } else {
+        // For now, other roles still see nothing or a default page
+        // If there's a student/tutor view later, we can add it here
+      }
+    }
+  }, [status, session, router]);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-teal-50 p-6 lg:p-8">
-      <div className="max-w-7xl mx-auto">
-        <Link href="/dashboard">
-          <Button variant="ghost" className="mb-6 hover:bg-gray-100 transition-all duration-200">
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Ana Sayfaya Dön
-          </Button>
-        </Link>
-
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-800 mb-2">
-            <span className="bg-clip-text text-transparent bg-gradient-to-r from-emerald-600 to-teal-600">
-              {part?.name}
-            </span>
-          </h1>
-          <p className="text-gray-600">{part?.description}</p>
-        </div>
-
-        <div className="mb-8">
-          <div className="flex items-center justify-between mb-6">
-            <div>
-              <h2 className="text-2xl font-bold text-gray-800 mb-1">Belgeler</h2>
-              <p className="text-gray-600">Bu bölüm için paylaşılan belgeler</p>
-            </div>
-            <Link href="/dashboard/pdfs">
-              <Button variant="outline" className="border-emerald-200 text-emerald-600 hover:bg-emerald-50">
-                <FileText className="h-4 w-4 mr-2" />
-                Tüm Belgeleri Görüntüle
-              </Button>
-            </Link>
-          </div>
-          <PartDocuments partId={10} gradientFrom="from-emerald-600" gradientTo="to-teal-600" />
-        </div>
-
-        <Card className="border-0 shadow-lg rounded-2xl overflow-hidden">
-          <div className="h-2 bg-gradient-to-r from-emerald-500 to-teal-500"></div>
-          <CardHeader>
-            <CardTitle className="text-2xl">Geliştirme Aşamasında</CardTitle>
-            <CardDescription>Bu bölüm yakında kullanıma açılacaktır</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="text-center py-12">
-              <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-gradient-to-br from-emerald-100 to-teal-100 mb-6">
-                <FileText className="h-10 w-10 text-emerald-600" />
-              </div>
-              <p className="text-gray-600 mb-4">Gençlik Merkezi yönetim sistemi üzerinde çalışıyoruz.</p>
-              <p className="text-sm text-gray-500">Bu bölüm tamamlandığında program yönetimi, katılımcı kaydı ve etkinlik takibi özellikleri sunacaktır.</p>
-            </div>
-          </CardContent>
-        </Card>
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-50 via-white to-purple-50">
+      <div className="text-center space-y-4">
+        <Loader2 className="h-10 w-10 animate-spin text-indigo-600 mx-auto" />
+        <p className="text-gray-600 font-medium">Yönlendiriliyorsunuz...</p>
       </div>
     </div>
   );

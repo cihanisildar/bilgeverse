@@ -1,12 +1,13 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Badge } from '@/components/ui/badge';
+import TagTemplateManager from '@/app/components/admin/TagTemplateManager';
+import FavoriteActivitiesDialog from '@/app/components/sociometric/FavoriteActivitiesDialog';
+import QuickTagAssigner from '@/app/components/student/QuickTagAssigner';
+import StudentTagsView from '@/app/components/student/StudentTagsView';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import {
     Dialog,
     DialogContent,
@@ -15,32 +16,22 @@ import {
     DialogTitle,
     DialogTrigger,
 } from '@/components/ui/dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
-    Users,
-    UserMinus,
-    Crown,
-    Network,
-    TrendingUp,
-    Calendar,
     AlertCircle,
+    Calendar,
+    Crown,
     Loader2,
-    Tag,
+    Network,
     Settings,
-    UserPlus
+    Tag,
+    TrendingUp,
+    UserMinus,
+    Users
 } from 'lucide-react';
-import { getSociometricData } from '@/app/actions/sociometric';
-import StudentTagsView from '@/app/components/student/StudentTagsView';
-import TagTemplateManager from '@/app/components/admin/TagTemplateManager';
-import QuickTagAssigner from '@/app/components/student/QuickTagAssigner';
-import FavoriteActivitiesDialog from '@/app/components/sociometric/FavoriteActivitiesDialog';
+import { useEffect, useState } from 'react';
 
-import {
-    SociometricData,
-    GroupLeader,
-    IsolatedStudent,
-    FriendGroup,
-    ActivityStats
-} from '@/types/sociometric';
 
 interface SociometricAnalysisProps {
     userId: string;
