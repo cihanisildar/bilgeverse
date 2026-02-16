@@ -5,13 +5,13 @@ import { UserRole } from '@prisma/client';
  * Note: Students don't have access to the dashboard page itself, only their specific part7 area
  */
 export const ROLE_PART_PERMISSIONS: Record<UserRole, number[]> = {
-    [UserRole.ADMIN]: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10], // Admin can see all parts
-    [UserRole.BOARD_MEMBER]: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10], // Board Member can see all parts
-    [UserRole.TUTOR]: [2, 4, 7], // Tutor can see Part 2, Part 4 and Part 7 on dashboard
-    [UserRole.ASISTAN]: [2, 4, 7], // Asistan can see Part 2, Part 4 and Part 7 on dashboard
-    [UserRole.STUDENT]: [4, 7], // Students can access Part 4 (Workshops) and Part 7 (Bilgeverse)
+    [UserRole.ADMIN]: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11], // Admin can see all parts
+    [UserRole.BOARD_MEMBER]: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11], // Board Member can see all parts
+    [UserRole.TUTOR]: [2, 4, 7, 11], // Tutor can see Part 2, Part 4, Part 7 and Part 11
+    [UserRole.ASISTAN]: [2, 4, 7, 11], // Asistan can see Part 2, Part 4, Part 7 and Part 11
+    [UserRole.STUDENT]: [4, 7, 11], // Students can access Part 4, Part 7 and Part 11
     [UserRole.DONOR]: [], // Donors don't have dashboard access by default
-    [UserRole.ATHLETE]: [9], // Athletes can access Part 9 (Athlete Management)
+    [UserRole.ATHLETE]: [9, 11], // Athletes can access Part 9 and Part 11
 };
 
 /**

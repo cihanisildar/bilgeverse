@@ -3,7 +3,7 @@ import { PrismaClient } from '@prisma/client';
 const prismaClientSingleton = () => {
   // Parse DATABASE_URL and add connection pool parameters if not present
   let databaseUrl = process.env.DATABASE_URL || '';
-  
+
   // Add connection pool parameters to handle concurrent requests
   // connection_limit: Maximum number of connections in the pool (default is 1)
   // pool_timeout: Maximum time to wait for a connection (default is 10 seconds)
@@ -31,11 +31,6 @@ const prismaClientSingleton = () => {
     transactionOptions: {
       timeout: 10000, // 10 seconds default timeout
     },
-  });
-
-  // Handle connection errors gracefully
-  prisma.$connect().catch(error => {
-    console.error('Failed to connect to database:', error);
   });
 
   return prisma;

@@ -113,5 +113,15 @@ export const PARTS: Part[] = [
     bgColor: 'bg-emerald-50',
     textColor: 'text-emerald-600',
   },
+  {
+    id: 11,
+    name: 'Akademi',
+    description: 'Okul derslerini ve öğrenci katılımını yönetin',
+    path: '/dashboard/part11',
+    icon: <Grid3x3 className="h-8 w-8" />,
+    color: 'from-blue-600 to-indigo-600',
+    bgColor: 'bg-blue-50',
+    textColor: 'text-blue-600',
+  },
 ];
 

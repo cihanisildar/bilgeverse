@@ -129,6 +129,10 @@ model User {
   orientationProcess            OrientationProcess?       @relation("StudentOrientation")
   decidedOrientations           OrientationProcess[]      @relation("DecidedOrientation")
   expulsionRecords              ExpulsionRecord[]         @relation("ExpulsionResponsible")
+  academyAssignments            AcademyAssignment[]       @relation("AcademyAssignments")
+  academySessions               AcademySession[]          @relation("AcademySessions")
+  academyStudents               AcademyStudent[]          @relation("AcademyStudents")
+  academyAttendances            AcademyAttendance[]       @relation("AcademyAttendances")
 
   @@index([tutorId])
 }
@@ -1247,10 +1251,90 @@ model ExpulsionRecord {
   responsible    User     @relation("ExpulsionResponsible", fields: [responsibleId], references: [id])
   reason         String
   notes          String?
-  week1Notes     String?
-  week2Notes     String?
-  week3Notes     String?
 
   @@index([responsibleId])
   @@index([expulsionDate])
 }
+
+model AcademyLesson {
+  id          String              @id @default(uuid())
+  name        String
+  description String?
+  imageUrl    String?
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
+  assignments AcademyAssignment[]
+  sessions    AcademySession[]
+  students    AcademyStudent[]
+  syllabus    AcademySyllabus?
+}
+
+model AcademyAssignment {
+  id        String        @id @default(uuid())
+  lessonId  String
+  userId    String
+  role      UserRole
+  lesson    AcademyLesson @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  user      User          @relation("AcademyAssignments", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([lessonId, userId])
+}
+
+model AcademyStudent {
+  id        String        @id @default(uuid())
+  lessonId  String
+  studentId String
+  joinedAt  DateTime      @default(now())
+  lesson    AcademyLesson @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  student   User          @relation("AcademyStudents", fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([lessonId, studentId])
+}
+
+model AcademySyllabus {
+  id          String                @id @default(uuid())
+  lessonId    String                @unique
+  lesson      AcademyLesson         @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  items       AcademySyllabusItem[]
+  createdAt   DateTime              @default(now())
+  updatedAt   DateTime              @updatedAt
+}
+
+model AcademySyllabusItem {
+  id          String          @id @default(uuid())
+  syllabusId  String
+  orderIndex  Int
+  title       String
+  description String?
+  syllabus    AcademySyllabus @relation(fields: [syllabusId], references: [id], onDelete: Cascade)
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+}
+
+model AcademySession {
+  id          String              @id @default(uuid())
+  lessonId    String
+  tutorId     String
+  title       String
+  description String?
+  date        DateTime
+  startTime   String?
+  endTime     String?
+  lesson      AcademyLesson       @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  tutor       User                @relation("AcademySessions", fields: [tutorId], references: [id], onDelete: Cascade)
+  attendances AcademyAttendance[]
+}
+
+model AcademyAttendance {
+  id            String         @id @default(uuid())
+  sessionId     String
+  studentId     String
+  status        Boolean        @default(false)
+  checkInMethod CheckInMethod  @default(MANUAL)
+  checkInTime   DateTime?
+  session       AcademySession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  student       User           @relation("AcademyAttendances", fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([sessionId, studentId])
+}
+
