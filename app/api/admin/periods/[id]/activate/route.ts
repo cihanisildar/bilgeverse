@@ -22,7 +22,7 @@ export async function POST(
     }
 
     const body = await request.json();
-    const { resetData = true } = body;
+    const { resetData = false } = body;
 
     // Check if period exists
     const period = await prisma.period.findUnique({

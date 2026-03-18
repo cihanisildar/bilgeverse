@@ -133,7 +133,7 @@ export default function PeriodsPage() {
     }
   };
 
-  const handleActivatePeriod = async (periodId: string, resetData: boolean = true) => {
+  const handleActivatePeriod = async (periodId: string, resetData: boolean = false) => {
     const period = periods.find(p => p.id === periodId);
     if (period) {
       setDialogState({
@@ -748,13 +748,20 @@ export default function PeriodsPage() {
               <AlertDialogDescription className="text-left">
                 <strong>{dialogState.period?.name}</strong> dönemini aktifleştirmek istediğinizden emin misiniz?
                 <br /><br />
-                Bu işlem:
-                <ul className="list-disc list-inside mt-2 space-y-1">
-                  <li>Tüm diğer dönemleri pasifleştirecek</li>
-                  {dialogState.resetData && (
-                    <li className="text-red-600 font-medium">Tüm kullanıcı puanlarını ve deneyimlerini sıfırlayacak</li>
-                  )}
-                </ul>
+                Bu işlem tüm diğer dönemleri pasifleştirecek.
+                <br /><br />
+                <label className="flex items-start gap-2 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={!!dialogState.resetData}
+                    onChange={(e) => setDialogState(prev => ({ ...prev, resetData: e.target.checked }))}
+                    className="mt-0.5 h-4 w-4 cursor-pointer"
+                  />
+                  <span className="text-sm">
+                    <span className="text-red-600 font-medium">Tüm kullanıcı puanlarını ve deneyimlerini sıfırla</span>
+                    <span className="block text-gray-500 text-xs mt-0.5">Yeni bir dönem başlatıyorsanız işaretleyin. Yanlışlıkla arşivlediyseniz işaretlemeyin.</span>
+                  </span>
+                </label>
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
