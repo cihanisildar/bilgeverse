@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { Loader2, Calendar as CalendarIcon, Save } from 'lucide-react';
+import { Loader2, Calendar as CalendarIcon, Clock, Save } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { useRouter } from 'next/navigation';
 
@@ -25,6 +25,8 @@ export function AddPlanModal({
     const [title, setTitle] = useState('');
     const [description, setDescription] = useState('');
     const [date, setDate] = useState('');
+    const [startTime, setStartTime] = useState('');
+    const [endTime, setEndTime] = useState('');
     const router = useRouter();
 
     useEffect(() => {
@@ -32,10 +34,14 @@ export function AddPlanModal({
             setTitle(course.title);
             setDescription(course.description || '');
             setDate(new Date(course.date).toISOString().split('T')[0]);
+            setStartTime(course.startTime || '');
+            setEndTime(course.endTime || '');
         } else {
             setTitle('');
             setDescription('');
             setDate('');
+            setStartTime('');
+            setEndTime('');
         }
     }, [course, open]);
 
@@ -53,7 +59,7 @@ export function AddPlanModal({
             const res = await fetch(url, {
                 method,
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ title, description, date }),
+                body: JSON.stringify({ title, description, date, startTime: startTime || null, endTime: endTime || null }),
             });
 
             if (!res.ok) throw new Error('Action failed');
@@ -105,6 +111,35 @@ export function AddPlanModal({
                                 className="pl-10 rounded-xl border-gray-200 focus:ring-amber-500"
                                 required
                             />
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                            <Label htmlFor="plan-start-time" className="text-sm font-semibold text-gray-700">Başlangıç Saati</Label>
+                            <div className="relative">
+                                <Clock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                                <Input
+                                    id="plan-start-time"
+                                    type="time"
+                                    value={startTime}
+                                    onChange={(e) => setStartTime(e.target.value)}
+                                    className="pl-10 rounded-xl border-gray-200 focus:ring-amber-500"
+                                />
+                            </div>
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="plan-end-time" className="text-sm font-semibold text-gray-700">Bitiş Saati</Label>
+                            <div className="relative">
+                                <Clock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                                <Input
+                                    id="plan-end-time"
+                                    type="time"
+                                    value={endTime}
+                                    onChange={(e) => setEndTime(e.target.value)}
+                                    className="pl-10 rounded-xl border-gray-200 focus:ring-amber-500"
+                                />
+                            </div>
                         </div>
                     </div>
 

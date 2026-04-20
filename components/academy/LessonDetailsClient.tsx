@@ -15,18 +15,19 @@ interface LessonDetailsClientProps {
     lessonId: string;
     userId: string;
     userRoles: UserRole[];
+    basePath?: string;
 }
 
-export function LessonDetailsClient({ lessonId, userId, userRoles }: LessonDetailsClientProps) {
+export function LessonDetailsClient({ lessonId, userId, userRoles, basePath = '/dashboard/part11' }: LessonDetailsClientProps) {
     const { data: lesson, isLoading, error } = useAcademyLessonDetails(lessonId);
     const router = useRouter();
 
     useEffect(() => {
         if (!isLoading && (error || !lesson)) {
-            const timer = setTimeout(() => router.push('/dashboard/part11'), 3000);
+            const timer = setTimeout(() => router.push(basePath), 3000);
             return () => clearTimeout(timer);
         }
-    }, [isLoading, error, lesson, router]);
+    }, [isLoading, error, lesson, router, basePath]);
 
     if (isLoading) {
         return (

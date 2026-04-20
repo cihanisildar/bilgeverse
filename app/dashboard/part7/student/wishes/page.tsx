@@ -1,8 +1,9 @@
-﻿'use client';
+'use client';
 
 import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '@/app/contexts/AuthContext';
 import toast from 'react-hot-toast';
+import { Skeleton } from '@/components/ui/skeleton';
 
 type Wish = {
   id: string;
@@ -108,22 +109,51 @@ export default function StudentWishes() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 py-12">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="animate-pulse space-y-8">
-            <div className="text-center space-y-4">
-              <div className="h-10 w-80 bg-gray-200 rounded-lg mx-auto"></div>
-              <div className="h-6 w-96 bg-gray-200 rounded-md mx-auto"></div>
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 animate-pulse">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-12 space-y-12">
+          {/* Header Skeleton */}
+          <div className="text-center space-y-8">
+            <Skeleton className="mx-auto h-16 w-16 rounded-2xl bg-indigo-100" />
+            <div className="space-y-4">
+              <Skeleton className="mx-auto h-12 w-80 rounded-2xl" />
+              <Skeleton className="mx-auto h-6 w-96 rounded-xl" />
             </div>
-            <div className="space-y-6">
+            {/* Stats Skeleton */}
+            <div className="flex justify-center gap-6">
               {[1, 2, 3].map((i) => (
-                <div key={i} className="bg-white/80 backdrop-blur-sm rounded-2xl border border-white/20 shadow-xl p-6 space-y-4">
-                  <div className="h-6 w-3/4 bg-gray-200 rounded-lg"></div>
-                  <div className="h-4 w-1/2 bg-gray-200 rounded-md"></div>
-                  <div className="h-16 bg-gray-200 rounded-lg"></div>
-                </div>
+                <Skeleton key={i} className="h-16 w-32 rounded-2xl" />
               ))}
             </div>
+            <Skeleton className="mx-auto h-12 w-56 rounded-xl" />
+          </div>
+
+          {/* List Skeleton */}
+          <div className="space-y-6">
+            <div className="flex items-center gap-4">
+              <Skeleton className="h-10 w-10 rounded-xl" />
+              <Skeleton className="h-8 w-64 rounded-xl" />
+            </div>
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="bg-white/80 backdrop-blur-sm rounded-3xl border border-white/20 shadow-xl p-8 space-y-6">
+                <div className="flex justify-between items-start">
+                  <div className="flex items-center gap-4">
+                    <Skeleton className="h-10 w-10 rounded-lg" />
+                    <div className="space-y-2">
+                      <Skeleton className="h-6 w-48 rounded-md" />
+                      <Skeleton className="h-4 w-32 rounded-md" />
+                    </div>
+                  </div>
+                  <Skeleton className="h-6 w-24 rounded-full" />
+                </div>
+                <Skeleton className="h-24 w-full rounded-2xl bg-gray-50/50" />
+                <div className="pt-4 border-t border-gray-50 flex justify-between items-center">
+                  <div className="flex gap-2">
+                    <Skeleton className="h-4 w-24 rounded-md" />
+                  </div>
+                  <Skeleton className="h-4 w-32 rounded-md" />
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       </div>

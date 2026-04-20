@@ -44,7 +44,7 @@ export async function PUT(
         }
 
         const body = await req.json();
-        const { title, description, date } = body;
+        const { title, description, date, startTime, endTime } = body;
 
         const course = await prisma.workshopCourse.update({
             where: { id: params.courseId },
@@ -52,6 +52,8 @@ export async function PUT(
                 title,
                 description,
                 date: date ? new Date(date) : undefined,
+                startTime: startTime !== undefined ? (startTime || null) : undefined,
+                endTime: endTime !== undefined ? (endTime || null) : undefined,
             }
         });
 

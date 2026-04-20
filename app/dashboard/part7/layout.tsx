@@ -6,7 +6,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import Link from 'next/link';
 import { Button } from "../../../components/ui/button";
 import { Avatar, AvatarFallback } from "../../../components/ui/avatar";
-import { LogOut, LayoutDashboard, Users, FileText, Calendar, ShoppingBag, PieChart, GraduationCap, Trophy, ShoppingCart, ClipboardList, School, Award, TrendingUp, Menu, CreditCard, Bell, Clock, BookOpen, Grid3x3 } from "lucide-react";
+import { LogOut, LayoutDashboard, Users, FileText, Calendar, ShoppingBag, PieChart, GraduationCap, Trophy, ShoppingCart, ClipboardList, School, Award, TrendingUp, Menu, CreditCard, Bell, Clock, BookOpen, Grid3x3, Settings } from "lucide-react";
 import { UserRole } from '@prisma/client';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "../../../components/ui/sheet";
 
@@ -75,15 +75,14 @@ export default function AuthenticatedLayout({
   ];
 
   const studentLinks: NavLink[] = [
-    { href: '/dashboard/part7/student', label: 'Gösterge Paneli', icon: <LayoutDashboard className="h-5 w-5" /> },
-    { href: '/dashboard/part7/student/announcements', label: 'Duyuru Panosu', icon: <Bell className="h-5 w-5" /> },
-    { href: '/dashboard/part7/student/classroom', label: 'Sınıfım', icon: <School className="h-5 w-5" /> },
-    { href: '/dashboard/part7/student/events', label: 'Etkinlikler', icon: <Calendar className="h-5 w-5" /> },
+    { href: '/dashboard/part7/student', label: 'Ana Sayfa', icon: <LayoutDashboard className="h-5 w-5" /> },
+    { href: '/dashboard/part7/student/academy', label: 'Akademi', icon: <GraduationCap className="h-5 w-5" /> },
+    { href: '/dashboard/part7/student/workshops', label: 'Atölyeler', icon: <Grid3x3 className="h-5 w-5" /> },
     { href: '/dashboard/part7/student/leaderboard', label: 'Liderlik Tablosu', icon: <Trophy className="h-5 w-5" /> },
     { href: '/dashboard/part7/student/store', label: 'Mağaza', icon: <ShoppingCart className="h-5 w-5" /> },
-    { href: '/dashboard/part7/student/requests', label: 'İsteklerim', icon: <ClipboardList className="h-5 w-5" /> },
-    { href: '/dashboard/part7/student/wishes', label: 'Dilek ve İstekler', icon: <FileText className="h-5 w-5" /> },
-    { href: '/dashboard/part7/student/tips', label: 'Başarı Rehberi', icon: <TrendingUp className="h-5 w-5" /> },
+    { href: '/dashboard/part7/student/requests', label: 'İstek ve Dilekler', icon: <ClipboardList className="h-5 w-5" /> },
+    { href: '/dashboard/part7/student/tips', label: 'Nasıl Bilge Para Kazanırım', icon: <TrendingUp className="h-5 w-5" /> },
+    { href: '/dashboard/part7/student/settings', label: 'Ayarlar', icon: <Settings className="h-5 w-5" /> },
   ];
 
   // Determine which set of links to show based on user role AND path
@@ -145,21 +144,23 @@ export default function AuthenticatedLayout({
 
   const NavigationLinks = () => (
     <ul className="space-y-2">
-      <li>
-        <Link
-          href="/dashboard"
-          className={`flex items-center justify-start px-4 py-2 rounded-lg transition-all duration-200 ${pathname === '/dashboard'
-            ? `${activeIconBg} ${activeLinkColor} font-medium`
-            : 'text-gray-500 hover:bg-gray-50 hover:text-gray-800'
-            }`}
-          onClick={() => setIsMobileMenuOpen(false)}
-        >
-          <div className="flex-shrink-0 mr-3">
-            <Grid3x3 className="h-5 w-5" />
-          </div>
-          <span className="truncate text-sm tracking-wide">Bölümlere Dön</span>
-        </Link>
-      </li>
+      {!isStudent && (
+        <li>
+          <Link
+            href="/dashboard"
+            className={`flex items-center justify-start px-4 py-2 rounded-lg transition-all duration-200 ${pathname === '/dashboard'
+              ? `${activeIconBg} ${activeLinkColor} font-medium`
+              : 'text-gray-500 hover:bg-gray-50 hover:text-gray-800'
+              }`}
+            onClick={() => setIsMobileMenuOpen(false)}
+          >
+            <div className="flex-shrink-0 mr-3">
+              <Grid3x3 className="h-5 w-5" />
+            </div>
+            <span className="truncate text-sm tracking-wide">Bölümlere Dön</span>
+          </Link>
+        </li>
+      )}
       {navLinks.map((link) => (
         <li key={link.href}>
           <Link

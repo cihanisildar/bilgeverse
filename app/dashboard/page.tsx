@@ -21,7 +21,10 @@ export default function DashboardPage() {
     if (!loading && !user) {
       router.push('/login');
     }
-  }, [loading, user, router]);
+    if (!loading && user && isStudent && !isAdmin) {
+      router.replace('/dashboard/part7/student');
+    }
+  }, [loading, user, isStudent, isAdmin, router]);
 
 
   if (loading) {
@@ -54,7 +57,8 @@ export default function DashboardPage() {
   // Filter parts based on user's role permissions
   const roles = user.roles && user.roles.length > 0 ? user.roles : [user.role];
   const allowedPartIds = getAllowedParts(roles);
-  const visibleParts = PARTS.filter(part => allowedPartIds.includes(part.id));
+  const visibleParts = PARTS.filter(part => allowedPartIds.includes(part.id))
+    .filter(part => !(isStudent && !isAdmin && (part.id === 4 || part.id === 11)));
 
   // Only show sidebar on dashboard page
   const isDashboardPage = pathname === '/dashboard';

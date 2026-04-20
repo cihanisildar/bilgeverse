@@ -10,7 +10,15 @@ import { CreateLessonModal } from './CreateLessonModal';
 import { AcademyLesson } from '@/types/academy';
 import { UserRole } from '@prisma/client';
 
-export function LessonCard({ lesson, isJoined }: { lesson: AcademyLesson; isJoined: boolean }) {
+export function LessonCard({ 
+    lesson, 
+    isJoined, 
+    basePath = '/dashboard/part11' 
+}: { 
+    lesson: AcademyLesson; 
+    isJoined: boolean;
+    basePath?: string;
+}) {
     return (
         <Card className="hover:shadow-xl transition-all duration-300 border-0 bg-white/80 backdrop-blur-sm group overflow-hidden flex flex-col h-full">
             {lesson.imageUrl ? (
@@ -61,7 +69,7 @@ export function LessonCard({ lesson, isJoined }: { lesson: AcademyLesson; isJoin
                 </div>
             </CardContent>
             <CardFooter className="flex-none flex gap-2 pt-0">
-                <Link href={`/dashboard/part11/lesson/${lesson.id}`} className="flex-1">
+                <Link href={`${basePath}/lesson/${lesson.id}`} className="flex-1">
                     <Button variant="outline" className="w-full border-blue-200 text-blue-700 hover:bg-blue-50">
                         İncele
                     </Button>
@@ -71,7 +79,17 @@ export function LessonCard({ lesson, isJoined }: { lesson: AcademyLesson; isJoin
     );
 }
 
-export function LessonList({ lessons, role, userId }: { lessons: AcademyLesson[]; role: UserRole; userId: string }) {
+export function LessonList({ 
+    lessons, 
+    role, 
+    userId, 
+    basePath = '/dashboard/part11' 
+}: { 
+    lessons: AcademyLesson[]; 
+    role: UserRole; 
+    userId: string;
+    basePath?: string;
+}) {
     if (lessons.length === 0) {
         return (
             <div className="text-center py-20 bg-white/50 rounded-3xl border-2 border-dashed border-blue-200">
@@ -98,6 +116,7 @@ export function LessonList({ lessons, role, userId }: { lessons: AcademyLesson[]
                         key={lesson.id}
                         lesson={lesson}
                         isJoined={isJoined}
+                        basePath={basePath}
                     />
                 );
             })}

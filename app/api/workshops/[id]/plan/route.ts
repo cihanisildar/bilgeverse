@@ -21,7 +21,7 @@ export async function POST(
         const isBoardMember = userRoles.includes(UserRole.BOARD_MEMBER);
 
         const body = await req.json();
-        const { title, description, date } = body;
+        const { title, description, date, startTime, endTime } = body;
 
         if (!title || !date) {
             return NextResponse.json({ error: 'Title and date are required' }, { status: 400 });
@@ -46,6 +46,8 @@ export async function POST(
                 title,
                 description,
                 date: new Date(date),
+                startTime: startTime || null,
+                endTime: endTime || null,
             }
         });
 

@@ -27,49 +27,52 @@ type ClassroomInfo = {
 
 function ClassroomSkeleton() {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50">
-      <div className="px-4 py-8 space-y-8">
+    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50 animate-pulse">
+      <div className="container mx-auto px-4 py-8 space-y-12">
+        {/* Header Skeleton */}
+        <div className="text-center space-y-4">
+          <Skeleton className="mx-auto h-12 w-48 rounded-2xl" />
+          <Skeleton className="mx-auto h-6 w-64 rounded-xl" />
+        </div>
+
         {/* Tutor Card Skeleton */}
-        <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-violet-600 to-indigo-700 p-8 shadow-2xl">
-          <div className="absolute inset-0 bg-white/10 backdrop-blur-sm"></div>
-          <div className="relative z-10">
-            <div className="flex items-center gap-3 mb-6">
-              <Skeleton className="h-8 w-8 rounded-lg" />
-              <Skeleton className="h-8 w-48" />
-            </div>
-            <div className="flex items-center gap-6">
-              <Skeleton className="h-20 w-20 rounded-full" />
-              <div className="space-y-3">
-                <Skeleton className="h-8 w-64" />
-                <Skeleton className="h-6 w-40" />
-              </div>
+        <div className="relative overflow-hidden rounded-3xl bg-violet-600/20 p-8 border border-violet-200 shadow-xl space-y-8">
+          <div className="flex items-center gap-4">
+            <Skeleton className="h-10 w-10 rounded-xl" />
+            <Skeleton className="h-8 w-32 rounded-lg" />
+          </div>
+          <div className="flex flex-col sm:flex-row items-center sm:items-start gap-8">
+            <Skeleton className="h-24 w-24 rounded-full" />
+            <div className="space-y-4 flex-1">
+              <Skeleton className="h-10 w-64 rounded-xl" />
+              <Skeleton className="h-7 w-40 rounded-lg" />
+              <Skeleton className="h-12 w-32 rounded-full" />
             </div>
           </div>
         </div>
 
         {/* Students Card Skeleton */}
         <div className="rounded-3xl bg-white/80 backdrop-blur-sm border border-white/40 shadow-xl overflow-hidden">
-          <div className="p-6 border-b border-gray-100/60 bg-gradient-to-r from-blue-50/50 to-purple-50/50">
-            <div className="flex justify-between items-center">
-              <div className="flex items-center gap-3">
-                <Skeleton className="h-6 w-6 rounded" />
-                <Skeleton className="h-7 w-40" />
-                <Skeleton className="h-6 w-20 rounded-full" />
-              </div>
-              <Skeleton className="h-6 w-32" />
+          <div className="p-8 border-b border-gray-100 flex flex-col sm:flex-row justify-between items-center gap-6">
+            <div className="flex items-center gap-4">
+              <Skeleton className="h-10 w-10 rounded-xl" />
+              <Skeleton className="h-8 w-48 rounded-xl" />
+              <Skeleton className="h-6 w-24 rounded-full" />
             </div>
+            <Skeleton className="h-10 w-40 rounded-full" />
           </div>
-          <div className="p-6">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-              {[1, 2, 3, 4].map((i) => (
-                <div key={i} className="p-4 rounded-xl bg-gradient-to-br from-white to-gray-50 border border-gray-100">
-                  <div className="flex items-center gap-4">
-                    <Skeleton className="h-12 w-12 rounded-full" />
-                    <div className="space-y-2 flex-1">
-                      <Skeleton className="h-5 w-32" />
-                      <Skeleton className="h-4 w-24" />
-                      <Skeleton className="h-4 w-20" />
+          <div className="p-8">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {[1, 2, 3, 4, 5, 6].map((i) => (
+                <div key={i} className="p-6 rounded-2xl bg-white border border-gray-100 shadow-sm flex items-center gap-6">
+                  <Skeleton className="h-16 w-16 rounded-full" />
+                  <div className="space-y-3 flex-1">
+                    <div className="flex items-center gap-3">
+                      <Skeleton className="h-6 w-40 rounded-lg" />
+                      <Skeleton className="h-5 w-12 rounded-full" />
                     </div>
+                    <Skeleton className="h-4 w-32 rounded-md" />
+                    <Skeleton className="h-8 w-24 rounded-full" />
                   </div>
                 </div>
               ))}

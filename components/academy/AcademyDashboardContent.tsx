@@ -23,8 +23,9 @@ export function AcademyDashboardContent({
     userRoles,
     partName,
     partDescription,
-    documentsContent
-}: AcademyDashboardContentProps) {
+    documentsContent,
+    basePath = '/dashboard/part11'
+}: AcademyDashboardContentProps & { basePath?: string }) {
     const { data: lessons = [], isLoading } = useAcademyLessons();
     const isAdminOrBoard = userRoles.includes(UserRole.ADMIN) || userRoles.includes(UserRole.BOARD_MEMBER);
 
@@ -77,6 +78,7 @@ export function AcademyDashboardContent({
                             lessons={lessons}
                             role={role}
                             userId={userId}
+                            basePath={basePath}
                         />
                     )}
                 </TabsContent>

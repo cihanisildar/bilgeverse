@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { UserPlus, Clock, CheckCircle2, LogOut } from 'lucide-react';
+import { UserPlus, Clock, CheckCircle2, LogOut, MoreVertical } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import {
     Dialog,
@@ -22,8 +22,13 @@ import {
     AlertDialogFooter,
     AlertDialogHeader,
     AlertDialogTitle,
-    AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
@@ -117,12 +122,22 @@ export function WorkshopJoinButton({ workshopId, currentStatus, onStatusChange }
                     <span className="font-medium">Atölye üyesisiniz</span>
                 </div>
                 <AlertDialog open={leaveDialogOpen} onOpenChange={setLeaveDialogOpen}>
-                    <AlertDialogTrigger asChild>
-                        <Button variant="outline" className="border-red-200 text-red-600 hover:bg-red-50">
-                            <LogOut className="h-4 w-4 mr-2" />
-                            Ayrıl
-                        </Button>
-                    </AlertDialogTrigger>
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon" className="text-gray-400 hover:text-gray-600">
+                                <MoreVertical className="h-4 w-4" />
+                            </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                            <DropdownMenuItem
+                                className="text-red-600 focus:text-red-600 focus:bg-red-50 cursor-pointer"
+                                onClick={() => setLeaveDialogOpen(true)}
+                            >
+                                <LogOut className="h-4 w-4 mr-2" />
+                                Atölyeden Ayrıl
+                            </DropdownMenuItem>
+                        </DropdownMenuContent>
+                    </DropdownMenu>
                     <AlertDialogContent>
                         <AlertDialogHeader>
                             <AlertDialogTitle>Atölyeden ayrılmak istediğinize emin misiniz?</AlertDialogTitle>

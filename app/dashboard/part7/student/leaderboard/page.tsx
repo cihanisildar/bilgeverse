@@ -26,6 +26,10 @@ interface LeaderboardEntry {
   points: number;
   experience: number;
   rank: number;
+  tutor?: {
+    firstName: string | null;
+    lastName: string | null;
+  } | null;
 }
 
 interface UserRanking {
@@ -36,40 +40,49 @@ interface UserRanking {
 
 function HeaderSkeleton() {
   return (
-    <div className="space-y-2">
-      <Skeleton className="h-6 sm:h-8 w-[200px] sm:w-[250px]" />
-      <Skeleton className="h-3 sm:h-4 w-[250px] sm:w-[300px]" />
+    <div className="text-center mb-16 space-y-6">
+      <div className="flex justify-center gap-4">
+        <Skeleton className="h-14 w-14 rounded-2xl" />
+        <Skeleton className="h-16 w-80 rounded-2xl" />
+        <Skeleton className="h-14 w-14 rounded-2xl" />
+      </div>
+      <Skeleton className="mx-auto h-6 w-96 rounded-xl" />
     </div>
   );
 }
 
 function LeaderboardEntrySkeleton() {
   return (
-    <div className="animate-pulse">
-      <div className="flex items-center p-4 space-x-4">
-        <Skeleton className="h-12 w-12 rounded-full" />
-        <div className="flex-1 space-y-2">
-          <Skeleton className="h-4 w-32" />
-          <Skeleton className="h-3 w-24" />
+    <div className="flex items-center justify-between p-6 bg-white/50 rounded-2xl border border-gray-100">
+      <div className="flex items-center gap-6">
+        <Skeleton className="h-12 w-12 rounded-xl" />
+        <Skeleton className="h-14 w-14 rounded-full" />
+        <div className="space-y-2">
+          <Skeleton className="h-5 w-32 rounded-md" />
+          <Skeleton className="h-4 w-24 rounded-md" />
         </div>
-        <Skeleton className="h-8 w-16" />
       </div>
+      <Skeleton className="h-12 w-32 rounded-2xl" />
     </div>
   );
 }
 
 function StatsCardSkeleton() {
   return (
-    <Card className="border-0 shadow-lg">
-      <CardContent className="p-4 sm:p-6">
-        <div className="flex items-center justify-between">
-          <div className="space-y-1 sm:space-y-2">
-            <Skeleton className="h-3 sm:h-4 w-20 sm:w-24" />
-            <Skeleton className="h-6 sm:h-8 w-12 sm:w-16" />
+    <Card className="border-0 shadow-2xl rounded-3xl overflow-hidden bg-white/80 p-8">
+      <div className="flex flex-col lg:flex-row items-center justify-between gap-8">
+        <div className="flex flex-col lg:flex-row items-center gap-6">
+          <Skeleton className="h-20 w-20 rounded-2xl" />
+          <div className="space-y-3">
+            <Skeleton className="h-8 w-48 rounded-xl" />
+            <Skeleton className="h-12 w-40 rounded-xl" />
           </div>
-          <Skeleton className="h-10 w-10 sm:h-12 sm:w-12 rounded-full" />
         </div>
-      </CardContent>
+        <div className="grid grid-cols-2 gap-8">
+          <Skeleton className="h-24 w-32 rounded-2xl" />
+          <Skeleton className="h-24 w-32 rounded-2xl" />
+        </div>
+      </div>
     </Card>
   );
 }
@@ -248,15 +261,16 @@ export default function StudentLeaderboardPage() {
   const { user } = useAuth();
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
   const [userRank, setUserRank] = useState<UserRanking | null>(null);
+  const [scope, setScope] = useState<'all' | 'group'>('all');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchData = async () => {
+  const fetchData = async (currentScope: 'all' | 'group') => {
     try {
       setLoading(true);
       setError(null);
 
-      const response = await fetch("/api/leaderboard", {
+      const response = await fetch(`/api/leaderboard?scope=${currentScope}`, {
         credentials: "include",
         headers: {
           "Cache-Control": "no-cache",
@@ -280,9 +294,9 @@ export default function StudentLeaderboardPage() {
 
   useEffect(() => {
     if (user) {
-      fetchData();
+      fetchData(scope);
     }
-  }, [user]);
+  }, [user, scope]);
 
   function getRankIcon(rank: number) {
     if (rank === 1) return <Crown className="h-5 w-5 text-yellow-500" />;
@@ -372,8 +386,41 @@ export default function StudentLeaderboardPage() {
               </div>
             </div>
             <p className="text-xl text-gray-600 max-w-2xl mx-auto leading-relaxed">
-              En başarılı öğrenciler arasında yerinizi keşfedin ve hedefinize doğru ilerleyin
+              {scope === 'all' 
+                ? 'En başarılı öğrenciler arasında yerinizi keşfedin ve hedefinize doğru ilerleyin'
+                : `Grubunuzdaki arkadaşlarınız arasındaki yerinizi görün${leaderboard[0]?.tutor ? ` (Rehber: ${leaderboard[0].tutor.firstName} ${leaderboard[0].tutor.lastName})` : ''}`
+              }
             </p>
+          </div>
+
+          {/* Scope Toggle */}
+          <div className="flex justify-center mb-8">
+            <div className="bg-white/50 backdrop-blur-md p-1.5 rounded-2xl border border-white/40 shadow-xl flex gap-1">
+              <button
+                onClick={() => setScope('all')}
+                className={cn(
+                  "px-8 py-3 rounded-xl font-bold transition-all duration-300 flex items-center gap-2",
+                  scope === 'all'
+                    ? "bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-lg shadow-indigo-200 scale-105"
+                    : "text-gray-500 hover:bg-white/80 hover:text-indigo-600"
+                )}
+              >
+                <Users className="h-5 w-5" />
+                Genel Sıralama
+              </button>
+              <button
+                onClick={() => setScope('group')}
+                className={cn(
+                  "px-8 py-3 rounded-xl font-bold transition-all duration-300 flex items-center gap-2",
+                  scope === 'group'
+                    ? "bg-gradient-to-r from-teal-500 to-emerald-600 text-white shadow-lg shadow-teal-200 scale-105"
+                    : "text-gray-500 hover:bg-white/80 hover:text-teal-600"
+                )}
+              >
+                <Award className="h-5 w-5" />
+                Grubum
+              </button>
+            </div>
           </div>
 
           {/* Enhanced Personal Rank Card */}
@@ -467,7 +514,7 @@ export default function StudentLeaderboardPage() {
                         <Trophy className="h-10 w-10" />
                       </div>
                       <span className="bg-clip-text text-transparent bg-gradient-to-r from-yellow-600 via-orange-600 to-red-600">
-                        Şeref Listesi
+                        {scope === 'all' ? 'Şeref Listesi' : 'Grup Şeref Listesi'}
                       </span>
                       <div className="p-4 rounded-2xl bg-gradient-to-r from-orange-500 to-red-500 text-white shadow-xl animate-pulse delay-1000">
                         <Crown className="h-10 w-10" />
@@ -695,7 +742,7 @@ export default function StudentLeaderboardPage() {
                   <div className="p-2 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-xl">
                     <Users className="h-6 w-6 text-white" />
                   </div>
-                  Yükselen Yıldızlar (4. Sırada ve Sonrası)
+                  {scope === 'all' ? 'Yükselen Yıldızlar (4. Sırada ve Sonrası)' : 'Grup Sıralaması (Devamı)'}
                 </CardTitle>
                 <CardDescription className="text-lg">
                   Zirveye doğru yolculuklarını sürdüren yetenekli öğrenciler

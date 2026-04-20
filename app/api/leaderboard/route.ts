@@ -19,9 +19,10 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Parse limit from query params
+    // Parse limit and scope from query params
     const { searchParams } = new URL(request.url);
     let limitParam = searchParams.get('limit');
+    let scope = searchParams.get('scope'); // 'all' or 'group'
     let limit: number | 'all' = 25;
     if (limitParam) {
       if (limitParam === 'all') {
@@ -37,12 +38,27 @@ export async function GET(request: NextRequest) {
     // Get active period
     const activePeriod = await requireActivePeriod();
 
-    // Get all active students with their basic information
+    // Determine filter
+    const whereClause: any = {
+      role: UserRole.STUDENT,
+      isActive: true
+    };
+
+    if (scope === 'group') {
+      // Get current user's tutorId if filtering by group
+      const currentUser = await prisma.user.findUnique({
+        where: { id: session.user.id },
+        select: { tutorId: true }
+      });
+
+      if (currentUser?.tutorId) {
+        whereClause.tutorId = currentUser.tutorId;
+      }
+    }
+
+    // Get active students with their basic information
     const studentsRaw = await prisma.user.findMany({
-      where: {
-        role: UserRole.STUDENT,
-        isActive: true
-      },
+      where: whereClause,
       select: {
         id: true,
         username: true,
@@ -86,7 +102,12 @@ export async function GET(request: NextRequest) {
     // Find current user's rank if they are a student
     const userRoles = (session.user as any).roles || [session.user.role].filter(Boolean) as UserRole[];
     const isStudent = userRoles.includes(UserRole.STUDENT);
-    const userRank = isStudent
+    
+    // For userRank, we should always check the FULL leaderboard unless the user specifically wants their rank within the group
+    // But usually, the "My Performance" section shows the global rank.
+    // Let's find global rank first if not in group scope, or group rank if in group scope.
+    
+    const userRankEntry = isStudent
       ? leaderboard.find(entry => entry.id === session.user.id)
       : null;
 
@@ -98,11 +119,12 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({
       leaderboard: leaderboardToReturn,
-      userRank: userRank ? {
-        rank: userRank.rank,
-        experience: userRank.experience
+      userRank: userRankEntry ? {
+        rank: userRankEntry.rank,
+        experience: userRankEntry.experience
       } : null,
-      total: students.length
+      total: students.length,
+      scope: scope || 'all'
     }, { status: 200 });
   } catch (error) {
     console.error('Get leaderboard error:', error);

@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '@/app/contexts/AuthContext';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
+import { Skeleton } from '@/components/ui/skeleton';
 
 type ItemRequest = {
   id: string;
@@ -140,50 +141,57 @@ export default function StudentRequests() {
   
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <div className="animate-pulse space-y-8">
-            {/* Header Skeleton */}
-            <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6">
-              <div className="space-y-4">
-                <div className="h-10 w-64 bg-gradient-to-r from-gray-200 to-gray-300 rounded-2xl"></div>
-                <div className="h-5 w-96 bg-gray-200 rounded-xl"></div>
-              </div>
-              <div className="h-12 w-40 bg-gradient-to-r from-gray-200 to-gray-300 rounded-2xl"></div>
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 animate-pulse">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-12">
+          {/* Header Skeleton */}
+          <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6">
+            <div className="space-y-4">
+              <Skeleton className="h-12 w-64 rounded-2xl" />
+              <Skeleton className="h-6 w-96 rounded-xl" />
             </div>
-            
-            {/* Filter Buttons Skeleton */}
-            <div className="flex flex-wrap gap-3">
-              {[1, 2, 3, 4].map((i) => (
-                <div key={i} className="h-12 w-32 bg-gray-200 rounded-2xl"></div>
-              ))}
+            <div className="flex gap-4">
+              <Skeleton className="h-14 w-32 rounded-2xl" />
+              <Skeleton className="h-14 w-44 rounded-2xl" />
             </div>
-            
-            {/* Cards Skeleton */}
-            <div className="grid grid-cols-1 gap-6">
-              {[1, 2, 3].map((i) => (
-                <div key={i} className="bg-white rounded-3xl shadow-lg border border-gray-100 p-8 space-y-6">
-                  <div className="flex justify-between items-start">
-                    <div className="h-7 w-48 bg-gray-200 rounded-xl"></div>
-                    <div className="h-8 w-28 bg-gray-200 rounded-full"></div>
+          </div>
+          
+          {/* Filter Buttons Skeleton */}
+          <div className="flex flex-wrap gap-3">
+            {[1, 2, 3, 4].map((i) => (
+              <Skeleton key={i} className="h-12 w-32 rounded-2xl" />
+            ))}
+          </div>
+          
+          {/* Cards Skeleton */}
+          <div className="grid grid-cols-1 gap-8">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-xl border border-gray-100 p-8 space-y-8">
+                <div className="flex flex-col sm:flex-row justify-between items-start gap-4">
+                  <div className="space-y-3 flex-1">
+                    <Skeleton className="h-8 w-64 rounded-xl" />
+                    <Skeleton className="h-4 w-full rounded-md" />
                   </div>
-                  <div className="space-y-3">
-                    <div className="h-4 w-full bg-gray-200 rounded-lg"></div>
-                    <div className="h-4 w-3/4 bg-gray-200 rounded-lg"></div>
-                  </div>
-                  <div className="grid grid-cols-2 gap-6">
+                  <Skeleton className="h-10 w-32 rounded-full" />
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                  <div className="flex items-center gap-4">
+                    <Skeleton className="h-12 w-12 rounded-xl" />
                     <div className="space-y-2">
-                      <div className="h-4 w-24 bg-gray-200 rounded-lg"></div>
-                      <div className="h-6 w-32 bg-gray-200 rounded-lg"></div>
+                      <Skeleton className="h-4 w-24 rounded-md" />
+                      <Skeleton className="h-7 w-16 rounded-md" />
                     </div>
+                  </div>
+                  <div className="flex items-center gap-4">
+                    <Skeleton className="h-12 w-12 rounded-xl" />
                     <div className="space-y-2">
-                      <div className="h-4 w-20 bg-gray-200 rounded-lg"></div>
-                      <div className="h-6 w-36 bg-gray-200 rounded-lg"></div>
+                      <Skeleton className="h-4 w-24 rounded-md" />
+                      <Skeleton className="h-7 w-40 rounded-md" />
                     </div>
                   </div>
                 </div>
-              ))}
-            </div>
+                <Skeleton className="h-24 w-full rounded-2xl" />
+              </div>
+            ))}
           </div>
         </div>
       </div>

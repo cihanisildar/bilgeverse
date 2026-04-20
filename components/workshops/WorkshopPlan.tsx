@@ -32,6 +32,8 @@ interface Course {
     title: string;
     description: string | null;
     date: Date | string;
+    startTime: string | null;
+    endTime: string | null;
     isCompleted: boolean;
 }
 
@@ -143,13 +145,19 @@ export function WorkshopPlan({
                                 {/* Content */}
                                 <div className="w-[calc(100%-4rem)] md:w-[calc(50%-2.5rem)] p-4 rounded-2xl border border-gray-100 bg-white shadow-sm hover:shadow-md transition-all">
                                     <div className="flex justify-between items-start mb-2">
-                                        <div className="flex items-center gap-2">
+                                        <div className="flex items-center gap-2 flex-wrap">
                                             <span className="text-xs font-bold text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full uppercase">
                                                 Ders {index + 1}
                                             </span>
                                             <time className="text-xs font-medium text-gray-400">
                                                 {new Date(course.date).toLocaleDateString('tr-TR', { day: 'numeric', month: 'long' })}
                                             </time>
+                                            {(course.startTime || course.endTime) && (
+                                                <span className="flex items-center gap-1 text-xs text-gray-400">
+                                                    <Clock className="h-3 w-3 text-amber-400" />
+                                                    {course.startTime || "??:??"} - {course.endTime || "??:??"}
+                                                </span>
+                                            )}
                                         </div>
                                         {isPrivileged && (
                                             <DropdownMenu>

@@ -22,7 +22,17 @@ interface Workshop {
     };
 }
 
-export function WorkshopCard({ workshop, role, isJoined }: { workshop: Workshop; role: string; isJoined: boolean }) {
+export function WorkshopCard({ 
+    workshop, 
+    role, 
+    isJoined, 
+    basePath = '/dashboard/part4' 
+}: { 
+    workshop: Workshop; 
+    role: string; 
+    isJoined: boolean; 
+    basePath?: string 
+}) {
 
     return (
         <Card className="hover:shadow-xl transition-all duration-300 border-0 bg-white/80 backdrop-blur-sm group overflow-hidden flex flex-col h-full">
@@ -74,7 +84,7 @@ export function WorkshopCard({ workshop, role, isJoined }: { workshop: Workshop;
                 </div>
             </CardContent>
             <CardFooter className="flex-none flex gap-2 pt-0">
-                <Link href={`/dashboard/part4/workshops/${workshop.id}`} className="flex-1">
+                <Link href={`${basePath}/workshops/${workshop.id}`} className="flex-1">
                     <Button variant="outline" className="w-full border-amber-200 text-amber-700 hover:bg-amber-50">
                         Detaylar
                     </Button>
@@ -84,7 +94,17 @@ export function WorkshopCard({ workshop, role, isJoined }: { workshop: Workshop;
     );
 }
 
-export function WorkshopList({ workshops, role, userId }: { workshops: Workshop[]; role: string; userId?: string }) {
+export function WorkshopList({ 
+    workshops, 
+    role, 
+    userId, 
+    basePath = '/dashboard/part4' 
+}: { 
+    workshops: Workshop[]; 
+    role: string; 
+    userId?: string; 
+    basePath?: string 
+}) {
     if (workshops.length === 0) {
         return (
             <div className="text-center py-20 bg-white/50 rounded-3xl border-2 border-dashed border-amber-200">
@@ -130,6 +150,7 @@ export function WorkshopList({ workshops, role, userId }: { workshops: Workshop[
                                     workshop={w}
                                     role={role}
                                     isJoined={w.students.some(s => s.studentId === userId)}
+                                    basePath={basePath}
                                 />
                             ))}
                         </div>
@@ -153,6 +174,7 @@ export function WorkshopList({ workshops, role, userId }: { workshops: Workshop[
                                     workshop={w}
                                     role={role}
                                     isJoined={w.students.some(s => s.studentId === userId)}
+                                    basePath={basePath}
                                 />
                             ))}
                         </div>
@@ -166,11 +188,12 @@ export function WorkshopList({ workshops, role, userId }: { workshops: Workshop[
     return (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {workshops.map((w) => (
-                <WorkshopCard
+                 <WorkshopCard
                     key={w.id}
                     workshop={w}
                     role={role}
                     isJoined={userId ? w.students.some(s => s.studentId === userId) : false}
+                    basePath={basePath}
                 />
             ))}
         </div>

@@ -843,62 +843,49 @@ function FullscreenImageModal({
 
 function LoadingStore() {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-cyan-50 to-emerald-50">
-      {/* Background Elements */}
-      <div className="fixed inset-0 pointer-events-none overflow-hidden">
-        <div className="absolute -top-40 -right-40 w-80 h-80 bg-gradient-to-br from-cyan-400/20 to-emerald-400/20 rounded-full blur-3xl animate-pulse"></div>
-        <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-gradient-to-br from-emerald-400/20 to-cyan-400/20 rounded-full blur-3xl animate-pulse delay-1000"></div>
-      </div>
-
-      <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 space-y-8">
-        {/* Header skeleton */}
-        <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6">
-          <div className="space-y-4">
-            <Skeleton className="h-16 w-80 rounded-2xl" />
-            <Skeleton className="h-6 w-96 rounded-2xl" />
-          </div>
-          <Skeleton className="h-14 w-40 rounded-2xl" />
-        </div>
-
-        {/* Points card skeleton */}
-        <div className="bg-white/90 backdrop-blur-xl shadow-2xl rounded-3xl p-8 border border-white/20">
-          <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6">
-            <div className="space-y-4">
-              <div className="flex items-center gap-3">
-                <Skeleton className="h-14 w-14 rounded-2xl" />
-                <div className="space-y-2">
-                  <Skeleton className="h-6 w-32 rounded-2xl" />
-                  <Skeleton className="h-4 w-24 rounded-2xl" />
-                </div>
-              </div>
-              <div className="flex items-baseline gap-3">
-                <Skeleton className="h-16 w-24 rounded-2xl" />
-                <Skeleton className="h-6 w-12 rounded-2xl" />
-              </div>
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 animate-pulse">
+      <div className="relative px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
+        <div className="max-w-7xl mx-auto space-y-12">
+          {/* Header skeleton */}
+          <div className="text-center space-y-6">
+            <div className="mx-auto h-10 w-48 rounded-full bg-white/70" />
+            <div className="mx-auto space-y-4">
+              <Skeleton className="mx-auto h-16 w-80 sm:w-[500px] rounded-2xl" />
+              <Skeleton className="mx-auto h-6 w-64 sm:w-[400px] rounded-2xl" />
             </div>
-            <Skeleton className="h-16 w-16 rounded-2xl" />
+            <Skeleton className="mx-auto h-14 w-44 rounded-2xl" />
           </div>
-          <Skeleton className="h-16 w-full mt-6 rounded-2xl" />
-        </div>
 
-        {/* Store items grid skeleton */}
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 lg:gap-8">
-          {[1, 2, 3, 4, 5, 6].map((i) => (
-            <div key={i} className="bg-white/90 backdrop-blur-xl rounded-3xl shadow-xl border border-white/20 overflow-hidden">
-              <Skeleton className="h-60 w-full" />
-              <div className="p-6">
-                <div className="flex justify-between items-start gap-4 mb-3">
-                  <Skeleton className="h-8 w-40 rounded-2xl" />
-                </div>
-                <Skeleton className="h-4 w-full mb-2 rounded-2xl" />
-                <Skeleton className="h-4 w-2/3 mb-6 rounded-2xl" />
-                <div className="flex items-center justify-between">
-                  <Skeleton className="h-6 w-24 rounded-2xl" />
-                  <Skeleton className="h-10 w-28 rounded-2xl" />
+          {/* Points card skeleton */}
+          <div className="bg-white/80 backdrop-blur-xl border border-blue-200/50 rounded-3xl p-6 sm:p-8 shadow-xl">
+            <div className="flex flex-col lg:flex-row items-center justify-between gap-6">
+              <div className="flex items-center gap-6">
+                <Skeleton className="h-20 w-20 rounded-2xl" />
+                <div className="space-y-3">
+                  <Skeleton className="h-10 w-48 rounded-2xl" />
+                  <Skeleton className="h-12 w-32 rounded-2xl" />
                 </div>
               </div>
+              <Skeleton className="h-24 w-40 rounded-2xl" />
             </div>
-          ))}
+          </div>
+
+          {/* Store items grid skeleton */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
+            {[1, 2, 3, 4, 5, 6].map((i) => (
+              <div key={i} className="relative h-96 rounded-3xl bg-white/90 border border-slate-200/50 shadow-lg overflow-hidden flex flex-col">
+                <Skeleton className="h-48 w-full" />
+                <div className="p-6 flex-1 flex flex-col justify-between">
+                  <div className="space-y-4 flex-1 flex flex-col items-center">
+                    <Skeleton className="h-7 w-40 rounded-xl" />
+                    <Skeleton className="h-4 w-full rounded-md" />
+                    <Skeleton className="h-4 w-5/6 rounded-md" />
+                  </div>
+                  <Skeleton className="h-12 w-full mt-6 rounded-2xl" />
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
     </div>

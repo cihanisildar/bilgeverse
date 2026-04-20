@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { ProfileSkeleton } from "@/app/components/ui/ProfileSkeleton";
 import { HeaderSkeleton, SkeletonShimmer } from "@/app/components/ui/skeleton-shimmer";
@@ -422,62 +422,52 @@ function ProfileContent() {
 // Loading state component
 function LoadingProfile() {
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="space-y-6 sm:space-y-8">
+    <div className="container mx-auto px-4 py-8 animate-pulse">
+      <div className="space-y-12">
         {/* Header Loading */}
-        <div className="mb-4 sm:mb-6">
-          <SkeletonShimmer className="h-8 sm:h-10 md:h-12 rounded-lg w-32 sm:w-40 mb-2" />
-          <SkeletonShimmer className="h-4 sm:h-5 rounded w-64 sm:w-80" />
+        <div className="space-y-4">
+          <Skeleton className="h-12 w-48 rounded-2xl" />
+          <Skeleton className="h-6 w-80 rounded-xl" />
         </div>
 
-        <div className="flex flex-col lg:flex-row gap-4 sm:gap-6 lg:gap-8">
+        <div className="flex flex-col lg:flex-row gap-8">
           {/* Left Column - Profile Card Loading */}
           <div className="w-full lg:w-1/3">
-            <div className="bg-white rounded-xl shadow-md border border-gray-100 overflow-hidden">
-              {/* Profile Header Loading */}
+            <div className="bg-white rounded-3xl shadow-xl border border-gray-100 overflow-hidden">
               <div className="relative">
-                <SkeletonShimmer className="h-24 sm:h-32" />
-                <div className="absolute -bottom-12 sm:-bottom-16 left-0 w-full flex justify-center">
-                  <SkeletonShimmer className="ring-4 ring-white rounded-full h-24 w-24 sm:h-32 sm:w-32" />
+                <Skeleton className="h-40 w-full" />
+                <div className="absolute -bottom-16 left-0 w-full flex justify-center">
+                  <Skeleton className="ring-8 ring-white rounded-full h-32 w-32" />
                 </div>
               </div>
 
-              {/* Profile Info Loading */}
-              <div className="pt-16 sm:pt-20 pb-6 sm:pb-8 px-4 sm:px-6 text-center space-y-3">
-                <SkeletonShimmer className="h-6 sm:h-8 rounded w-32 sm:w-40 mx-auto" />
-                <SkeletonShimmer className="h-4 sm:h-5 rounded w-20 mx-auto" />
-                <SkeletonShimmer className="h-3 sm:h-4 rounded w-28 mx-auto" />
-                <SkeletonShimmer className="h-8 sm:h-10 rounded w-full sm:w-32 mx-auto mt-4 sm:mt-6" />
-              </div>
-
-              {/* Contact Info Loading */}
-              <div className="border-t border-gray-100 px-4 sm:px-6 py-3 sm:py-4">
-                <SkeletonShimmer className="h-4 rounded w-24 mb-2 sm:mb-3" />
-                <div className="flex items-center space-x-2 sm:space-x-3">
-                  <SkeletonShimmer className="h-4 w-4 sm:h-5 sm:w-5 rounded" />
-                  <SkeletonShimmer className="h-4 rounded w-32" />
+              <div className="pt-20 pb-8 px-8 text-center space-y-4">
+                <Skeleton className="h-8 w-48 mx-auto rounded-xl" />
+                <div className="flex justify-center gap-2">
+                  <Skeleton className="h-6 w-20 rounded-full" />
+                  <Skeleton className="h-6 w-20 rounded-full" />
                 </div>
+                <Skeleton className="h-4 w-32 mx-auto rounded-md" />
+                <Skeleton className="h-12 w-full rounded-2xl mt-4" />
               </div>
 
-              {/* Stats Loading */}
-              <div className="border-t border-gray-100 px-4 sm:px-6 py-3 sm:py-4">
-                <SkeletonShimmer className="h-4 rounded w-20 mb-2 sm:mb-3" />
-                <div className="grid grid-cols-2 gap-2 sm:gap-4">
-                  <div className="bg-gray-50 rounded-lg p-2 sm:p-3 text-center space-y-1">
-                    <SkeletonShimmer className="h-6 sm:h-8 rounded" />
-                    <SkeletonShimmer className="h-3 rounded" />
+              <div className="border-t border-gray-50 p-8 space-y-6">
+                <div className="space-y-4">
+                  <Skeleton className="h-6 w-32 rounded-lg" />
+                  <div className="flex items-center gap-4">
+                    <Skeleton className="h-10 w-10 rounded-xl" />
+                    <Skeleton className="h-5 w-40 rounded-lg" />
                   </div>
-                  <div className="bg-gray-50 rounded-lg p-2 sm:p-3 text-center space-y-1">
-                    <SkeletonShimmer className="h-6 sm:h-8 rounded" />
-                    <SkeletonShimmer className="h-3 rounded" />
-                  </div>
-                  <div className="bg-gray-50 rounded-lg p-2 sm:p-3 text-center space-y-1">
-                    <SkeletonShimmer className="h-6 sm:h-8 rounded" />
-                    <SkeletonShimmer className="h-3 rounded" />
-                  </div>
-                  <div className="bg-gray-50 rounded-lg p-2 sm:p-3 text-center space-y-1">
-                    <SkeletonShimmer className="h-6 sm:h-8 rounded" />
-                    <SkeletonShimmer className="h-3 rounded" />
+                </div>
+                <div className="space-y-4">
+                  <Skeleton className="h-6 w-24 rounded-lg" />
+                  <div className="grid grid-cols-2 gap-4">
+                    {[1, 2, 3, 4].map((i) => (
+                      <div key={i} className="bg-gray-50 rounded-2xl p-4 space-y-2">
+                        <Skeleton className="h-8 w-12 mx-auto rounded-lg" />
+                        <Skeleton className="h-3 w-16 mx-auto rounded-md" />
+                      </div>
+                    ))}
                   </div>
                 </div>
               </div>
@@ -485,63 +475,34 @@ function LoadingProfile() {
           </div>
 
           {/* Right Column - Content Loading */}
-          <div className="w-full lg:w-2/3">
-            <div className="bg-white rounded-xl shadow-md border border-gray-100 overflow-hidden">
-              {/* Tutor Info Loading */}
-              <div className="p-4 sm:p-6 border-b border-gray-100">
-                <SkeletonShimmer className="h-5 sm:h-6 rounded w-32 mb-3 sm:mb-4" />
-                <div className="flex flex-col sm:flex-row items-center sm:items-start gap-3 sm:gap-4">
-                  <SkeletonShimmer className="h-16 w-16 sm:h-20 sm:w-20 rounded-full flex-shrink-0" />
-                  <div className="text-center sm:text-left space-y-2">
-                    <SkeletonShimmer className="h-5 sm:h-6 rounded w-32" />
-                    <SkeletonShimmer className="h-4 rounded w-24" />
-                  </div>
+          <div className="w-full lg:w-2/3 space-y-8">
+            <div className="bg-white rounded-3xl shadow-xl border border-gray-100 p-8">
+              <Skeleton className="h-8 w-48 mb-6 rounded-xl" />
+              <div className="flex items-start gap-6">
+                <Skeleton className="h-20 w-20 rounded-full flex-shrink-0" />
+                <div className="space-y-3 flex-1">
+                  <Skeleton className="h-7 w-40 rounded-lg" />
+                  <Skeleton className="h-5 w-32 rounded-lg" />
+                  <Skeleton className="h-10 w-24 rounded-full" />
                 </div>
               </div>
+            </div>
 
-              {/* Achievement Stats Loading */}
-              <div className="p-4 sm:p-6">
-                <SkeletonShimmer className="h-5 sm:h-6 rounded w-20 mb-3 sm:mb-4" />
-                <div className="space-y-3 sm:space-y-4">
-                  <div className="bg-gradient-to-r from-yellow-50 to-amber-50 p-3 sm:p-4 rounded-lg border border-amber-100">
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-0">
-                      <div className="flex items-center space-x-2 sm:space-x-3">
-                        <SkeletonShimmer className="h-5 w-5 sm:h-6 sm:w-6 rounded flex-shrink-0" />
-                        <div className="space-y-1">
-                          <SkeletonShimmer className="h-4 rounded w-16" />
-                          <SkeletonShimmer className="h-3 rounded w-32" />
-                        </div>
+            <div className="bg-white rounded-3xl shadow-xl border border-gray-100 p-8">
+              <Skeleton className="h-8 w-32 mb-6 rounded-xl" />
+              <div className="space-y-4">
+                {[1, 2, 3].map((i) => (
+                  <div key={i} className="bg-gray-50 rounded-2xl p-6 flex justify-between items-center">
+                    <div className="flex items-center gap-4">
+                      <Skeleton className="h-10 w-10 rounded-xl" />
+                      <div className="space-y-2">
+                        <Skeleton className="h-5 w-32 rounded-lg" />
+                        <Skeleton className="h-4 w-48 rounded-lg" />
                       </div>
-                      <SkeletonShimmer className="h-6 sm:h-8 rounded w-12" />
                     </div>
+                    <Skeleton className="h-8 w-12 rounded-lg" />
                   </div>
-
-                  <div className="bg-gradient-to-r from-indigo-50 to-purple-50 p-3 sm:p-4 rounded-lg border border-indigo-100">
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-0">
-                      <div className="flex items-center space-x-2 sm:space-x-3">
-                        <SkeletonShimmer className="h-5 w-5 sm:h-6 sm:w-6 rounded flex-shrink-0" />
-                        <div className="space-y-1">
-                          <SkeletonShimmer className="h-4 rounded w-20" />
-                          <SkeletonShimmer className="h-3 rounded w-40" />
-                        </div>
-                      </div>
-                      <SkeletonShimmer className="h-6 sm:h-8 rounded w-16" />
-                    </div>
-                  </div>
-
-                  <div className="bg-gradient-to-r from-green-50 to-emerald-50 p-3 sm:p-4 rounded-lg border border-green-100">
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-0">
-                      <div className="flex items-center space-x-2 sm:space-x-3">
-                        <SkeletonShimmer className="h-5 w-5 sm:h-6 sm:w-6 rounded flex-shrink-0" />
-                        <div className="space-y-1">
-                          <SkeletonShimmer className="h-4 rounded w-32" />
-                          <SkeletonShimmer className="h-3 rounded w-44" />
-                        </div>
-                      </div>
-                      <SkeletonShimmer className="h-6 sm:h-8 rounded w-8" />
-                    </div>
-                  </div>
-                </div>
+                ))}
               </div>
             </div>
           </div>

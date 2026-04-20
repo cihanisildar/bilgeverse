@@ -946,6 +946,8 @@ model WorkshopCourse {
   title       String
   description String?
   date        DateTime
+  startTime   String?
+  endTime     String?
   isCompleted Boolean  @default(false)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt

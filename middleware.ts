@@ -101,6 +101,14 @@ export async function middleware(request: NextRequest) {
       }
     }
 
+    // Redirect students away from the main /dashboard page
+    if (pathname === '/dashboard') {
+      if (hasStudent && !hasAdmin && !hasBoardMember) {
+        console.log('Student attempting to access /dashboard, redirecting to part7/student');
+        return NextResponse.redirect(new URL('/dashboard/part7/student', request.url));
+      }
+    }
+
     // Redirect non-admin/board users away from parts 1, 3-6 and 8-9 to part 7 (except check-in and detail pages)
     if (pathname.startsWith('/dashboard/part') &&
       !pathname.startsWith('/dashboard/part7') &&

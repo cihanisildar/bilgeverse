@@ -7,6 +7,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Award,
   GraduationCap,
@@ -82,37 +83,48 @@ export default function TipsPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex items-center justify-center relative overflow-hidden">
-        {/* Animated background elements */}
-        <div className="absolute inset-0">
-          <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-purple-500/20 rounded-full blur-3xl animate-pulse"></div>
-          <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-blue-500/20 rounded-full blur-3xl animate-pulse delay-1000"></div>
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 animate-pulse">
+        <div className="relative z-10 px-4 sm:px-6 lg:px-8 py-12 max-w-7xl mx-auto space-y-12">
+          {/* Header Skeleton */}
+          <div className="text-center space-y-6">
+            <Skeleton className="mx-auto h-10 w-40 rounded-full bg-white/10" />
+            <div className="space-y-4">
+              <Skeleton className="mx-auto h-16 w-3/4 max-w-2xl rounded-2xl bg-white/5" />
+              <Skeleton className="mx-auto h-16 w-1/2 max-w-xl rounded-2xl bg-white/5" />
+            </div>
+            <Skeleton className="mx-auto h-6 w-80 rounded-xl bg-white/5" />
+            <Skeleton className="mx-auto h-10 w-64 rounded-full bg-white/10" />
+          </div>
+
+          {/* Cards Grid Skeleton */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
+            {[1, 2, 3, 4, 5, 6].map((i) => (
+              <div key={i} className="h-80 rounded-2xl bg-white/5 border border-white/10 p-8 flex flex-col items-center justify-center space-y-6">
+                <Skeleton className="h-20 w-20 rounded-full bg-white/10" />
+                <div className="space-y-3 w-full">
+                  <Skeleton className="h-7 w-3/4 mx-auto rounded-lg bg-white/10" />
+                  <Skeleton className="h-4 w-full rounded-md bg-white/5" />
+                  <Skeleton className="h-4 w-5/6 mx-auto rounded-md bg-white/5" />
+                </div>
+                <Skeleton className="h-10 w-32 rounded-full bg-white/10" />
+              </div>
+            ))}
+          </div>
+
+          {/* Bottom Banner Skeleton */}
+          <div className="rounded-3xl bg-white/5 border border-white/10 p-12">
+            <div className="flex flex-col lg:flex-row items-center justify-between gap-8">
+              <div className="flex items-center gap-6">
+                <Skeleton className="h-16 w-16 rounded-2xl bg-white/10" />
+                <div className="space-y-3">
+                  <Skeleton className="h-8 w-64 rounded-xl bg-white/10" />
+                  <Skeleton className="h-6 w-80 rounded-lg bg-white/5" />
+                </div>
+              </div>
+              <Skeleton className="h-14 w-48 rounded-full bg-white/10" />
+            </div>
+          </div>
         </div>
-        
-        <motion.div 
-          className="relative z-10 text-center"
-          initial={{ opacity: 0, scale: 0.5 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.5 }}
-        >
-          <div className="flex items-center justify-center gap-4 mb-4">
-            <motion.div
-              animate={{ rotate: 360 }}
-              transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
-            >
-              <Sparkles className="h-8 w-8 text-purple-400" />
-            </motion.div>
-            <span className="text-xl font-semibold text-white">Yükleniyor...</span>
-          </div>
-          <div className="h-2 w-64 bg-gray-800 rounded-full overflow-hidden">
-            <motion.div
-              className="h-full bg-gradient-to-r from-purple-500 to-blue-500 rounded-full"
-              initial={{ width: "0%" }}
-              animate={{ width: "100%" }}
-              transition={{ duration: 2, repeat: Infinity }}
-            />
-          </div>
-        </motion.div>
       </div>
     );
   }
@@ -173,7 +185,7 @@ export default function TipsPage() {
           >
             <div className="inline-flex items-center gap-3 px-6 py-3 bg-white/10 backdrop-blur-sm border border-white/20 rounded-full text-white/90 text-sm font-medium">
               <Star className="h-4 w-4 text-yellow-400" />
-              <span>Başarı Rehberi</span>
+              <span>Nasıl Bilge Para Kazanırım</span>
               <Star className="h-4 w-4 text-yellow-400" />
             </div>
             
