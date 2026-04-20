@@ -96,6 +96,8 @@ export type WorkshopWithDetails = Prisma.WorkshopGetPayload<{
         title: string;
         description: string | null;
         date: Date;
+        startTime: string | null;
+        endTime: string | null;
         isCompleted: boolean;
     }[];
 };
