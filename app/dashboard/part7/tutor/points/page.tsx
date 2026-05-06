@@ -16,7 +16,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Tabs, TabsContent } from "@/components/ui/tabs";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -31,7 +31,17 @@ import {
   UserCheck,
   MinusCircle,
   PlusCircle,
+  XCircle,
+  AlertTriangle,
 } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 
 // Types
@@ -854,6 +864,190 @@ function PointsManagement() {
   );
 }
 
+function WrongEntryTab() {
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [cancelTarget, setCancelTarget] = useState<Transaction | null>(null);
+  const [isCancelling, setIsCancelling] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
+
+  const getDisplayName = (s: { firstName?: string | null; lastName?: string | null; username: string } | undefined) => {
+    if (!s) return "Bilinmeyen";
+    if (s.firstName && s.lastName) return `${s.firstName} ${s.lastName}`;
+    return s.username;
+  };
+
+  useEffect(() => {
+    fetch("/api/points", { credentials: "include" })
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.transactions) {
+          setTransactions(
+            [...data.transactions].sort(
+              (a: any, b: any) =>
+                new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+            )
+          );
+        }
+      })
+      .catch(console.error)
+      .finally(() => setIsLoading(false));
+  }, []);
+
+  const handleCancel = async () => {
+    if (!cancelTarget) return;
+    setIsCancelling(true);
+    try {
+      const res = await fetch("/api/tutor/transactions/cancel", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ transactionId: cancelTarget.id }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        toast.error(data.error || "İptal işlemi başarısız oldu");
+      } else {
+        toast.success("Puan girişi iptal edildi");
+        setTransactions((prev) => prev.filter((t) => t.id !== cancelTarget.id));
+      }
+    } catch {
+      toast.error("Bir hata oluştu");
+    } finally {
+      setIsCancelling(false);
+      setCancelTarget(null);
+    }
+  };
+
+  const filtered = transactions.filter((t) => {
+    const name = getDisplayName(t.student).toLowerCase();
+    const reason = t.reason.toLowerCase();
+    const term = searchTerm.toLowerCase();
+    return name.includes(term) || reason.includes(term);
+  });
+
+  return (
+    <div>
+      <div className="relative mb-6">
+        <div className="absolute inset-0 bg-gradient-to-r from-rose-500/10 to-orange-500/10 rounded-2xl" />
+        <div className="relative p-6 text-center">
+          <h2 className="text-2xl font-bold mb-1">
+            <span className="bg-gradient-to-r from-rose-600 to-orange-600 bg-clip-text text-transparent">
+              Hatalı Puan Girişi
+            </span>
+          </h2>
+          <p className="text-gray-600">Yanlış girilen puanları iptal edin</p>
+        </div>
+      </div>
+
+      <Card className="border-0 shadow-xl bg-gradient-to-br from-white to-rose-50/30">
+        <CardHeader className="pb-4">
+          <CardTitle className="flex items-center text-rose-700">
+            <div className="p-2 bg-rose-100 rounded-lg mr-3">
+              <XCircle className="h-5 w-5 text-rose-600" />
+            </div>
+            Puan İşlemleri
+          </CardTitle>
+          <CardDescription>Hatalı girilen puan işlemini seçip iptal edin</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="relative mb-4">
+            <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+            <Input
+              className="pl-10"
+              placeholder="Öğrenci adı veya sebep ile ara..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
+
+          {isLoading ? (
+            <div className="space-y-3">
+              {[...Array(5)].map((_, i) => (
+                <div key={i} className="flex items-center justify-between p-4 border rounded-xl">
+                  <div className="space-y-2">
+                    <Skeleton className="h-4 w-40" />
+                    <Skeleton className="h-3 w-32" />
+                  </div>
+                  <Skeleton className="h-8 w-20" />
+                </div>
+              ))}
+            </div>
+          ) : filtered.length === 0 ? (
+            <div className="text-center py-10 text-gray-500">
+              {searchTerm ? "Arama sonucu bulunamadı" : "Henüz puan işlemi yok"}
+            </div>
+          ) : (
+            <div className="space-y-3 max-h-[500px] overflow-y-auto pr-1">
+              {filtered.map((t) => (
+                <div
+                  key={t.id}
+                  className="flex items-center justify-between p-4 rounded-xl border-2 border-gray-100 hover:border-rose-200 hover:bg-rose-50/30 transition-all"
+                >
+                  <div className="flex-1">
+                    <p className="font-semibold text-gray-900">{getDisplayName(t.student)}</p>
+                    <p className="text-sm text-gray-600 mt-0.5">{t.reason}</p>
+                    <p className="text-xs text-gray-400 mt-1">
+                      {new Date(t.createdAt).toLocaleString("tr-TR")}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-3 ml-4">
+                    <span className={`font-bold text-base ${t.type === "AWARD" ? "text-green-600" : "text-red-600"}`}>
+                      {t.type === "AWARD" ? "+" : "-"}{t.points} puan
+                    </span>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setCancelTarget(t)}
+                      className="border-rose-200 text-rose-600 hover:bg-rose-50 hover:border-rose-300"
+                    >
+                      <XCircle className="h-4 w-4 mr-1" />
+                      İptal Et
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <Dialog open={!!cancelTarget} onOpenChange={() => setCancelTarget(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-rose-700">
+              <AlertTriangle className="h-5 w-5" />
+              Puan Girişini İptal Et
+            </DialogTitle>
+            <DialogDescription>
+              {cancelTarget && (
+                <span>
+                  <strong>{getDisplayName(cancelTarget.student)}</strong> adlı öğrenciye{" "}
+                  <strong>"{cancelTarget.reason}"</strong> sebebiyle verilen{" "}
+                  <strong className="text-rose-600">{cancelTarget.points} puan</strong> iptal
+                  edilecek. Bu işlem geri alınamaz.
+                </span>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setCancelTarget(null)} disabled={isCancelling}>
+              Vazgeç
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleCancel}
+              disabled={isCancelling}
+            >
+              {isCancelling ? "İptal ediliyor..." : "Evet, İptal Et"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
+
 export default function PointsPage() {
   const [loading, setLoading] = useState(true);
 
@@ -865,14 +1059,25 @@ export default function PointsPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-blue-50">
-      <div className="p-8 space-y-8">
+      <div className="p-8 space-y-6">
         {loading ? (
           <LoadingPoints />
         ) : (
-          <div className="space-y-8">
+          <>
             <PointsHeader />
-            <PointsManagement />
-          </div>
+            <Tabs defaultValue="award">
+              <TabsList className="grid w-full max-w-md grid-cols-2 mb-6">
+                <TabsTrigger value="award">Puan Ver</TabsTrigger>
+                <TabsTrigger value="wrong">Hatalı Puan Girişi</TabsTrigger>
+              </TabsList>
+              <TabsContent value="award">
+                <PointsManagement />
+              </TabsContent>
+              <TabsContent value="wrong">
+                <WrongEntryTab />
+              </TabsContent>
+            </Tabs>
+          </>
         )}
       </div>
     </div>

@@ -6,7 +6,9 @@ import { useMeetings, useDeleteMeeting } from '@/app/hooks/use-meetings';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Calendar, MapPin, Users, FileText, Trash2, Edit2, ArrowRight, LayoutDashboard } from 'lucide-react';
+import { Plus, Calendar, MapPin, Users, FileText, Trash2, Edit2, ArrowRight, ArrowLeft, Search, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { format } from 'date-fns';
 import { tr } from 'date-fns/locale';
 import { useState, useEffect } from 'react';
@@ -44,6 +46,9 @@ export default function MeetingsPage() {
   const deleteMeeting = useDeleteMeeting();
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [selectedMeetingId, setSelectedMeetingId] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState<'ALL' | MeetingStatus>('ALL');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
 
   // Reset dialog state when it closes
   useEffect(() => {
@@ -84,52 +89,112 @@ export default function MeetingsPage() {
     });
   };
 
+  const filteredMeetings = meetings?.filter((meeting) => {
+    const matchesSearch = meeting.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      meeting.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      meeting.location.toLowerCase().includes(searchQuery.toLowerCase());
+    
+    const matchesStatus = statusFilter === 'ALL' || meeting.status === statusFilter;
+    
+    return matchesSearch && matchesStatus;
+  })?.sort((a, b) => {
+    const dateA = new Date(a.meetingDate).getTime();
+    const dateB = new Date(b.meetingDate).getTime();
+    return sortOrder === 'asc' ? dateA - dateB : dateB - dateA;
+  });
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50 p-6 lg:p-8">
       <div className="max-w-7xl mx-auto">
         <div className="mb-8">
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-800 mb-2">
-                <span className="bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-purple-600">
-                  Toplantılar
-                </span>
-              </h1>
-              <p className="text-gray-600">Yönetim kurulu toplantılarını görüntüleyin ve yönetin</p>
-            </div>
-            <div className="flex items-center gap-3">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div className="flex items-start gap-4">
               <Button
-                variant="outline"
+                variant="ghost"
                 onClick={() => router.push('/dashboard/part1')}
-                className="border-gray-300 text-gray-700 hover:bg-gray-50 hover:border-gray-400 transition-all duration-200"
+                className="mt-1 text-gray-600 hover:text-gray-900 hover:bg-gray-100/50 transition-all duration-200"
               >
-                <LayoutDashboard className="h-4 w-4 mr-2" />
-                Dashboard
+                <ArrowLeft className="h-5 w-5 mr-2" />
+                Geri
               </Button>
-              {isAdmin && (
-                <Button
-                  onClick={() => router.push('/dashboard/part1/meetings/new')}
-                  className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white shadow-lg shadow-indigo-500/50 transition-all duration-200 hover:shadow-xl hover:shadow-indigo-500/60"
-                >
-                  <Plus className="h-4 w-4 mr-2" />
-                  Yeni Toplantı
-                </Button>
-              )}
+              <div>
+                <h1 className="text-3xl font-bold text-gray-800 mb-2">
+                  <span className="bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-purple-600">
+                    Toplantılar
+                  </span>
+                </h1>
+                <p className="text-gray-600">Yönetim kurulu toplantılarını görüntüleyin ve yönetin</p>
+              </div>
             </div>
+            {isAdmin && (
+              <Button
+                onClick={() => router.push('/dashboard/part1/meetings/new')}
+                className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white shadow-lg shadow-indigo-500/50 transition-all duration-200 hover:shadow-xl hover:shadow-indigo-500/60"
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Yeni Toplantı
+              </Button>
+            )}
           </div>
         </div>
 
-        {!meetings || meetings.length === 0 ? (
+        {/* Filter Section */}
+        <div className="mb-8 space-y-4">
+          <div className="flex flex-col md:flex-row gap-4">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <Input
+                placeholder="Toplantı ara (başlık, açıklama, konum)..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-10 border-gray-200 focus:border-indigo-500 focus:ring-indigo-500 rounded-xl"
+              />
+            </div>
+            <Button
+              variant="outline"
+              onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
+              className="border-gray-200 text-gray-700 hover:bg-gray-50 rounded-xl px-4"
+            >
+              {sortOrder === 'asc' ? (
+                <>
+                  <ArrowUp className="h-4 w-4 mr-2 text-indigo-600" />
+                  Eskiden Yeniye
+                </>
+              ) : (
+                <>
+                  <ArrowDown className="h-4 w-4 mr-2 text-indigo-600" />
+                  Yeniden Eskiye
+                </>
+              )}
+            </Button>
+          </div>
+
+          <Tabs defaultValue="ALL" onValueChange={(v) => setStatusFilter(v as any)} className="w-full">
+            <TabsList className="bg-white/50 border border-gray-100 p-1 rounded-xl h-auto flex flex-wrap">
+              <TabsTrigger value="ALL" className="rounded-lg px-4 py-2 data-[state=active]:bg-white data-[state=active]:shadow-sm">Tümü</TabsTrigger>
+              <TabsTrigger value="PLANNED" className="rounded-lg px-4 py-2 data-[state=active]:bg-white data-[state=active]:shadow-sm">Planlandı</TabsTrigger>
+              <TabsTrigger value="ONGOING" className="rounded-lg px-4 py-2 data-[state=active]:bg-white data-[state=active]:shadow-sm">Devam Ediyor</TabsTrigger>
+              <TabsTrigger value="COMPLETED" className="rounded-lg px-4 py-2 data-[state=active]:bg-white data-[state=active]:shadow-sm">Tamamlandı</TabsTrigger>
+              <TabsTrigger value="CANCELLED" className="rounded-lg px-4 py-2 data-[state=active]:bg-white data-[state=active]:shadow-sm">İptal Edildi</TabsTrigger>
+            </TabsList>
+          </Tabs>
+        </div>
+
+        {!filteredMeetings || filteredMeetings.length === 0 ? (
           <Card className="border-0 shadow-lg rounded-2xl overflow-hidden">
             <CardContent className="text-center py-16 px-6">
               <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-gradient-to-br from-indigo-100 to-purple-100 mb-6">
                 <Calendar className="h-10 w-10 text-indigo-600" />
               </div>
-              <h3 className="text-xl font-semibold text-gray-800 mb-2">Henüz toplantı yok</h3>
+              <h3 className="text-xl font-semibold text-gray-800 mb-2">
+                {searchQuery || statusFilter !== 'ALL' ? 'Eşleşen toplantı bulunamadı' : 'Henüz toplantı yok'}
+              </h3>
               <p className="text-sm text-gray-500 mb-6 max-w-md mx-auto">
-                İlk toplantıyı oluşturmak için yukarıdaki butona tıklayın ve toplantılarınızı yönetmeye başlayın.
+                {searchQuery || statusFilter !== 'ALL'
+                  ? 'Filtrelerinizi değiştirerek tekrar deneyebilirsiniz.' 
+                  : 'İlk toplantıyı oluşturmak için yukarıdaki butona tıklayın ve toplantılarınızı yönetmeye başlayın.'}
               </p>
-              {isAdmin && (
+              {isAdmin && !searchQuery && statusFilter === 'ALL' && (
                 <Button
                   onClick={() => router.push('/dashboard/part1/meetings/new')}
                   className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white shadow-lg shadow-indigo-500/50"
@@ -142,7 +207,7 @@ export default function MeetingsPage() {
           </Card>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {meetings.map((meeting) => (
+            {filteredMeetings.map((meeting) => (
               <Card
                 key={meeting.id}
                 className="group border-0 shadow-md rounded-2xl overflow-hidden transition-all duration-300 hover:shadow-2xl hover:-translate-y-2 cursor-pointer bg-white"

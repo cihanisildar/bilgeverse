@@ -5,6 +5,8 @@ import { isAuthorized } from './permissions';
 import { UserRole } from '@prisma/client';
 import { NextResponse } from 'next/server';
 
+export { USER_AUTH_SELECT, normalizeUserRoles, isUserInAcademy } from './auth-helpers';
+
 interface RequireAuthOptions {
     partId?: number;
     roles?: UserRole[];
@@ -38,7 +40,8 @@ export async function requireAuth(options: RequireAuthOptions = {}) {
     }
 
     if (partId !== undefined) {
-        if (!isAuthorized(session, partId)) {
+        const isAuth = await isAuthorized(session, partId);
+        if (!isAuth) {
             redirect(redirectTo);
         }
     }

@@ -5,7 +5,7 @@ import SociometricAnalysis from './SociometricAnalysis';
 import { requireAuth } from '@/app/lib/auth-utils';
 
 export default async function SociometricPage() {
-    const session = await requireAuth({ roles: ['ADMIN', 'TUTOR'] });
+    const session = await requireAuth({ roles: ['ADMIN', 'TUTOR', 'ASISTAN'] });
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-violet-50 via-white to-purple-50 p-6 lg:p-8">

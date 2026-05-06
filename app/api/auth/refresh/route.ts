@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '../[...nextauth]/auth.config';
 import prisma from '@/lib/prisma';
+import { USER_AUTH_SELECT, normalizeUserRoles, isUserInAcademy } from '@/app/lib/auth-helpers';
 
 export const dynamic = 'force-dynamic';
 
@@ -20,25 +21,7 @@ export async function POST(request: NextRequest) {
     // Fetch fresh user data from database
     const freshUser = await prisma.user.findUnique({
       where: { id: session.user.id },
-      select: {
-        id: true,
-        username: true,
-        role: true,
-        firstName: true,
-        lastName: true,
-        points: true,
-        experience: true,
-        tutorId: true,
-        assistedTutorId: true,
-        tutor: {
-          select: {
-            id: true,
-            username: true,
-            firstName: true,
-            lastName: true
-          }
-        }
-      }
+      select: USER_AUTH_SELECT
     });
 
     if (!freshUser) {
@@ -50,7 +33,11 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(
       {
-        user: freshUser,
+        user: {
+          ...freshUser,
+          roles: normalizeUserRoles(freshUser),
+          isInAcademy: isUserInAcademy(freshUser)
+        },
         message: 'User data refreshed successfully'
       },
       {

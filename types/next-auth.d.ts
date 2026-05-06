@@ -1,7 +1,7 @@
 import { UserRole } from '@prisma/client';
 import NextAuth from 'next-auth';
 
-type TutorInfo = {
+export type TutorInfo = {
   id: string;
   username: string;
   firstName?: string;
@@ -13,7 +13,10 @@ declare module 'next-auth' {
     id: string;
     username: string;
     role: UserRole;
-    roles?: UserRole[];
+    roles: UserRole[];
+    isInAcademy: boolean;
+    isAdmin: boolean;
+    isBoardMember: boolean;
     tutorId?: string | null;
     assistedTutorId?: string | null;
     tutor?: TutorInfo;
@@ -23,5 +26,18 @@ declare module 'next-auth' {
     user: User & {
       id: string;
     };
+  }
+}
+
+declare module 'next-auth/jwt' {
+  interface JWT {
+    username: string;
+    role: UserRole;
+    roles: UserRole[];
+    isAdmin: boolean;
+    isBoardMember: boolean;
+    isInAcademy: boolean;
+    tutorId?: string | null;
+    tutor?: TutorInfo;
   }
 }

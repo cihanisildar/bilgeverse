@@ -1,4 +1,5 @@
 import { UserRole } from '@prisma/client';
+import prisma from '@/lib/prisma';
 
 /**
  * Defines which parts each role can access on the dashboard page
@@ -54,11 +55,31 @@ import { Session } from 'next-auth';
  * @param session - The NextAuth session
  * @param partId - The part ID to check
  */
-export function isAuthorized(session: Session | null, partId: number): boolean {
+export async function isAuthorized(session: Session | null, partId: number): Promise<boolean> {
     if (!session?.user) return false;
 
     const user = session.user;
-    const roles = user.roles || (user.role ? [user.role] : []);
+    const roles = (user.roles || (user.role ? [user.role] : [])) as UserRole[];
+
+    // Explicitly allow board members to access part 1 if they have the role
+    // or if they are marked as isBoardMember in the session
+    let isBoardMember = roles.includes(UserRole.BOARD_MEMBER) || (user as any).isBoardMember;
+    
+    // Fallback database check for board members if session is stale
+    if (!isBoardMember && partId === 1) {
+        const dbUser = await prisma.user.findUnique({
+            where: { id: user.id },
+            include: { boardMember: { select: { isActive: true } } }
+        });
+        
+        if (dbUser) {
+            isBoardMember = dbUser.roles.includes(UserRole.BOARD_MEMBER) || 
+                           dbUser.role === UserRole.BOARD_MEMBER ||
+                           !!dbUser.boardMember?.isActive;
+        }
+    }
+    
+    if (partId === 1 && isBoardMember) return true;
 
     if (roles.length === 0) return false;
     return canAccessPart(roles, partId);

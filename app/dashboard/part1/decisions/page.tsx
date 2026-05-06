@@ -218,7 +218,7 @@ export default function DecisionsOverviewPage() {
                         onClick={() => router.push('/dashboard/part1')}
                     >
                         <ArrowLeft className="h-4 w-4 mr-2" />
-                        Geri Dön
+                        Geri
                     </Button>
                 </div>
 

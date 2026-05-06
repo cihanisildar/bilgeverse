@@ -9,7 +9,7 @@ import {
 import { useRouter } from "next/navigation";
 import toast from 'react-hot-toast';
 import { UserRole } from "@prisma/client";
-import { signIn, signOut, useSession } from "next-auth/react";
+import { signIn, signOut, useSession, getSession } from "next-auth/react";
 
 type AuthUser = {
   id: string;
@@ -27,6 +27,15 @@ type AuthUser = {
     lastName?: string;
   };
   createdAt?: string;
+  boardMember?: {
+    id: string;
+    isActive: boolean;
+  } | null;
+  _count?: {
+    academyAssignments: number;
+    academyStudents: number;
+  };
+  isInAcademy?: boolean;
 };
 
 type AuthContextType = {
@@ -41,6 +50,7 @@ type AuthContextType = {
   isBoardMember: boolean;
   isTutor: boolean;
   isStudent: boolean;
+  isInAcademy: boolean;
 };
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -115,14 +125,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       return;
     }
 
-    // Only update user state from session if it wasn't recently updated from API
-    // and if it's actually different to prevent unnecessary re-renders
+    // Set initial user from session to avoid delay
     if (session?.user && (!user || user.id !== session.user.id) && !userUpdatedFromAPI) {
       setUser(session.user as any as AuthUser);
+      // Fetch fresh data from API to ensure roles and flags are up to date
+      checkAuth();
+    } else {
+      setLoading(false);
     }
-
-    setLoading(false);
-  }, [session?.user?.id, status, user?.id, userUpdatedFromAPI]); // Only depend on user ID and status, not the entire session
+  }, [session?.user?.id, status]); // Only depend on user ID and status, not the entire session
 
   const login = async (username: string, password: string, callbackUrl?: string) => {
     try {
@@ -166,8 +177,22 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       // Show success message
       toast.success('Giriş başarılı!');
 
-      // Redirect to callbackUrl if provided, otherwise to dashboard
-      const redirectUrl = callbackUrl || '/dashboard';
+      // Determine role-based redirect if no callbackUrl
+      let defaultRedirect = '/dashboard';
+      if (!callbackUrl) {
+        const currentSession = await getSession();
+        const sessionUser = currentSession?.user as any;
+        const roles: string[] = sessionUser?.roles || (sessionUser?.role ? [sessionUser.role] : []);
+        if (roles.includes('ADMIN')) {
+          defaultRedirect = '/dashboard/part7/admin';
+        } else if (roles.includes('TUTOR') || roles.includes('ASISTAN')) {
+          defaultRedirect = '/dashboard/part7/tutor';
+        } else if (roles.includes('STUDENT')) {
+          defaultRedirect = '/dashboard/part7/student';
+        }
+      }
+
+      const redirectUrl = callbackUrl || defaultRedirect;
       await router.replace(redirectUrl);
 
     } catch (error) {
@@ -221,12 +246,23 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  const isAdmin = user?.roles?.includes(UserRole.ADMIN) || user?.role === UserRole.ADMIN;
-  const isBoardMember = user?.roles?.includes(UserRole.BOARD_MEMBER) || user?.role === UserRole.BOARD_MEMBER;
-  const isTutor = user?.roles?.some(r => r === UserRole.TUTOR || r === UserRole.ASISTAN) ||
+  const isAdmin = Boolean(user?.roles?.includes(UserRole.ADMIN) || user?.role === UserRole.ADMIN);
+  const isBoardMember = Boolean(
+    user?.roles?.includes(UserRole.BOARD_MEMBER) || 
+    user?.role === UserRole.BOARD_MEMBER || 
+    user?.boardMember?.isActive
+  );
+  const isTutor = Boolean(
+    user?.roles?.some(r => r === UserRole.TUTOR || r === UserRole.ASISTAN) ||
     user?.role === UserRole.TUTOR ||
-    user?.role === UserRole.ASISTAN;
-  const isStudent = user?.roles?.includes(UserRole.STUDENT) || user?.role === UserRole.STUDENT;
+    user?.role === UserRole.ASISTAN
+  );
+  const isStudent = Boolean(user?.roles?.includes(UserRole.STUDENT) || user?.role === UserRole.STUDENT);
+  const isInAcademy = Boolean(
+    user?.isInAcademy || 
+    (user?._count?.academyAssignments || 0) > 0 || 
+    (user?._count?.academyStudents || 0) > 0
+  );
   const isAuthenticated = Boolean(user && !loading);
 
   return (
@@ -243,6 +279,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         isBoardMember,
         isTutor,
         isStudent,
+        isInAcademy,
       }}
     >
       {children}

@@ -164,8 +164,9 @@ export async function createAttendanceSession(data: {
     const userRoles = userNode?.roles || [userNode?.role].filter(Boolean) as string[];
     const isAdmin = userRoles.includes('ADMIN');
     const isTutor = userRoles.includes('TUTOR');
+    const isAsistan = userRoles.includes('ASISTAN');
 
-    if (!session?.user || (!isAdmin && !isTutor)) {
+    if (!session?.user || (!isAdmin && !isTutor && !isAsistan)) {
       throw new Error('Unauthorized');
     }
 
@@ -236,8 +237,9 @@ export async function updateAttendanceSession(sessionId: string, data: {
     const userRoles = userNode?.roles || [userNode?.role].filter(Boolean) as UserRole[];
     const isAdmin = userRoles.includes(UserRole.ADMIN);
     const isTutor = userRoles.includes(UserRole.TUTOR);
+    const isAsistan = userRoles.includes(UserRole.ASISTAN);
 
-    if (!session?.user || (!isAdmin && !isTutor)) {
+    if (!session?.user || (!isAdmin && !isTutor && !isAsistan)) {
       return { error: 'Yetkisiz erişim', data: null };
     }
 
@@ -303,8 +305,9 @@ export async function generateQRCodeForSession(sessionId: string) {
     const userRoles = userNode?.roles || [userNode?.role].filter(Boolean) as UserRole[];
     const isAdmin = userRoles.includes(UserRole.ADMIN);
     const isTutor = userRoles.includes(UserRole.TUTOR);
+    const isAsistan = userRoles.includes(UserRole.ASISTAN);
 
-    if (!session?.user || (!isAdmin && !isTutor)) {
+    if (!session?.user || (!isAdmin && !isTutor && !isAsistan)) {
       return { error: 'Yetkisiz erişim', data: null };
     }
 
@@ -714,8 +717,9 @@ export async function deleteAttendanceSession(sessionId: string) {
     const userRoles = userNode?.roles || [userNode?.role].filter(Boolean) as UserRole[];
     const isAdmin = userRoles.includes(UserRole.ADMIN);
     const isTutor = userRoles.includes(UserRole.TUTOR);
+    const isAsistan = userRoles.includes(UserRole.ASISTAN);
 
-    if (!session?.user || (!isAdmin && !isTutor)) {
+    if (!session?.user || (!isAdmin && !isTutor && !isAsistan)) {
       return { error: 'Yetkisiz erişim', data: null };
     }
 

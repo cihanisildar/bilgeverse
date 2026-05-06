@@ -17,7 +17,9 @@ export async function GET(request: NextRequest) {
 
         // Only admins can see inactive templates
         const whereClause: any = {};
-        if (!includeInactive || session.user.role !== 'ADMIN') {
+        const userRoles: string[] = (session.user as any).roles || [session.user.role].filter(Boolean);
+        const isAdmin = userRoles.includes('ADMIN');
+        if (!includeInactive || !isAdmin) {
             whereClause.isActive = true;
         }
 
@@ -62,10 +64,12 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
-        // Only admins can create templates
-        if (session.user.role !== 'ADMIN') {
+        // Allow admins, tutors and assistants to create templates
+        const userRoles: string[] = (session.user as any).roles || [session.user.role].filter(Boolean);
+        const canCreate = userRoles.some(r => r === 'ADMIN' || r === 'TUTOR' || r === 'ASISTAN');
+        if (!canCreate) {
             return NextResponse.json(
-                { error: 'Sadece yöneticiler etiket şablonu oluşturabilir' },
+                { error: 'Etiket şablonu oluşturma yetkiniz yok' },
                 { status: 403 }
             );
         }

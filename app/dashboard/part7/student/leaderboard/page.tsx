@@ -1,8 +1,8 @@
 "use client";
 
 import { useAuth } from "@/app/contexts/AuthContext";
+import { LevelBadge } from "@/components/LevelBadge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -13,10 +13,9 @@ import {
 } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
-import { AlertCircle, Award, Medal, Trophy, Crown, Star, Users, Sparkles, Zap, Target, TrendingUp } from "lucide-react";
-import Link from "next/link";
+import { AlertCircle, Award, Crown, Medal, Sparkles, Star, Target, TrendingUp, Trophy, Users, Zap } from "lucide-react";
+
 import { useEffect, useState } from "react";
-import { LevelBadge } from "@/components/LevelBadge";
 
 interface LeaderboardEntry {
   id: string;
@@ -270,7 +269,7 @@ export default function StudentLeaderboardPage() {
       setLoading(true);
       setError(null);
 
-      const response = await fetch(`/api/leaderboard?scope=${currentScope}`, {
+      const response = await fetch(`/api/leaderboard?scope=${currentScope}&limit=all`, {
         credentials: "include",
         headers: {
           "Cache-Control": "no-cache",
@@ -820,7 +819,7 @@ export default function StudentLeaderboardPage() {
               </CardContent>
               <CardFooter className="bg-gradient-to-r from-gray-50/80 to-gray-100/80 text-center py-6">
                 <div className="w-full text-lg text-gray-600 font-medium">
-                  Gösterilen: {Math.min(25, leaderboard.length)} / {leaderboard.length} öğrenci
+                  Gösterilen: {leaderboard.length} / {leaderboard.length} öğrenci
                 </div>
               </CardFooter>
             </Card>

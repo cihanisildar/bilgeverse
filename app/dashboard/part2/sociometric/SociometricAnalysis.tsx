@@ -76,8 +76,8 @@ export default function SociometricAnalysis({ userId, userRole }: SociometricAna
 
     return (
         <div className="space-y-6">
-            {/* Admin Header with Tag Management Button */}
-            {userRole === 'ADMIN' && (
+            {/* Header with Tag Management Button for Admin/Tutor/Asistan */}
+            {(userRole === 'ADMIN' || userRole === 'TUTOR' || userRole === 'ASISTAN') && (
                 <div className="flex justify-end gap-2">
                     <Dialog open={tagManagementOpen} onOpenChange={setTagManagementOpen}>
                         <DialogTrigger asChild>
@@ -96,7 +96,7 @@ export default function SociometricAnalysis({ userId, userRole }: SociometricAna
                                     Etiket Şablonları Yönetimi
                                 </DialogTitle>
                                 <DialogDescription>
-                                    Tüm sınıflar için geçerli etiket şablonlarını oluşturun ve yönetin
+                                    Etiket şablonlarını oluşturun ve yönetin
                                 </DialogDescription>
                             </DialogHeader>
                             <TagTemplateManager embedded />
@@ -106,22 +106,6 @@ export default function SociometricAnalysis({ userId, userRole }: SociometricAna
                         <FavoriteActivitiesDialog activities={data.activityStats.topActivities} />
                     )}
                     {selectedClassroom && data?.students && (
-                        <QuickTagAssigner
-                            classroomId={selectedClassroom}
-                            students={data.students as any}
-                            onTagsChange={refetchSociometric}
-                        />
-                    )}
-                </div>
-            )}
-
-            {/* Tutor Header with Quick Tag Assign Button */}
-            {userRole === 'TUTOR' && selectedClassroom && data && (
-                <div className="flex justify-end gap-2">
-                    {data.activityStats && (
-                        <FavoriteActivitiesDialog activities={data.activityStats.topActivities} />
-                    )}
-                    {data.students && (
                         <QuickTagAssigner
                             classroomId={selectedClassroom}
                             students={data.students as any}

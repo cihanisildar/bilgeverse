@@ -4,13 +4,8 @@ import { PrismaAdapter } from "@next-auth/prisma-adapter";
 import prisma from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 import { UserRole } from "@prisma/client";
-
-type TutorInfo = {
-  id: string;
-  username: string;
-  firstName?: string;
-  lastName?: string;
-}
+import { TutorInfo } from "@/types/next-auth";
+import { USER_AUTH_SELECT, normalizeUserRoles, isUserInAcademy } from "@/app/lib/auth-helpers";
 
 export const authOptions: AuthOptions = {
   adapter: PrismaAdapter(prisma),
@@ -32,16 +27,7 @@ export const authOptions: AuthOptions = {
 
           const user = await prisma.user.findUnique({
             where: { username: credentials.username.toLowerCase() },
-            include: {
-              tutor: {
-                select: {
-                  id: true,
-                  username: true,
-                  firstName: true,
-                  lastName: true
-                }
-              }
-            }
+            select: USER_AUTH_SELECT
           });
 
           if (!user) {
@@ -61,8 +47,11 @@ export const authOptions: AuthOptions = {
           return {
             id: user.id,
             username: user.username,
-            role: user.role, // Keeping for backwards compatibility during migration if needed
-            roles: user.roles,
+            role: user.role,
+            roles: normalizeUserRoles(user),
+            isInAcademy: isUserInAcademy(user),
+            isBoardMember: user.role === UserRole.BOARD_MEMBER || !!user.boardMember?.isActive,
+            isAdmin: user.role === UserRole.ADMIN,
             tutorId: user.tutorId || undefined,
             assistedTutorId: user.assistedTutorId || undefined,
             tutor: user.tutor ? {
@@ -90,8 +79,11 @@ export const authOptions: AuthOptions = {
         token.email = user.email;
         token.role = user.role;
         token.roles = user.roles;
+        token.isInAcademy = user.isInAcademy;
         token.tutorId = user.tutorId ?? undefined;
         token.assistedTutorId = user.assistedTutorId ?? undefined;
+        token.isBoardMember = user.isBoardMember;
+        token.isAdmin = user.isAdmin;
         token.tutor = user.tutor;
       }
       return token;
@@ -103,8 +95,11 @@ export const authOptions: AuthOptions = {
         session.user.email = token.email as string;
         session.user.role = token.role as UserRole;
         session.user.roles = token.roles as UserRole[];
+        session.user.isInAcademy = token.isInAcademy as boolean;
         session.user.tutorId = token.tutorId as string | undefined;
         session.user.assistedTutorId = token.assistedTutorId as string | undefined;
+        session.user.isBoardMember = token.isBoardMember as boolean;
+        session.user.isAdmin = token.isAdmin as boolean;
         session.user.tutor = token.tutor as TutorInfo; // Use proper TutorInfo type extension
       }
       return session;

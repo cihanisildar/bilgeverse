@@ -16,14 +16,23 @@ export async function GET() {
         const userRoles = user.roles || [user.role].filter(Boolean) as string[];
         const isAdmin = userRoles.includes('ADMIN');
         const isTutor = userRoles.includes('TUTOR');
+        const isAsistan = userRoles.includes('ASISTAN');
 
-        if (!isAdmin && !isTutor) {
+        if (!isAdmin && !isTutor && !isAsistan) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
         }
 
         // Get classrooms based on user role
+        let classroomWhere = {};
+        if (!isAdmin) {
+            if (isAsistan && !isTutor) {
+                classroomWhere = { tutorId: user.assistedTutorId };
+            } else {
+                classroomWhere = { tutorId: session.user.id };
+            }
+        }
         const classrooms = await prisma.classroom.findMany({
-            where: isAdmin ? {} : { tutorId: session.user.id },
+            where: classroomWhere,
             include: {
                 tutor: {
                     select: {

@@ -357,7 +357,7 @@ export async function getAllDecisions(statusFilter?: 'all' | 'completed' | 'todo
         },
       },
       orderBy: {
-        createdAt: 'desc',
+        meeting: { meetingDate: 'asc' },
       },
     });
 

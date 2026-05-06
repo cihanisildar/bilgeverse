@@ -13,9 +13,13 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Search, Clock, Plus } from "lucide-react";
 import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
+import dynamic from "next/dynamic";
+
+const RollbackTab = dynamic(() => import("../transactions/rollback/page"), { ssr: false });
 
 // Types
 type Student = {
@@ -778,11 +782,24 @@ function PointsManagement() {
 }
 
 export default function PointsPage() {
+  const [activeTab, setActiveTab] = useState("points");
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
       <div className="p-8 space-y-8">
         <PointsHeader />
-        <PointsManagement />
+        <Tabs value={activeTab} onValueChange={setActiveTab}>
+          <TabsList className="mb-6">
+            <TabsTrigger value="points">Puan Ver / Al</TabsTrigger>
+            <TabsTrigger value="rollback">İşlem Geri Alma</TabsTrigger>
+          </TabsList>
+          <TabsContent value="points">
+            <PointsManagement />
+          </TabsContent>
+          <TabsContent value="rollback">
+            {activeTab === "rollback" && <RollbackTab />}
+          </TabsContent>
+        </Tabs>
       </div>
     </div>
   );

@@ -264,8 +264,9 @@ export async function PATCH(
     const userRoles = session.user.roles || [session.user.role].filter(Boolean) as UserRole[];
     const isAdmin = userRoles.includes(UserRole.ADMIN);
     const isTutor = userRoles.includes(UserRole.TUTOR);
+    const isAsistan = userRoles.includes(UserRole.ASISTAN);
 
-    if (!isAdmin && !isTutor) {
+    if (!isAdmin && !isTutor && !isAsistan) {
       return NextResponse.json(
         { error: 'Unauthorized: Admin or Tutor access required' },
         { status: 403 }

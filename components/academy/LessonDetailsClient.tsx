@@ -9,7 +9,9 @@ import Image from 'next/image';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAcademyLessonDetails } from '@/app/hooks/use-academy-data';
-import { AcademyAssignments, AcademyStudents, AcademySyllabus, AcademySessions, EditLessonModal } from '@/components/academy';
+import { AcademyAssignments, AcademyStudents } from './AcademyManagement';
+import { AcademySyllabus, AcademySessions } from './AcademyCurriculum';
+import { EditLessonModal } from './EditLessonModal';
 
 interface LessonDetailsClientProps {
     lessonId: string;

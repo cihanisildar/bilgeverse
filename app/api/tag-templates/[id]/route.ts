@@ -62,9 +62,10 @@ export async function PATCH(
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
-        if (session.user.role !== 'ADMIN') {
+        const userRolesP: string[] = (session.user as any).roles || [session.user.role].filter(Boolean);
+        if (!userRolesP.some(r => r === 'ADMIN' || r === 'TUTOR' || r === 'ASISTAN')) {
             return NextResponse.json(
-                { error: 'Sadece yöneticiler şablon güncelleyebilir' },
+                { error: 'Şablon güncelleme yetkiniz yok' },
                 { status: 403 }
             );
         }
@@ -125,9 +126,10 @@ export async function DELETE(
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
-        if (session.user.role !== 'ADMIN') {
+        const userRolesDel: string[] = (session.user as any).roles || [session.user.role].filter(Boolean);
+        if (!userRolesDel.some(r => r === 'ADMIN' || r === 'TUTOR' || r === 'ASISTAN')) {
             return NextResponse.json(
-                { error: 'Sadece yöneticiler şablon silebilir' },
+                { error: 'Şablon silme yetkiniz yok' },
                 { status: 403 }
             );
         }

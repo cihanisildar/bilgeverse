@@ -42,7 +42,7 @@ export interface UserSummary {
 
 export async function getBoardMembers() {
     try {
-        const { error } = await requireActionAuth([UserRole.ADMIN]);
+        const { error } = await requireActionAuth([UserRole.ADMIN, UserRole.BOARD_MEMBER]);
         if (error) return { error, data: null };
 
         // Get total number of relevant meetings (Completed, Ongoing, or Planned but past/current)
@@ -140,7 +140,7 @@ export async function getBoardMembers() {
 
 export async function getBoardMemberById(id: string) {
     try {
-        const { error } = await requireActionAuth([UserRole.ADMIN]);
+        const { error } = await requireActionAuth([UserRole.ADMIN, UserRole.BOARD_MEMBER]);
         if (error) return { error, data: null };
 
         const boardMember = await prisma.boardMember.findUnique({
@@ -239,6 +239,19 @@ export async function createBoardMember(data: unknown) {
             return { error: 'Bu kullanıcı zaten yönetim kurulu üyesi', data: null };
         }
 
+        // Add BOARD_MEMBER to user roles if it's not there
+        const existingUserRecord = await prisma.user.findUnique({
+            where: { id: targetUserId },
+            select: { roles: true }
+        });
+        
+        if (existingUserRecord && !existingUserRecord.roles.includes(UserRole.BOARD_MEMBER)) {
+            await prisma.user.update({
+                where: { id: targetUserId },
+                data: { roles: { push: UserRole.BOARD_MEMBER } }
+            });
+        }
+
         const boardMember = await prisma.boardMember.create({
             data: {
                 userId: targetUserId!,
@@ -309,10 +322,28 @@ export async function updateBoardMember(id: string, data: unknown) {
                         lastName: true,
                         email: true,
                         phone: true,
+                        roles: true,
                     },
                 },
             },
         });
+
+        // Sync role if isActive changed
+        if (validated.isActive !== undefined) {
+            const hasRole = boardMember.user.roles.includes(UserRole.BOARD_MEMBER);
+            if (validated.isActive && !hasRole) {
+                await prisma.user.update({
+                    where: { id: boardMember.userId },
+                    data: { roles: { push: UserRole.BOARD_MEMBER } }
+                });
+            } else if (!validated.isActive && hasRole) {
+                const newRoles = boardMember.user.roles.filter((r: UserRole) => r !== UserRole.BOARD_MEMBER);
+                await prisma.user.update({
+                    where: { id: boardMember.userId },
+                    data: { roles: newRoles }
+                });
+            }
+        }
 
         return {
             error: null,
@@ -362,6 +393,20 @@ export async function deleteBoardMember(id: string) {
         await prisma.boardMember.delete({
             where: { id },
         });
+
+        // Remove BOARD_MEMBER role from user
+        const user = await prisma.user.findUnique({
+            where: { id: boardMember.userId },
+            select: { roles: true }
+        });
+        
+        if (user && user.roles.includes(UserRole.BOARD_MEMBER)) {
+            const newRoles = user.roles.filter((r: UserRole) => r !== UserRole.BOARD_MEMBER);
+            await prisma.user.update({
+                where: { id: boardMember.userId },
+                data: { roles: newRoles }
+            });
+        }
 
         return { error: null, data: { success: true } };
     } catch (error: any) {
@@ -415,10 +460,26 @@ export async function toggleBoardMemberStatus(id: string) {
                         lastName: true,
                         email: true,
                         phone: true,
+                        roles: true,
                     },
                 },
             },
         });
+
+        // Sync role
+        const hasRole = updated.user.roles.includes(UserRole.BOARD_MEMBER);
+        if (updated.isActive && !hasRole) {
+            await prisma.user.update({
+                where: { id: updated.userId },
+                data: { roles: { push: UserRole.BOARD_MEMBER } }
+            });
+        } else if (!updated.isActive && hasRole) {
+            const newRoles = updated.user.roles.filter((r: UserRole) => r !== UserRole.BOARD_MEMBER);
+            await prisma.user.update({
+                where: { id: updated.userId },
+                data: { roles: newRoles }
+            });
+        }
 
         return {
             error: null,
@@ -452,6 +513,11 @@ export async function getAllUsers() {
         if (error) return { error, data: null };
 
         const users = await prisma.user.findMany({
+            where: {
+                boardMember: {
+                    is: null,
+                },
+            },
             select: {
                 id: true,
                 username: true,
@@ -460,22 +526,42 @@ export async function getAllUsers() {
                 email: true,
                 role: true,
             },
-            orderBy: {
-                username: 'asc',
-            },
+        });
+
+        const formattedUsers = users.map((user) => ({
+            id: user.id,
+            username: user.username,
+            firstName: user.firstName,
+            lastName: user.lastName,
+            email: user.email,
+            role: user.role,
+            displayName: `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.username,
+        })) satisfies UserSummary[];
+
+        // Sort alphabetically by displayName with comprehensive Turkish support
+        const turkishOrder = " 0123456789abcçdefgğhıijklmnoöprsştuüvyz";
+        const getCharWeight = (c: string) => {
+            const lower = c.toLowerCase();
+            const index = turkishOrder.indexOf(lower);
+            return index !== -1 ? index : lower.charCodeAt(0) + 1000;
+        };
+
+        formattedUsers.sort((a, b) => {
+            const nameA = a.displayName.trim();
+            const nameB = b.displayName.trim();
+            const len = Math.min(nameA.length, nameB.length);
+            
+            for (let i = 0; i < len; i++) {
+                const weightA = getCharWeight(nameA[i]);
+                const weightB = getCharWeight(nameB[i]);
+                if (weightA !== weightB) return weightA - weightB;
+            }
+            return nameA.length - nameB.length;
         });
 
         return {
             error: null,
-            data: users.map((user) => ({
-                id: user.id,
-                username: user.username,
-                firstName: user.firstName,
-                lastName: user.lastName,
-                email: user.email,
-                role: user.role,
-                displayName: `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.username,
-            })) satisfies UserSummary[],
+            data: formattedUsers,
         };
     } catch (error) {
         console.error('Error fetching users:', error);

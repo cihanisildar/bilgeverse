@@ -5,6 +5,7 @@ import { authOptions } from '../[...nextauth]/auth.config';
 import { calculateUserPoints } from '@/lib/points';
 import { getActivePeriod } from '@/lib/periods';
 import { UserRole } from '@prisma/client';
+import { USER_AUTH_SELECT, normalizeUserRoles, isUserInAcademy } from '@/app/lib/auth-helpers';
 
 export const dynamic = 'force-dynamic';
 
@@ -21,25 +22,7 @@ export async function GET(request: NextRequest) {
 
     const user = await prisma.user.findUnique({
       where: { id: session.user.id },
-      select: {
-        id: true,
-        username: true,
-        role: true,
-        roles: true,
-        firstName: true,
-        lastName: true,
-        points: true,
-        tutorId: true,
-        assistedTutorId: true,
-        tutor: {
-          select: {
-            id: true,
-            username: true,
-            firstName: true,
-            lastName: true
-          }
-        }
-      }
+      select: USER_AUTH_SELECT
     });
 
     if (!user) {
@@ -59,14 +42,20 @@ export async function GET(request: NextRequest) {
         ? await calculateUserPoints(user.id, activePeriod.id)
         : 0;
 
+      const userWithNormalizedRoles = {
+        ...user,
+        roles: normalizeUserRoles(user),
+        isInAcademy: isUserInAcademy(user)
+      };
+
       return NextResponse.json(
-        { user: { ...user, points: calculatedPoints } },
+        { user: { ...userWithNormalizedRoles, points: calculatedPoints } },
         { status: 200 }
       );
     }
 
     return NextResponse.json(
-      { user },
+      { user: { ...user, roles: normalizeUserRoles(user), isInAcademy: isUserInAcademy(user) } },
       { status: 200 }
     );
   } catch (error) {

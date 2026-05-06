@@ -13,7 +13,7 @@ import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import Loading from '@/app/components/Loading';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Combobox } from '@/components/ui/combobox';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 const formSchema = z.object({
@@ -160,18 +160,15 @@ export default function NewBoardMemberPage() {
                                             name="userId"
                                             control={control}
                                             render={({ field }) => (
-                                                <Select onValueChange={field.onChange} value={field.value}>
-                                                    <SelectTrigger className="border-gray-300 focus:border-indigo-500 focus:ring-indigo-500">
-                                                        <SelectValue placeholder="Kullanıcı seçin..." />
-                                                    </SelectTrigger>
-                                                    <SelectContent>
-                                                        {userOptions.map((option) => (
-                                                            <SelectItem key={option.value} value={option.value}>
-                                                                {option.label}
-                                                            </SelectItem>
-                                                        ))}
-                                                    </SelectContent>
-                                                </Select>
+                                                <Combobox
+                                                    options={userOptions}
+                                                    value={field.value}
+                                                    onValueChange={field.onChange}
+                                                    placeholder="Kullanıcı seçin..."
+                                                    searchPlaceholder="Kullanıcı ara (ad, soyad veya kullanıcı adı)..."
+                                                    emptyText="Kullanıcı bulunamadı."
+                                                    className="w-full"
+                                                />
                                             )}
                                         />
                                         {errors.userId && (

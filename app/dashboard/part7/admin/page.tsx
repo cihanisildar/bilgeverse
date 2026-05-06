@@ -1,18 +1,13 @@
 'use client';
 
-import { useEffect, useState, Suspense, useMemo, lazy } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { useSession } from 'next-auth/react';
 import Link from 'next/link';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
 import { Users, Calendar, ShoppingBag, AlertCircle, ChevronRight, Home, User, UserPlus, BarChart2, Trophy, Star, FileText, Heart } from "lucide-react";
 import { HeaderSkeleton, StatsCardSkeleton } from '@/app/components/ui/skeleton-shimmer';
 import { UserRole } from '@prisma/client';
-import dynamic from 'next/dynamic';
 import CurrentPeriod from '@/app/components/CurrentPeriod';
-
-// Lazy load heavy components to improve FID
-const QuickAccessGrid = lazy(() => import('./components/QuickAccessGrid'));
 
 type Stats = {
   totalUsers: number;
@@ -221,20 +216,6 @@ export default function AdminDashboard() {
             ))}
           </div>
 
-          {/* Quick Access Grid */}
-          <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-100">
-            <div className="h-4 w-32 bg-gray-200 rounded mb-4" />
-            <Separator className="mb-6 bg-gray-200" />
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
-                <div key={i} className="border border-gray-200 rounded-xl p-5 bg-white">
-                  <div className="w-12 h-12 rounded-full bg-gray-100 mb-4" />
-                  <div className="h-4 w-24 bg-gray-200 rounded mb-2" />
-                  <div className="h-3 w-32 bg-gray-100 rounded" />
-                </div>
-              ))}
-            </div>
-          </div>
         </div>
       </div>
     );
@@ -303,25 +284,6 @@ export default function AdminDashboard() {
             </Card>
           )}
 
-          <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-100">
-            <h2 className="text-xl font-bold text-gray-800 mb-4">
-              Hızlı Erişim
-            </h2>
-            <Separator className="mb-6 bg-gray-200" />
-            <Suspense fallback={
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
-                  <div key={i} className="border border-gray-200 rounded-xl p-5 bg-white">
-                    <div className="w-12 h-12 rounded-full bg-gray-100 mb-4 animate-pulse" />
-                    <div className="h-4 w-24 bg-gray-200 rounded mb-2 animate-pulse" />
-                    <div className="h-3 w-32 bg-gray-100 rounded animate-pulse" />
-                  </div>
-                ))}
-              </div>
-            }>
-              <QuickAccessGrid />
-            </Suspense>
-          </div>
         </div>
 
         <div className="text-center mt-12 text-xs text-gray-500">

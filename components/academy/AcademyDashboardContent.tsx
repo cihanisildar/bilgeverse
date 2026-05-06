@@ -4,7 +4,8 @@ import { useState } from 'react';
 import { LayoutGrid, FileText, GraduationCap, Plus, Loader2 } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from '@/components/ui/button';
-import { LessonList, CreateLessonModal } from '@/components/academy';
+import { LessonList } from './LessonList';
+import { CreateLessonModal } from './CreateLessonModal';
 import { useAcademyLessons } from '@/app/hooks/use-academy-data';
 import { UserRole } from '@prisma/client';
 

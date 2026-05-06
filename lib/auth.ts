@@ -31,6 +31,18 @@ export const authOptions: NextAuthOptions = {
                 firstName: true,
                 lastName: true
               }
+            },
+            boardMember: {
+              select: {
+                id: true,
+                isActive: true
+              }
+            },
+            _count: {
+              select: {
+                academyAssignments: true,
+                academyStudents: true
+              }
             }
           }
         });
@@ -45,11 +57,18 @@ export const authOptions: NextAuthOptions = {
           return null;
         }
 
+        const isAdmin = user.roles.includes('ADMIN') || user.role === 'ADMIN';
+        const isBoardMember = user.roles.includes('BOARD_MEMBER') || user.role === 'BOARD_MEMBER' || user.boardMember?.isActive === true;
+        const isInAcademy = (user as any).isInAcademy || (user._count.academyAssignments > 0) || (user._count.academyStudents > 0);
+
         return {
           id: user.id,
           username: user.username,
-    
           role: user.role,
+          roles: user.roles,
+          isAdmin,
+          isBoardMember,
+          isInAcademy,
           tutorId: user.tutorId || undefined,
           tutor: user.tutor ? {
             id: user.tutor.id,
@@ -70,6 +89,10 @@ export const authOptions: NextAuthOptions = {
           id: token.sub,
           username: token.username,
           role: token.role,
+          roles: token.roles,
+          isAdmin: token.isAdmin,
+          isBoardMember: token.isBoardMember,
+          isInAcademy: token.isInAcademy,
           tutorId: token.tutorId,
           tutor: token.tutor
         },
@@ -79,6 +102,10 @@ export const authOptions: NextAuthOptions = {
       if (user) {
         token.username = user.username;
         token.role = user.role;
+        token.roles = user.roles;
+        token.isAdmin = user.isAdmin;
+        token.isBoardMember = user.isBoardMember;
+        token.isInAcademy = user.isInAcademy;
         token.tutorId = user.tutorId;
         token.tutor = user.tutor;
       }

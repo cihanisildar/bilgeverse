@@ -8,12 +8,13 @@ import SyllabusList from './SyllabusList';
 
 export default async function SyllabusPage() {
   const session = await requireAuth({
-    roles: ['ADMIN', 'TUTOR'],
+    roles: ['ADMIN', 'TUTOR', 'ASISTAN'],
     redirectTo: '/dashboard/part7/student'
   });
 
-  const isAdmin = session.user.role === 'ADMIN';
-  const isTutor = session.user.role === 'TUTOR';
+  const userRoles = session.user.roles || [session.user.role];
+  const isAdmin = userRoles.includes('ADMIN');
+  const isTutor = userRoles.includes('TUTOR') || userRoles.includes('ASISTAN');
   const canManage = isAdmin || isTutor;
 
   const result = await getSyllabi();
@@ -33,7 +34,7 @@ export default async function SyllabusPage() {
           <div>
             <h1 className="text-3xl font-bold text-gray-800 mb-2">
               <span className="bg-clip-text text-transparent bg-gradient-to-r from-cyan-600 to-teal-600">
-                Müfredat Yönetimi
+                Buluşma İçeriği
               </span>
             </h1>
             <p className="text-gray-600">

@@ -36,7 +36,7 @@ export default function Part1Page() {
   const toast = useToast();
   const router = useRouter();
   const pathname = usePathname();
-  const { user, loading, isAdmin } = useAuth();
+  const { user, loading, isAdmin, isBoardMember } = useAuth();
   const [pdfs, setPdfs] = useState<PartPdf[]>([]);
   const [loadingPdfs, setLoadingPdfs] = useState(true);
   const [decisionStats, setDecisionStats] = useState<{ total: number; completed: number; pending: number; todo: number; inProgress: number } | null>(null);
@@ -117,17 +117,17 @@ export default function Part1Page() {
       router.push(getRoleBasedPath(user.role));
     } else {
       // For other parts, only allow admin users
-      if (isAdmin) {
+      if (isAdmin || isBoardMember) {
         router.push(partPath);
       } else {
-        // Non-admin users should be redirected to part 7
+        // Non-admin/non-board members should be redirected to their default path
         router.push(getRoleBasedPath(user.role));
       }
     }
   };
 
-  // Filter parts to only show part 7 for non-admin users
-  const visibleParts = isAdmin ? PARTS : PARTS.filter(part => part.id === 7);
+  // Filter parts to show for current user
+  const visibleParts = (isAdmin || isBoardMember) ? PARTS : PARTS.filter(part => part.id === 7);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50">
@@ -249,7 +249,7 @@ export default function Part1Page() {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
               {/* Meetings Card */}
-              {isAdmin && (
+              {(isAdmin || isBoardMember) && (
                 <Card
                   className="border-0 shadow-lg rounded-xl overflow-hidden transition-all duration-200 hover:shadow-xl hover:-translate-y-1 cursor-pointer bg-gradient-to-br from-indigo-50 to-purple-50"
                   onClick={() => router.push('/dashboard/part1/meetings')}
@@ -276,7 +276,7 @@ export default function Part1Page() {
               )}
 
               {/* Board Members Card */}
-              {isAdmin && (
+              {(isAdmin || isBoardMember) && (
                 <Card
                   className="border-0 shadow-lg rounded-xl overflow-hidden transition-all duration-200 hover:shadow-xl hover:-translate-y-1 cursor-pointer bg-gradient-to-br from-purple-50 to-pink-50"
                   onClick={() => router.push('/dashboard/part1/board-members')}
@@ -310,7 +310,7 @@ export default function Part1Page() {
                   <h2 className="text-2xl font-bold text-gray-800 mb-1">Yönetim Kurulu Belgeleri</h2>
                   <p className="text-gray-600">Yönetim kurulu için paylaşılan belgeler ve klasörler</p>
                 </div>
-                {isAdmin && (
+                {(isAdmin || isBoardMember) && (
                   <Button
                     onClick={() => router.push('/dashboard/pdfs')}
                     variant="outline"
@@ -393,7 +393,7 @@ export default function Part1Page() {
                     <p className="text-sm text-gray-500 mb-6 max-w-md mx-auto">
                       Yönetim kurulu için henüz belge paylaşılmamış. Yöneticiler belge ekleyebilir.
                     </p>
-                    {isAdmin && (
+                    {(isAdmin || isBoardMember) && (
                       <Button
                         onClick={() => router.push('/dashboard/pdfs')}
                         className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white shadow-lg shadow-indigo-500/50"

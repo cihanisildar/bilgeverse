@@ -6,7 +6,7 @@ import { useBoardMembers, useDeleteBoardMember, useToggleBoardMemberStatus } fro
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Users, Edit2, Trash2, LayoutDashboard, Mail, Phone, Power } from 'lucide-react';
+import { Plus, Users, Edit2, Trash2, LayoutDashboard, ArrowLeft, Mail, Phone, Power } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import {
     AlertDialog,
@@ -72,33 +72,35 @@ export default function BoardMembersPage() {
         <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50 p-6 lg:p-8">
             <div className="max-w-7xl mx-auto">
                 <div className="mb-8">
-                    <div className="flex items-center justify-between mb-4">
-                        <div>
-                            <h1 className="text-3xl font-bold text-gray-800 mb-2">
-                                <span className="bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-purple-600">
-                                    Yönetim Kurulu Üyeleri
-                                </span>
-                            </h1>
-                            <p className="text-gray-600">Yönetim kurulu üyelerini görüntüleyin ve yönetin</p>
-                        </div>
-                        <div className="flex items-center gap-3">
-                            <Button
-                                variant="outline"
-                                onClick={() => router.push('/dashboard/part1')}
-                                className="border-gray-300 text-gray-700 hover:bg-gray-50 hover:border-gray-400 transition-all duration-200"
-                            >
-                                <LayoutDashboard className="h-4 w-4 mr-2" />
-                                Dashboard
-                            </Button>
-                            {isAdmin && (
-                                <Button
-                                    onClick={() => router.push('/dashboard/part1/board-members/new')}
-                                    className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white shadow-lg shadow-indigo-500/50 transition-all duration-200 hover:shadow-xl hover:shadow-indigo-500/60"
-                                >
-                                    <Plus className="h-4 w-4 mr-2" />
-                                    Yeni Üye Ekle
-                                </Button>
-                            )}
+                    <div className="flex items-start gap-4 mb-4">
+                        <Button
+                            variant="ghost"
+                            onClick={() => router.push('/dashboard/part1')}
+                            className="mt-1 text-gray-600 hover:text-gray-900 hover:bg-gray-100/50 transition-all duration-200"
+                        >
+                            <ArrowLeft className="h-5 w-5 mr-2" />
+                            Geri
+                        </Button>
+                        <div className="flex-1">
+                            <div className="flex items-center justify-between">
+                                <div>
+                                    <h1 className="text-3xl font-bold text-gray-800 mb-2">
+                                        <span className="bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-purple-600">
+                                            Yönetim Kurulu Üyeleri
+                                        </span>
+                                    </h1>
+                                    <p className="text-gray-600">Yönetim kurulu üyelerini görüntüleyin ve yönetin</p>
+                                </div>
+                                {isAdmin && (
+                                    <Button
+                                        onClick={() => router.push('/dashboard/part1/board-members/new')}
+                                        className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white shadow-lg shadow-indigo-500/50 transition-all duration-200 hover:shadow-xl hover:shadow-indigo-500/60"
+                                    >
+                                        <Plus className="h-4 w-4 mr-2" />
+                                        Yeni Üye Ekle
+                                    </Button>
+                                )}
+                            </div>
                         </div>
                     </div>
                 </div>

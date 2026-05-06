@@ -55,8 +55,9 @@ export async function getSociometricData(classroomId: string) {
         const userRoles = userNode?.roles || [userNode?.role].filter(Boolean) as string[];
         const isAdmin = userRoles.includes('ADMIN');
         const isTutor = userRoles.includes('TUTOR');
+        const isAsistan = userRoles.includes('ASISTAN');
 
-        if (!session?.user || (!isAdmin && !isTutor)) {
+        if (!session?.user || (!isAdmin && !isTutor && !isAsistan)) {
             throw new Error('Unauthorized');
         }
 
@@ -71,6 +72,18 @@ export async function getSociometricData(classroomId: string) {
 
             if (!classroom) {
                 throw new Error('Unauthorized - not your classroom');
+            }
+        } else if (isAsistan && !isAdmin) {
+            // Assistants can access their tutor's classroom
+            const classroom = await prisma.classroom.findFirst({
+                where: {
+                    id: classroomId,
+                    tutorId: userNode.assistedTutorId,
+                },
+            });
+
+            if (!classroom) {
+                throw new Error('Unauthorized - not your tutor\'s classroom');
             }
         }
 

@@ -10,7 +10,7 @@ import { useAuth } from '../contexts/AuthContext';
 function LoginForm() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
-  const { login, loading, user } = useAuth();
+  const { login, loading, user, isAdmin, isTutor, isStudent } = useAuth();
   const toast = useToast();
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -18,12 +18,21 @@ function LoginForm() {
 
   // Redirect if already logged in
   useEffect(() => {
-    if (user && callbackUrl) {
+    if (!user) return;
+    if (callbackUrl) {
       router.push(callbackUrl);
-    } else if (user) {
+      return;
+    }
+    if (isAdmin) {
+      router.push('/dashboard/part7/admin');
+    } else if (isTutor) {
+      router.push('/dashboard/part7/tutor');
+    } else if (isStudent) {
+      router.push('/dashboard/part7/student');
+    } else {
       router.push('/dashboard');
     }
-  }, [user, callbackUrl, router]);
+  }, [user, callbackUrl, router, isAdmin, isTutor, isStudent]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
