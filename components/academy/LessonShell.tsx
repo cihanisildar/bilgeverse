@@ -107,7 +107,7 @@ export function LessonShell({ lessonId, userId, userRoles, basePath, children }:
 
     return (
         <LessonContext.Provider value={ctxValue}>
-            <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 p-6 lg:p-8">
+            <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 p-4 sm:p-6 lg:p-8">
                 <div className="max-w-7xl mx-auto">
                     <Link href={basePath}>
                         <Button variant="ghost" className="mb-6 hover:bg-gray-100 transition-all duration-200">
@@ -117,7 +117,7 @@ export function LessonShell({ lessonId, userId, userRoles, basePath, children }:
                     </Link>
 
                     {/* Header card */}
-                    <div className="bg-white rounded-3xl p-6 lg:p-8 shadow-sm border border-blue-100 overflow-hidden relative mb-6">
+                    <div className="bg-white rounded-3xl p-5 sm:p-6 lg:p-8 shadow-sm border border-blue-100 overflow-hidden relative mb-6">
                         <div className="absolute top-0 left-0 w-2 h-full bg-gradient-to-b from-blue-500 to-indigo-500"></div>
                         <div className="flex flex-col md:flex-row gap-6 md:items-center">
                             {lesson.imageUrl && (
@@ -127,7 +127,7 @@ export function LessonShell({ lessonId, userId, userRoles, basePath, children }:
                             )}
                             <div className="space-y-3 flex-1">
                                 <div className="flex justify-between items-start gap-4">
-                                    <h1 className="text-3xl lg:text-4xl font-extrabold text-gray-900 leading-tight">{lesson.name}</h1>
+                                    <h1 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-gray-900 leading-tight">{lesson.name}</h1>
                                     {canManage && <EditLessonModal lesson={lesson} />}
                                 </div>
                                 <div className="flex flex-wrap gap-3">

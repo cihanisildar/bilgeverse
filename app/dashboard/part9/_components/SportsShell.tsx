@@ -62,7 +62,7 @@ export default function SportsShell({ children }: { children: React.ReactNode })
     const items = NAV_ITEMS.filter((item) => !item.managerOnly || isManager);
 
     return (
-        <div className="min-h-screen bg-gray-50 p-6 lg:p-8">
+        <div className="min-h-screen bg-gray-50 p-4 sm:p-6 lg:p-8">
             <div className="max-w-7xl mx-auto">
                 <div className="mb-6">
                     <Link href="/dashboard">
@@ -71,12 +71,12 @@ export default function SportsShell({ children }: { children: React.ReactNode })
                             Ana Sayfaya Dön
                         </Button>
                     </Link>
-                    <h1 className="text-3xl font-bold text-gray-900 tracking-tight">
+                    <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 tracking-tight">
                         <span className="bg-clip-text text-transparent bg-gradient-to-r from-slate-700 to-indigo-600">
                             Bilge Spor Kulübü
                         </span>
                     </h1>
-                    <p className="text-gray-500">
+                    <p className="text-sm sm:text-base text-gray-500">
                         Sporcu, antrenman, müsabaka, disiplin, ekipman, futbol okulu ve kulüp yönetimi.
                     </p>
                 </div>

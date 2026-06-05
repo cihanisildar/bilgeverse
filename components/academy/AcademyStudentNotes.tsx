@@ -81,7 +81,7 @@ export function AcademyStudentNotes({
         <div className="space-y-8">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <div>
-                    <h2 className="text-3xl font-extrabold text-gray-900 tracking-tight">Öğrenci Değerlendirmeleri</h2>
+                    <h2 className="text-2xl sm:text-3xl font-extrabold text-gray-900 tracking-tight">Öğrenci Değerlendirmeleri</h2>
                     <p className="text-gray-500 mt-1">Öğrenciler hakkında not, değerlendirme ve gözlemlerinizi kaydedin.</p>
                 </div>
                 <Button onClick={openCreate} className="bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-200/50 rounded-2xl px-6 py-6 font-bold transition-all hover:scale-105 active:scale-95">

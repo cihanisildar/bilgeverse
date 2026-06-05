@@ -34,7 +34,7 @@ export function AcademyDashboardContent({
         <div className="max-w-7xl mx-auto">
             <div className="flex flex-col md:flex-row md:items-end justify-between mb-8 gap-4">
                 <div>
-                    <h1 className="text-4xl font-extrabold text-gray-900 mb-2 tracking-tight flex items-center gap-3">
+                    <h1 className="text-3xl sm:text-4xl font-extrabold text-gray-900 mb-2 tracking-tight flex items-center gap-3">
                         <GraduationCap className="h-10 w-10 text-blue-600" />
                         <span className="bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-indigo-600">
                             {partName || 'Akademi'}

@@ -63,7 +63,7 @@ export function AcademyReports({ lessonId }: { lessonId: string }) {
         <div className="space-y-8">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 print:hidden">
                 <div>
-                    <h2 className="text-3xl font-extrabold text-gray-900 tracking-tight">Faaliyet Raporu</h2>
+                    <h2 className="text-2xl sm:text-3xl font-extrabold text-gray-900 tracking-tight">Faaliyet Raporu</h2>
                     <p className="text-gray-500 mt-1">
                         {new Date(summary.generatedAt).toLocaleString('tr-TR')} itibarıyla otomatik oluşturuldu.
                     </p>
@@ -92,6 +92,7 @@ export function AcademyReports({ lessonId }: { lessonId: string }) {
             </div>
 
             <div className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden">
+              <div className="overflow-x-auto">
                 <Table>
                     <TableHeader>
                         <TableRow className="bg-slate-50/50 border-none">
@@ -132,6 +133,7 @@ export function AcademyReports({ lessonId }: { lessonId: string }) {
                         )}
                     </TableBody>
                 </Table>
+              </div>
             </div>
         </div>
     );

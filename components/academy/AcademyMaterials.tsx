@@ -113,7 +113,7 @@ export function AcademyMaterials({
         <div className="space-y-8">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <div>
-                    <h2 className="text-3xl font-extrabold text-gray-900 tracking-tight">Eğitim Materyalleri</h2>
+                    <h2 className="text-2xl sm:text-3xl font-extrabold text-gray-900 tracking-tight">Eğitim Materyalleri</h2>
                     <p className="text-gray-500 mt-1">PDF, video, doküman ve bağlantıları buradan paylaşın.</p>
                 </div>
                 {canManage && (

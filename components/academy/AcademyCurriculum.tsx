@@ -68,7 +68,7 @@ export function AcademySyllabus({ lessonId, syllabus, canManage }: { lessonId: s
         <div className="space-y-10 max-w-4xl mx-auto">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-gray-100 pb-8">
                 <div>
-                    <h2 className="text-3xl font-extrabold text-gray-900 tracking-tight flex items-center gap-3">
+                    <h2 className="text-2xl sm:text-3xl font-extrabold text-gray-900 tracking-tight flex items-center gap-3">
                         Eğitim Müfredatı
                         {syllabusMutation.isPending && <Loader2 className="h-5 w-5 animate-spin text-blue-500" />}
                     </h2>
@@ -280,7 +280,7 @@ export function AcademySessions({
         <div className="space-y-8">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <div>
-                    <h2 className="text-3xl font-extrabold text-gray-900 tracking-tight">Oturumlar ve Yoklama</h2>
+                    <h2 className="text-2xl sm:text-3xl font-extrabold text-gray-900 tracking-tight">Oturumlar ve Yoklama</h2>
                     <p className="text-gray-500 mt-1">Ders planını ve katılım durumlarını buradan yönetin.</p>
                 </div>
                 {canManage && (

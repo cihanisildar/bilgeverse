@@ -23,7 +23,7 @@ export default function FinanceShell({ children }: { children: React.ReactNode }
     const pathname = usePathname();
 
     return (
-        <div className="min-h-screen bg-gray-50 p-6 lg:p-8">
+        <div className="min-h-screen bg-gray-50 p-4 sm:p-6 lg:p-8">
             <div className="max-w-7xl mx-auto">
                 <div className="mb-6">
                     <Link href="/dashboard">
@@ -32,8 +32,8 @@ export default function FinanceShell({ children }: { children: React.ReactNode }
                             Ana Sayfaya Dön
                         </Button>
                     </Link>
-                    <h1 className="text-3xl font-bold text-gray-900 tracking-tight">Maliye</h1>
-                    <p className="text-gray-500">Gelir, gider, kasa bakiyesi ve aylık raporları yönetin.</p>
+                    <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 tracking-tight">Maliye</h1>
+                    <p className="text-sm sm:text-base text-gray-500">Gelir, gider, kasa bakiyesi ve aylık raporları yönetin.</p>
                 </div>
 
                 <div className="grid grid-cols-1 lg:grid-cols-[240px_1fr] gap-6">
