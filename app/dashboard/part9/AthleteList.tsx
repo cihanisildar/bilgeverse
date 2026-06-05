@@ -1,12 +1,11 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Search, UserPlus, Calendar as CalendarIcon, MoreVertical, Filter, Plus, X, User } from 'lucide-react';
-import { getAthletes, upsertAthleteProfile, searchStudents, getSportBranches, registerNewAthlete, deleteAthleteProfile } from '@/app/actions/athlete-actions';
-import { useToast } from '@/hooks/use-toast';
+import toast from 'react-hot-toast';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -28,7 +27,22 @@ import {
     AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 
-import { useAthletes, useSportBranches, useUpsertAthleteProfile, useRegisterNewAthlete, useDeleteAthleteProfile } from '@/app/hooks/use-athlete-data';
+import { useAthletes, useSportBranches, useUpsertAthleteProfile, useRegisterNewAthlete, useDeleteAthleteProfile, useSearchStudents } from '@/app/hooks/use-athlete-data';
+import { useDebounce } from '@/app/hooks/use-debounce';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { MEMBERSHIP_STATUSES, getMembershipMeta } from '@/app/lib/sports';
+import { ReqMark, RequiredLegend } from './_components/ReqMark';
+
+const EMPTY_PROFILE = {
+    birthDate: '',
+    phone: '',
+    parentName: '',
+    parentPhone: '',
+    membershipStatus: 'ACTIVE',
+    licenseNumber: '',
+    licenseExpiry: '',
+    footballSchool: false,
+};
 
 export default function AthleteList() {
     const { data: athletes = [], isLoading: loading } = useAthletes();
@@ -41,10 +55,12 @@ export default function AthleteList() {
     const [searchQuery, setSearchQuery] = useState('');
     const [isAdding, setIsAdding] = useState(false);
     const [studentSearch, setStudentSearch] = useState('');
-    const [searchResults, setSearchResults] = useState<any[]>([]);
+    const debouncedSearch = useDebounce(studentSearch, 500);
+    const { data: searchResults = [] } = useSearchStudents(debouncedSearch);
     const [selectedStudent, setSelectedStudent] = useState<any>(null);
     const [selectedBranches, setSelectedBranches] = useState<string[]>([]);
     const [healthExpiry, setHealthExpiry] = useState<string>('');
+    const [profileForm, setProfileForm] = useState({ ...EMPTY_PROFILE });
     const [registerTab, setRegisterTab] = useState('existing');
     const [editingAthlete, setEditingAthlete] = useState<any>(null);
     const [deletingAthleteId, setDeletingAthleteId] = useState<string | null>(null);
@@ -57,34 +73,27 @@ export default function AthleteList() {
         lastName: '',
     });
 
-    const { toast } = useToast();
-
-    // Real-time search with debounce
-    useEffect(() => {
-        const timer = setTimeout(() => {
-            if (studentSearch.length >= 2) {
-                handleSearchStudents();
-            } else {
-                setSearchResults([]);
-            }
-        }, 500);
-
-        return () => clearTimeout(timer);
-    }, [studentSearch]);
-
-    const handleSearchStudents = async () => {
-        const result = await searchStudents(studentSearch);
-        if (result.data) setSearchResults(result.data);
-    };
+    const buildExtra = () => ({
+        birthDate: profileForm.birthDate ? new Date(profileForm.birthDate) : null,
+        phone: profileForm.phone || null,
+        parentName: profileForm.parentName || null,
+        parentPhone: profileForm.parentPhone || null,
+        membershipStatus: profileForm.membershipStatus as any,
+        licenseNumber: profileForm.licenseNumber || null,
+        licenseExpiry: profileForm.licenseExpiry ? new Date(profileForm.licenseExpiry) : null,
+        footballSchool: profileForm.footballSchool,
+    });
 
     const handleSaveAthlete = async () => {
         setSaving(true);
+        const extra = buildExtra();
         try {
             if (editingAthlete) {
                 const result = await upsertAthleteMutation.mutateAsync({
                     userId: editingAthlete.user.id,
                     branchIds: selectedBranches,
-                    healthReportExpiry: healthExpiry ? new Date(healthExpiry) : undefined
+                    healthReportExpiry: healthExpiry ? new Date(healthExpiry) : undefined,
+                    ...extra,
                 });
 
                 if (!result.error) {
@@ -93,7 +102,7 @@ export default function AthleteList() {
                 }
             } else if (registerTab === 'existing') {
                 if (!selectedStudent || selectedBranches.length === 0) {
-                    toast({ title: 'Hata', description: 'Öğrenci ve en az bir branş seçmelisiniz', variant: 'destructive' });
+                    toast.error('Öğrenci ve en az bir branş seçmelisiniz');
                     setSaving(false);
                     return;
                 }
@@ -101,7 +110,8 @@ export default function AthleteList() {
                 const result = await upsertAthleteMutation.mutateAsync({
                     userId: selectedStudent.id,
                     branchIds: selectedBranches,
-                    healthReportExpiry: healthExpiry ? new Date(healthExpiry) : undefined
+                    healthReportExpiry: healthExpiry ? new Date(healthExpiry) : undefined,
+                    ...extra,
                 });
 
                 if (!result.error) {
@@ -111,7 +121,7 @@ export default function AthleteList() {
             } else {
                 // New Registration
                 if (!newAthlete.username || !newAthlete.firstName || !newAthlete.lastName || selectedBranches.length === 0) {
-                    toast({ title: 'Hata', description: 'Tüm alanları doldurmalı ve en az bir branş seçmelisiniz', variant: 'destructive' });
+                    toast.error('Tüm alanları doldurmalı ve en az bir branş seçmelisiniz');
                     setSaving(false);
                     return;
                 }
@@ -119,7 +129,8 @@ export default function AthleteList() {
                 const result = await registerAthleteMutation.mutateAsync({
                     ...newAthlete,
                     branchIds: selectedBranches,
-                    healthReportExpiry: healthExpiry ? new Date(healthExpiry) : undefined
+                    healthReportExpiry: healthExpiry ? new Date(healthExpiry) : undefined,
+                    ...extra,
                 });
 
                 if (!result.error) {
@@ -148,6 +159,16 @@ export default function AthleteList() {
             setEditingAthlete(athlete);
             setSelectedBranches(athlete.branches.map((b: any) => b.id));
             setHealthExpiry(athlete.healthReportExpiry ? format(new Date(athlete.healthReportExpiry), 'yyyy-MM-dd') : '');
+            setProfileForm({
+                birthDate: athlete.birthDate ? format(new Date(athlete.birthDate), 'yyyy-MM-dd') : '',
+                phone: athlete.phone ?? '',
+                parentName: athlete.parentName ?? '',
+                parentPhone: athlete.parentPhone ?? '',
+                membershipStatus: athlete.membershipStatus ?? 'ACTIVE',
+                licenseNumber: athlete.licenseNumber ?? '',
+                licenseExpiry: athlete.licenseExpiry ? format(new Date(athlete.licenseExpiry), 'yyyy-MM-dd') : '',
+                footballSchool: athlete.footballSchool ?? false,
+            });
             setIsAdding(true);
         }, 100);
     };
@@ -162,8 +183,8 @@ export default function AthleteList() {
         setSelectedBranches([]);
         setHealthExpiry('');
         setStudentSearch('');
-        setSearchResults([]);
         setNewAthlete({ username: '', firstName: '', lastName: '' });
+        setProfileForm({ ...EMPTY_PROFILE });
         setRegisterTab('existing');
         setEditingAthlete(null);
     };
@@ -210,11 +231,20 @@ export default function AthleteList() {
                                         </AvatarFallback>
                                     </Avatar>
                                     <div className="flex-1 min-w-0">
-                                        <h4 className="font-bold text-gray-800 truncate">
-                                            {athlete.user.firstName} {athlete.user.lastName}
-                                        </h4>
+                                        <div className="flex items-center gap-2">
+                                            <h4 className="font-bold text-gray-800 truncate">
+                                                {athlete.user.firstName} {athlete.user.lastName}
+                                            </h4>
+                                            {(() => {
+                                                const meta = getMembershipMeta((athlete as any).membershipStatus ?? 'ACTIVE');
+                                                return <Badge variant="outline" className={`text-[9px] px-1.5 py-0 ${meta.color}`}>{meta.label}</Badge>;
+                                            })()}
+                                        </div>
                                         <p className="text-xs text-gray-500 truncate">@{athlete.user.username}</p>
                                         <div className="flex flex-wrap gap-1 mt-2">
+                                            {(athlete as any).footballSchool && (
+                                                <Badge variant="secondary" className="text-[10px] px-2 py-0.5 bg-green-600 text-white border-0">Futbol Okulu</Badge>
+                                            )}
                                             {athlete.branches.map((b: any) => (
                                                 <Badge key={b.id} variant="secondary" className="text-[10px] px-2 py-0.5 bg-indigo-600 text-white shadow-sm border-0 font-medium">
                                                     {b.name}
@@ -342,7 +372,7 @@ export default function AthleteList() {
                             <TabsContent value="new" className="space-y-4 animate-in slide-in-from-right-4 duration-200">
                                 <div className="grid grid-cols-2 gap-4">
                                     <div className="space-y-2">
-                                        <Label>Adı</Label>
+                                        <Label>Adı <ReqMark /></Label>
                                         <Input
                                             placeholder="Örn: Ahmet"
                                             value={newAthlete.firstName}
@@ -350,7 +380,7 @@ export default function AthleteList() {
                                         />
                                     </div>
                                     <div className="space-y-2">
-                                        <Label>Soyadı</Label>
+                                        <Label>Soyadı <ReqMark /></Label>
                                         <Input
                                             placeholder="Örn: Yılmaz"
                                             value={newAthlete.lastName}
@@ -359,7 +389,7 @@ export default function AthleteList() {
                                     </div>
                                 </div>
                                 <div className="space-y-2">
-                                    <Label>Kullanıcı Adı</Label>
+                                    <Label>Kullanıcı Adı <ReqMark /></Label>
                                     <Input
                                         placeholder="Sisteme giriş için benzersiz bir ad"
                                         value={newAthlete.username}
@@ -395,7 +425,7 @@ export default function AthleteList() {
 
                     <div className="space-y-4 mt-4 border-t pt-4">
                         <div className="space-y-2">
-                            <Label>Branşlar</Label>
+                            <Label>Branşlar <ReqMark /></Label>
                             <div className="grid grid-cols-2 gap-3 p-3 border rounded-xl bg-gray-50/50">
                                 {branches.map(branch => (
                                     <div key={branch.id} className="flex items-center space-x-2 p-1 hover:bg-white rounded-md transition-colors">
@@ -418,6 +448,49 @@ export default function AthleteList() {
                             </div>
                         </div>
 
+                        <div className="grid grid-cols-2 gap-3">
+                            <div className="space-y-2">
+                                <Label htmlFor="birth-date">Doğum Tarihi</Label>
+                                <Input id="birth-date" type="date" value={profileForm.birthDate} onChange={(e) => setProfileForm({ ...profileForm, birthDate: e.target.value })} className="rounded-xl" />
+                            </div>
+                            <div className="space-y-2">
+                                <Label>Üyelik Durumu</Label>
+                                <Select value={profileForm.membershipStatus} onValueChange={(v) => setProfileForm({ ...profileForm, membershipStatus: v })}>
+                                    <SelectTrigger className="rounded-xl"><SelectValue /></SelectTrigger>
+                                    <SelectContent>
+                                        {MEMBERSHIP_STATUSES.map((s) => (<SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                        </div>
+
+                        <div className="space-y-2">
+                            <Label>Telefon</Label>
+                            <Input value={profileForm.phone} onChange={(e) => setProfileForm({ ...profileForm, phone: e.target.value })} placeholder="Sporcu telefonu" className="rounded-xl" />
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-3">
+                            <div className="space-y-2">
+                                <Label>Veli Adı</Label>
+                                <Input value={profileForm.parentName} onChange={(e) => setProfileForm({ ...profileForm, parentName: e.target.value })} placeholder="18 yaş altı için" className="rounded-xl" />
+                            </div>
+                            <div className="space-y-2">
+                                <Label>Veli Telefonu</Label>
+                                <Input value={profileForm.parentPhone} onChange={(e) => setProfileForm({ ...profileForm, parentPhone: e.target.value })} placeholder="Veli telefonu" className="rounded-xl" />
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-3">
+                            <div className="space-y-2">
+                                <Label>Lisans No</Label>
+                                <Input value={profileForm.licenseNumber} onChange={(e) => setProfileForm({ ...profileForm, licenseNumber: e.target.value })} className="rounded-xl" />
+                            </div>
+                            <div className="space-y-2">
+                                <Label>Lisans Geçerlilik</Label>
+                                <Input type="date" value={profileForm.licenseExpiry} onChange={(e) => setProfileForm({ ...profileForm, licenseExpiry: e.target.value })} className="rounded-xl" />
+                            </div>
+                        </div>
+
                         <div className="space-y-2">
                             <Label htmlFor="health-date">Sağlık Raporu Geçerlilik Süresi</Label>
                             <Input
@@ -428,7 +501,20 @@ export default function AthleteList() {
                                 className="w-full rounded-xl"
                             />
                         </div>
+
+                        <div className="flex items-center space-x-2 p-3 rounded-xl border bg-green-50/50 border-green-100">
+                            <Checkbox
+                                id="football-school"
+                                checked={profileForm.footballSchool}
+                                onCheckedChange={(checked) => setProfileForm({ ...profileForm, footballSchool: !!checked })}
+                            />
+                            <label htmlFor="football-school" className="text-sm font-medium cursor-pointer">
+                                Futbol Okulu öğrencisi (aidat takibine dahil)
+                            </label>
+                        </div>
                     </div>
+
+                    <div className="mt-4"><RequiredLegend /></div>
 
                     <DialogFooter className="mt-6">
                         <Button variant="outline" onClick={closeModal} className="rounded-xl">İptal</Button>

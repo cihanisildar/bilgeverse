@@ -35,8 +35,17 @@ interface EditLessonModalProps {
         name: string;
         description: string | null;
         imageUrl: string | null;
+        startDate?: Date | string | null;
+        capacity?: number | null;
     };
     children?: React.ReactNode;
+}
+
+function toDateInputValue(value?: Date | string | null): string {
+    if (!value) return '';
+    const d = new Date(value);
+    if (isNaN(d.getTime())) return '';
+    return d.toISOString().split('T')[0];
 }
 
 export function EditLessonModal({ lesson, children }: EditLessonModalProps) {
@@ -52,10 +61,13 @@ export function EditLessonModal({ lesson, children }: EditLessonModalProps) {
         const name = formData.get('name') as string;
         const description = formData.get('description') as string;
         const imageUrl = formData.get('imageUrl') as string;
+        const startDate = (formData.get('startDate') as string) || null;
+        const capacityRaw = formData.get('capacity') as string;
+        const capacity = capacityRaw ? parseInt(capacityRaw, 10) : null;
 
         updateMutation.mutate({
             id: lesson.id,
-            data: { name, description, imageUrl }
+            data: { name, description, imageUrl, startDate, capacity }
         }, {
             onSuccess: (result) => {
                 if (!result.error) setOpen(false);
@@ -100,6 +112,16 @@ export function EditLessonModal({ lesson, children }: EditLessonModalProps) {
                         <div className="grid gap-2">
                             <Label htmlFor="description">Açıklama</Label>
                             <Textarea id="description" name="description" defaultValue={lesson.description || ''} placeholder="Ders hakkında kısa bilgi..." />
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="grid gap-2">
+                                <Label htmlFor="startDate">Başlangıç Tarihi</Label>
+                                <Input id="startDate" name="startDate" type="date" defaultValue={toDateInputValue(lesson.startDate)} />
+                            </div>
+                            <div className="grid gap-2">
+                                <Label htmlFor="capacity">Kontenjan</Label>
+                                <Input id="capacity" name="capacity" type="number" min="1" defaultValue={lesson.capacity ?? ''} placeholder="Sınırsız" />
+                            </div>
                         </div>
                         <div className="grid gap-2">
                             <Label htmlFor="imageUrl">Görsel URL</Label>

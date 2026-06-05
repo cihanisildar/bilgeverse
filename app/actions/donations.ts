@@ -3,8 +3,9 @@
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/app/api/auth/[...nextauth]/auth.config';
 import prisma from '@/lib/prisma';
-import { UserRole } from '@prisma/client';
+import { UserRole, Prisma } from '@prisma/client';
 import { revalidatePath } from 'next/cache';
+import { mapDonationCurrency } from '@/app/lib/finance';
 import {
     Donor,
     Donation,
@@ -234,21 +235,49 @@ export async function updateDonor(id: string, data: UpdateDonorData): Promise<Do
 
 export async function addDonation(data: AddDonationData): Promise<DonorActionResponse<Donation>> {
     try {
-        await checkAuth();
+        const session = await checkAuth();
+        const createdById = (session.user as any).id ?? null;
 
-        const donation = await prisma.donation.create({
-            data: {
-                ...data,
-                amount: data.amount,
-            },
+        // Create the donation and mirror it into the finance ledger as income so
+        // the cash balance stays in sync (req: donations are a type of income).
+        const donation = await prisma.$transaction(async (tx) => {
+            const created = await tx.donation.create({
+                data: {
+                    ...data,
+                    amount: data.amount,
+                },
+                include: { donor: { select: { firstName: true, lastName: true } } },
+            });
+
+            await tx.financeTransaction.create({
+                data: {
+                    type: 'INCOME',
+                    category: 'BAGIS',
+                    amount: new Prisma.Decimal(data.amount),
+                    currency: mapDonationCurrency(created.currency),
+                    source: `${created.donor.firstName} ${created.donor.lastName}`.trim(),
+                    description: created.notes,
+                    transactionDate: created.donationDate,
+                    donationId: created.id,
+                    createdById,
+                },
+            });
+
+            return created;
         });
 
         revalidatePath('/dashboard/part8');
         return {
             error: null,
             data: {
-                ...donation,
-                amount: donation.amount.toNumber()
+                id: donation.id,
+                amount: donation.amount.toNumber(),
+                currency: donation.currency,
+                donationDate: donation.donationDate,
+                notes: donation.notes,
+                createdAt: donation.createdAt,
+                updatedAt: donation.updatedAt,
+                donorId: donation.donorId,
             }
         };
     } catch (error) {

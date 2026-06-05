@@ -55,6 +55,9 @@ export default function DonationDialog({ isOpen, onClose, donor }: DonationDialo
                 toast.success("Bağış başarıyla eklendi");
                 queryClient.invalidateQueries({ queryKey: ['donors'] });
                 queryClient.invalidateQueries({ queryKey: ['donorDetails', donor.id] });
+                queryClient.invalidateQueries({ queryKey: ['finance-summary'] });
+                queryClient.invalidateQueries({ queryKey: ['finance-transactions'] });
+                queryClient.invalidateQueries({ queryKey: ['monthly-report'] });
                 setAmount("");
                 setNotes("");
                 onClose();

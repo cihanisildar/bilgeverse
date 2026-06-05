@@ -78,7 +78,7 @@ export default async function PartDocuments({ partId, gradientFrom, gradientTo }
                     <p className="text-sm text-gray-500 mb-6 max-w-md mx-auto">
                         Bu bölüm için henüz belge paylaşılmamış.
                     </p>
-                    <Link href="/dashboard/belgeler">
+                    <Link href="/dashboard/pdfs">
                         <Button className={`bg-gradient-to-r ${gradientFrom} ${gradientTo} hover:${gradientFrom.replace('-600', '-700')} hover:${gradientTo.replace('-600', '-700')} text-white shadow-lg`}>
                             <FileText className="h-4 w-4 mr-2" />
                             Belge Ekle

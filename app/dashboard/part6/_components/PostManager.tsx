@@ -8,12 +8,26 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { AlertCircle, ArrowRight, Calendar, CheckCircle2, Clock, Edit2, Facebook, FileText, Instagram, Linkedin, Loader2, Music2, Plus, Search, Send, Trash2, Twitter, Youtube } from 'lucide-react';
+import { AlertCircle, ArrowRight, BarChart3, Calendar, CheckCircle2, Clock, Edit2, Eye, Facebook, FileText, Heart, Instagram, Linkedin, Loader2, Music2, Plus, Search, Send, Sparkles, Trash2, Trophy, Twitter, Users, Youtube } from 'lucide-react';
 import { useState } from 'react';
+import { useSearchParams } from 'next/navigation';
+import { Checkbox } from '@/components/ui/checkbox';
+import toast from 'react-hot-toast';
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 
 import { useCreateSocialPost, useDeleteSocialPost, useSocialPosts, useUpdateSocialPost } from '@/app/hooks/use-social';
 import { SocialPost } from '@/types/social';
 import { PostStatus, SocialPlatform } from '@prisma/client';
+import { CONTENT_TYPES, SAMPLE_CAPTIONS, getContentTypeLabel } from '@/app/lib/social';
 
 const PLATFORMS = [
     { id: SocialPlatform.INSTAGRAM, label: 'Instagram', icon: <Instagram className="h-4 w-4" />, color: 'text-pink-600', bg: 'bg-pink-50' },
@@ -35,9 +49,11 @@ const STATUSES = [
 
 
 export default function PostManager() {
+    const searchParams = useSearchParams();
     const [searchQuery, setSearchQuery] = useState('');
     const [platformFilter, setPlatformFilter] = useState('ALL');
     const [statusFilter, setStatusFilter] = useState('ALL');
+    const [sportsOnly, setSportsOnly] = useState(searchParams.get('filter') === 'sports');
 
     // React Query Hooks
     const { data: posts = [], isLoading: loading } = useSocialPosts();
@@ -49,14 +65,20 @@ export default function PostManager() {
     const [editingPost, setEditingPost] = useState<SocialPost | null>(null);
     const [selectedPost, setSelectedPost] = useState<SocialPost | null>(null);
     const [isDetailsDialogOpen, setIsDetailsDialogOpen] = useState(false);
+    const [postToDelete, setPostToDelete] = useState<string | null>(null);
 
     // Form states
     const [title, setTitle] = useState('');
     const [content, setContent] = useState('');
     const [platform, setPlatform] = useState<SocialPlatform>(SocialPlatform.INSTAGRAM);
+    const [contentType, setContentType] = useState<string>('POST');
     const [status, setStatus] = useState<PostStatus>(PostStatus.DRAFT);
     const [scheduledDate, setScheduledDate] = useState('');
     const [hashtags, setHashtags] = useState('');
+    const [views, setViews] = useState('');
+    const [engagement, setEngagement] = useState('');
+    const [reach, setReach] = useState('');
+    const [isSportsClub, setIsSportsClub] = useState(false);
 
     const handleOpenDialog = (post: SocialPost | null = null) => {
         if (post) {
@@ -64,19 +86,35 @@ export default function PostManager() {
             setTitle(post.title);
             setContent(post.content);
             setPlatform(post.platform);
+            setContentType(post.contentType || 'POST');
             setStatus(post.status);
             setScheduledDate(post.scheduledDate ? new Date(post.scheduledDate).toISOString().split('T')[0] : '');
             setHashtags(post.hashtags.join(', '));
+            setViews(post.views != null ? String(post.views) : '');
+            setEngagement(post.engagement != null ? String(post.engagement) : '');
+            setReach(post.reach != null ? String(post.reach) : '');
+            setIsSportsClub(post.isSportsClub ?? false);
         } else {
             setEditingPost(null);
             setTitle('');
             setContent('');
             setPlatform(SocialPlatform.INSTAGRAM);
+            setContentType('POST');
             setStatus(PostStatus.DRAFT);
             setScheduledDate('');
             setHashtags('');
+            setViews('');
+            setEngagement('');
+            setReach('');
+            setIsSportsClub(sportsOnly);
         }
         setIsDialogOpen(true);
+    };
+
+    const appendSampleCaption = (id: string) => {
+        const sample = SAMPLE_CAPTIONS.find((s) => s.id === id);
+        if (!sample) return;
+        setContent((prev) => (prev.trim() ? `${prev}\n\n${sample.text}` : sample.text));
     };
 
     const handleOpenDetails = (post: SocialPost) => {
@@ -85,13 +123,18 @@ export default function PostManager() {
     };
 
     const handleStatusUpdate = async (postId: string, newStatus: PostStatus) => {
-        await updatePostMutation.mutateAsync({
-            id: postId,
-            data: { status: newStatus }
-        });
+        try {
+            await updatePostMutation.mutateAsync({
+                id: postId,
+                data: { status: newStatus }
+            });
 
-        if (selectedPost?.id === postId) {
-            setSelectedPost(prev => prev ? { ...prev, status: newStatus } : null);
+            if (selectedPost?.id === postId) {
+                setSelectedPost(prev => prev ? { ...prev, status: newStatus } : null);
+            }
+            toast.success('Durum başarıyla güncellendi.');
+        } catch (error) {
+            toast.error('Durum güncellenirken bir hata oluştu.');
         }
     };
 
@@ -103,23 +146,40 @@ export default function PostManager() {
             title,
             content,
             platform,
+            contentType,
             status,
             scheduledDate: scheduledDate || null,
             hashtags: parsedHashtags,
+            views: views === '' ? null : Number(views),
+            engagement: engagement === '' ? null : Number(engagement),
+            reach: reach === '' ? null : Number(reach),
+            isSportsClub,
         };
 
-        if (editingPost) {
-            await updatePostMutation.mutateAsync({ id: editingPost.id, data: payload });
-        } else {
-            await createPostMutation.mutateAsync(payload);
+        try {
+            if (editingPost) {
+                await updatePostMutation.mutateAsync({ id: editingPost.id, data: payload });
+                toast.success('Gönderi başarıyla güncellendi.');
+            } else {
+                await createPostMutation.mutateAsync(payload);
+                toast.success('Gönderi başarıyla oluşturuldu.');
+            }
+            setIsDialogOpen(false);
+        } catch (error) {
+            toast.error('İşlem sırasında bir hata oluştu.');
         }
-
-        setIsDialogOpen(false);
     };
 
-    const handleDelete = async (id: string) => {
-        if (!confirm('Bu gönderiyi silmek istediğinize emin misiniz?')) return;
-        await deletePostMutation.mutateAsync(id);
+    const confirmDelete = async () => {
+        if (!postToDelete) return;
+        try {
+            await deletePostMutation.mutateAsync(postToDelete);
+            toast.success('Gönderi başarıyla silindi.');
+        } catch (error) {
+            toast.error('Gönderi silinirken bir hata oluştu.');
+        } finally {
+            setPostToDelete(null);
+        }
     };
 
     const filteredPosts = (posts || []).filter(post => {
@@ -127,7 +187,8 @@ export default function PostManager() {
             post.platform.toLowerCase().includes(searchQuery.toLowerCase());
         const matchesPlatform = platformFilter === 'ALL' || post.platform === platformFilter;
         const matchesStatus = statusFilter === 'ALL' || post.status === statusFilter;
-        return matchesSearch && matchesPlatform && matchesStatus;
+        const matchesSports = !sportsOnly || (post as any).isSportsClub;
+        return matchesSearch && matchesPlatform && matchesStatus && matchesSports;
     });
 
     const getPlatformInfo = (platformId: string) => {
@@ -177,6 +238,14 @@ export default function PostManager() {
                             ))}
                         </SelectContent>
                     </Select>
+                    <Button
+                        type="button"
+                        variant={sportsOnly ? 'default' : 'outline'}
+                        onClick={() => setSportsOnly((v) => !v)}
+                        className={sportsOnly ? 'bg-indigo-600 hover:bg-indigo-700 text-white' : 'border-indigo-200 text-indigo-600'}
+                    >
+                        <Trophy className="h-4 w-4 mr-2" /> Spor Kulübü
+                    </Button>
                 </div>
                 <Button onClick={() => handleOpenDialog()} className="bg-gradient-to-r from-teal-600 to-cyan-600 text-white shadow-md hover:shadow-lg transition-all">
                     <Plus className="h-4 w-4 mr-2" />
@@ -211,10 +280,22 @@ export default function PostManager() {
                             <Card key={post.id} className="group flex flex-col border-0 shadow-sm hover:shadow-xl transition-all duration-300 overflow-hidden bg-white">
                                 <CardHeader className="pb-3 bg-gray-50/50">
                                     <div className="flex items-center justify-between">
-                                        <Badge variant="outline" className={`font-medium ${platformInfo.bg} ${platformInfo.color} border-transparent px-2 py-0.5`}>
-                                            <span className="mr-1.5">{platformInfo.icon}</span>
-                                            {platformInfo.label}
-                                        </Badge>
+                                        <div className="flex items-center gap-1.5">
+                                            <Badge variant="outline" className={`font-medium ${platformInfo.bg} ${platformInfo.color} border-transparent px-2 py-0.5`}>
+                                                <span className="mr-1.5">{platformInfo.icon}</span>
+                                                {platformInfo.label}
+                                            </Badge>
+                                            {post.contentType && (
+                                                <Badge variant="outline" className="font-medium bg-gray-100 text-gray-600 border-transparent px-2 py-0.5 text-[11px]">
+                                                    {getContentTypeLabel(post.contentType)}
+                                                </Badge>
+                                            )}
+                                            {(post as any).isSportsClub && (
+                                                <Badge variant="outline" className="font-medium bg-indigo-50 text-indigo-600 border-transparent px-2 py-0.5 text-[11px]">
+                                                    <Trophy className="h-3 w-3 mr-1" /> Spor
+                                                </Badge>
+                                            )}
+                                        </div>
                                         <Badge variant="outline" className={`font-medium ${statusInfo.bg} ${statusInfo.color} border-transparent px-2 py-0.5`}>
                                             <span className="mr-1.5">{statusInfo.icon}</span>
                                             {statusInfo.label}
@@ -248,7 +329,7 @@ export default function PostManager() {
                                             <Button variant="ghost" size="icon" className="h-7 w-7 text-blue-600 hover:bg-blue-50" onClick={() => handleOpenDialog(post)}>
                                                 <Edit2 className="h-3.5 w-3.5" />
                                             </Button>
-                                            <Button variant="ghost" size="icon" className="h-7 w-7 text-rose-600 hover:bg-rose-50" onClick={() => handleDelete(post.id)}>
+                                            <Button variant="ghost" size="icon" className="h-7 w-7 text-rose-600 hover:bg-rose-50" onClick={() => setPostToDelete(post.id)}>
                                                 <Trash2 className="h-3.5 w-3.5" />
                                             </Button>
                                         </div>
@@ -306,7 +387,7 @@ export default function PostManager() {
                             </div>
                         </div>
 
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                             <div className="space-y-2">
                                 <Label htmlFor="status">Durum</Label>
                                 <Select value={status} onValueChange={(value) => setStatus(value as PostStatus)}>
@@ -321,6 +402,19 @@ export default function PostManager() {
                                                     {s.label}
                                                 </div>
                                             </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="contentType">İçerik Türü</Label>
+                                <Select value={contentType} onValueChange={setContentType}>
+                                    <SelectTrigger id="contentType">
+                                        <SelectValue placeholder="Tür seçin" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {CONTENT_TYPES.map(c => (
+                                            <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
                                         ))}
                                     </SelectContent>
                                 </Select>
@@ -341,7 +435,20 @@ export default function PostManager() {
                         </div>
 
                         <div className="space-y-3">
-                            <Label htmlFor="post-content" className="text-gray-700 font-semibold">İçerik</Label>
+                            <div className="flex items-center justify-between">
+                                <Label htmlFor="post-content" className="text-gray-700 font-semibold">İçerik</Label>
+                                <Select value="" onValueChange={appendSampleCaption}>
+                                    <SelectTrigger className="h-8 w-auto gap-1.5 text-xs border-teal-100 text-teal-600">
+                                        <Sparkles className="h-3.5 w-3.5" />
+                                        <SelectValue placeholder="Örnek açıklama ekle" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {SAMPLE_CAPTIONS.map(s => (
+                                            <SelectItem key={s.id} value={s.id}>{s.title}</SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
                             <Textarea
                                 id="post-content"
                                 placeholder="Gönderi metnini buraya yazın..."
@@ -361,6 +468,35 @@ export default function PostManager() {
                                 onChange={(e) => setHashtags(e.target.value)}
                             />
                         </div>
+
+                        <label className="flex items-center gap-2 p-3 rounded-xl border border-indigo-100 bg-indigo-50/40 cursor-pointer">
+                            <Checkbox checked={isSportsClub} onCheckedChange={(c) => setIsSportsClub(!!c)} />
+                            <span className="text-sm font-medium flex items-center gap-1.5 text-indigo-700">
+                                <Trophy className="h-4 w-4" /> Spor Kulübü içeriği
+                            </span>
+                        </label>
+
+                        {status === PostStatus.PUBLISHED && (
+                            <div className="space-y-3 rounded-xl border border-violet-100 bg-violet-50/40 p-4">
+                                <Label className="text-violet-700 font-semibold flex items-center gap-2">
+                                    <BarChart3 className="h-4 w-4" /> Performans Verileri
+                                </Label>
+                                <div className="grid grid-cols-3 gap-3">
+                                    <div className="space-y-1.5">
+                                        <Label htmlFor="views" className="text-xs text-gray-500 flex items-center gap-1"><Eye className="h-3 w-3" /> Görüntülenme</Label>
+                                        <Input id="views" type="number" min={0} placeholder="0" value={views} onChange={(e) => setViews(e.target.value)} />
+                                    </div>
+                                    <div className="space-y-1.5">
+                                        <Label htmlFor="engagement" className="text-xs text-gray-500 flex items-center gap-1"><Heart className="h-3 w-3" /> Etkileşim</Label>
+                                        <Input id="engagement" type="number" min={0} placeholder="0" value={engagement} onChange={(e) => setEngagement(e.target.value)} />
+                                    </div>
+                                    <div className="space-y-1.5">
+                                        <Label htmlFor="reach" className="text-xs text-gray-500 flex items-center gap-1"><Users className="h-3 w-3" /> Erişim</Label>
+                                        <Input id="reach" type="number" min={0} placeholder="0" value={reach} onChange={(e) => setReach(e.target.value)} />
+                                    </div>
+                                </div>
+                            </div>
+                        )}
 
                         <Button type="button" variant="ghost" onClick={() => setIsDialogOpen(false)}>İptal</Button>
                         <Button type="submit" disabled={createPostMutation.isPending || updatePostMutation.isPending} className="bg-gradient-to-r from-teal-600 to-cyan-600 text-white min-w-[120px]">
@@ -443,6 +579,30 @@ export default function PostManager() {
                                         </div>
                                     </div>
                                 )}
+
+                                {/* Performance metrics */}
+                                {(selectedPost.views != null || selectedPost.engagement != null || selectedPost.reach != null) && (
+                                    <div className="space-y-2">
+                                        <h4 className="text-xs font-bold text-gray-400 uppercase tracking-widest px-1">Performans</h4>
+                                        <div className="grid grid-cols-3 gap-3">
+                                            <div className="rounded-xl bg-blue-50 p-3 text-center">
+                                                <Eye className="h-4 w-4 text-blue-500 mx-auto mb-1" />
+                                                <div className="text-lg font-bold text-blue-700">{(selectedPost.views ?? 0).toLocaleString('tr-TR')}</div>
+                                                <div className="text-[10px] text-gray-500 uppercase">Görüntülenme</div>
+                                            </div>
+                                            <div className="rounded-xl bg-rose-50 p-3 text-center">
+                                                <Heart className="h-4 w-4 text-rose-500 mx-auto mb-1" />
+                                                <div className="text-lg font-bold text-rose-700">{(selectedPost.engagement ?? 0).toLocaleString('tr-TR')}</div>
+                                                <div className="text-[10px] text-gray-500 uppercase">Etkileşim</div>
+                                            </div>
+                                            <div className="rounded-xl bg-violet-50 p-3 text-center">
+                                                <Users className="h-4 w-4 text-violet-500 mx-auto mb-1" />
+                                                <div className="text-lg font-bold text-violet-700">{(selectedPost.reach ?? 0).toLocaleString('tr-TR')}</div>
+                                                <div className="text-[10px] text-gray-500 uppercase">Erişim</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
                             </div>
 
                             <DialogFooter className="pt-4 border-t gap-2 sm:gap-0">
@@ -463,7 +623,7 @@ export default function PostManager() {
                                         disabled={deletePostMutation.isPending || updatePostMutation.isPending}
                                         className="text-rose-600 border-rose-100 hover:bg-rose-50"
                                         onClick={() => {
-                                            handleDelete(selectedPost.id);
+                                            setPostToDelete(selectedPost.id);
                                             setIsDetailsDialogOpen(false);
                                         }}
                                     >
@@ -477,6 +637,23 @@ export default function PostManager() {
                     )}
                 </DialogContent>
             </Dialog>
+
+            <AlertDialog open={!!postToDelete} onOpenChange={(open) => !open && setPostToDelete(null)}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Gönderiyi silmek istediğinize emin misiniz?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            Bu gönderiyi silmek istediğinize emin misiniz? Bu işlem geri alınamaz.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel>Vazgeç</AlertDialogCancel>
+                        <AlertDialogAction onClick={confirmDelete} className="bg-rose-600 hover:bg-rose-700 text-white">
+                            {deletePostMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Sil'}
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
         </div>
     );
 }

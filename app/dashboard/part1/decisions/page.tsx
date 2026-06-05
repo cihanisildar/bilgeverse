@@ -5,7 +5,7 @@ import { useAuth } from '@/app/contexts/AuthContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, Calendar, User, FileText, Eye, Edit2, Clock, Check, ChevronsUpDown, Search, Trash2 } from 'lucide-react';
+import { ArrowLeft, Calendar, User, FileText, Eye, Edit2, Clock, Check, ChevronsUpDown, Search, Trash2, Plus } from 'lucide-react';
 import { format } from 'date-fns';
 import { tr } from 'date-fns/locale';
 import { useEffect, useState } from 'react';
@@ -13,7 +13,8 @@ import { getAllDecisions } from '@/app/actions/meetings/decisions';
 import { getAdminUsers } from '@/app/actions/users';
 import Loading from '@/app/components/Loading';
 import { useToast } from '@/app/hooks/use-toast';
-import { useUpdateDecision, useDeleteDecision, useUpdateDecisionStatus } from '@/app/hooks/use-decisions';
+import { useUpdateDecision, useDeleteDecision, useUpdateDecisionStatus, useCreateDecision } from '@/app/hooks/use-decisions';
+import { useMeetings } from '@/app/hooks/use-meetings';
 import { cn } from '@/lib/utils';
 import {
     Dialog,
@@ -102,11 +103,17 @@ export default function DecisionsOverviewPage() {
     const [detailDialogOpen, setDetailDialogOpen] = useState(false);
     const [editDialogOpen, setEditDialogOpen] = useState(false);
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+    const [createDialogOpen, setCreateDialogOpen] = useState(false);
     const [selectedDecision, setSelectedDecision] = useState<Decision | null>(null);
 
     const updateDecision = useUpdateDecision();
     const deleteDecision = useDeleteDecision();
     const updateStatus = useUpdateDecisionStatus();
+    const createDecision = useCreateDecision();
+
+    // Meetings are ordered by date (desc), so the first one is the most recent.
+    const { data: meetings } = useMeetings();
+    const latestMeeting = meetings?.[0] ?? null;
 
     useEffect(() => {
         if (!authLoading && !user) {
@@ -179,6 +186,31 @@ export default function DecisionsOverviewPage() {
             fetchDecisions();
         } catch (error) {
             console.error('Error deleting decision:', error);
+        }
+    };
+
+    const handleCreateSubmit = async (data: {
+        title: string;
+        description: string | null;
+        targetDate: string | null;
+        responsibleUserIds: string[];
+    }) => {
+        if (!latestMeeting) {
+            toast.error('Karar eklenecek bir toplantı bulunamadı. Önce bir toplantı oluşturun.');
+            return;
+        }
+
+        try {
+            const result = await createDecision.mutateAsync({
+                meetingId: latestMeeting.id,
+                data,
+            });
+            if (result.error) return;
+            setCreateDialogOpen(false);
+            // Refetch decisions so the new one appears in the relevant filters.
+            fetchDecisions();
+        } catch (error) {
+            console.error('Error creating decision:', error);
         }
     };
 
@@ -260,6 +292,18 @@ export default function DecisionsOverviewPage() {
                         >
                             Tamamlanan
                         </Button>
+
+                        {/* Quick "New Decision" action — adds a decision directly to
+                            the most recent meeting without leaving this page. */}
+                        {isAdmin && (
+                            <Button
+                                onClick={() => setCreateDialogOpen(true)}
+                                className="sm:ml-auto bg-indigo-600 hover:bg-indigo-700 text-white"
+                            >
+                                <Plus className="h-4 w-4 mr-2" />
+                                Yeni Karar
+                            </Button>
+                        )}
                     </div>
                 </div>
 
@@ -374,6 +418,17 @@ export default function DecisionsOverviewPage() {
                         onDelete={handleDeleteClick}
                         onStatusChange={handleStatusChange}
                         isAdmin={isAdmin || false}
+                    />
+                )}
+
+                {/* Create Decision Dialog — adds to the most recent meeting */}
+                {isAdmin && (
+                    <CreateDecisionDialog
+                        open={createDialogOpen}
+                        onOpenChange={setCreateDialogOpen}
+                        onSubmit={handleCreateSubmit}
+                        isPending={createDecision.isPending}
+                        latestMeeting={latestMeeting}
                     />
                 )}
 
@@ -834,6 +889,275 @@ function EditDecisionDialog({
                         </Button>
                     </div>
                 </div>
+            </DialogContent>
+        </Dialog>
+    );
+}
+
+// Create Decision Dialog Component — used on the decisions overview page to add
+// a new decision directly into the most recent meeting.
+function CreateDecisionDialog({
+    open,
+    onOpenChange,
+    onSubmit,
+    isPending = false,
+    latestMeeting,
+}: {
+    open: boolean;
+    onOpenChange: (open: boolean) => void;
+    onSubmit: (data: {
+        title: string;
+        description: string | null;
+        targetDate: string | null;
+        responsibleUserIds: string[];
+    }) => void;
+    isPending?: boolean;
+    latestMeeting: { id: string; title: string; meetingDate: string } | null;
+}) {
+    const [title, setTitle] = useState('');
+    const [description, setDescription] = useState('');
+    const [targetDate, setTargetDate] = useState('');
+    const [selectedUserIds, setSelectedUserIds] = useState<string[]>([]);
+    const [adminUsers, setAdminUsers] = useState<any[]>([]);
+    const [loadingUsers, setLoadingUsers] = useState(false);
+    const [comboboxOpen, setComboboxOpen] = useState(false);
+    const [searchQuery, setSearchQuery] = useState('');
+
+    useEffect(() => {
+        if (open) {
+            setTitle('');
+            setDescription('');
+            setTargetDate('');
+            setSelectedUserIds([]);
+            setSearchQuery('');
+            setComboboxOpen(false);
+            setLoadingUsers(true);
+            getAdminUsers().then((result) => {
+                if (result.error === null && result.data) {
+                    setAdminUsers(result.data);
+                }
+                setLoadingUsers(false);
+            });
+        }
+    }, [open]);
+
+    const handleSubmit = () => {
+        if (!title.trim() || selectedUserIds.length === 0 || !latestMeeting) return;
+        onSubmit({
+            title,
+            description: description || null,
+            targetDate: targetDate || null,
+            responsibleUserIds: selectedUserIds,
+        });
+    };
+
+    const handleUserToggle = (userId: string) => {
+        setSelectedUserIds((prev) =>
+            prev.includes(userId)
+                ? prev.filter((id) => id !== userId)
+                : [...prev, userId]
+        );
+    };
+
+    return (
+        <Dialog open={open} onOpenChange={onOpenChange}>
+            <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+                <DialogHeader>
+                    <DialogTitle>Yeni Karar</DialogTitle>
+                    <DialogDescription>
+                        {latestMeeting
+                            ? 'Karar, en son toplantı kaydına eklenecektir'
+                            : 'Karar eklemek için önce bir toplantı oluşturmalısınız'}
+                    </DialogDescription>
+                </DialogHeader>
+
+                {latestMeeting ? (
+                    <div className="space-y-4">
+                        {/* Target meeting banner */}
+                        <div className="flex items-start gap-2 rounded-lg border border-indigo-100 bg-indigo-50 p-3 text-sm">
+                            <FileText className="h-4 w-4 text-indigo-600 mt-0.5 flex-shrink-0" />
+                            <div>
+                                <p className="font-medium text-gray-700">{latestMeeting.title}</p>
+                                <p className="text-xs text-gray-500">
+                                    {format(new Date(latestMeeting.meetingDate), 'dd MMMM yyyy', { locale: tr })}
+                                </p>
+                            </div>
+                        </div>
+
+                        <div>
+                            <Label>Başlık *</Label>
+                            <Input
+                                value={title}
+                                onChange={(e) => setTitle(e.target.value)}
+                                placeholder="Karar başlığı"
+                                className="mt-1"
+                            />
+                        </div>
+                        <div>
+                            <Label>Açıklama</Label>
+                            <Textarea
+                                value={description}
+                                onChange={(e) => setDescription(e.target.value)}
+                                placeholder="Karar açıklaması"
+                                rows={3}
+                                className="mt-1"
+                            />
+                        </div>
+                        <div>
+                            <Label>Hedef Tarih</Label>
+                            <Input
+                                type="date"
+                                value={targetDate}
+                                onChange={(e) => setTargetDate(e.target.value)}
+                                className="mt-1"
+                            />
+                        </div>
+                        <div className="relative">
+                            <Label>Sorumlu Yönetim Kurulu Üyeleri *</Label>
+                            <Button
+                                variant="outline"
+                                className="w-full justify-between mt-2"
+                                type="button"
+                                onClick={() => setComboboxOpen(!comboboxOpen)}
+                            >
+                                {selectedUserIds.length > 0
+                                    ? `${selectedUserIds.length} üye seçildi`
+                                    : 'Üye seçin...'}
+                                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                            </Button>
+
+                            {comboboxOpen && (
+                                <div className="absolute z-[100] w-full mt-1 bg-popover border rounded-md shadow-md">
+                                    <div className="flex items-center border-b px-3 py-2">
+                                        <Search className="mr-2 h-4 w-4 shrink-0 opacity-50" />
+                                        <Input
+                                            placeholder="Üye ara..."
+                                            value={searchQuery}
+                                            onChange={(e) => setSearchQuery(e.target.value)}
+                                            className="border-0 focus-visible:ring-0 focus-visible:ring-offset-0 h-9"
+                                            autoFocus
+                                        />
+                                    </div>
+
+                                    <div className="max-h-[200px] overflow-y-auto p-1">
+                                        {loadingUsers ? (
+                                            <div className="py-6 text-center text-sm text-muted-foreground">
+                                                Yükleniyor...
+                                            </div>
+                                        ) : adminUsers.filter((user) => {
+                                            if (!searchQuery) return true;
+                                            const displayName = user.firstName && user.lastName
+                                                ? `${user.firstName} ${user.lastName}`
+                                                : user.username;
+                                            return displayName.toLowerCase().includes(searchQuery.toLowerCase());
+                                        }).length === 0 ? (
+                                            <div className="py-6 text-center text-sm text-muted-foreground">
+                                                Üye bulunamadı.
+                                            </div>
+                                        ) : (
+                                            adminUsers
+                                                .filter((user) => {
+                                                    if (!searchQuery) return true;
+                                                    const displayName = user.firstName && user.lastName
+                                                        ? `${user.firstName} ${user.lastName}`
+                                                        : user.username;
+                                                    return displayName.toLowerCase().includes(searchQuery.toLowerCase());
+                                                })
+                                                .map((user) => {
+                                                    const isSelected = selectedUserIds.includes(user.id);
+                                                    const displayName = user.firstName && user.lastName
+                                                        ? `${user.firstName} ${user.lastName}`
+                                                        : user.username;
+                                                    return (
+                                                        <div
+                                                            key={user.id}
+                                                            className={cn(
+                                                                "relative flex w-full cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none transition-colors",
+                                                                "hover:bg-accent hover:text-accent-foreground",
+                                                                isSelected && "bg-accent text-accent-foreground"
+                                                            )}
+                                                            onClick={() => {
+                                                                handleUserToggle(user.id);
+                                                            }}
+                                                        >
+                                                            <Check
+                                                                className={cn(
+                                                                    "mr-2 h-4 w-4 flex-shrink-0",
+                                                                    isSelected ? "opacity-100" : "opacity-0"
+                                                                )}
+                                                            />
+                                                            <span className="flex-1">{displayName}</span>
+                                                        </div>
+                                                    );
+                                                })
+                                        )}
+                                    </div>
+                                </div>
+                            )}
+
+                            {comboboxOpen && (
+                                <div
+                                    className="fixed inset-0 z-[90]"
+                                    onClick={() => setComboboxOpen(false)}
+                                />
+                            )}
+                            {selectedUserIds.length > 0 && (
+                                <div className="mt-2 flex flex-wrap gap-2">
+                                    {selectedUserIds.map((userId) => {
+                                        const user = adminUsers.find((u) => u.id === userId);
+                                        if (!user) return null;
+                                        const displayName = user.firstName && user.lastName
+                                            ? `${user.firstName} ${user.lastName}`
+                                            : user.username;
+                                        return (
+                                            <Badge
+                                                key={userId}
+                                                variant="secondary"
+                                                className="text-sm"
+                                            >
+                                                {displayName}
+                                                <button
+                                                    type="button"
+                                                    className="ml-2 hover:text-red-500"
+                                                    onClick={() => handleUserToggle(userId)}
+                                                >
+                                                    ×
+                                                </button>
+                                            </Badge>
+                                        );
+                                    })}
+                                </div>
+                            )}
+                            {selectedUserIds.length === 0 && (
+                                <p className="text-sm text-red-500 mt-1">
+                                    En az bir sorumlu yönetim kurulu üyesi seçmelisiniz
+                                </p>
+                            )}
+                        </div>
+                        <div className="flex justify-end space-x-2">
+                            <Button
+                                variant="outline"
+                                onClick={() => onOpenChange(false)}
+                                disabled={isPending}
+                            >
+                                İptal
+                            </Button>
+                            <Button
+                                onClick={handleSubmit}
+                                disabled={!title.trim() || selectedUserIds.length === 0 || isPending}
+                                className="bg-indigo-600 hover:bg-indigo-700 text-white disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                                {isPending ? 'Oluşturuluyor...' : 'Oluştur'}
+                            </Button>
+                        </div>
+                    </div>
+                ) : (
+                    <div className="flex justify-end pt-2">
+                        <Button variant="outline" onClick={() => onOpenChange(false)}>
+                            Kapat
+                        </Button>
+                    </div>
+                )}
             </DialogContent>
         </Dialog>
     );

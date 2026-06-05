@@ -37,31 +37,34 @@ export default async function Part2Page() {
 
         {/* Feature Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-          {/* Weekly Attendance Card */}
-          <Link href="/dashboard/part2/attendance" className="block">
-            <Card className="border-0 shadow-lg rounded-xl overflow-hidden transition-all duration-200 hover:shadow-xl hover:-translate-y-1 cursor-pointer bg-gradient-to-br from-blue-50 to-cyan-50">
-              <div className="h-2 bg-gradient-to-r from-blue-500 to-cyan-500"></div>
-              <CardHeader>
-                <div className="flex items-center space-x-4">
-                  <div className="w-16 h-16 flex items-center justify-center rounded-full bg-blue-100 text-blue-600">
-                    <Calendar className="h-8 w-8" />
+          {/* Weekly Attendance Card - hidden for admins (admins don't take
+              attendance; they use the "Toplu Yoklama Özeti" card instead) */}
+          {!isAdmin && (
+            <Link href="/dashboard/part2/attendance" className="block">
+              <Card className="border-0 shadow-lg rounded-xl overflow-hidden transition-all duration-200 hover:shadow-xl hover:-translate-y-1 cursor-pointer bg-gradient-to-br from-blue-50 to-cyan-50">
+                <div className="h-2 bg-gradient-to-r from-blue-500 to-cyan-500"></div>
+                <CardHeader>
+                  <div className="flex items-center space-x-4">
+                    <div className="w-16 h-16 flex items-center justify-center rounded-full bg-blue-100 text-blue-600">
+                      <Calendar className="h-8 w-8" />
+                    </div>
+                    <div>
+                      <CardTitle className="text-xl">Haftalık Yoklama</CardTitle>
+                      <CardDescription className="mt-1">
+                        QR kod ile öğrenci devam takibi yapın
+                      </CardDescription>
+                    </div>
                   </div>
-                  <div>
-                    <CardTitle className="text-xl">Haftalık Yoklama</CardTitle>
-                    <CardDescription className="mt-1">
-                      QR kod ile öğrenci devam takibi yapın
-                    </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex items-center text-sm font-medium text-gray-600">
+                    {canManage ? 'Yoklama Yönetimine Git' : 'Yoklamalara Git'}
+                    <ArrowRight className="ml-2 h-4 w-4" />
                   </div>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="flex items-center text-sm font-medium text-gray-600">
-                  {canManage ? 'Yoklama Yönetimine Git' : 'Yoklamalara Git'}
-                  <ArrowRight className="ml-2 h-4 w-4" />
-                </div>
-              </CardContent>
-            </Card>
-          </Link>
+                </CardContent>
+              </Card>
+            </Link>
+          )}
 
           {/* Admin Attendance Overview Card */}
           {isAdmin && (

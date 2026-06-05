@@ -121,6 +121,8 @@ model User {
   reviewedTutorPromotions       TutorPromotion[]          @relation("ReviewedTutorPromotions")
   createdIngredients            ContentIngredient[]       @relation("IngredientCreator")
   createdSocialPosts            SocialPost[]              @relation("PostCreator")
+  contentIdeas                  ContentIdea[]             @relation("IdeaCreator")
+  socialEvents                  SocialEvent[]             @relation("EventCreator")
   donor                         Donor?                    @relation("UserDonor")
   athleteProfile                AthleteProfile?           @relation("UserAthleteProfile")
   roles                         UserRole[]                @default([STUDENT])
@@ -133,6 +135,22 @@ model User {
   academySessions               AcademySession[]          @relation("AcademySessions")
   academyStudents               AcademyStudent[]          @relation("AcademyStudents")
   academyAttendances            AcademyAttendance[]       @relation("AcademyAttendances")
+  academyMaterials              AcademyMaterial[]         @relation("AcademyMaterials")
+  academyStudentNotesReceived   AcademyStudentNote[]      @relation("AcademyStudentNotesReceived")
+  academyStudentNotesAuthored   AcademyStudentNote[]      @relation("AcademyStudentNotesAuthored")
+  academyTasksCreated           AcademyTask[]             @relation("AcademyTasksCreated")
+  academyTaskCompletions        AcademyTaskCompletion[]   @relation("AcademyTaskCompletions")
+  financeTransactions           FinanceTransaction[]      @relation("UserFinanceTransactions")
+  coachTrainings                AthleteTraining[]         @relation("CoachTrainings")
+  athleteEvaluationsGiven       AthleteEvaluation[]       @relation("EvaluationCoach")
+  disciplineRecordsCreated      DisciplineRecord[]        @relation("DisciplineRecordCreator")
+  tournamentsCreated            Tournament[]              @relation("TournamentCreator")
+  sportMatchesCreated           SportMatch[]              @relation("SportMatchCreator")
+  footballPaymentsRecorded      FootballPayment[]         @relation("FootballPaymentCreator")
+  sportTransactions             SportTransaction[]        @relation("SportTransactionCreator")
+  sportAnnouncementsCreated     SportAnnouncement[]       @relation("SportAnnouncementCreator")
+  sportFeedbackSubmitted        SportFeedback[]           @relation("SportFeedbackSubmitter")
+  sportFeedbackResponded        SportFeedback[]           @relation("SportFeedbackResponder")
 
   @@index([tutorId])
 }
@@ -621,19 +639,19 @@ model AbsenceNotification {
 }
 
 model Syllabus {
-  id               String                    @id @default(uuid())
-  title            String
-  description      String?
-  shareToken       String?                   @unique
-  isPublished      Boolean                   @default(false)
-  isGlobal         Boolean                   @default(false)
-  createdAt        DateTime                  @default(now())
-  updatedAt        DateTime                  @updatedAt
-  createdById      String
-  driveLink        String?
-  feedbackForms    ParentFeedback[]          @relation("SyllabusFeedback")
-  createdBy        User                      @relation("TutorSyllabi", fields: [createdById], references: [id])
-  lessons          SyllabusLesson[]          @relation("SyllabusLessons")
+  id                String                    @id @default(uuid())
+  title             String
+  description       String?
+  shareToken        String?                   @unique
+  isPublished       Boolean                   @default(false)
+  isGlobal          Boolean                   @default(false)
+  createdAt         DateTime                  @default(now())
+  updatedAt         DateTime                  @updatedAt
+  createdById       String
+  driveLink         String?
+  feedbackForms     ParentFeedback[]          @relation("SyllabusFeedback")
+  createdBy         User                      @relation("TutorSyllabi", fields: [createdById], references: [id])
+  lessons           SyllabusLesson[]          @relation("SyllabusLessons")
   classroomProgress ClassroomLessonProgress[] @relation("SyllabusClassroomProgress")
 
   @@index([createdById])
@@ -642,15 +660,15 @@ model Syllabus {
 }
 
 model SyllabusLesson {
-  id               String                    @id @default(uuid())
-  orderIndex       Int
-  title            String
-  description      String?
-  createdAt        DateTime                  @default(now())
-  updatedAt        DateTime                  @updatedAt
-  syllabusId       String
-  driveLink        String?
-  syllabus         Syllabus                  @relation("SyllabusLessons", fields: [syllabusId], references: [id], onDelete: Cascade)
+  id                String                    @id @default(uuid())
+  orderIndex        Int
+  title             String
+  description       String?
+  createdAt         DateTime                  @default(now())
+  updatedAt         DateTime                  @updatedAt
+  syllabusId        String
+  driveLink         String?
+  syllabus          Syllabus                  @relation("SyllabusLessons", fields: [syllabusId], references: [id], onDelete: Cascade)
   classroomProgress ClassroomLessonProgress[] @relation("LessonClassroomProgress")
 
   @@index([syllabusId])
@@ -785,6 +803,40 @@ enum TransactionType {
   REDEEM
 }
 
+enum FinanceType {
+  INCOME
+  EXPENSE
+}
+
+enum FinanceCurrency {
+  TL
+  USD
+  EUR
+  GOLD
+}
+
+model FinanceTransaction {
+  id              String          @id @default(uuid())
+  type            FinanceType
+  amount          Decimal         @db.Decimal(14, 2)
+  currency        FinanceCurrency @default(TL)
+  category        String
+  source          String?
+  description     String?
+  transactionDate DateTime        @default(now())
+  donationId      String?         @unique
+  donation        Donation?       @relation("DonationFinance", fields: [donationId], references: [id], onDelete: Cascade)
+  createdById     String?
+  createdBy       User?           @relation("UserFinanceTransactions", fields: [createdById], references: [id])
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  @@index([type])
+  @@index([transactionDate])
+  @@index([category])
+  @@index([currency])
+}
+
 enum EventStatus {
   YAKINDA
   DEVAM_EDIYOR
@@ -876,6 +928,7 @@ enum NotificationType {
   SYLLABUS_FEEDBACK
   GENERAL
   HEALTH_REPORT_EXPIRY
+  DUES_REMINDER
 }
 
 enum Part2EventStatus {
@@ -904,15 +957,15 @@ model TagTemplate {
 
 // Student Tags - Manual tagging by tutors for sociometric analysis
 model StudentTag {
-  id          String        @id @default(uuid())
-  studentId   String
-  tutorId     String
-  templateId  String
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
-  student     User          @relation("StudentTags", fields: [studentId], references: [id], onDelete: Cascade)
-  tutor       User          @relation("TutorAssignedTags", fields: [tutorId], references: [id], onDelete: Cascade)
-  template    TagTemplate   @relation("TemplateStudentTags", fields: [templateId], references: [id], onDelete: Cascade)
+  id         String      @id @default(uuid())
+  studentId  String
+  tutorId    String
+  templateId String
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
+  student    User        @relation("StudentTags", fields: [studentId], references: [id], onDelete: Cascade)
+  tutor      User        @relation("TutorAssignedTags", fields: [tutorId], references: [id], onDelete: Cascade)
+  template   TagTemplate @relation("TemplateStudentTags", fields: [templateId], references: [id], onDelete: Cascade)
 
   @@unique([studentId, templateId, tutorId])
   @@index([studentId])
@@ -927,16 +980,16 @@ enum Part2ParticipantStatus {
 }
 
 model Workshop {
-  id          String               @id @default(uuid())
-  name        String
-  description String?
-  imageUrl    String?
-  createdAt   DateTime             @default(now())
-  updatedAt   DateTime             @updatedAt
-  assignments WorkshopAssignment[]
-  activities  WorkshopActivity[]
-  students    WorkshopStudent[]
-  courses     WorkshopCourse[]
+  id           String                @id @default(uuid())
+  name         String
+  description  String?
+  imageUrl     String?
+  createdAt    DateTime              @default(now())
+  updatedAt    DateTime              @updatedAt
+  assignments  WorkshopAssignment[]
+  activities   WorkshopActivity[]
+  students     WorkshopStudent[]
+  courses      WorkshopCourse[]
   joinRequests WorkshopJoinRequest[] @relation("WorkshopJoinRequests")
 }
 
@@ -993,11 +1046,11 @@ model WorkshopStudent {
 }
 
 model WorkshopAttendance {
-  id            String        @id @default(uuid())
+  id            String           @id @default(uuid())
   activityId    String
   studentId     String
-  status        Boolean       @default(false)
-  checkInMethod CheckInMethod @default(MANUAL)
+  status        Boolean          @default(false)
+  checkInMethod CheckInMethod    @default(MANUAL)
   checkInTime   DateTime?
   activity      WorkshopActivity @relation(fields: [activityId], references: [id], onDelete: Cascade)
   student       User             @relation("WorkshopAttendances", fields: [studentId], references: [id], onDelete: Cascade)
@@ -1015,10 +1068,10 @@ model WorkshopJoinRequest {
   updatedAt  DateTime                  @updatedAt
   reviewedBy String?
   reviewedAt DateTime?
-  
-  workshop   Workshop @relation("WorkshopJoinRequests", fields: [workshopId], references: [id], onDelete: Cascade)
-  student    User     @relation("StudentJoinRequests", fields: [studentId], references: [id], onDelete: Cascade)
-  reviewer   User?    @relation("ReviewedJoinRequests", fields: [reviewedBy], references: [id])
+
+  workshop Workshop @relation("WorkshopJoinRequests", fields: [workshopId], references: [id], onDelete: Cascade)
+  student  User     @relation("StudentJoinRequests", fields: [studentId], references: [id], onDelete: Cascade)
+  reviewer User?    @relation("ReviewedJoinRequests", fields: [reviewedBy], references: [id])
 
   @@unique([workshopId, studentId])
   @@index([workshopId])
@@ -1033,22 +1086,22 @@ enum WorkshopJoinRequestStatus {
 }
 
 model TutorPromotion {
-  id              String                @id @default(uuid())
+  id              String               @id @default(uuid())
   userId          String
   requestedRole   UserRole
-  status          TutorPromotionStatus  @default(PENDING)
+  status          TutorPromotionStatus @default(PENDING)
   notes           String?
   rejectionReason String?
-  createdAt       DateTime              @default(now())
-  updatedAt       DateTime              @updatedAt
+  createdAt       DateTime             @default(now())
+  updatedAt       DateTime             @updatedAt
   createdById     String
   reviewedById    String?
   reviewedAt      DateTime?
-  
-  user            User                  @relation("UserTutorPromotions", fields: [userId], references: [id], onDelete: Cascade)
-  createdBy       User                  @relation("CreatedTutorPromotions", fields: [createdById], references: [id])
-  reviewedBy      User?                 @relation("ReviewedTutorPromotions", fields: [reviewedById], references: [id])
-  
+
+  user       User  @relation("UserTutorPromotions", fields: [userId], references: [id], onDelete: Cascade)
+  createdBy  User  @relation("CreatedTutorPromotions", fields: [createdById], references: [id])
+  reviewedBy User? @relation("ReviewedTutorPromotions", fields: [reviewedById], references: [id])
+
   @@index([userId])
   @@index([status])
   @@index([createdById])
@@ -1064,7 +1117,7 @@ model ContentIngredient {
   id          String   @id @default(uuid())
   title       String
   content     String   @db.Text
-  type        String   // e.g., "hashtag", "caption-template", "media-reference"
+  type        String // e.g., "hashtag", "caption-template", "media-reference"
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
   createdById String
@@ -1079,9 +1132,14 @@ model SocialPost {
   content       String         @db.Text
   mediaUrl      String?
   platform      SocialPlatform
+  contentType   String?
   status        PostStatus     @default(DRAFT)
   scheduledDate DateTime?
   hashtags      String[]
+  views         Int?
+  engagement    Int?
+  reach         Int?
+  isSportsClub  Boolean        @default(false)
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
   createdById   String
@@ -1090,6 +1148,54 @@ model SocialPost {
   @@index([createdById])
   @@index([platform])
   @@index([status])
+}
+
+model ContentIdea {
+  id             String            @id @default(uuid())
+  title          String
+  description    String?           @db.Text
+  platform       SocialPlatform?
+  contentType    String?
+  tags           String[]
+  status         ContentIdeaStatus @default(NEW)
+  convertedPostId String?          @unique
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+  createdById    String
+  createdBy      User              @relation("IdeaCreator", fields: [createdById], references: [id])
+
+  @@index([createdById])
+  @@index([status])
+}
+
+model SocialEvent {
+  id           String          @id @default(uuid())
+  title        String
+  description  String?         @db.Text
+  date         DateTime
+  type         SocialEventType @default(EVENT)
+  recurring    Boolean         @default(false)
+  reminderDays Int             @default(7)
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+  createdById  String
+  createdBy    User            @relation("EventCreator", fields: [createdById], references: [id])
+
+  @@index([createdById])
+  @@index([date])
+}
+
+enum ContentIdeaStatus {
+  NEW
+  IN_PROGRESS
+  CONVERTED
+  ARCHIVED
+}
+
+enum SocialEventType {
+  HOLIDAY
+  EVENT
+  CAMPAIGN
 }
 
 enum SocialPlatform {
@@ -1110,32 +1216,33 @@ enum PostStatus {
 }
 
 model Donor {
-  id              String     @id @default(uuid())
-  firstName       String
-  lastName        String
-  email           String?    @unique
-  phone           String?
-  address         String?
-  notes           String?
-  createdAt       DateTime   @default(now())
-  updatedAt       DateTime   @updatedAt
-  donations       Donation[] @relation("DonorDonations")
-  userId          String?    @unique
-  user            User?      @relation("UserDonor", fields: [userId], references: [id])
+  id        String     @id @default(uuid())
+  firstName String
+  lastName  String
+  email     String?    @unique
+  phone     String?
+  address   String?
+  notes     String?
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+  donations Donation[] @relation("DonorDonations")
+  userId    String?    @unique
+  user      User?      @relation("UserDonor", fields: [userId], references: [id])
 
   @@index([email])
 }
 
 model Donation {
-  id              String   @id @default(uuid())
-  amount          Decimal  @db.Decimal(10, 2)
-  currency        String   @default("TL")
-  donationDate    DateTime @default(now())
-  notes           String?
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-  donorId         String
-  donor           Donor    @relation("DonorDonations", fields: [donorId], references: [id], onDelete: Cascade)
+  id                 String              @id @default(uuid())
+  amount             Decimal             @db.Decimal(10, 2)
+  currency           String              @default("TL")
+  donationDate       DateTime            @default(now())
+  notes              String?
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+  donorId            String
+  donor              Donor               @relation("DonorDonations", fields: [donorId], references: [id], onDelete: Cascade)
+  financeTransaction FinanceTransaction? @relation("DonationFinance")
 
   @@index([donorId])
   @@index([donationDate])
@@ -1148,63 +1255,284 @@ model SportBranch {
   isActive    Boolean           @default(true)
   createdAt   DateTime          @default(now())
   updatedAt   DateTime          @updatedAt
-  athletes    AthleteProfile[]  @relation("BranchAthletes")
-  trainings   AthleteTraining[] @relation("BranchTrainings")
+  athletes      AthleteProfile[]    @relation("BranchAthletes")
+  trainings     AthleteTraining[]   @relation("BranchTrainings")
+  tournaments   Tournament[]        @relation("BranchTournaments")
+  matches       SportMatch[]        @relation("BranchMatches")
+  equipment     Equipment[]         @relation("BranchEquipment")
+  announcements SportAnnouncement[] @relation("BranchAnnouncements")
 }
 
 model AthleteProfile {
-  id                 String               @id @default(uuid())
-  userId             String               @unique
-  user               User                 @relation("UserAthleteProfile", fields: [userId], references: [id], onDelete: Cascade)
+  id                 String                @id @default(uuid())
+  userId             String                @unique
+  user               User                  @relation("UserAthleteProfile", fields: [userId], references: [id], onDelete: Cascade)
   healthReportExpiry DateTime?
-  createdAt          DateTime             @default(now())
-  updatedAt          DateTime             @updatedAt
-  branches           SportBranch[]        @relation("BranchAthletes")
-  attendances        AthleteAttendance[]  @relation("AthleteAttendances")
-  performances       AthletePerformance[] @relation("AthletePerformances")
+  birthDate          DateTime?
+  phone              String?
+  parentName         String?
+  parentPhone        String?
+  membershipStatus   MembershipStatus      @default(ACTIVE)
+  licenseNumber      String?
+  licenseExpiry      DateTime?
+  footballSchool     Boolean               @default(false)
+  createdAt          DateTime              @default(now())
+  updatedAt          DateTime              @updatedAt
+  branches           SportBranch[]         @relation("BranchAthletes")
+  attendances        AthleteAttendance[]   @relation("AthleteAttendances")
+  performances       AthletePerformance[]  @relation("AthletePerformances")
+  evaluations        AthleteEvaluation[]   @relation("AthleteEvaluations")
+  disciplineRecords  DisciplineRecord[]    @relation("AthleteDisciplineRecords")
+  matchParticipations MatchParticipation[] @relation("AthleteMatchParticipations")
+  assignedEquipment  Equipment[]           @relation("EquipmentAssignedAthlete")
+  footballFees       FootballFee[]         @relation("AthleteFootballFees")
+  feedbacks          SportFeedback[]       @relation("AthleteSportFeedbacks")
 }
 
 model AthleteTraining {
-  id            String              @id @default(uuid())
-  branchId      String
-  title         String
-  description   String?
-  date          DateTime
-  startTime     String?
-  endTime       String?
-  location      String?             @default("Spor Salonu")
-  type          AthleteTrainingType @default(TRAINING)
-  createdAt     DateTime            @default(now())
-  updatedAt     DateTime            @updatedAt
-  branch        SportBranch         @relation("BranchTrainings", fields: [branchId], references: [id], onDelete: Cascade)
-  attendances   AthleteAttendance[] @relation("TrainingAttendances")
-  performances  AthletePerformance[] @relation("TrainingPerformances")
+  id           String               @id @default(uuid())
+  branchId     String
+  title        String
+  description  String?
+  date         DateTime
+  startTime    String?
+  endTime      String?
+  location     String?              @default("Spor Salonu")
+  type         AthleteTrainingType  @default(TRAINING)
+  coachId      String?
+  coach        User?                @relation("CoachTrainings", fields: [coachId], references: [id])
+  createdAt    DateTime             @default(now())
+  updatedAt    DateTime             @updatedAt
+  branch       SportBranch          @relation("BranchTrainings", fields: [branchId], references: [id], onDelete: Cascade)
+  attendances  AthleteAttendance[]  @relation("TrainingAttendances")
+  performances AthletePerformance[] @relation("TrainingPerformances")
 
   @@index([branchId])
   @@index([date])
+  @@index([coachId])
+}
+
+model AthleteEvaluation {
+  id        String         @id @default(uuid())
+  athleteId String
+  athlete   AthleteProfile @relation("AthleteEvaluations", fields: [athleteId], references: [id], onDelete: Cascade)
+  coachId   String?
+  coach     User?          @relation("EvaluationCoach", fields: [coachId], references: [id])
+  date      DateTime       @default(now())
+  category  String
+  note      String         @db.Text
+  createdAt DateTime       @default(now())
+
+  @@index([athleteId])
+}
+
+model DisciplineRule {
+  id       String  @id @default(uuid())
+  code     String?
+  offense  String
+  penalty  String
+  order    Int     @default(0)
+  isActive Boolean @default(true)
+  records  DisciplineRecord[] @relation("RuleDisciplineRecords")
+}
+
+model DisciplineRecord {
+  id          String          @id @default(uuid())
+  athleteId   String
+  athlete     AthleteProfile  @relation("AthleteDisciplineRecords", fields: [athleteId], references: [id], onDelete: Cascade)
+  ruleId      String?
+  rule        DisciplineRule? @relation("RuleDisciplineRecords", fields: [ruleId], references: [id])
+  offense     String
+  penalty     String
+  date        DateTime        @default(now())
+  note        String?
+  createdById String?
+  createdBy   User?           @relation("DisciplineRecordCreator", fields: [createdById], references: [id])
+  createdAt   DateTime        @default(now())
+
+  @@index([athleteId])
+}
+
+model Tournament {
+  id          String           @id @default(uuid())
+  name        String
+  branchId    String?
+  branch      SportBranch?     @relation("BranchTournaments", fields: [branchId], references: [id])
+  location    String?
+  startDate   DateTime
+  endDate     DateTime?
+  status      TournamentStatus @default(UPCOMING)
+  description String?
+  createdById String?
+  createdBy   User?            @relation("TournamentCreator", fields: [createdById], references: [id])
+  createdAt   DateTime         @default(now())
+  matches     SportMatch[]     @relation("TournamentMatches")
+
+  @@index([branchId])
+}
+
+model SportMatch {
+  id            String               @id @default(uuid())
+  tournamentId  String?
+  tournament    Tournament?          @relation("TournamentMatches", fields: [tournamentId], references: [id], onDelete: SetNull)
+  branchId      String
+  branch        SportBranch          @relation("BranchMatches", fields: [branchId], references: [id], onDelete: Cascade)
+  date          DateTime
+  location      String?
+  opponent      String
+  ourScore      Int?
+  theirScore    Int?
+  result        MatchResult          @default(PENDING)
+  achievement   String?
+  notes         String?
+  createdById   String?
+  createdBy     User?                @relation("SportMatchCreator", fields: [createdById], references: [id])
+  createdAt     DateTime             @default(now())
+  participations MatchParticipation[] @relation("MatchParticipations")
+
+  @@index([branchId])
+  @@index([tournamentId])
+  @@index([date])
+}
+
+model MatchParticipation {
+  id        String         @id @default(uuid())
+  matchId   String
+  match     SportMatch     @relation("MatchParticipations", fields: [matchId], references: [id], onDelete: Cascade)
+  athleteId String
+  athlete   AthleteProfile @relation("AthleteMatchParticipations", fields: [athleteId], references: [id], onDelete: Cascade)
+  isStarter Boolean        @default(false)
+  goals     Int            @default(0)
+  assists   Int            @default(0)
+  notes     String?
+
+  @@unique([matchId, athleteId])
+  @@index([athleteId])
+}
+
+model Equipment {
+  id                String          @id @default(uuid())
+  name              String
+  category          String?
+  quantity          Int             @default(1)
+  status            EquipmentStatus @default(IN_USE)
+  assignedAthleteId String?
+  assignedAthlete   AthleteProfile? @relation("EquipmentAssignedAthlete", fields: [assignedAthleteId], references: [id], onDelete: SetNull)
+  assignedUnit      String?
+  branchId          String?
+  branch            SportBranch?    @relation("BranchEquipment", fields: [branchId], references: [id], onDelete: SetNull)
+  notes             String?
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+
+  @@index([status])
+  @@index([assignedAthleteId])
+}
+
+model FootballFee {
+  id          String          @id @default(uuid())
+  athleteId   String
+  athlete     AthleteProfile  @relation("AthleteFootballFees", fields: [athleteId], references: [id], onDelete: Cascade)
+  periodMonth DateTime
+  amount      Decimal         @db.Decimal(10, 2)
+  dueDate     DateTime
+  status      FeeStatus       @default(PENDING)
+  createdAt   DateTime        @default(now())
+  payments    FootballPayment[] @relation("FeePayments")
+
+  @@unique([athleteId, periodMonth])
+  @@index([status])
+}
+
+model FootballPayment {
+  id                 String            @id @default(uuid())
+  feeId              String
+  fee                FootballFee       @relation("FeePayments", fields: [feeId], references: [id], onDelete: Cascade)
+  amount             Decimal           @db.Decimal(10, 2)
+  date               DateTime          @default(now())
+  description        String?
+  createdById        String?
+  createdBy          User?             @relation("FootballPaymentCreator", fields: [createdById], references: [id])
+  sportTransaction   SportTransaction? @relation("PaymentSportTransaction")
+  createdAt          DateTime          @default(now())
+
+  @@index([feeId])
+}
+
+model SportTransaction {
+  id                String          @id @default(uuid())
+  type              FinanceType
+  amount            Decimal         @db.Decimal(14, 2)
+  currency          FinanceCurrency @default(TL)
+  category          String
+  description       String?
+  transactionDate   DateTime        @default(now())
+  footballPaymentId String?         @unique
+  footballPayment   FootballPayment? @relation("PaymentSportTransaction", fields: [footballPaymentId], references: [id], onDelete: SetNull)
+  createdById       String?
+  createdBy         User?           @relation("SportTransactionCreator", fields: [createdById], references: [id])
+  createdAt         DateTime        @default(now())
+
+  @@index([type])
+  @@index([transactionDate])
+}
+
+model SportAnnouncement {
+  id          String       @id @default(uuid())
+  title       String
+  content     String       @db.Text
+  type        String       @default("ANNOUNCEMENT")
+  branchId    String?
+  branch      SportBranch? @relation("BranchAnnouncements", fields: [branchId], references: [id], onDelete: SetNull)
+  createdById String?
+  createdBy   User?        @relation("SportAnnouncementCreator", fields: [createdById], references: [id])
+  createdAt   DateTime     @default(now())
+
+  @@index([branchId])
+  @@index([createdAt])
+}
+
+model SportFeedback {
+  id            String          @id @default(uuid())
+  athleteId     String?
+  athlete       AthleteProfile? @relation("AthleteSportFeedbacks", fields: [athleteId], references: [id], onDelete: SetNull)
+  createdById   String?
+  createdBy     User?           @relation("SportFeedbackSubmitter", fields: [createdById], references: [id])
+  subject       String
+  message       String          @db.Text
+  category      String          @default("REQUEST")
+  status        FeedbackStatus  @default(NEW)
+  response      String?         @db.Text
+  respondedById String?
+  respondedBy   User?           @relation("SportFeedbackResponder", fields: [respondedById], references: [id])
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+
+  @@index([status])
+  @@index([createdAt])
 }
 
 model AthleteAttendance {
-  id         String            @id @default(uuid())
+  id         String           @id @default(uuid())
   trainingId String
   athleteId  String
-  status     AttendanceStatus  @default(YOKTU)
-  markedAt   DateTime          @default(now())
-  training   AthleteTraining   @relation("TrainingAttendances", fields: [trainingId], references: [id], onDelete: Cascade)
-  athlete    AthleteProfile    @relation("AthleteAttendances", fields: [athleteId], references: [id], onDelete: Cascade)
+  status     AttendanceStatus @default(YOKTU)
+  markedAt   DateTime         @default(now())
+  training   AthleteTraining  @relation("TrainingAttendances", fields: [trainingId], references: [id], onDelete: Cascade)
+  athlete    AthleteProfile   @relation("AthleteAttendances", fields: [athleteId], references: [id], onDelete: Cascade)
 
   @@unique([trainingId, athleteId])
 }
 
 model AthletePerformance {
-  id         String             @id @default(uuid())
+  id         String            @id @default(uuid())
   trainingId String
   athleteId  String
   metricType AthleteMetricType
-  value      String             // "10", "45.5s", "5km"
+  value      String // "10", "45.5s", "5km"
   notes      String?
-  training   AthleteTraining    @relation("TrainingPerformances", fields: [trainingId], references: [id], onDelete: Cascade)
-  athlete    AthleteProfile     @relation("AthletePerformances", fields: [athleteId], references: [id], onDelete: Cascade)
+  training   AthleteTraining   @relation("TrainingPerformances", fields: [trainingId], references: [id], onDelete: Cascade)
+  athlete    AthleteProfile    @relation("AthletePerformances", fields: [athleteId], references: [id], onDelete: Cascade)
 
   @@index([trainingId])
   @@index([athleteId])
@@ -1220,6 +1548,43 @@ enum AthleteMetricType {
   TIME
   DISTANCE
   OTHER
+}
+
+enum MembershipStatus {
+  ACTIVE
+  PASSIVE
+  SUSPENDED
+}
+
+enum EquipmentStatus {
+  IN_USE
+  MAINTENANCE
+  OUT_OF_SERVICE
+}
+
+enum MatchResult {
+  WIN
+  LOSS
+  DRAW
+  PENDING
+}
+
+enum TournamentStatus {
+  UPCOMING
+  ONGOING
+  COMPLETED
+}
+
+enum FeeStatus {
+  PAID
+  PENDING
+  OVERDUE
+}
+
+enum FeedbackStatus {
+  NEW
+  IN_REVIEW
+  RESOLVED
 }
 
 model OrientationProcess {
@@ -1263,21 +1628,102 @@ model AcademyLesson {
   name        String
   description String?
   imageUrl    String?
+  startDate   DateTime?
+  capacity    Int?
   createdAt   DateTime            @default(now())
   updatedAt   DateTime            @updatedAt
   assignments AcademyAssignment[]
   sessions    AcademySession[]
   students    AcademyStudent[]
   syllabus    AcademySyllabus?
+  materials   AcademyMaterial[]
+  tasks       AcademyTask[]
+  notes       AcademyStudentNote[]
+}
+
+enum AcademyMaterialType {
+  PDF
+  VIDEO
+  DOCUMENT
+  LINK
+}
+
+enum AcademyNoteType {
+  NOTE
+  EVALUATION
+  OBSERVATION
+}
+
+model AcademyMaterial {
+  id           String              @id @default(uuid())
+  lessonId     String
+  title        String
+  description  String?
+  type         AcademyMaterialType @default(LINK)
+  url          String
+  fileKey      String?
+  uploadedById String
+  createdAt    DateTime            @default(now())
+  lesson       AcademyLesson       @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  uploadedBy   User                @relation("AcademyMaterials", fields: [uploadedById], references: [id])
+
+  @@index([lessonId])
+}
+
+model AcademyStudentNote {
+  id        String          @id @default(uuid())
+  lessonId  String
+  studentId String
+  authorId  String
+  type      AcademyNoteType @default(NOTE)
+  content   String
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
+  lesson    AcademyLesson   @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  student   User            @relation("AcademyStudentNotesReceived", fields: [studentId], references: [id], onDelete: Cascade)
+  author    User            @relation("AcademyStudentNotesAuthored", fields: [authorId], references: [id])
+
+  @@index([lessonId, studentId])
+}
+
+model AcademyTask {
+  id          String                  @id @default(uuid())
+  lessonId    String
+  title       String
+  description String?
+  points      Int                     @default(0)
+  dueDate     DateTime?
+  createdById String
+  createdAt   DateTime                @default(now())
+  updatedAt   DateTime                @updatedAt
+  lesson      AcademyLesson           @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  createdBy   User                    @relation("AcademyTasksCreated", fields: [createdById], references: [id])
+  completions AcademyTaskCompletion[]
+
+  @@index([lessonId])
+}
+
+model AcademyTaskCompletion {
+  id                  String      @id @default(uuid())
+  taskId              String
+  studentId           String
+  completedAt         DateTime    @default(now())
+  awardedById         String
+  pointsTransactionId String?
+  task                AcademyTask @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  student             User        @relation("AcademyTaskCompletions", fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([taskId, studentId])
+  @@index([studentId])
 }
 
 model AcademyAssignment {
-  id        String        @id @default(uuid())
-  lessonId  String
-  userId    String
-  role      UserRole
-  lesson    AcademyLesson @relation(fields: [lessonId], references: [id], onDelete: Cascade)
-  user      User          @relation("AcademyAssignments", fields: [userId], references: [id], onDelete: Cascade)
+  id       String        @id @default(uuid())
+  lessonId String
+  userId   String
+  role     UserRole
+  lesson   AcademyLesson @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  user     User          @relation("AcademyAssignments", fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([lessonId, userId])
 }
@@ -1294,12 +1740,12 @@ model AcademyStudent {
 }
 
 model AcademySyllabus {
-  id          String                @id @default(uuid())
-  lessonId    String                @unique
-  lesson      AcademyLesson         @relation(fields: [lessonId], references: [id], onDelete: Cascade)
-  items       AcademySyllabusItem[]
-  createdAt   DateTime              @default(now())
-  updatedAt   DateTime              @updatedAt
+  id        String                @id @default(uuid())
+  lessonId  String                @unique
+  lesson    AcademyLesson         @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  items     AcademySyllabusItem[]
+  createdAt DateTime              @default(now())
+  updatedAt DateTime              @updatedAt
 }
 
 model AcademySyllabusItem {
@@ -1339,4 +1785,3 @@ model AcademyAttendance {
 
   @@unique([sessionId, studentId])
 }
-

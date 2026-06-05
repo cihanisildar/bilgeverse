@@ -40,7 +40,7 @@ export function useMarkNotificationAsRead() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: markNotificationAsRead,
+    mutationFn: (notificationId: string) => markNotificationAsRead(notificationId),
     onSuccess: (result) => {
       if (result.error) {
         toast.error(result.error);
@@ -59,7 +59,7 @@ export function useMarkAllNotificationsAsRead() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: markAllNotificationsAsRead,
+    mutationFn: () => markAllNotificationsAsRead(),
     onSuccess: (result) => {
       if (result.error) {
         toast.error(result.error);

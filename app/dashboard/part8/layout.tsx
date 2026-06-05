@@ -1,5 +1,6 @@
 import ProtectedPartLayout from '@/app/components/auth/ProtectedPartLayout';
 import React from 'react';
+import FinanceShell from './components/FinanceShell';
 
 export default async function Part8Layout({
     children,
@@ -8,7 +9,7 @@ export default async function Part8Layout({
 }) {
     return (
         <ProtectedPartLayout partId={8}>
-            {children}
+            <FinanceShell>{children}</FinanceShell>
         </ProtectedPartLayout>
     );
 }

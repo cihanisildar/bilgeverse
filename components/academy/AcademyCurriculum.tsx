@@ -8,7 +8,6 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Plus, Trash2, Save, Clock, CheckCircle2, XCircle, Loader2, Edit3, Users, List } from 'lucide-react';
 import Image from 'next/image';
 import { useUpdateSyllabus, useCreateSession, useRecordAttendance } from '@/app/hooks/use-academy-data';
-import { useToast } from '@/hooks/use-toast';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
@@ -31,7 +30,6 @@ export function AcademySyllabus({ lessonId, syllabus, canManage }: { lessonId: s
     const [open, setOpen] = useState(false);
     const [editingItem, setEditingItem] = useState<{ index: number, title: string, description: string } | null>(null);
     const syllabusMutation = useUpdateSyllabus();
-    const { toast } = useToast();
 
     function handleAddItem(e: React.FormEvent<HTMLFormElement>) {
         e.preventDefault();

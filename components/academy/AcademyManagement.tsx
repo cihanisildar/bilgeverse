@@ -20,7 +20,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { UserRole } from '@prisma/client';
-import { AcademyAssignment, AcademyStudent } from '@/types/academy';
+import { AcademyAssignment, AcademyStudent, AcademySession } from '@/types/academy';
 import { useUsers, useAssignStaff, useRemoveStaff, useEnrollStudent, useUnenrollStudent } from '@/app/hooks/use-academy-data';
 
 export function AcademyAssignments({ lessonId, assignments }: { lessonId: string, assignments: AcademyAssignment[] }) {
@@ -191,11 +191,22 @@ export function AcademyAssignments({ lessonId, assignments }: { lessonId: string
     );
 }
 
-export function AcademyStudents({ lessonId, students, canManage }: { lessonId: string, students: AcademyStudent[], canManage: boolean }) {
+export function AcademyStudents({ lessonId, students, canManage, sessions = [] }: { lessonId: string, students: AcademyStudent[], canManage: boolean, sessions?: AcademySession[] }) {
     const { data: users = [], isLoading: usersLoading } = useUsers();
     const enrollMutation = useEnrollStudent();
     const unenrollMutation = useUnenrollStudent();
     const [search, setSearch] = useState('');
+
+    const totalSessions = sessions.length;
+    const attendanceByStudent = useMemo(() => {
+        const map: Record<string, number> = {};
+        for (const session of sessions) {
+            for (const att of session.attendances || []) {
+                if (att.status) map[att.studentId] = (map[att.studentId] || 0) + 1;
+            }
+        }
+        return map;
+    }, [sessions]);
 
     const filteredStudents = useMemo(() => {
         return users.filter(s => {
@@ -276,18 +287,23 @@ export function AcademyStudents({ lessonId, students, canManage }: { lessonId: s
                         <TableRow className="bg-slate-50/50 border-none">
                             <TableHead className="font-bold py-4 pl-6 text-slate-700">Ad Soyad</TableHead>
                             <TableHead className="font-bold py-4 text-slate-700">Kayıt Tarihi</TableHead>
+                            <TableHead className="font-bold py-4 text-slate-700">Katılım / Devamsızlık</TableHead>
                             {canManage && <TableHead className="text-right font-bold py-4 pr-6 text-slate-700">İşlemler</TableHead>}
                         </TableRow>
                     </TableHeader>
                     <TableBody>
                         {students.length === 0 ? (
                             <TableRow>
-                                <TableCell colSpan={canManage ? 3 : 2} className="text-center py-12 text-gray-500 italic">
+                                <TableCell colSpan={canManage ? 4 : 3} className="text-center py-12 text-gray-500 italic">
                                     Bu derse kayıtlı öğrenci bulunmuyor.
                                 </TableCell>
                             </TableRow>
                         ) : (
-                            students.map((s) => (
+                            students.map((s) => {
+                                const attended = attendanceByStudent[s.studentId] || 0;
+                                const absent = totalSessions - attended;
+                                const rate = totalSessions > 0 ? Math.round((attended / totalSessions) * 100) : 0;
+                                return (
                                 <TableRow key={s.id} className="hover:bg-slate-50/50 transition-colors border-gray-50">
                                     <TableCell className="font-medium pl-6 py-4">
                                         <div className="flex flex-col">
@@ -296,6 +312,19 @@ export function AcademyStudents({ lessonId, students, canManage }: { lessonId: s
                                         </div>
                                     </TableCell>
                                     <TableCell className="text-slate-600 font-medium py-4">{new Date(s.joinedAt).toLocaleDateString('tr-TR')}</TableCell>
+                                    <TableCell className="py-4">
+                                        {totalSessions === 0 ? (
+                                            <span className="text-gray-400 text-sm italic">Oturum yok</span>
+                                        ) : (
+                                            <div className="flex items-center gap-3">
+                                                <div className="w-24 h-2 rounded-full bg-gray-100 overflow-hidden">
+                                                    <div className={`h-full rounded-full ${rate >= 70 ? 'bg-green-500' : rate >= 40 ? 'bg-amber-500' : 'bg-red-500'}`} style={{ width: `${rate}%` }} />
+                                                </div>
+                                                <span className="text-sm font-bold text-slate-700">%{rate}</span>
+                                                <Badge variant="outline" className="text-[10px] border-red-100 text-red-600 bg-red-50">{absent} devamsız</Badge>
+                                            </div>
+                                        )}
+                                    </TableCell>
                                     {canManage && (
                                         <TableCell className="text-right pr-6 py-4">
                                             <AlertDialog>
@@ -330,7 +359,8 @@ export function AcademyStudents({ lessonId, students, canManage }: { lessonId: s
                                         </TableCell>
                                     )}
                                 </TableRow>
-                            ))
+                                );
+                            })
                         )}
                     </TableBody>
                 </Table>

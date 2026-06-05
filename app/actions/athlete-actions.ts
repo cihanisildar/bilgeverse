@@ -7,6 +7,7 @@ import {
     AthleteMetricType,
     AthleteTrainingType,
     AttendanceStatus,
+    MembershipStatus,
     UserRole
 } from '@prisma/client';
 import { revalidatePath } from 'next/cache';
@@ -104,7 +105,15 @@ export async function getAthletes(branchId?: string) {
 export async function upsertAthleteProfile(data: {
     userId: string;
     branchIds: string[];
-    healthReportExpiry?: Date;
+    healthReportExpiry?: Date | null;
+    birthDate?: Date | null;
+    phone?: string | null;
+    parentName?: string | null;
+    parentPhone?: string | null;
+    membershipStatus?: MembershipStatus;
+    licenseNumber?: string | null;
+    licenseExpiry?: Date | null;
+    footballSchool?: boolean;
 }) {
     try {
         const session = await getServerSession(authOptions);
@@ -131,17 +140,29 @@ export async function upsertAthleteProfile(data: {
             });
         }
 
+        const scalarData = {
+            healthReportExpiry: data.healthReportExpiry,
+            birthDate: data.birthDate,
+            phone: data.phone,
+            parentName: data.parentName,
+            parentPhone: data.parentPhone,
+            membershipStatus: data.membershipStatus,
+            licenseNumber: data.licenseNumber,
+            licenseExpiry: data.licenseExpiry,
+            footballSchool: data.footballSchool,
+        };
+
         const profile = await prisma.athleteProfile.upsert({
             where: { userId: data.userId },
             create: {
                 userId: data.userId,
-                healthReportExpiry: data.healthReportExpiry,
+                ...scalarData,
                 branches: {
                     connect: data.branchIds.map(id => ({ id }))
                 }
             },
             update: {
-                healthReportExpiry: data.healthReportExpiry,
+                ...scalarData,
                 branches: {
                     set: data.branchIds.map(id => ({ id }))
                 }
@@ -169,6 +190,9 @@ export async function getTrainings(params: { branchId?: string; startDate?: Date
             },
             include: {
                 branch: true,
+                coach: {
+                    select: { id: true, firstName: true, lastName: true, username: true }
+                },
                 _count: {
                     select: { attendances: true }
                 }
@@ -191,6 +215,7 @@ export async function createTraining(data: {
     endTime?: string;
     location?: string;
     type: AthleteTrainingType;
+    coachId?: string | null;
 }) {
     try {
         const session = await getServerSession(authOptions);
@@ -368,7 +393,15 @@ export async function registerNewAthlete(data: {
     firstName: string;
     lastName: string;
     branchIds: string[];
-    healthReportExpiry?: Date;
+    healthReportExpiry?: Date | null;
+    birthDate?: Date | null;
+    phone?: string | null;
+    parentName?: string | null;
+    parentPhone?: string | null;
+    membershipStatus?: MembershipStatus;
+    licenseNumber?: string | null;
+    licenseExpiry?: Date | null;
+    footballSchool?: boolean;
 }) {
     try {
         const session = await getServerSession(authOptions);
@@ -406,6 +439,14 @@ export async function registerNewAthlete(data: {
                 data: {
                     userId: newUser.id,
                     healthReportExpiry: data.healthReportExpiry,
+                    birthDate: data.birthDate,
+                    phone: data.phone,
+                    parentName: data.parentName,
+                    parentPhone: data.parentPhone,
+                    membershipStatus: data.membershipStatus,
+                    licenseNumber: data.licenseNumber,
+                    licenseExpiry: data.licenseExpiry,
+                    footballSchool: data.footballSchool ?? false,
                     branches: {
                         connect: data.branchIds.map(id => ({ id }))
                     }
@@ -457,5 +498,28 @@ export async function deleteAthleteProfile(userId: string) {
     } catch (error) {
         console.error('Error deleting athlete profile:', error);
         return { error: 'Sporcu profili silinirken bir hata oluştu', data: null };
+    }
+}
+
+/** Coaches / staff who can be assigned as responsible for a training or match. */
+export async function getCoaches() {
+    try {
+        const coaches = await prisma.user.findMany({
+            where: {
+                isActive: true,
+                roles: { hasSome: [UserRole.ADMIN, UserRole.TUTOR, UserRole.ASISTAN, UserRole.BOARD_MEMBER] }
+            },
+            select: {
+                id: true,
+                firstName: true,
+                lastName: true,
+                username: true,
+            },
+            orderBy: { firstName: 'asc' }
+        });
+        return { error: null, data: coaches };
+    } catch (error) {
+        console.error('Error fetching coaches:', error);
+        return { error: 'Antrenörler yüklenirken bir hata oluştu', data: null };
     }
 }

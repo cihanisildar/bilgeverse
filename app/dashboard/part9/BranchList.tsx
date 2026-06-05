@@ -3,7 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Plus, Trophy, Pencil, Trash2 } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
+import toast from 'react-hot-toast';
 import { Badge } from '@/components/ui/badge';
 import {
     Dialog,
@@ -24,6 +24,7 @@ import {
     AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { useSportBranches, useUpsertSportBranch, useDeleteSportBranch } from '@/app/hooks/use-athlete-data';
+import { ReqMark, RequiredLegend } from './_components/ReqMark';
 
 interface Branch {
     id: string;
@@ -46,11 +47,9 @@ export default function BranchList() {
         description: ''
     });
 
-    const { toast } = useToast();
-
     const handleSaveBranch = async () => {
         if (!currentBranch.name) {
-            toast({ title: 'Hata', description: 'Grup adı boş olamaz', variant: 'destructive' });
+            toast.error('Grup adı boş olamaz');
             return;
         }
 
@@ -153,7 +152,7 @@ export default function BranchList() {
                     </DialogHeader>
                     <div className="space-y-4 py-4">
                         <div className="space-y-2">
-                            <label className="text-sm font-medium">Branş Adı</label>
+                            <label className="text-sm font-medium">Branş Adı <ReqMark /></label>
                             <Input
                                 placeholder="örn: Futbol"
                                 value={currentBranch.name}
@@ -168,6 +167,7 @@ export default function BranchList() {
                                 onChange={(e) => setCurrentBranch({ ...currentBranch, description: e.target.value })}
                             />
                         </div>
+                        <RequiredLegend />
                     </div>
                     <DialogFooter>
                         <Button variant="outline" onClick={() => setIsDialogOpen(false)}>İptal</Button>

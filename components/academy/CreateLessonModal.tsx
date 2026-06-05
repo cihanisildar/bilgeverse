@@ -20,8 +20,11 @@ export function CreateLessonModal({ children }: { children: React.ReactNode }) {
         const name = formData.get('name') as string;
         const description = formData.get('description') as string;
         const imageUrl = formData.get('imageUrl') as string;
+        const startDate = (formData.get('startDate') as string) || null;
+        const capacityRaw = formData.get('capacity') as string;
+        const capacity = capacityRaw ? parseInt(capacityRaw, 10) : null;
 
-        createMutation.mutate({ name, description, imageUrl }, {
+        createMutation.mutate({ name, description, imageUrl, startDate, capacity }, {
             onSuccess: (result) => {
                 if (!result.error) setOpen(false);
             }
@@ -49,6 +52,16 @@ export function CreateLessonModal({ children }: { children: React.ReactNode }) {
                         <div className="grid gap-2">
                             <Label htmlFor="description">Açıklama</Label>
                             <Textarea id="description" name="description" placeholder="Ders hakkında kısa bilgi..." />
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="grid gap-2">
+                                <Label htmlFor="startDate">Başlangıç Tarihi</Label>
+                                <Input id="startDate" name="startDate" type="date" />
+                            </div>
+                            <div className="grid gap-2">
+                                <Label htmlFor="capacity">Kontenjan</Label>
+                                <Input id="capacity" name="capacity" type="number" min="1" placeholder="Sınırsız" />
+                            </div>
                         </div>
                         <div className="grid gap-2">
                             <Label htmlFor="imageUrl">Görsel URL (İsteğe Bağlı)</Label>

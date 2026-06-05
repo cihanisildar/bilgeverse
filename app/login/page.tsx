@@ -24,7 +24,9 @@ function LoginForm() {
       return;
     }
     if (isAdmin) {
-      router.push('/dashboard/part7/admin');
+      // Admins land on the main dashboard (all sections) instead of the
+      // Bilgeverse admin panel, so no left sidebar opens on login.
+      router.push('/dashboard');
     } else if (isTutor) {
       router.push('/dashboard/part7/tutor');
     } else if (isStudent) {

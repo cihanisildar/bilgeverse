@@ -48,7 +48,7 @@ export function useCreatePart2Event() {
     const queryClient = useQueryClient();
 
     return useMutation({
-        mutationFn: createPart2Event,
+        mutationFn: (data: Parameters<typeof createPart2Event>[0]) => createPart2Event(data),
         onSuccess: (result) => {
             if (result.error) {
                 toast.error(result.error);
@@ -89,7 +89,7 @@ export function useDeletePart2Event() {
     const queryClient = useQueryClient();
 
     return useMutation({
-        mutationFn: deletePart2Event,
+        mutationFn: (eventId: string) => deletePart2Event(eventId),
         onSuccess: (result) => {
             if (result.error) {
                 toast.error(result.error);
@@ -108,7 +108,7 @@ export function useGeneratePart2EventQR() {
     const queryClient = useQueryClient();
 
     return useMutation({
-        mutationFn: generateQRCodeForPart2Event,
+        mutationFn: (eventId: string) => generateQRCodeForPart2Event(eventId),
         onSuccess: (result, eventId) => {
             if (result.error) {
                 toast.error(result.error);
@@ -128,7 +128,7 @@ export function useRegisterForPart2Event() {
     const queryClient = useQueryClient();
 
     return useMutation({
-        mutationFn: registerForPart2Event,
+        mutationFn: (eventId: string) => registerForPart2Event(eventId),
         onSuccess: (result, eventId) => {
             if (result.error) {
                 toast.error(result.error);
@@ -182,7 +182,7 @@ export function useCreatePart2EventType() {
     const queryClient = useQueryClient();
 
     return useMutation({
-        mutationFn: createPart2EventType,
+        mutationFn: (data: Parameters<typeof createPart2EventType>[0]) => createPart2EventType(data),
         onSuccess: (result) => {
             if (result.error) {
                 toast.error(result.error);
@@ -221,7 +221,7 @@ export function useDeletePart2EventType() {
     const queryClient = useQueryClient();
 
     return useMutation({
-        mutationFn: deletePart2EventType,
+        mutationFn: (eventTypeId: string) => deletePart2EventType(eventTypeId),
         onSuccess: (result) => {
             if (result.error) {
                 toast.error(result.error);

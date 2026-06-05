@@ -45,7 +45,7 @@ export function useCreateAttendanceSession() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: createAttendanceSession,
+    mutationFn: (data: Parameters<typeof createAttendanceSession>[0]) => createAttendanceSession(data),
     onSuccess: (result) => {
       if (result.error) {
         toast.error(result.error);
@@ -85,7 +85,7 @@ export function useDeleteAttendanceSession() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: deleteAttendanceSession,
+    mutationFn: (sessionId: string) => deleteAttendanceSession(sessionId),
     onSuccess: (result) => {
       if (result.error) {
         toast.error(result.error);
@@ -104,7 +104,7 @@ export function useGenerateQRCode() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: generateQRCodeForSession,
+    mutationFn: (sessionId: string) => generateQRCodeForSession(sessionId),
     onSuccess: (result, sessionId) => {
       if (result.error) {
         toast.error(result.error);
@@ -124,7 +124,7 @@ export function useCheckInToSession() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: checkInToSession,
+    mutationFn: (sessionId: string) => checkInToSession(sessionId),
     onSuccess: (result, sessionId) => {
       if (result.error) {
         toast.error(result.error);
@@ -165,7 +165,7 @@ export function useCheckAbsentStudents() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: checkAndNotifyAbsentStudents,
+    mutationFn: () => checkAndNotifyAbsentStudents(),
     onSuccess: (result) => {
       if (result.error) {
         toast.error(result.error);

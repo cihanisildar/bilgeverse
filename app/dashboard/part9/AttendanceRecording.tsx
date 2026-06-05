@@ -4,7 +4,6 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Check, X, ArrowLeft, Save, Trophy, Timer, Ruler, Users, CheckCircle, XCircle } from 'lucide-react';
-import { getTrainingDetails, recordAttendance, recordPerformance } from '@/app/actions/athlete-actions';
 import { toast } from 'react-hot-toast';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
@@ -74,10 +73,13 @@ export default function AttendanceRecording({ trainingId, onBack }: { trainingId
         });
 
         try {
-            const [attRes, perfRes] = await Promise.all([
-                attArray.length ? recordAttendance(trainingId, attArray) : Promise.resolve({ error: null }),
-                perfArray.length ? recordPerformance(trainingId, perfArray) : Promise.resolve({ error: null })
+            const results = await Promise.all([
+                attArray.length ? recordAttendanceMutation.mutateAsync({ trainingId, attendances: attArray }) : Promise.resolve({ error: null }),
+                perfArray.length ? recordPerformanceMutation.mutateAsync({ trainingId, performances: perfArray }) : Promise.resolve({ error: null })
             ]);
+
+            const attRes = results[0];
+            const perfRes = results[1];
 
             if (!attRes.error && !perfRes.error) {
                 toast.success('Yoklama ve performans verileri başarıyla kaydedildi');

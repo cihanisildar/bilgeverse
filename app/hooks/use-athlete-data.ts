@@ -13,9 +13,23 @@ import {
     getTrainingDetails,
     recordAttendance,
     recordPerformance,
-    registerNewAthlete
+    registerNewAthlete,
+    searchStudents
 } from '@/app/actions/athlete-actions';
 import { toast } from 'react-hot-toast';
+
+export function useSearchStudents(query: string) {
+    return useQuery({
+        queryKey: ['search-students', query],
+        queryFn: async () => {
+            if (!query || query.length < 2) return [];
+            const result = await searchStudents(query);
+            if (result.error) throw new Error(result.error);
+            return result.data || [];
+        },
+        enabled: query.length >= 2,
+    });
+}
 
 // --- Branch Hooks ---
 
@@ -33,7 +47,7 @@ export function useSportBranches() {
 export function useUpsertSportBranch() {
     const queryClient = useQueryClient();
     return useMutation({
-        mutationFn: upsertSportBranch,
+        mutationFn: (data: Parameters<typeof upsertSportBranch>[0]) => upsertSportBranch(data),
         onSuccess: (result) => {
             if (result.error) {
                 toast.error(result.error);
@@ -51,7 +65,7 @@ export function useUpsertSportBranch() {
 export function useDeleteSportBranch() {
     const queryClient = useQueryClient();
     return useMutation({
-        mutationFn: deleteSportBranch,
+        mutationFn: (id: Parameters<typeof deleteSportBranch>[0]) => deleteSportBranch(id),
         onSuccess: (result) => {
             if (result.error) {
                 toast.error(result.error);
@@ -82,7 +96,7 @@ export function useAthletes(branchId?: string) {
 export function useUpsertAthleteProfile() {
     const queryClient = useQueryClient();
     return useMutation({
-        mutationFn: upsertAthleteProfile,
+        mutationFn: (data: Parameters<typeof upsertAthleteProfile>[0]) => upsertAthleteProfile(data),
         onSuccess: (result) => {
             if (result.error) {
                 toast.error(result.error);
@@ -101,7 +115,7 @@ export function useUpsertAthleteProfile() {
 export function useRegisterNewAthlete() {
     const queryClient = useQueryClient();
     return useMutation({
-        mutationFn: registerNewAthlete,
+        mutationFn: (data: Parameters<typeof registerNewAthlete>[0]) => registerNewAthlete(data),
         onSuccess: (result) => {
             if (result.error) {
                 toast.error(result.error);
@@ -120,7 +134,7 @@ export function useRegisterNewAthlete() {
 export function useDeleteAthleteProfile() {
     const queryClient = useQueryClient();
     return useMutation({
-        mutationFn: deleteAthleteProfile,
+        mutationFn: (userId: Parameters<typeof deleteAthleteProfile>[0]) => deleteAthleteProfile(userId),
         onSuccess: (result) => {
             if (result.error) {
                 toast.error(result.error);
@@ -164,7 +178,7 @@ export function useTrainingDetails(trainingId: string) {
 export function useCreateTraining() {
     const queryClient = useQueryClient();
     return useMutation({
-        mutationFn: createTraining,
+        mutationFn: (data: Parameters<typeof createTraining>[0]) => createTraining(data),
         onSuccess: (result) => {
             if (result.error) {
                 toast.error(result.error);

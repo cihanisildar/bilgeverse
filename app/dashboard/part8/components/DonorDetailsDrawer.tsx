@@ -70,6 +70,9 @@ export default function DonorDetailsDrawer({ isOpen, onClose, donorId }: DonorDe
             toast.success("Bağış kaydı silindi");
             queryClient.invalidateQueries({ queryKey: ['donors'] });
             queryClient.invalidateQueries({ queryKey: ['donorDetails', donorId] });
+            queryClient.invalidateQueries({ queryKey: ['finance-summary'] });
+            queryClient.invalidateQueries({ queryKey: ['finance-transactions'] });
+            queryClient.invalidateQueries({ queryKey: ['monthly-report'] });
         }
         setDeletingId(null);
     };

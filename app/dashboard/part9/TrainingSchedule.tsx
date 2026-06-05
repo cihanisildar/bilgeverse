@@ -5,7 +5,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Plus } from 'lucide-react';
-import { createTraining } from '@/app/actions/athlete-actions';
 import { toast } from 'react-hot-toast';
 import { format, startOfMonth } from 'date-fns';
 import { tr } from 'date-fns/locale';
@@ -15,6 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
 import TrainingCalendar from './TrainingCalendar';
+import { ReqMark, RequiredLegend } from './_components/ReqMark';
 
 import { useTrainings, useSportBranches, useCreateTraining } from '@/app/hooks/use-athlete-data';
 
@@ -89,7 +89,7 @@ export default function TrainingSchedule({ onSelectSession }: { onSelectSession:
                     <div className="grid gap-4 py-4">
                         <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-2">
-                                <Label>Branş</Label>
+                                <Label>Branş <ReqMark /></Label>
                                 <Select value={newTraining.branchId} onValueChange={(v) => setNewTraining({ ...newTraining, branchId: v })}>
                                     <SelectTrigger>
                                         <SelectValue placeholder="Seçiniz" />
@@ -114,7 +114,7 @@ export default function TrainingSchedule({ onSelectSession }: { onSelectSession:
                         </div>
 
                         <div className="space-y-2">
-                            <Label>Başlık</Label>
+                            <Label>Başlık <ReqMark /></Label>
                             <Input
                                 placeholder="örn: Teknik Antrenman veya Dostluk Maçı"
                                 value={newTraining.title}
@@ -134,7 +134,7 @@ export default function TrainingSchedule({ onSelectSession }: { onSelectSession:
 
                         <div className="grid grid-cols-3 gap-4">
                             <div className="space-y-2">
-                                <Label>Tarih</Label>
+                                <Label>Tarih <ReqMark /></Label>
                                 <Input type="date" value={newTraining.date} onChange={(e) => setNewTraining({ ...newTraining, date: e.target.value })} />
                             </div>
                             <div className="space-y-2">
@@ -151,6 +151,8 @@ export default function TrainingSchedule({ onSelectSession }: { onSelectSession:
                             <Label>Konum</Label>
                             <Input value={newTraining.location} onChange={(e) => setNewTraining({ ...newTraining, location: e.target.value })} />
                         </div>
+
+                        <RequiredLegend />
                     </div>
 
                     <DialogFooter>

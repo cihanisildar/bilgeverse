@@ -16,7 +16,7 @@ export function useAdminPdfs(partId?: number) {
 export function useCreateAdminPdf() {
     const queryClient = useQueryClient();
     return useMutation({
-        mutationFn: createAdminPdf,
+        mutationFn: (data: Parameters<typeof createAdminPdf>[0]) => createAdminPdf(data),
         onSuccess: (result) => {
             if (result.error) {
                 toast.error(result.error);
@@ -52,7 +52,7 @@ export function useUpdateAdminPdf() {
 export function useDeleteAdminPdf() {
     const queryClient = useQueryClient();
     return useMutation({
-        mutationFn: deleteAdminPdf,
+        mutationFn: (id: string) => deleteAdminPdf(id),
         onSuccess: (result) => {
             if (result.error) {
                 toast.error(result.error);

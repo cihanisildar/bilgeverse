@@ -71,7 +71,7 @@ export function useRemoveAttendance() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: removeAttendance,
+    mutationFn: (attendanceId: string) => removeAttendance(attendanceId),
     onSuccess: (result, attendanceId) => {
       if (result.error) {
         toast.error(result.error);

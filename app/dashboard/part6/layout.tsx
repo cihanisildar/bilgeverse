@@ -1,4 +1,5 @@
 import ProtectedPartLayout from '@/app/components/auth/ProtectedPartLayout';
+import SocialShell from './_components/SocialShell';
 import React from 'react';
 
 export default async function Part6Layout({
@@ -8,7 +9,7 @@ export default async function Part6Layout({
 }) {
     return (
         <ProtectedPartLayout partId={6}>
-            {children}
+            <SocialShell>{children}</SocialShell>
         </ProtectedPartLayout>
     );
 }

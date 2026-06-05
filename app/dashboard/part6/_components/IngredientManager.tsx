@@ -11,6 +11,16 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import toast from 'react-hot-toast';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 
 import { useSocialIngredients, useCreateSocialIngredient, useUpdateSocialIngredient, useDeleteSocialIngredient } from '@/app/hooks/use-social';
 import { ContentIngredient } from '@/types/social';
@@ -27,6 +37,7 @@ export default function IngredientManager() {
 
     const [isDialogOpen, setIsDialogOpen] = useState(false);
     const [editingIngredient, setEditingIngredient] = useState<ContentIngredient | null>(null);
+    const [ingredientToDelete, setIngredientToDelete] = useState<string | null>(null);
 
     // Form states
     const [title, setTitle] = useState('');
@@ -53,18 +64,30 @@ export default function IngredientManager() {
 
         const payload = { title, content, type };
 
-        if (editingIngredient) {
-            await updateIngredientMutation.mutateAsync({ id: editingIngredient.id, data: payload });
-        } else {
-            await createIngredientMutation.mutateAsync(payload);
+        try {
+            if (editingIngredient) {
+                await updateIngredientMutation.mutateAsync({ id: editingIngredient.id, data: payload });
+                toast.success('Bileşen başarıyla güncellendi.');
+            } else {
+                await createIngredientMutation.mutateAsync(payload);
+                toast.success('Bileşen başarıyla oluşturuldu.');
+            }
+            setIsDialogOpen(false);
+        } catch (error) {
+            toast.error('İşlem sırasında bir hata oluştu.');
         }
-
-        setIsDialogOpen(false);
     };
 
-    const handleDelete = async (id: string) => {
-        if (!confirm('Bu bileşeni silmek istediğinize emin misiniz?')) return;
-        await deleteIngredientMutation.mutateAsync(id);
+    const confirmDelete = async () => {
+        if (!ingredientToDelete) return;
+        try {
+            await deleteIngredientMutation.mutateAsync(ingredientToDelete);
+            toast.success('Bileşen başarıyla silindi.');
+        } catch (error) {
+            toast.error('Bileşen silinirken bir hata oluştu.');
+        } finally {
+            setIngredientToDelete(null);
+        }
     };
 
     const handleCopy = (content: string, title: string) => {
@@ -189,7 +212,7 @@ export default function IngredientManager() {
                                             variant="ghost"
                                             size="icon"
                                             className="h-8 w-8 text-rose-600 hover:bg-rose-50"
-                                            onClick={() => handleDelete(ingredient.id)}
+                                            onClick={() => setIngredientToDelete(ingredient.id)}
                                             disabled={deleteIngredientMutation.isPending || createIngredientMutation.isPending || updateIngredientMutation.isPending}
                                         >
                                             {deleteIngredientMutation.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
@@ -264,6 +287,23 @@ export default function IngredientManager() {
                     </form>
                 </DialogContent>
             </Dialog>
+
+            <AlertDialog open={!!ingredientToDelete} onOpenChange={(open) => !open && setIngredientToDelete(null)}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Bileşeni silmek istediğinize emin misiniz?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            Bu bileşeni silmek istediğinize emin misiniz? Bu işlem geri alınamaz.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel>Vazgeç</AlertDialogCancel>
+                        <AlertDialogAction onClick={confirmDelete} className="bg-rose-600 hover:bg-rose-700 text-white">
+                            {deleteIngredientMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Sil'}
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
         </div>
     );
 }

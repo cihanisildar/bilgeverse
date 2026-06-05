@@ -1,5 +1,6 @@
 import ProtectedPartLayout from '@/app/components/auth/ProtectedPartLayout';
 import React from 'react';
+import SportsShell from './_components/SportsShell';
 
 export default async function Part9Layout({
     children,
@@ -8,7 +9,7 @@ export default async function Part9Layout({
 }) {
     return (
         <ProtectedPartLayout partId={9}>
-            {children}
+            <SportsShell>{children}</SportsShell>
         </ProtectedPartLayout>
     );
 }

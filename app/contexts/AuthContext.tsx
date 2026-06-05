@@ -184,7 +184,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         const sessionUser = currentSession?.user as any;
         const roles: string[] = sessionUser?.roles || (sessionUser?.role ? [sessionUser.role] : []);
         if (roles.includes('ADMIN')) {
-          defaultRedirect = '/dashboard/part7/admin';
+          // Admins land on the main dashboard (all sections), not the Bilgeverse
+          // admin panel, to avoid the confusing left sidebar on login.
+          defaultRedirect = '/dashboard';
         } else if (roles.includes('TUTOR') || roles.includes('ASISTAN')) {
           defaultRedirect = '/dashboard/part7/tutor';
         } else if (roles.includes('STUDENT')) {
