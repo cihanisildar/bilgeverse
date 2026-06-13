@@ -21,6 +21,7 @@ import { useToast } from "@/hooks/use-toast";
 import {
   AlertCircle,
   Award,
+  BookOpen,
   Calendar,
   ChevronDown,
   Clock,
@@ -731,6 +732,12 @@ export default function TutorEventsPage() {
               </div>
             </div>
             <div className="flex flex-col sm:flex-row gap-3">
+              <Button asChild variant="secondary" className="bg-white/10 backdrop-blur-sm text-white border-white/20 hover:bg-white/20">
+                <Link href="/dashboard/part7/tutor/syllabus">
+                  <BookOpen className="h-4 w-4 mr-2" />
+                  Müfredat
+                </Link>
+              </Button>
               <Button asChild variant="secondary" className="bg-white/10 backdrop-blur-sm text-white border-white/20 hover:bg-white/20">
                 <Link href="/dashboard/part7/tutor/events/new">
                   <Plus className="h-4 w-4 mr-2" />

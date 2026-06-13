@@ -5,6 +5,7 @@ import { useAuth } from '@/app/contexts/AuthContext';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { Skeleton } from '@/components/ui/skeleton';
+import WishBox from './WishBox';
 
 type ItemRequest = {
   id: string;
@@ -211,7 +212,7 @@ export default function StudentRequests() {
         <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6 mb-10">
           <div className="space-y-2">
             <h1 className="text-4xl lg:text-5xl font-bold bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 bg-clip-text text-transparent">
-              Taleplerim
+              Mağaza Taleplerim
             </h1>
             <p className="text-lg text-gray-600 max-w-2xl">
               Mağazadan talep ettiğiniz ürünleri buradan takip edebilir, durumlarını görüntüleyebilirsiniz.
@@ -480,7 +481,10 @@ export default function StudentRequests() {
             </div>
           </div>
         </div>
+
+        {/* Direct wish & request box to management */}
+        <WishBox />
       </div>
     </div>
   );
-} 
+}

@@ -8,9 +8,9 @@ import { useEffect, useState } from "react";
 import {
   Award,
   Bell,
+  BookOpen,
   Calendar,
   ClipboardCheck,
-  Plus,
   Search,
   UserPlus,
   ArrowRight,
@@ -181,8 +181,8 @@ function RecentTransactions() {
 
 const quickActions = [
   {
-    label: "Yoklama Al",
-    description: "Öğrenci katılımını kaydet",
+    label: "Yoklamalar",
+    description: "Yoklama al ve katılımı izle",
     href: "/dashboard/part7/tutor/attendance",
     icon: ClipboardCheck,
     gradient: "from-blue-500 to-cyan-500",
@@ -220,8 +220,8 @@ const quickActions = [
     iconColor: "text-indigo-600",
   },
   {
-    label: "Etkinlikler",
-    description: "Etkinlikleri görüntüle",
+    label: "Etkinlik Yönetimi",
+    description: "Etkinlikleri görüntüle ve oluştur",
     href: "/dashboard/part7/tutor/events",
     icon: Calendar,
     gradient: "from-orange-500 to-amber-500",
@@ -233,10 +233,10 @@ const quickActions = [
     iconColor: "text-orange-600",
   },
   {
-    label: "Etkinlik Oluştur",
-    description: "Yeni etkinlik planla",
-    href: "/dashboard/part7/tutor/events/new",
-    icon: Plus,
+    label: "Müfredat",
+    description: "Buluşma içeriklerini yönet",
+    href: "/dashboard/part7/tutor/syllabus",
+    icon: BookOpen,
     gradient: "from-pink-500 to-rose-500",
     bg: "from-pink-50 to-rose-50",
     border: "border-pink-100",

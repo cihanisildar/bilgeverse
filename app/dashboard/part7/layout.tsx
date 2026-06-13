@@ -71,14 +71,13 @@ export default function AuthenticatedLayout({
   const tutorLinks: NavLink[] = [
     { href: '/dashboard/part7/tutor', label: 'Rehber Paneli', icon: <LayoutDashboard className="h-5 w-5" /> },
     { href: '/dashboard/part7/tutor/students', label: 'Grubum', icon: <Users className="h-5 w-5" /> },
-    { href: '/dashboard/part7/tutor/education', label: 'Eğitim İçerikleri', icon: <BookOpen className="h-5 w-5" /> },
     { href: '/dashboard/part7/tutor/leaderboard', label: 'Liderlik Tablosu', icon: <Trophy className="h-5 w-5" /> },
     { href: '/dashboard/part7/tutor/workshops', label: 'Atölyeler', icon: <Grid3x3 className="h-5 w-5" /> },
     { isSeparator: true },
     { href: '/dashboard/part7/tutor/weekly-reports', label: 'Haftalık İlerleme Raporu', icon: <FileText className="h-5 w-5" /> },
     { href: '/dashboard/part7/tutor/tips', label: 'Nasıl Bilge Para Kazanılır', icon: <TrendingUp className="h-5 w-5" /> },
     { href: '/dashboard/part7/tutor/store', label: 'Öğrenci Mağazası', icon: <ShoppingCart className="h-5 w-5" /> },
-    ...(isInAcademy ? [{ href: '/dashboard/part7/student/academy', label: 'Akademi', icon: <GraduationCap className="h-5 w-5" /> } as NavLink] : []),
+    ...(isInAcademy ? [{ href: '/dashboard/part7/tutor/academy', label: 'Akademi', icon: <GraduationCap className="h-5 w-5" /> } as NavLink] : []),
     ...(hasBoardMember ? [{ href: '/dashboard/part1', label: 'Yönetim Kurulu', icon: <Building2 className="h-5 w-5" /> } as NavLink] : []),
     { href: '/dashboard/part7/tutor/settings', label: 'Ayarlar', icon: <Settings className="h-5 w-5" /> },
   ];
@@ -160,7 +159,7 @@ export default function AuthenticatedLayout({
 
   const NavigationLinks = ({ forceExpanded = false }: { forceExpanded?: boolean }) => (
     <ul className="space-y-1">
-      {(!isStudent || isBoardMember) && (
+      {(isAdmin || isBoardMember) && (
         <li>
           <Link
             href="/dashboard"

@@ -18,9 +18,11 @@ import {
   ArrowLeft,
   Loader2,
   AlertCircle,
+  CalendarClock,
 } from "lucide-react";
 import Link from "next/link";
 import toast from "react-hot-toast";
+import ParticipationOverview from "./ParticipationOverview";
 
 interface Student {
   id: string;
@@ -186,7 +188,7 @@ export default function TutorAttendancePage() {
             <div className="p-2 bg-blue-100 rounded-lg">
               <ClipboardCheck className="h-6 w-6 text-blue-600" />
             </div>
-            <h1 className="text-2xl font-bold text-gray-800">Yoklama Al</h1>
+            <h1 className="text-2xl font-bold text-gray-800">Yoklamalar</h1>
           </div>
           <p className="text-gray-500 ml-14">{dateStr}</p>
         </div>
@@ -202,6 +204,18 @@ export default function TutorAttendancePage() {
         {/* Student List */}
         <Card className="border-0 shadow-xl mb-6">
           <CardHeader className="pb-4 border-b border-gray-100">
+            <div className="flex justify-end mb-3">
+              <Link href="/dashboard/part7/tutor/weekly-attendance">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="border-blue-200 text-blue-700 hover:bg-blue-50"
+                >
+                  <CalendarClock className="h-4 w-4 mr-2" />
+                  Telafi Yoklamalar
+                </Button>
+              </Link>
+            </div>
             <div className="flex items-center justify-between">
               <CardTitle className="flex items-center gap-2 text-gray-800">
                 <Users className="h-5 w-5 text-blue-600" />
@@ -311,6 +325,9 @@ export default function TutorAttendancePage() {
             {selected.size} öğrenci işaretlendi
           </p>
         )}
+
+        {/* Student participation rates & consecutive-absence warnings */}
+        <ParticipationOverview />
       </div>
     </div>
   );
