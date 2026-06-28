@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import { useAuth } from '@/app/contexts/AuthContext';
 import { PeriodStatus } from '@prisma/client';
-import { Clock, Plus, Play, Pause, Archive, Calendar, BarChart3, Users, Activity, Trash2, TrendingUp, AlertTriangle, Edit, Save, X } from 'lucide-react';
+import { Clock, Plus, Play, Pause, Archive, Calendar, BarChart3, Users, Activity, Trash2, TrendingUp, AlertTriangle, Edit, Save, X, Download } from 'lucide-react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -353,6 +353,36 @@ export default function PeriodsPage() {
       setError('Dönem öğrencileri yüklenemedi');
     } finally {
       setManageLoading(false);
+    }
+  };
+
+  // Download every record of a period as a multi-sheet Excel file.
+  const handleExportPeriod = async (period: Period) => {
+    setOperationLoading(prev => ({ ...prev, [`export-${period.id}`]: true }));
+    try {
+      const response = await fetch(`/api/admin/periods/${period.id}/export`);
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        throw new Error(data.error || 'Dışa aktarma başarısız oldu');
+      }
+      const blob = await response.blob();
+      // Prefer the filename the server set; fall back to a safe local name.
+      const disposition = response.headers.get('Content-Disposition') || '';
+      const match = disposition.match(/filename\*=UTF-8''([^;]+)/);
+      const filename = match ? decodeURIComponent(match[1]) : `${period.name}_kayitlar.xlsx`;
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Error exporting period:', error);
+      setError(error instanceof Error ? error.message : 'Dışa aktarma başarısız oldu');
+    } finally {
+      setOperationLoading(prev => ({ ...prev, [`export-${period.id}`]: false }));
     }
   };
 
@@ -925,6 +955,26 @@ export default function PeriodsPage() {
                           >
                             <Users className="h-3 w-3" />
                             Öğrenciler
+                          </button>
+                        )}
+                        {editingPeriod !== period.id && (
+                          <button
+                            onClick={() => handleExportPeriod(period)}
+                            disabled={operationLoading[`export-${period.id}`]}
+                            className="flex items-center gap-1 px-3 py-2 bg-emerald-100 text-emerald-700 rounded-lg hover:bg-emerald-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-xs font-medium"
+                            title="Bu döneme ait tüm kayıtları Excel olarak indir"
+                          >
+                            {operationLoading[`export-${period.id}`] ? (
+                              <>
+                                <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-emerald-700"></div>
+                                Hazırlanıyor...
+                              </>
+                            ) : (
+                              <>
+                                <Download className="h-3 w-3" />
+                                Excel İndir
+                              </>
+                            )}
                           </button>
                         )}
                         {period.status !== 'ACTIVE' && (
