@@ -4,6 +4,7 @@ import { getServerSession } from 'next-auth';
 import { UserRole } from '@prisma/client';
 import { hash } from 'bcryptjs';
 import { authOptions } from '../../auth/[...nextauth]/auth.config';
+import { getActivePeriod } from '@/lib/periods';
 
 // GET - Fetch all registration requests
 export async function GET(request: NextRequest) {
@@ -88,6 +89,16 @@ export async function POST(request: NextRequest) {
           roles: [registrationRequest.requestedRole],
         }
       });
+
+      // If the new user is a student, add them to the active period (if any)
+      if (registrationRequest.requestedRole === UserRole.STUDENT) {
+        const activePeriod = await getActivePeriod();
+        if (activePeriod) {
+          await prisma.periodStudent.create({
+            data: { periodId: activePeriod.id, studentId: newUser.id }
+          });
+        }
+      }
 
       // Update the registration request status
       await prisma.registrationRequest.update({

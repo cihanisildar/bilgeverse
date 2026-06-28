@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { UserRole } from '@prisma/client';
 import { getUserFromRequest, isAuthenticated, isStudent } from '@/lib/server-auth';
+import { requireActivePeriod, periodStudentWhere } from '@/lib/periods';
 
 export const dynamic = 'force-dynamic';
 
@@ -13,10 +14,12 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Get all students with their points
+    // Get students who are members of the active period, with their points
+    const activePeriod = await requireActivePeriod();
     const students = await prisma.user.findMany({
-      where: { 
-        role: UserRole.STUDENT 
+      where: {
+        role: UserRole.STUDENT,
+        ...periodStudentWhere(activePeriod.id)
       },
       select: {
         id: true,

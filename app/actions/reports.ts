@@ -5,6 +5,7 @@ import { authOptions } from '@/app/api/auth/[...nextauth]/auth.config';
 import prisma from '@/lib/prisma';
 import { UserRole } from '@prisma/client';
 import { startOfWeek, endOfWeek } from 'date-fns';
+import { getActivePeriod, periodStudentWhere } from '@/lib/periods';
 import {
     WeeklyParticipationReport,
     SyllabusTrackingReport,
@@ -385,9 +386,13 @@ export async function getAttendanceAlertsReport(): Promise<BaseReportResponse<At
             select: { id: true, title: true, sessionDate: true, createdById: true },
         });
 
-        // Get all students with their participation data
+        // Get students (members of the active period) with their participation data
+        const activePeriod = await getActivePeriod();
         const students = await prisma.user.findMany({
-            where: { roles: { has: UserRole.STUDENT } },
+            where: {
+                roles: { has: UserRole.STUDENT },
+                ...(activePeriod ? periodStudentWhere(activePeriod.id) : { deletedAt: null }),
+            },
             select: {
                 id: true,
                 firstName: true,

@@ -4,6 +4,7 @@ import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/app/api/auth/[...nextauth]/auth.config';
 import prisma from '@/lib/prisma';
 import { UserRole } from '@prisma/client';
+import { requireActivePeriod, periodStudentWhere } from '@/lib/periods';
 
 // Helper to get current week
 function getCurrentWeek(): { start: Date; end: Date } {
@@ -34,6 +35,7 @@ export async function GET() {
         }
 
         const currentWeek = getCurrentWeek();
+        const activePeriod = await requireActivePeriod();
 
         // Get all tutors with their students
         const tutors = await prisma.user.findMany({
@@ -51,6 +53,7 @@ export async function GET() {
                     where: {
                         isActive: true,
                         role: UserRole.STUDENT,
+                        ...periodStudentWhere(activePeriod.id),
                     },
                     select: {
                         id: true,

@@ -7,6 +7,7 @@ import { revalidatePath } from 'next/cache';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/app/api/auth/[...nextauth]/auth.config';
 import { hasRole } from '@/app/lib/auth-utils';
+import { getActivePeriod } from '@/lib/periods';
 
 export async function createStudentManual(formData: any) {
     try {
@@ -82,6 +83,14 @@ export async function createStudentManual(formData: any) {
                     status: OrientationStatus.ONGOING,
                 }
             });
+
+            // 4. Add the new student to the active period (if any)
+            const activePeriod = await getActivePeriod();
+            if (activePeriod) {
+                await tx.periodStudent.create({
+                    data: { periodId: activePeriod.id, studentId: newUser.id }
+                });
+            }
 
             return newUser;
         });
@@ -229,6 +238,7 @@ export async function getOrientationStudents() {
             where: {
                 role: UserRole.STUDENT,
                 orientationStatus: OrientationStatus.ONGOING,
+                deletedAt: null,
             },
             include: {
                 orientationProcess: true,

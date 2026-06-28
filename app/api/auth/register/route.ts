@@ -4,6 +4,7 @@ import { UserRole } from '@prisma/client';
 import { getServerSession } from 'next-auth';
 import bcrypt from 'bcryptjs';
 import { authOptions } from '../[...nextauth]/auth.config';
+import { getActivePeriod } from '@/lib/periods';
 
 export const dynamic = 'force-dynamic';
 
@@ -200,6 +201,16 @@ export async function POST(request: NextRequest) {
             tutorId: newUser.id,
           }
         });
+      }
+
+      // If the new user is a student, add them to the active period (if any)
+      if (role === UserRole.STUDENT) {
+        const activePeriod = await getActivePeriod();
+        if (activePeriod) {
+          await tx.periodStudent.create({
+            data: { periodId: activePeriod.id, studentId: newUser.id }
+          });
+        }
       }
 
       return newUser;

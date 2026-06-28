@@ -4,7 +4,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "../../auth/[...nextauth]/auth.config";
 import { UserRole } from "@prisma/client";
 import { calculateMultipleUserPoints, calculateUserExperience } from "@/lib/points";
-import { requireActivePeriod } from "@/lib/periods";
+import { requireActivePeriod, periodStudentWhere } from "@/lib/periods";
 
 export const dynamic = 'force-dynamic';
 
@@ -32,6 +32,7 @@ export async function GET() {
     const students = await prisma.user.findMany({
       where: {
         role: UserRole.STUDENT,
+        ...periodStudentWhere(activePeriod.id),
       },
       select: {
         id: true,

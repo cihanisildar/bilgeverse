@@ -37,8 +37,22 @@ model Period {
   rollbacks              TransactionRollback[]   @relation("PeriodRollbacks")
   weeklyReports          WeeklyReport[]          @relation("PeriodWeeklyReports")
   wishes                 Wish[]                  @relation("PeriodWishes")
+  periodStudents         PeriodStudent[]         @relation("PeriodStudents")
 
   @@index([status])
+}
+
+model PeriodStudent {
+  id        String   @id @default(uuid())
+  periodId  String
+  studentId String
+  joinedAt  DateTime @default(now())
+  period    Period   @relation("PeriodStudents", fields: [periodId], references: [id], onDelete: Cascade)
+  student   User     @relation("StudentPeriods", fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([periodId, studentId])
+  @@index([periodId])
+  @@index([studentId])
 }
 
 model User {
@@ -64,6 +78,8 @@ model User {
   isActive                      Boolean                   @default(true)
   statusChangedAt               DateTime?
   statusChangedBy               String?
+  deletedAt                     DateTime?
+  studentPeriods                PeriodStudent[]           @relation("StudentPeriods")
   absenceNotificationsAsStudent AbsenceNotification[]     @relation("StudentAbsenceNotifications")
   absenceNotificationsAsTutor   AbsenceNotification[]     @relation("TutorAbsenceNotifications")
   createdAnnouncements          Announcement[]            @relation("AdminAnnouncements")

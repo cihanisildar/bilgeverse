@@ -35,6 +35,12 @@ export const authOptions: AuthOptions = {
             throw new Error("Invalid username or password");
           }
 
+          // Soft-deleted users cannot log in
+          if (user.deletedAt) {
+            console.error('Deleted user attempted login:', credentials.username);
+            throw new Error("Invalid username or password");
+          }
+
           console.log('User found, checking password...');
           const isValidPassword = await bcrypt.compare(credentials.password, user.password);
 

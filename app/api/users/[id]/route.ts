@@ -378,123 +378,19 @@ export async function DELETE(
       );
     }
 
-    // Delete all related records in a transaction with increased timeout
-    await prisma.$transaction(async (tx) => {
-      // Delete all points transactions where user is either student or tutor
-      await tx.pointsTransaction.deleteMany({
-        where: {
-          OR: [
-            { studentId: userId },
-            { tutorId: userId }
-          ]
-        }
-      });
-
-      // Delete all experience transactions where user is either student or tutor
-      await tx.experienceTransaction.deleteMany({
-        where: {
-          OR: [
-            { studentId: userId },
-            { tutorId: userId }
-          ]
-        }
-      });
-
-      // Delete all item requests where user is either student or tutor
-      await tx.itemRequest.deleteMany({
-        where: {
-          OR: [
-            { studentId: userId },
-            { tutorId: userId }
-          ]
-        }
-      });
-
-      // Store items are now global, so we don't delete them when deleting a tutor
-      // The following line was causing the error because tutorId field was removed from StoreItem
-      // await tx.storeItem.deleteMany({
-      //   where: { tutorId: userId }
-      // });
-
-      // Delete all event participants records
-      await tx.eventParticipant.deleteMany({
-        where: { userId: userId }
-      });
-
-      // Delete all events created by this user
-      await tx.event.deleteMany({
-        where: { createdById: userId }
-      });
-
-      // Delete all events created for this tutor
-      await tx.event.deleteMany({
-        where: { createdForTutorId: userId }
-      });
-
-      // Delete all registration requests processed by this user
-      await tx.registrationRequest.updateMany({
-        where: { processedById: userId },
-        data: { processedById: null }
-      });
-
-      // Delete all student notes where user is either student or tutor
-      await tx.studentNote.deleteMany({
-        where: {
-          OR: [
-            { studentId: userId },
-            { tutorId: userId }
-          ]
-        }
-      });
-
-      // Delete all student reports where user is either student or tutor
-      await tx.studentReport.deleteMany({
-        where: {
-          OR: [
-            { studentId: userId },
-            { tutorId: userId }
-          ]
-        }
-      });
-
-      // Delete all wishes created by this student
-      await tx.wish.deleteMany({
-        where: { studentId: userId }
-      });
-
-      // Delete all point earning cards created by this admin
-      await tx.pointEarningCard.deleteMany({
-        where: { createdById: userId }
-      });
-
-      // Remove tutor reference from any students and clear their studentClassroomId
-      await tx.user.updateMany({
-        where: { tutorId: userId },
-        data: { tutorId: null, studentClassroomId: null }
-      });
-
-      // Remove studentClassroomId from any students in this user's classroom
-      await tx.user.updateMany({
-        where: {
-          classroomStudents: {
-            tutorId: userId
-          }
-        },
-        data: { studentClassroomId: null }
-      });
-
-      // Delete the classroom if user is a tutor
-      await tx.classroom.deleteMany({
-        where: { tutorId: userId }
-      });
-
-      // Finally delete the user
-      await tx.user.delete({
-        where: { id: userId }
-      });
-    }, {
-      maxWait: 20000, // 20 seconds max wait time
-      timeout: 30000, // 30 seconds timeout
+    // SOFT DELETE: We never hard-delete users, because that would also wipe all of
+    // their historical period data (points/experience/notes/reports/wishes etc.).
+    // Instead we mark them as deleted + inactive. All historical records and their
+    // period memberships are preserved, so past periods stay intact (no data loss).
+    // The `deletedAt: null` filter used across listings hides them from current views.
+    await prisma.user.update({
+      where: { id: userId },
+      data: {
+        deletedAt: new Date(),
+        isActive: false,
+        statusChangedAt: new Date(),
+        statusChangedBy: session.user.id
+      }
     });
 
     return NextResponse.json(

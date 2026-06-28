@@ -3,7 +3,7 @@ import prisma from '@/lib/prisma';
 import { TransactionType, UserRole } from '@prisma/client';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '../auth/[...nextauth]/auth.config';
-import { requireActivePeriod } from '@/lib/periods';
+import { requireActivePeriod, periodStudentWhere } from '@/lib/periods';
 import { calculateUserPoints } from '@/lib/points';
 
 export const dynamic = 'force-dynamic';
@@ -49,11 +49,12 @@ export async function POST(request: NextRequest) {
 
     // Use Prisma transaction
     const result = await prisma.$transaction(async (tx) => {
-      // Check if student exists and is actually a student
+      // Check if student exists, is a student, and is a member of the active period
       const student = await tx.user.findFirst({
         where: {
           id: studentId,
-          role: UserRole.STUDENT
+          role: UserRole.STUDENT,
+          ...periodStudentWhere(activePeriod.id)
         }
       });
 

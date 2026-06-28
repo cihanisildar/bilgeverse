@@ -4,7 +4,7 @@ import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/app/api/auth/[...nextauth]/auth.config';
 import prisma from '@/lib/prisma';
 import { UserRole, CheckInMethod, AttendanceSessionStatus, TransactionType } from '@prisma/client';
-import { requireActivePeriod } from '@/lib/periods';
+import { requireActivePeriod, getActivePeriod, periodStudentWhere } from '@/lib/periods';
 import crypto from 'crypto';
 
 export async function getAttendanceSessions() {
@@ -761,6 +761,9 @@ export async function getTutorStudents() {
       } | null;
     }> = [];
 
+    const activePeriod = await getActivePeriod();
+    const periodFilter = activePeriod ? periodStudentWhere(activePeriod.id) : { deletedAt: null };
+
     if (isTutor || isAdmin) {
       // Both admins and tutors see only THEIR own students (where they are the tutor)
       students = await prisma.user.findMany({
@@ -768,6 +771,7 @@ export async function getTutorStudents() {
           tutorId: userNode.id,
           roles: { has: UserRole.STUDENT },
           isActive: true,
+          ...periodFilter,
         },
         select: {
           id: true,
@@ -795,6 +799,7 @@ export async function getTutorStudents() {
             tutorId: userNode.assistedTutorId,
             roles: { has: UserRole.STUDENT },
             isActive: true,
+            ...periodFilter,
           },
           select: {
             id: true,

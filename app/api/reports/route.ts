@@ -4,7 +4,7 @@ import { UserRole } from '@prisma/client';
 import { getServerSession } from 'next-auth';
 import logger from '@/lib/logger';
 import { authOptions } from '../auth/[...nextauth]/auth.config';
-import { requireActivePeriod } from '@/lib/periods';
+import { requireActivePeriod, periodStudentWhere } from '@/lib/periods';
 
 export const dynamic = 'force-dynamic';
 
@@ -101,12 +101,15 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Check if the student exists and is active before creating a report
+    const activePeriod = await requireActivePeriod();
+
+    // Check if the student exists, is active, and is a member of the active period
     const student = await prisma.user.findFirst({
       where: {
         id: studentId,
         role: UserRole.STUDENT,
-        isActive: true
+        isActive: true,
+        ...periodStudentWhere(activePeriod.id)
       },
       select: { id: true }
     });
@@ -117,8 +120,6 @@ export async function POST(request: NextRequest) {
         { status: 404 }
       );
     }
-
-    const activePeriod = await requireActivePeriod();
 
     const report = await prisma.studentReport.create({
       data: {

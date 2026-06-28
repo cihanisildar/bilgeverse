@@ -4,7 +4,7 @@ import { UserRole } from '@prisma/client';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '../auth/[...nextauth]/auth.config';
 import { calculateMultipleUserPoints, calculateMultipleUserExperience } from '@/lib/points';
-import { requireActivePeriod } from '@/lib/periods';
+import { requireActivePeriod, periodStudentWhere } from '@/lib/periods';
 
 export const dynamic = 'force-dynamic';
 
@@ -38,10 +38,11 @@ export async function GET(request: NextRequest) {
     // Get active period
     const activePeriod = await requireActivePeriod();
 
-    // Determine filter
+    // Determine filter (only students who are members of the active period)
     const whereClause: any = {
       role: UserRole.STUDENT,
-      isActive: true
+      isActive: true,
+      ...periodStudentWhere(activePeriod.id)
     };
 
     if (scope === 'group') {

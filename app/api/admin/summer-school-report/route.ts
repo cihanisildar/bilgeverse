@@ -3,7 +3,7 @@ import prisma from '@/lib/prisma';
 import { UserRole } from '@prisma/client';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '../../auth/[...nextauth]/auth.config';
-import { getActivePeriod } from '@/lib/periods';
+import { getActivePeriod, periodStudentWhere } from '@/lib/periods';
 
 export const dynamic = 'force-dynamic';
 
@@ -59,7 +59,8 @@ export async function GET(request: NextRequest) {
         students: {
           where: {
             roles: { has: UserRole.STUDENT },
-            isActive: true
+            isActive: true,
+            ...periodStudentWhere(activePeriod.id)
           },
           select: {
             id: true,
@@ -78,9 +79,9 @@ export async function GET(request: NextRequest) {
       }
     });
 
-    // Get all students with calculated stats from transactions
+    // Get all students (members of the active period) with calculated stats from transactions
     const studentsRaw = await prisma.user.findMany({
-      where: { roles: { has: UserRole.STUDENT } },
+      where: { roles: { has: UserRole.STUDENT }, ...periodStudentWhere(activePeriod.id) },
       select: {
         id: true,
         username: true,

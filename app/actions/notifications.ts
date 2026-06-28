@@ -4,6 +4,7 @@ import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/app/api/auth/[...nextauth]/auth.config';
 import prisma from '@/lib/prisma';
 import { NotificationType } from '@prisma/client';
+import { getActivePeriod, periodStudentWhere } from '@/lib/periods';
 
 export async function getNotifications() {
   try {
@@ -163,11 +164,13 @@ export async function checkAndNotifyAbsentStudents() {
       },
     });
 
-    // Get all students
+    // Get students who are members of the active period
+    const activePeriod = await getActivePeriod();
     const students = await prisma.user.findMany({
       where: {
         role: 'STUDENT',
         isActive: true,
+        ...(activePeriod ? periodStudentWhere(activePeriod.id) : { deletedAt: null }),
       },
       include: {
         tutor: true,

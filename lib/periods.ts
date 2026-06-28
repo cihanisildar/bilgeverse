@@ -34,6 +34,26 @@ export async function requireActivePeriod() {
 }
 
 /**
+ * Reusable Prisma `where` fragment for listing students who are members of a
+ * given period AND have not been soft-deleted.
+ *
+ * Use this for CURRENT/operational student listings (active period). Spread it
+ * into a `where` that already targets `role: STUDENT`:
+ *   where: { role: UserRole.STUDENT, ...periodStudentWhere(activePeriod.id) }
+ *
+ * For purely historical, period-scoped reports (a specific past periodId), do
+ * NOT use this helper — filter only by `studentPeriods: { some: { periodId } }`
+ * and omit the `deletedAt` filter, so soft-deleted students still appear in the
+ * past data they belonged to.
+ */
+export function periodStudentWhere(periodId: string) {
+  return {
+    deletedAt: null,
+    studentPeriods: { some: { periodId } },
+  };
+}
+
+/**
  * Get period by ID
  * @param periodId The period ID
  * @returns The period or null if not found

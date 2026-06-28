@@ -3,6 +3,7 @@ import prisma from '@/lib/prisma';
 import { UserRole } from '@prisma/client';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '../../auth/[...nextauth]/auth.config';
+import { requireActivePeriod, periodStudentWhere } from '@/lib/periods';
 
 export const dynamic = 'force-dynamic';
 
@@ -23,12 +24,14 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Find students who have a tutor but no classroom
+    // Find students (members of the active period) who have a tutor but no classroom
+    const activePeriod = await requireActivePeriod();
     const studentsWithIssues = await prisma.user.findMany({
       where: {
         roles: { has: UserRole.STUDENT },
         tutorId: { not: null }, // Has a tutor
         studentClassroomId: null, // But no classroom
+        ...periodStudentWhere(activePeriod.id),
       },
       include: {
         tutor: {

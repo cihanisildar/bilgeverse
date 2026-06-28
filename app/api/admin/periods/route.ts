@@ -87,7 +87,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { name, description, startDate, endDate } = body;
+    const { name, description, startDate, endDate, studentIds } = body;
 
     if (!name || !startDate) {
       return NextResponse.json(
@@ -119,17 +119,54 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const period = await prisma.period.create({
-      data: {
-        name,
-        description,
-        startDate: start,
-        endDate: end,
-        status: PeriodStatus.INACTIVE
+    // Determine which students become members of this period.
+    // - If `studentIds` is provided (the curation flow), use exactly those.
+    // - Otherwise fall back to all current active, non-deleted students
+    //   (preserves the legacy "everyone is in every period" behaviour).
+    let memberStudentIds: string[];
+    if (Array.isArray(studentIds)) {
+      const validStudents = await prisma.user.findMany({
+        where: {
+          id: { in: studentIds },
+          role: UserRole.STUDENT,
+          deletedAt: null,
+        },
+        select: { id: true },
+      });
+      memberStudentIds = validStudents.map((s) => s.id);
+    } else {
+      const allStudents = await prisma.user.findMany({
+        where: { role: UserRole.STUDENT, isActive: true, deletedAt: null },
+        select: { id: true },
+      });
+      memberStudentIds = allStudents.map((s) => s.id);
+    }
+
+    const period = await prisma.$transaction(async (tx) => {
+      const createdPeriod = await tx.period.create({
+        data: {
+          name,
+          description,
+          startDate: start,
+          endDate: end,
+          status: PeriodStatus.INACTIVE
+        }
+      });
+
+      if (memberStudentIds.length > 0) {
+        await tx.periodStudent.createMany({
+          data: memberStudentIds.map((studentId) => ({
+            periodId: createdPeriod.id,
+            studentId,
+          })),
+          skipDuplicates: true,
+        });
       }
+
+      return createdPeriod;
     });
 
-    return NextResponse.json({ period }, { status: 201 });
+    return NextResponse.json({ period, memberCount: memberStudentIds.length }, { status: 201 });
   } catch (error: unknown) {
     return handleDatabaseError(error, 'Creating period');
   }

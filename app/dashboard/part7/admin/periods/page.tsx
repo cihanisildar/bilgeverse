@@ -50,6 +50,29 @@ interface EditPeriodData {
   endDate: string;
 }
 
+interface StudentLite {
+  id: string;
+  username: string;
+  firstName: string | null;
+  lastName: string | null;
+  tutor?: {
+    id: string;
+    firstName: string | null;
+    lastName: string | null;
+    username: string;
+  } | null;
+  joinedAt?: string;
+}
+
+const studentLabel = (s: StudentLite) =>
+  s.firstName && s.lastName ? `${s.firstName} ${s.lastName}` : s.username;
+const tutorLabel = (s: StudentLite) =>
+  s.tutor
+    ? (s.tutor.firstName && s.tutor.lastName
+        ? `${s.tutor.firstName} ${s.tutor.lastName}`
+        : s.tutor.username)
+    : 'Atanmamış';
+
 export default function PeriodsPage() {
   const { data: session } = useSession();
   const { refreshUser } = useAuth();
@@ -81,6 +104,24 @@ export default function PeriodsPage() {
     endDate: ''
   });
 
+  // New-period student curation
+  const [allStudents, setAllStudents] = useState<StudentLite[]>([]);
+  const [studentsLoading, setStudentsLoading] = useState(false);
+  const [selectedStudentIds, setSelectedStudentIds] = useState<Set<string>>(new Set());
+  const [createStudentSearch, setCreateStudentSearch] = useState('');
+
+  // In-period student management
+  const [managePeriod, setManagePeriod] = useState<Period | null>(null);
+  const [manageMembers, setManageMembers] = useState<StudentLite[]>([]);
+  const [manageNonMembers, setManageNonMembers] = useState<StudentLite[]>([]);
+  const [manageLoading, setManageLoading] = useState(false);
+  const [manageBusy, setManageBusy] = useState(false);
+  const [manageSearch, setManageSearch] = useState('');
+  const [addSelectedIds, setAddSelectedIds] = useState<Set<string>>(new Set());
+  const [showAddPicker, setShowAddPicker] = useState(false);
+  const [removeSelectedIds, setRemoveSelectedIds] = useState<Set<string>>(new Set());
+  const [confirmRemoveIds, setConfirmRemoveIds] = useState<string[] | null>(null);
+
   const fetchPeriods = async () => {
     try {
       const response = await fetch('/api/admin/periods');
@@ -101,6 +142,51 @@ export default function PeriodsPage() {
     }
   }, [session]);
 
+  const fetchAllStudents = async () => {
+    setStudentsLoading(true);
+    try {
+      const response = await fetch('/api/admin/students/all');
+      if (!response.ok) throw new Error('Öğrenciler yüklenemedi');
+      const data = await response.json();
+      const students: StudentLite[] = data.students || [];
+      setAllStudents(students);
+      // Default: everyone selected — admin removes the ones they don't want
+      setSelectedStudentIds(new Set(students.map((s) => s.id)));
+    } catch (error) {
+      console.error('Error fetching students:', error);
+      setError('Öğrenci listesi yüklenemedi');
+    } finally {
+      setStudentsLoading(false);
+    }
+  };
+
+  const openCreateForm = () => {
+    setError('');
+    setCreateData({ name: '', description: '', startDate: '', endDate: '' });
+    setCreateStudentSearch('');
+    setShowCreateForm(true);
+    fetchAllStudents();
+  };
+
+  const toggleStudent = (id: string) => {
+    setSelectedStudentIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const filteredCreateStudents = allStudents.filter((s) => {
+    const q = createStudentSearch.toLowerCase().trim();
+    if (!q) return true;
+    return (
+      studentLabel(s).toLowerCase().includes(q) ||
+      s.username.toLowerCase().includes(q) ||
+      tutorLabel(s).toLowerCase().includes(q)
+    );
+  });
+
   const handleCreatePeriod = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!createData.name || !createData.startDate) {
@@ -115,7 +201,7 @@ export default function PeriodsPage() {
       const response = await fetch('/api/admin/periods', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(createData)
+        body: JSON.stringify({ ...createData, studentIds: Array.from(selectedStudentIds) })
       });
 
       if (!response.ok) {
@@ -247,6 +333,116 @@ export default function PeriodsPage() {
     }
   };
 
+  const openManageStudents = async (period: Period) => {
+    setManagePeriod(period);
+    setManageSearch('');
+    setShowAddPicker(false);
+    setAddSelectedIds(new Set());
+    setRemoveSelectedIds(new Set());
+    setManageLoading(true);
+    setManageMembers([]);
+    setManageNonMembers([]);
+    try {
+      const response = await fetch(`/api/admin/periods/${period.id}/students`);
+      if (!response.ok) throw new Error('Dönem öğrencileri yüklenemedi');
+      const data = await response.json();
+      setManageMembers(data.members || []);
+      setManageNonMembers(data.nonMembers || []);
+    } catch (error) {
+      console.error('Error fetching period students:', error);
+      setError('Dönem öğrencileri yüklenemedi');
+    } finally {
+      setManageLoading(false);
+    }
+  };
+
+  const refreshManage = async (periodId: string) => {
+    const response = await fetch(`/api/admin/periods/${periodId}/students`);
+    if (response.ok) {
+      const data = await response.json();
+      setManageMembers(data.members || []);
+      setManageNonMembers(data.nonMembers || []);
+    }
+  };
+
+  const toggleRemoveStudent = (id: string) => {
+    setRemoveSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const confirmRemoveMembers = async () => {
+    if (!managePeriod || !confirmRemoveIds || confirmRemoveIds.length === 0) {
+      setConfirmRemoveIds(null);
+      return;
+    }
+    const ids = confirmRemoveIds;
+    setManageBusy(true);
+    try {
+      const response = await fetch(`/api/admin/periods/${managePeriod.id}/students`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ studentIds: ids })
+      });
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Öğrenci çıkarılamadı');
+      }
+      setRemoveSelectedIds((prev) => {
+        const next = new Set(prev);
+        ids.forEach((id) => next.delete(id));
+        return next;
+      });
+      await refreshManage(managePeriod.id);
+    } catch (error: any) {
+      setError(error.message);
+    } finally {
+      setManageBusy(false);
+      setConfirmRemoveIds(null);
+    }
+  };
+
+  const toggleAddStudent = (id: string) => {
+    setAddSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const handleAddMembers = async () => {
+    if (!managePeriod || addSelectedIds.size === 0) return;
+    setManageBusy(true);
+    try {
+      const response = await fetch(`/api/admin/periods/${managePeriod.id}/students`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ studentIds: Array.from(addSelectedIds) })
+      });
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Öğrenci eklenemedi');
+      }
+      setAddSelectedIds(new Set());
+      setShowAddPicker(false);
+      await refreshManage(managePeriod.id);
+    } catch (error: any) {
+      setError(error.message);
+    } finally {
+      setManageBusy(false);
+    }
+  };
+
+  const filteredMembers = manageMembers.filter((s) => {
+    const q = manageSearch.toLowerCase().trim();
+    if (!q) return true;
+    return studentLabel(s).toLowerCase().includes(q) || s.username.toLowerCase().includes(q);
+  });
+
   const handleEditPeriod = (period: Period) => {
     setEditingPeriod(period.id);
     setEditData({
@@ -351,7 +547,7 @@ export default function PeriodsPage() {
             <p className="text-gray-600 mt-2">Akademik dönemlerinizi oluşturun ve yönetin</p>
           </div>
           <button
-            onClick={() => setShowCreateForm(true)}
+            onClick={openCreateForm}
             className="bg-indigo-600 text-white px-6 py-3 rounded-xl hover:bg-indigo-700 transition-colors duration-200 flex items-center gap-2 shadow-lg hover:shadow-xl"
           >
             <Plus className="h-5 w-5" />
@@ -430,6 +626,75 @@ export default function PeriodsPage() {
                     />
                   </div>
                 </div>
+                {/* Student curation */}
+                <div className="border-t border-gray-200 pt-5">
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="block text-sm font-medium text-gray-900 flex items-center gap-2">
+                      <Users className="h-4 w-4 text-indigo-600" />
+                      Bu Döneme Alınacak Öğrenciler
+                    </label>
+                    <span className="text-xs font-medium text-indigo-600">
+                      {selectedStudentIds.size} / {allStudents.length} seçili
+                    </span>
+                  </div>
+                  <p className="text-xs text-gray-500 mb-3">
+                    Tüm öğrenciler varsayılan olarak seçilidir. Bu döneme almak <span className="font-medium">istemediklerinizin</span> işaretini kaldırın.
+                    Rehber, asistan ve diğer roller otomatik olarak her döneme dahildir.
+                  </p>
+
+                  <div className="flex flex-col sm:flex-row gap-2 mb-3">
+                    <input
+                      type="text"
+                      value={createStudentSearch}
+                      onChange={(e) => setCreateStudentSearch(e.target.value)}
+                      placeholder="Öğrenci veya rehber ara..."
+                      className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm"
+                    />
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setSelectedStudentIds(new Set(allStudents.map((s) => s.id)))}
+                        className="px-3 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 text-xs font-medium whitespace-nowrap"
+                      >
+                        Tümünü Seç
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setSelectedStudentIds(new Set())}
+                        className="px-3 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 text-xs font-medium whitespace-nowrap"
+                      >
+                        Temizle
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="border border-gray-200 rounded-xl max-h-64 overflow-y-auto divide-y divide-gray-100">
+                    {studentsLoading ? (
+                      <div className="p-6 text-center text-gray-500 text-sm">Öğrenciler yükleniyor...</div>
+                    ) : filteredCreateStudents.length === 0 ? (
+                      <div className="p-6 text-center text-gray-500 text-sm">Öğrenci bulunamadı.</div>
+                    ) : (
+                      filteredCreateStudents.map((s) => (
+                        <label
+                          key={s.id}
+                          className="flex items-center gap-3 px-4 py-2.5 cursor-pointer hover:bg-gray-50 select-none"
+                        >
+                          <input
+                            type="checkbox"
+                            checked={selectedStudentIds.has(s.id)}
+                            onChange={() => toggleStudent(s.id)}
+                            className="h-4 w-4 cursor-pointer"
+                          />
+                          <div className="flex-1 min-w-0">
+                            <div className="text-sm font-medium text-gray-900 truncate">{studentLabel(s)}</div>
+                            <div className="text-xs text-gray-500 truncate">@{s.username} · Rehber: {tutorLabel(s)}</div>
+                          </div>
+                        </label>
+                      ))
+                    )}
+                  </div>
+                </div>
+
                 <div className="flex flex-col sm:flex-row gap-3 pt-4">
                   <button
                     type="submit"
@@ -478,7 +743,7 @@ export default function PeriodsPage() {
                 <h3 className="text-lg font-medium text-gray-900 mb-2">Henüz dönem yok</h3>
                 <p className="text-gray-600 mb-6">İlk akademik döneminizi oluşturmak için yukarıdaki butona tıklayın.</p>
                 <button
-                  onClick={() => setShowCreateForm(true)}
+                  onClick={openCreateForm}
                   className="bg-indigo-600 text-white px-6 py-3 rounded-xl hover:bg-indigo-700 transition-colors duration-200 flex items-center gap-2 mx-auto"
                 >
                   <Plus className="h-5 w-5" />
@@ -650,6 +915,16 @@ export default function PeriodsPage() {
                           >
                             <Edit className="h-3 w-3" />
                             Düzenle
+                          </button>
+                        )}
+                        {editingPeriod !== period.id && (
+                          <button
+                            onClick={() => openManageStudents(period)}
+                            disabled={Object.values(operationLoading).some(loading => loading)}
+                            className="flex items-center gap-1 px-3 py-2 bg-teal-100 text-teal-700 rounded-lg hover:bg-teal-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-xs font-medium"
+                          >
+                            <Users className="h-3 w-3" />
+                            Öğrenciler
                           </button>
                         )}
                         {period.status !== 'ACTIVE' && (
@@ -837,6 +1112,214 @@ export default function PeriodsPage() {
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
+
+        {/* Confirm remove students from period */}
+        <AlertDialog open={!!confirmRemoveIds} onOpenChange={(open) => { if (!open) setConfirmRemoveIds(null); }}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle className="flex items-center gap-2">
+                <AlertTriangle className="h-5 w-5 text-red-600" />
+                Öğrenciyi Dönemden Çıkar
+              </AlertDialogTitle>
+              <AlertDialogDescription className="text-left">
+                {confirmRemoveIds && confirmRemoveIds.length === 1 ? (
+                  <>
+                    <strong>
+                      {(() => {
+                        const s = manageMembers.find((m) => m.id === confirmRemoveIds[0]);
+                        return s ? studentLabel(s) : 'Bu öğrenci';
+                      })()}
+                    </strong> adlı öğrenciyi <strong>{managePeriod?.name}</strong> döneminden çıkarmak istediğinize emin misiniz?
+                  </>
+                ) : (
+                  <>
+                    Seçili <strong>{confirmRemoveIds?.length || 0}</strong> öğrenciyi <strong>{managePeriod?.name}</strong> döneminden çıkarmak istediğinize emin misiniz?
+                  </>
+                )}
+                <br /><br />
+                <span className="text-gray-600 text-sm">
+                  Bu işlem öğrencinin <span className="font-medium">hiçbir verisini silmez</span> — sadece bu dönemden çıkarır. İstediğiniz zaman tekrar ekleyebilir, tüm verileri geri gelir.
+                </span>
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel disabled={manageBusy}>Vazgeç</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={confirmRemoveMembers}
+                disabled={manageBusy}
+                className="bg-red-600 hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {manageBusy ? 'Çıkarılıyor...' : 'Çıkar'}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+
+        {/* Manage Period Students Modal */}
+        {managePeriod && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+            <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+              <div className="p-6 border-b border-gray-200 flex items-start justify-between">
+                <div>
+                  <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-3">
+                    <div className="p-2 bg-teal-100 rounded-lg">
+                      <Users className="h-6 w-6 text-teal-600" />
+                    </div>
+                    Dönem Öğrencileri
+                  </h2>
+                  <p className="text-gray-600 mt-2">{managePeriod.name}</p>
+                </div>
+                <button
+                  onClick={() => setManagePeriod(null)}
+                  className="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+
+              <div className="p-6 overflow-y-auto flex-1 space-y-4">
+                {manageLoading ? (
+                  <div className="py-12 text-center">
+                    <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-teal-600 mx-auto mb-3"></div>
+                    <p className="text-gray-600 text-sm">Yükleniyor...</p>
+                  </div>
+                ) : (
+                  <>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-medium text-gray-900">
+                        {manageMembers.length} öğrenci bu dönemde
+                      </span>
+                      <button
+                        onClick={() => setShowAddPicker((v) => !v)}
+                        disabled={manageBusy}
+                        className="flex items-center gap-1 px-3 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 disabled:opacity-50 transition-colors text-xs font-medium"
+                      >
+                        <Plus className="h-3 w-3" />
+                        Öğrenci Ekle
+                      </button>
+                    </div>
+
+                    {/* Add picker */}
+                    {showAddPicker && (
+                      <div className="border border-teal-200 bg-teal-50/40 rounded-xl p-3">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-xs font-medium text-gray-700">
+                            Eklenebilir öğrenciler ({manageNonMembers.length})
+                          </span>
+                          <button
+                            onClick={handleAddMembers}
+                            disabled={manageBusy || addSelectedIds.size === 0}
+                            className="px-3 py-1.5 bg-teal-600 text-white rounded-lg hover:bg-teal-700 disabled:opacity-50 disabled:cursor-not-allowed text-xs font-medium"
+                          >
+                            {addSelectedIds.size > 0 ? `${addSelectedIds.size} öğrenci ekle` : 'Seçiniz'}
+                          </button>
+                        </div>
+                        <div className="border border-gray-200 bg-white rounded-lg max-h-48 overflow-y-auto divide-y divide-gray-100">
+                          {manageNonMembers.length === 0 ? (
+                            <div className="p-4 text-center text-gray-500 text-xs">Eklenecek öğrenci yok.</div>
+                          ) : (
+                            manageNonMembers.map((s) => (
+                              <label key={s.id} className="flex items-center gap-3 px-3 py-2 cursor-pointer hover:bg-gray-50 select-none">
+                                <input
+                                  type="checkbox"
+                                  checked={addSelectedIds.has(s.id)}
+                                  onChange={() => toggleAddStudent(s.id)}
+                                  className="h-4 w-4 cursor-pointer"
+                                />
+                                <div className="flex-1 min-w-0">
+                                  <div className="text-sm font-medium text-gray-900 truncate">{studentLabel(s)}</div>
+                                  <div className="text-xs text-gray-500 truncate">@{s.username} · Rehber: {tutorLabel(s)}</div>
+                                </div>
+                              </label>
+                            ))
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Member search */}
+                    <input
+                      type="text"
+                      value={manageSearch}
+                      onChange={(e) => setManageSearch(e.target.value)}
+                      placeholder="Dönemdeki öğrencilerde ara..."
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500 text-sm"
+                    />
+
+                    {/* Bulk remove toolbar */}
+                    {filteredMembers.length > 0 && (
+                      <div className="flex items-center justify-between gap-2 flex-wrap">
+                        <label className="flex items-center gap-2 cursor-pointer select-none text-xs font-medium text-gray-700">
+                          <input
+                            type="checkbox"
+                            checked={removeSelectedIds.size > 0 && filteredMembers.every((s) => removeSelectedIds.has(s.id))}
+                            onChange={(e) => {
+                              setRemoveSelectedIds((prev) => {
+                                const next = new Set(prev);
+                                if (e.target.checked) filteredMembers.forEach((s) => next.add(s.id));
+                                else filteredMembers.forEach((s) => next.delete(s.id));
+                                return next;
+                              });
+                            }}
+                            className="h-4 w-4 cursor-pointer"
+                          />
+                          Tümünü seç
+                        </label>
+                        <button
+                          onClick={() => setConfirmRemoveIds(Array.from(removeSelectedIds))}
+                          disabled={manageBusy || removeSelectedIds.size === 0}
+                          className="flex items-center gap-1 px-3 py-1.5 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-xs font-medium"
+                        >
+                          <X className="h-3 w-3" />
+                          {removeSelectedIds.size > 0 ? `Seçilenleri Çıkar (${removeSelectedIds.size})` : 'Seçilenleri Çıkar'}
+                        </button>
+                      </div>
+                    )}
+
+                    {/* Member list */}
+                    <div className="border border-gray-200 rounded-xl divide-y divide-gray-100">
+                      {filteredMembers.length === 0 ? (
+                        <div className="p-6 text-center text-gray-500 text-sm">
+                          Bu dönemde öğrenci yok.
+                        </div>
+                      ) : (
+                        filteredMembers.map((s) => (
+                          <div
+                            key={s.id}
+                            className={`flex items-center gap-3 px-4 py-2.5 ${removeSelectedIds.has(s.id) ? 'bg-red-50/60' : ''}`}
+                          >
+                            <input
+                              type="checkbox"
+                              checked={removeSelectedIds.has(s.id)}
+                              onChange={() => toggleRemoveStudent(s.id)}
+                              className="h-4 w-4 cursor-pointer"
+                            />
+                            <div className="flex-1 min-w-0">
+                              <div className="text-sm font-medium text-gray-900 truncate">{studentLabel(s)}</div>
+                              <div className="text-xs text-gray-500 truncate">@{s.username} · Rehber: {tutorLabel(s)}</div>
+                            </div>
+                            <button
+                              onClick={() => setConfirmRemoveIds([s.id])}
+                              disabled={manageBusy}
+                              title="Dönemden çıkar"
+                              className="flex items-center gap-1 px-2.5 py-1.5 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 disabled:opacity-50 transition-colors text-xs font-medium"
+                            >
+                              <X className="h-3 w-3" />
+                              Çıkar
+                            </button>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                    <p className="text-xs text-gray-400">
+                      Çıkarma işlemi öğrencinin geçmiş verilerini silmez; yalnızca bu dönemden çıkarır. Tekrar eklendiğinde tüm verileri geri gelir.
+                    </p>
+                  </>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
 
       </div>
     </div>

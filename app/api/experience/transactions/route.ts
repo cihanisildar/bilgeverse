@@ -3,7 +3,7 @@ import prisma from '@/lib/prisma';
 import { getServerSession } from 'next-auth';
 import { UserRole } from '@prisma/client';
 import { authOptions } from '../../auth/[...nextauth]/auth.config';
-import { requireActivePeriod } from '@/lib/periods';
+import { requireActivePeriod, periodStudentWhere } from '@/lib/periods';
 
 export const dynamic = 'force-dynamic';
 
@@ -149,15 +149,19 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Get active period (also used to scope membership checks below)
+    const activePeriod = await requireActivePeriod();
+
     // Verify the student authorization based on role
     let student;
 
     if (isAdmin) {
-      // Admins can do anything
+      // Admins can do anything (but student must be a member of the active period)
       student = await prisma.user.findFirst({
         where: {
           id: studentId,
-          roles: { has: UserRole.STUDENT }
+          roles: { has: UserRole.STUDENT },
+          ...periodStudentWhere(activePeriod.id)
         }
       });
     } else if (isTutor) {
@@ -166,7 +170,8 @@ export async function POST(request: NextRequest) {
         where: {
           id: studentId,
           tutorId: user.id,
-          roles: { has: UserRole.STUDENT }
+          roles: { has: UserRole.STUDENT },
+          ...periodStudentWhere(activePeriod.id)
         }
       });
 
@@ -208,7 +213,8 @@ export async function POST(request: NextRequest) {
         where: {
           id: studentId,
           studentClassroomId: assistedTutor.classroom.id,
-          roles: { has: UserRole.STUDENT }
+          roles: { has: UserRole.STUDENT },
+          ...periodStudentWhere(activePeriod.id)
         }
       });
 
@@ -219,9 +225,6 @@ export async function POST(request: NextRequest) {
         );
       }
     }
-
-    // Get active period
-    const activePeriod = await requireActivePeriod();
 
     // Create the transaction
     const transaction = await prisma.experienceTransaction.create({

@@ -3,6 +3,7 @@ import prisma from '@/lib/prisma';
 import { UserRole } from '@prisma/client';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '../../auth/[...nextauth]/auth.config';
+import { requireActivePeriod, periodStudentWhere } from '@/lib/periods';
 
 export async function POST(request: NextRequest) {
   try {
@@ -50,11 +51,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Verify that the student exists and is actually a student
+    // Verify that the student exists, is a student, and is a member of the active period
+    const activePeriod = await requireActivePeriod();
     const student = await prisma.user.findFirst({
       where: {
         id: studentId,
-        roles: { has: UserRole.STUDENT }
+        roles: { has: UserRole.STUDENT },
+        ...periodStudentWhere(activePeriod.id)
       }
     });
 
@@ -158,11 +161,13 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Get unassigned students
+    // Get unassigned students (members of the active period)
+    const activePeriod = await requireActivePeriod();
     const unassignedStudents = await prisma.user.findMany({
       where: {
         roles: { has: UserRole.STUDENT },
-        tutorId: null
+        tutorId: null,
+        ...periodStudentWhere(activePeriod.id)
       },
       select: {
         id: true,

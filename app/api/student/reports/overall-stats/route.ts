@@ -3,6 +3,7 @@ import prisma from '@/lib/prisma';
 import { UserRole } from '@prisma/client';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '../../../auth/[...nextauth]/auth.config';
+import { requireActivePeriod, periodStudentWhere } from '@/lib/periods';
 
 export const dynamic = 'force-dynamic';
 
@@ -30,8 +31,10 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Get all active students (filtered by tutor/asistan if tutor or asistan role)
-    let whereClause: any = { roles: { has: UserRole.STUDENT }, isActive: true };
+    // Get all active students who are members of the active period
+    // (filtered by tutor/asistan if tutor or asistan role)
+    const activePeriod = await requireActivePeriod();
+    let whereClause: any = { roles: { has: UserRole.STUDENT }, isActive: true, ...periodStudentWhere(activePeriod.id) };
 
     if (isTutor || isAsistan) {
       const tutorIdToCheck = isAsistan ? (session.user as any).assistedTutorId : session.user.id;

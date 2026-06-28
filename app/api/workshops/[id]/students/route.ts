@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/app/api/auth/[...nextauth]/auth.config';
 import prisma from '@/lib/prisma';
 import { UserRole } from '@prisma/client';
+import { requireActivePeriod, periodStudentWhere } from '@/lib/periods';
 
 export const dynamic = 'force-dynamic';
 
@@ -96,13 +97,15 @@ export async function GET(
         // Return users that are NOT yet in this workshop
         // but are eligible to join (STUDENT role)
 
-        let whereClause: { roles: { has: UserRole }; workshopMemberships: { none: { workshopId: string } }; tutorId?: string } = {
+        const activePeriod = await requireActivePeriod();
+        const whereClause: any = {
             roles: { has: UserRole.STUDENT },
             workshopMemberships: {
                 none: {
                     workshopId: params.id
                 }
-            }
+            },
+            ...periodStudentWhere(activePeriod.id)
         };
 
         // If tutor, only show their students

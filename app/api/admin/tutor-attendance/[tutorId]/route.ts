@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/app/api/auth/[...nextauth]/auth.config';
 import prisma from '@/lib/prisma';
 import { UserRole } from '@prisma/client';
+import { requireActivePeriod, periodStudentWhere } from '@/lib/periods';
 
 export async function GET(
     request: Request,
@@ -22,6 +23,7 @@ export async function GET(
         }
 
         const { tutorId } = params;
+        const activePeriod = await requireActivePeriod();
 
         // Get tutor information
         const tutor = await prisma.user.findUnique({
@@ -37,6 +39,7 @@ export async function GET(
                     where: {
                         isActive: true,
                         roles: { has: UserRole.STUDENT },
+                        ...periodStudentWhere(activePeriod.id),
                     },
                     select: {
                         id: true,

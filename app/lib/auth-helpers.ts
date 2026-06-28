@@ -6,6 +6,7 @@ export const USER_AUTH_SELECT = {
     password: true,
     role: true,
     roles: true,
+    deletedAt: true,
     firstName: true,
     lastName: true,
     points: true,

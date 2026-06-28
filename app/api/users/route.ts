@@ -4,7 +4,7 @@ import { UserRole, User } from '@prisma/client';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '../auth/[...nextauth]/auth.config';
 import { calculateMultipleUserPoints } from '@/lib/points';
-import { requireActivePeriod } from '@/lib/periods';
+import { requireActivePeriod, periodStudentWhere } from '@/lib/periods';
 
 export const dynamic = 'force-dynamic';
 
@@ -57,6 +57,9 @@ export async function GET(request: NextRequest) {
     // If admin or board member, return all users
     if (isAdmin || isBoardMember) {
       users = await prisma.user.findMany({
+        where: {
+          deletedAt: null
+        },
         select: {
           id: true,
           username: true,
@@ -90,7 +93,8 @@ export async function GET(request: NextRequest) {
       users = await prisma.user.findMany({
         where: {
           tutorId: targetTutorId,
-          roles: { has: UserRole.STUDENT }
+          roles: { has: UserRole.STUDENT },
+          ...periodStudentWhere(activePeriod.id)
         },
         select: {
           id: true,

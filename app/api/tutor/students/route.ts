@@ -6,7 +6,7 @@ import bcrypt from 'bcrypt';
 import logger from '@/lib/logger';
 import { authOptions } from '../../auth/[...nextauth]/auth.config';
 import { calculateMultipleUserPoints, calculateUserExperience } from '@/lib/points';
-import { requireActivePeriod } from '@/lib/periods';
+import { requireActivePeriod, periodStudentWhere } from '@/lib/periods';
 
 export const dynamic = 'force-dynamic';
 
@@ -48,7 +48,8 @@ export async function GET(request: NextRequest) {
         include: {
           students: {
             where: {
-              isActive: true
+              isActive: true,
+              ...periodStudentWhere(activePeriod.id)
             },
             select: {
               id: true,
@@ -84,7 +85,8 @@ export async function GET(request: NextRequest) {
         include: {
           students: {
             where: {
-              isActive: true
+              isActive: true,
+              ...periodStudentWhere(activePeriod.id)
             },
             select: {
               id: true,
@@ -261,8 +263,13 @@ export async function POST(request: NextRequest) {
       }
     });
 
-    // Calculate period-aware stats for the new student (will be 0 since they're new)
+    // Add the new student to the active period
     const activePeriod = await requireActivePeriod();
+    await prisma.periodStudent.create({
+      data: { periodId: activePeriod.id, studentId: newStudent.id }
+    });
+
+    // Calculate period-aware stats for the new student (will be 0 since they're new)
     const calculatedPoints = await calculateMultipleUserPoints([newStudent.id], activePeriod.id);
     const calculatedExperience = await calculateUserExperience(newStudent.id, activePeriod.id);
 

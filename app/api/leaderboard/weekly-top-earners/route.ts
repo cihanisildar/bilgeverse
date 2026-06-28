@@ -3,6 +3,7 @@ import prisma from '@/lib/prisma';
 import { UserRole } from '@prisma/client';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '../../auth/[...nextauth]/auth.config';
+import { requireActivePeriod, periodStudentWhere } from '@/lib/periods';
 
 export const dynamic = 'force-dynamic';
 
@@ -28,11 +29,13 @@ export async function GET(request: NextRequest) {
     endOfWeek.setDate(startOfWeek.getDate() + 6);
     endOfWeek.setHours(23, 59, 59, 999);
 
-    // Get all active students with their weekly points and experience earned
+    // Get active students who are members of the active period
+    const activePeriod = await requireActivePeriod();
     const students = await prisma.user.findMany({
       where: {
         role: UserRole.STUDENT,
-        isActive: true
+        isActive: true,
+        ...periodStudentWhere(activePeriod.id)
       },
       select: {
         id: true,

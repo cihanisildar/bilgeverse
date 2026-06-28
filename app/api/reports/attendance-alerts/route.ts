@@ -3,6 +3,7 @@ import prisma from '@/lib/prisma';
 import { UserRole } from '@prisma/client';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/app/api/auth/[...nextauth]/auth.config';
+import { requireActivePeriod, periodStudentWhere } from '@/lib/periods';
 
 export const dynamic = 'force-dynamic';
 
@@ -20,10 +21,12 @@ export async function GET(request: NextRequest) {
         const { searchParams } = new URL(request.url);
         const threshold = searchParams.get('threshold') ? parseInt(searchParams.get('threshold')!) : 70;
 
-        // Get all students with their attendance records
+        // Get students (members of the active period) with their attendance records
+        const activePeriod = await requireActivePeriod();
         const students = await prisma.user.findMany({
             where: {
                 role: UserRole.STUDENT,
+                ...periodStudentWhere(activePeriod.id),
             },
             include: {
                 studentAttendances: {
