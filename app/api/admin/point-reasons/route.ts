@@ -94,7 +94,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { name, description, isActive } = body;
+    const { name, description, isActive, points, minPoints, maxPoints, icon, showInTips } = body;
 
     // Validate required fields
     if (!name || typeof name !== "string" || name.trim().length === 0) {
@@ -113,12 +113,20 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const toInt = (v: unknown) =>
+      v === null || v === undefined || v === "" ? null : Number.isFinite(Number(v)) ? Math.trunc(Number(v)) : null;
+
     // Create the new point reason
     const newReason = await prisma.pointReason.create({
       data: {
         name: name.trim(),
         description: description?.trim() || null,
         isActive: isActive !== undefined ? Boolean(isActive) : true,
+        points: toInt(points),
+        minPoints: toInt(minPoints),
+        maxPoints: toInt(maxPoints),
+        icon: icon?.trim() || null,
+        showInTips: Boolean(showInTips),
         createdById: session.user.id,
       },
       include: {

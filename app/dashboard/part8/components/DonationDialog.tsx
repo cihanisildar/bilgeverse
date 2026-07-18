@@ -13,6 +13,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Loader2 } from "lucide-react";
 import { addDonation } from "@/app/actions/donations";
 import { toast } from "react-hot-toast";
@@ -29,6 +30,7 @@ export default function DonationDialog({ isOpen, onClose, donor }: DonationDialo
     const queryClient = useQueryClient();
     const [loading, setLoading] = useState(false);
     const [amount, setAmount] = useState("");
+    const [category, setCategory] = useState("BAGIS");
     const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
     const [notes, setNotes] = useState("");
 
@@ -47,12 +49,13 @@ export default function DonationDialog({ isOpen, onClose, donor }: DonationDialo
                 amount: parseFloat(amount),
                 donationDate: new Date(date),
                 notes,
+                category,
             });
 
             if (res.error) {
                 toast.error(res.error);
             } else {
-                toast.success("Bağış başarıyla eklendi");
+                toast.success(category === "ZEKAT" ? "Zekât başarıyla eklendi" : "Bağış başarıyla eklendi");
                 queryClient.invalidateQueries({ queryKey: ['donors'] });
                 queryClient.invalidateQueries({ queryKey: ['donorDetails', donor.id] });
                 queryClient.invalidateQueries({ queryKey: ['finance-summary'] });
@@ -60,6 +63,7 @@ export default function DonationDialog({ isOpen, onClose, donor }: DonationDialo
                 queryClient.invalidateQueries({ queryKey: ['monthly-report'] });
                 setAmount("");
                 setNotes("");
+                setCategory("BAGIS");
                 onClose();
             }
         } catch (error) {
@@ -73,9 +77,9 @@ export default function DonationDialog({ isOpen, onClose, donor }: DonationDialo
         <Dialog open={isOpen} onOpenChange={onClose}>
             <DialogContent className="sm:max-w-[425px]">
                 <DialogHeader>
-                    <DialogTitle>Bağış Ekle</DialogTitle>
+                    <DialogTitle>Bağış / Zekât Ekle</DialogTitle>
                     <DialogDescription>
-                        {donor?.firstName} {donor?.lastName} için yeni bir bağış girişi yapın.
+                        {donor?.firstName} {donor?.lastName} için yeni bir bağış veya zekât girişi yapın.
                     </DialogDescription>
                 </DialogHeader>
                 <form onSubmit={handleSubmit} className="space-y-4 py-4">
@@ -94,6 +98,18 @@ export default function DonationDialog({ isOpen, onClose, donor }: DonationDialo
                             />
                             <span className="absolute left-3 top-2.5 text-muted-foreground font-medium">₺</span>
                         </div>
+                    </div>
+                    <div className="space-y-2">
+                        <Label htmlFor="category">Katkı Türü *</Label>
+                        <Select value={category} onValueChange={setCategory}>
+                            <SelectTrigger id="category">
+                                <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="BAGIS">Bağış</SelectItem>
+                                <SelectItem value="ZEKAT">Zekât</SelectItem>
+                            </SelectContent>
+                        </Select>
                     </div>
                     <div className="space-y-2">
                         <Label htmlFor="date">Tarih *</Label>

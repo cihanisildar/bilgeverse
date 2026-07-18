@@ -314,7 +314,7 @@ export function AcademyStudents({ lessonId, students, canManage, sessions = [] }
                                     <TableCell className="text-slate-600 font-medium py-4">{new Date(s.joinedAt).toLocaleDateString('tr-TR')}</TableCell>
                                     <TableCell className="py-4">
                                         {totalSessions === 0 ? (
-                                            <span className="text-gray-400 text-sm italic">Oturum yok</span>
+                                            <span className="text-gray-400 text-sm italic">Yoklama yok</span>
                                         ) : (
                                             <div className="flex items-center gap-3">
                                                 <div className="w-24 h-2 rounded-full bg-gray-100 overflow-hidden">

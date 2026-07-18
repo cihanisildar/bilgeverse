@@ -31,6 +31,7 @@ model Period {
   events                 Event[]                 @relation("PeriodEvents")
   experienceTransactions ExperienceTransaction[] @relation("PeriodExperienceTransactions")
   itemRequests           ItemRequest[]           @relation("PeriodItemRequests")
+  storeItems             StoreItem[]             @relation("PeriodStoreItems")
   pointsTransactions     PointsTransaction[]     @relation("PeriodPointsTransactions")
   studentNotes           StudentNote[]           @relation("PeriodStudentNotes")
   studentReports         StudentReport[]         @relation("PeriodStudentReports")
@@ -62,6 +63,7 @@ model User {
   password                      String
   role                          UserRole
   points                        Int                       @default(0)
+  allowedParts                  Int[]                     @default([])
   firstName                     String?
   lastName                      String?
   createdAt                     DateTime                  @default(now())
@@ -80,6 +82,9 @@ model User {
   statusChangedBy               String?
   deletedAt                     DateTime?
   studentPeriods                PeriodStudent[]           @relation("StudentPeriods")
+  tutorTrainingRecords          TutorTrainingRecord[]     @relation("TutorTrainingRecords")
+  characterGroups               CharacterGroup[]          @relation("CharacterGroupTutor")
+  tutorStatus                   String?
   absenceNotificationsAsStudent AbsenceNotification[]     @relation("StudentAbsenceNotifications")
   absenceNotificationsAsTutor   AbsenceNotification[]     @relation("TutorAbsenceNotifications")
   createdAnnouncements          Announcement[]            @relation("AdminAnnouncements")
@@ -227,13 +232,19 @@ model EventParticipant {
 
 model StoreItem {
   id             String        @id @default(uuid())
-  name           String        @unique
+  name           String
   description    String
   pointsRequired Int
   imageUrl       String?
+  isActive       Boolean       @default(true)
+  periodId       String?
   createdAt      DateTime      @default(now())
   updatedAt      DateTime      @updatedAt
+  period         Period?       @relation("PeriodStoreItems", fields: [periodId], references: [id])
   itemRequests   ItemRequest[]
+
+  @@index([periodId])
+  @@index([periodId, name])
 }
 
 model RegistrationRequest {
@@ -379,6 +390,11 @@ model PointReason {
   name         String              @unique
   description  String?
   isActive     Boolean             @default(true)
+  points       Int?
+  minPoints    Int?
+  maxPoints    Int?
+  icon         String?
+  showInTips   Boolean             @default(false)
   createdAt    DateTime            @default(now())
   updatedAt    DateTime            @updatedAt
   createdById  String
@@ -1252,6 +1268,7 @@ model Donation {
   id                 String              @id @default(uuid())
   amount             Decimal             @db.Decimal(10, 2)
   currency           String              @default("TL")
+  category           String              @default("BAGIS")
   donationDate       DateTime            @default(now())
   notes              String?
   createdAt          DateTime            @default(now())
@@ -1289,6 +1306,7 @@ model AthleteProfile {
   parentName         String?
   parentPhone        String?
   membershipStatus   MembershipStatus      @default(ACTIVE)
+  ageGroup           String?
   licenseNumber      String?
   licenseExpiry      DateTime?
   footballSchool     Boolean               @default(false)
@@ -1644,6 +1662,7 @@ model AcademyLesson {
   name        String
   description String?
   imageUrl    String?
+  level       Int?
   startDate   DateTime?
   capacity    Int?
   createdAt   DateTime            @default(now())
@@ -1800,4 +1819,126 @@ model AcademyAttendance {
   student       User           @relation("AcademyAttendances", fields: [studentId], references: [id], onDelete: Cascade)
 
   @@unique([sessionId, studentId])
+}
+
+// --- İnsan Kaynağı (part3) ---
+
+// Mezun öğrenciler listesi
+model GraduatedStudent {
+  id             String    @id @default(uuid())
+  firstName      String
+  lastName       String
+  graduationDate DateTime?
+  school         String?
+  notes          String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+}
+
+// Burs alan öğrenciler listesi
+model ScholarshipStudent {
+  id        String    @id @default(uuid())
+  firstName String
+  lastName  String
+  school    String?
+  amount    Decimal?  @db.Decimal(10, 2)
+  startDate DateTime?
+  isActive  Boolean   @default(true)
+  notes     String?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+}
+
+// --- Gençlik Merkezi (part10) ---
+
+// Demirbaş listesi (masa, sandalye, bilgisayar ...)
+model InventoryItem {
+  id        String   @id @default(uuid())
+  name      String
+  quantity  Int      @default(1)
+  category  String?
+  location  String?
+  condition String   @default("GOOD") // GOOD | NEEDS_REPAIR | BROKEN
+  notes     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// Dernek müdürü görev takibi (to-do list)
+model CenterTask {
+  id          String    @id @default(uuid())
+  title       String
+  description String?
+  status      String    @default("TODO") // TODO | IN_PROGRESS | DONE
+  dueDate     DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+// Süreli işler (kira zammı, abonelik yenileme ...) — hedef tarihte kırmızı yanar
+model RecurringTask {
+  id        String   @id @default(uuid())
+  title     String
+  dueDate   DateTime
+  notes     String?
+  isDone    Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// Karakter eğitim grupları — okul/merkez, sorumlu rehber, rehber ihtiyacı takibi
+model CharacterGroup {
+  id           String   @id @default(uuid())
+  name         String
+  locationType String   @default("CENTER") // "SCHOOL" | "CENTER"
+  locationName String?
+  tutorId      String?
+  tutor        User?    @relation("CharacterGroupTutor", fields: [tutorId], references: [id])
+  isActive     Boolean  @default(true)
+  notes        String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([tutorId])
+}
+
+// Rehber adayları — rehber olarak düşünülen kişiler ve haklarında alınan karar
+model TutorCandidate {
+  id        String   @id @default(uuid())
+  firstName String
+  lastName  String
+  phone     String?
+  status    String   @default("CONSIDERING")
+  decision  String?
+  notes     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// Rehberlerin alması gereken eğitim programları (A, B, C ...)
+model TutorTrainingProgram {
+  id          String                @id @default(uuid())
+  name        String
+  description String?
+  orderIndex  Int                   @default(0)
+  createdAt   DateTime              @default(now())
+  updatedAt   DateTime              @updatedAt
+  records     TutorTrainingRecord[] @relation("ProgramRecords")
+}
+
+// Hangi rehberin hangi eğitimi aldığı + yönetim notu
+model TutorTrainingRecord {
+  id          String               @id @default(uuid())
+  programId   String
+  tutorId     String
+  completed   Boolean              @default(false)
+  completedAt DateTime?
+  notes       String?
+  createdAt   DateTime             @default(now())
+  updatedAt   DateTime             @updatedAt
+  program     TutorTrainingProgram @relation("ProgramRecords", fields: [programId], references: [id], onDelete: Cascade)
+  tutor       User                 @relation("TutorTrainingRecords", fields: [tutorId], references: [id], onDelete: Cascade)
+
+  @@unique([programId, tutorId])
+  @@index([tutorId])
 }

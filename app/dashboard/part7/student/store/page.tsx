@@ -329,6 +329,30 @@ export default function StudentStore() {
               <p className="text-slate-600">Yakında harika ödüller sizleri bekliyor!</p>
             </div>
           )}
+
+          {/* Bilge Para ile alışveriş seçenekleri (1 BP = 1 TL) */}
+          <div className="mt-16">
+            <div className="text-center mb-8">
+              <h2 className="text-2xl sm:text-3xl font-bold text-slate-800">Bilge Paranı Nerelerde Kullanabilirsin?</h2>
+              <p className="text-slate-600 mt-2">1 Bilge Para = 1 TL. Aşağıdaki seçenekler için rehberinle iletişime geç.</p>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+              {[
+                { emoji: '🛒', name: 'Hepsiburada', desc: 'Bilge Paranla Hepsiburada üzerinden istediğin ürünü alabilirsin.', color: 'from-orange-400 to-amber-500' },
+                { emoji: '🎮', name: 'Steam', desc: 'Bilge Paranla Steam üzerinden istediğin oyunu satın alabilirsin.', color: 'from-slate-700 to-slate-900' },
+                { emoji: '💎', name: 'Oyun İçi Para', desc: 'Oynadığın oyunlarda kullanmak için oyun içi para alabilirsin.', color: 'from-indigo-400 to-purple-500' },
+              ].map((opt) => (
+                <div key={opt.name} className="bg-white border border-slate-200/70 rounded-2xl shadow-sm hover:shadow-md transition-all overflow-hidden">
+                  <div className={`h-2 bg-gradient-to-r ${opt.color}`} />
+                  <div className="p-6 text-center">
+                    <div className="text-5xl mb-3">{opt.emoji}</div>
+                    <h3 className="text-lg font-bold text-slate-800 mb-2">{opt.name}</h3>
+                    <p className="text-sm text-slate-600 leading-relaxed">{opt.desc}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
       </div>
 

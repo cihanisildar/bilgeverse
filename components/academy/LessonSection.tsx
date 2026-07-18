@@ -28,12 +28,16 @@ function NoAccess() {
 
 export function LessonSection({ section }: { section: LessonSectionKey }) {
     const { lesson, userId, canManage, isStudent, isMember, isAdminOrBoard } = useLessonContext();
+    // Students not enrolled in the lesson may only view general curriculum content
+    // (overview, syllabus, tasks) — attendance and materials are restricted.
+    const isNonMemberStudent = isStudent && !isMember && !canManage;
 
     switch (section) {
         case 'overview':
             return <AcademyLessonOverview />;
 
         case 'sessions':
+            if (isNonMemberStudent) return <NoAccess />;
             return (
                 <AcademySessions
                     lessonId={lesson.id}
@@ -52,6 +56,7 @@ export function LessonSection({ section }: { section: LessonSectionKey }) {
             return <AcademySyllabus lessonId={lesson.id} syllabus={lesson.syllabus} canManage={canManage} />;
 
         case 'materials':
+            if (isNonMemberStudent) return <NoAccess />;
             return <AcademyMaterials lessonId={lesson.id} materials={lesson.materials || []} canManage={canManage} />;
 
         case 'tasks':

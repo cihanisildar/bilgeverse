@@ -280,7 +280,7 @@ export function AcademySessions({
         <div className="space-y-8">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <div>
-                    <h2 className="text-2xl sm:text-3xl font-extrabold text-gray-900 tracking-tight">Oturumlar ve Yoklama</h2>
+                    <h2 className="text-2xl sm:text-3xl font-extrabold text-gray-900 tracking-tight">Yoklamalar</h2>
                     <p className="text-gray-500 mt-1">Ders planını ve katılım durumlarını buradan yönetin.</p>
                 </div>
                 {canManage && (
@@ -288,20 +288,20 @@ export function AcademySessions({
                         <DialogTrigger asChild>
                             <Button className="bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-200/50 rounded-2xl px-6 py-6 font-bold transition-all hover:scale-105 active:scale-95 group">
                                 <Plus className="h-5 w-5 mr-2 group-hover:rotate-90 transition-transform duration-300" />
-                                Yeni Oturum Oluştur
+                                Yeni Yoklama Oluştur
                             </Button>
                         </DialogTrigger>
                         <DialogContent className="sm:max-w-[500px] rounded-[2rem] border-none shadow-2xl">
                             <form onSubmit={handleCreateSession}>
                                 <DialogHeader>
-                                    <DialogTitle className="text-2xl font-bold text-gray-900">Yeni Oturum Planla</DialogTitle>
+                                    <DialogTitle className="text-2xl font-bold text-gray-900">Yeni Yoklama Planla</DialogTitle>
                                     <DialogDescription className="text-gray-500">
                                         Ders oturumu için zaman ve eğitmen planlayın.
                                     </DialogDescription>
                                 </DialogHeader>
                                 <div className="grid gap-6 py-6">
                                     <div className="grid gap-2">
-                                        <Label className="text-sm font-bold text-gray-700 ml-1">Oturum Başlığı</Label>
+                                        <Label className="text-sm font-bold text-gray-700 ml-1">Yoklama Başlığı</Label>
                                         <Input name="title" placeholder="Haftalık Ders veya Konu Adı" required className="rounded-2xl border-gray-200 focus:ring-blue-500" />
                                     </div>
                                     <div className="grid grid-cols-2 gap-4">
@@ -337,13 +337,13 @@ export function AcademySessions({
                                     </div>
                                     <div className="grid gap-2">
                                         <Label className="text-sm font-bold text-gray-700 ml-1">Notlar / Açıklama</Label>
-                                        <Textarea name="description" placeholder="Oturum hakkında detaylı bilgi (isteğe bağlı)..." className="rounded-2xl border-gray-200 min-h-[100px]" />
+                                        <Textarea name="description" placeholder="Yoklama hakkında detaylı bilgi (isteğe bağlı)..." className="rounded-2xl border-gray-200 min-h-[100px]" />
                                     </div>
                                 </div>
                                 <DialogFooter>
                                     <Button type="submit" disabled={sessionMutation.isPending} className="w-full bg-blue-600 text-white hover:bg-blue-700 py-6 rounded-2xl font-bold shadow-lg shadow-blue-200 mb-2 transition-all">
                                         {sessionMutation.isPending ? <Loader2 className="h-5 w-5 animate-spin mr-2" /> : <Save className="h-5 w-5 mr-2" />}
-                                        Oturumu Kaydet
+                                        Yoklamayı Kaydet
                                     </Button>
                                 </DialogFooter>
                             </form>
@@ -362,7 +362,7 @@ export function AcademySessions({
                         <p className="text-gray-500 max-w-xs mx-auto mb-8">Henüz bu ders için bir oturum planlanmamış. Yeni bir tane oluşturarak başlayın.</p>
                         {canManage && (
                             <Button onClick={() => setOpen(true)} className="bg-blue-600 hover:bg-blue-700 text-white rounded-2xl px-8 py-6 font-bold shadow-lg shadow-blue-100">
-                                İlk Oturumu Oluştur
+                                İlk Yoklamayı Oluştur
                             </Button>
                         )}
                     </div>

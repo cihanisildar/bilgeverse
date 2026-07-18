@@ -65,4 +65,6 @@ export interface AddDonationData {
     amount: number;
     donationDate: Date;
     notes?: string;
+    /** 'BAGIS' (bağış) or 'ZEKAT' (zekât) — kept separate in the ledger */
+    category?: string;
 }

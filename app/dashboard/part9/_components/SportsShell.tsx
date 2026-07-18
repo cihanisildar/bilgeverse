@@ -30,17 +30,20 @@ interface NavItem {
     href: string;
     /** Only visible to managers (admin/coach). Athletes get a reduced menu. */
     managerOnly?: boolean;
+    /** Only visible to athletes (their own read-only view). */
+    athleteOnly?: boolean;
 }
 
 const NAV_ITEMS: NavItem[] = [
-    { label: 'Genel Bakış', icon: LayoutDashboard, href: '/dashboard/part9' },
+    { label: 'Panelim', icon: LayoutDashboard, href: '/dashboard/part9/me', athleteOnly: true },
+    { label: 'Genel Bakış', icon: LayoutDashboard, href: '/dashboard/part9', managerOnly: true },
     { label: 'Sporcular', icon: Users, href: '/dashboard/part9/athletes', managerOnly: true },
     { label: 'Branşlar', icon: Dumbbell, href: '/dashboard/part9/branches', managerOnly: true },
     { label: 'Antrenman', icon: CalendarDays, href: '/dashboard/part9/schedule' },
     { label: 'Katılım', icon: ClipboardCheck, href: '/dashboard/part9/attendance-overview', managerOnly: true },
     { label: 'Performans', icon: LineChart, href: '/dashboard/part9/performance', managerOnly: true },
     { label: 'Turnuvalar', icon: Trophy, href: '/dashboard/part9/tournaments' },
-    { label: 'Disiplin', icon: Gavel, href: '/dashboard/part9/discipline' },
+    { label: 'Disiplin', icon: Gavel, href: '/dashboard/part9/discipline', managerOnly: true },
     { label: 'Ekipman', icon: Package, href: '/dashboard/part9/equipment', managerOnly: true },
     { label: 'Futbol Okulu', icon: CircleDollarSign, href: '/dashboard/part9/football-school', managerOnly: true },
     { label: 'Maliye', icon: Wallet, href: '/dashboard/part9/finance', managerOnly: true },
@@ -59,7 +62,11 @@ export default function SportsShell({ children }: { children: React.ReactNode })
         ([UserRole.ADMIN, UserRole.TUTOR, UserRole.ASISTAN, UserRole.BOARD_MEMBER] as UserRole[]).includes(r as UserRole)
     );
 
-    const items = NAV_ITEMS.filter((item) => !item.managerOnly || isManager);
+    const items = NAV_ITEMS.filter((item) => {
+        if (item.managerOnly) return isManager;
+        if (item.athleteOnly) return !isManager;
+        return true;
+    });
 
     return (
         <div className="min-h-screen bg-gray-50 p-4 sm:p-6 lg:p-8">

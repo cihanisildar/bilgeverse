@@ -37,6 +37,7 @@ interface EditLessonModalProps {
         imageUrl: string | null;
         startDate?: Date | string | null;
         capacity?: number | null;
+        level?: number | null;
     };
     children?: React.ReactNode;
 }
@@ -64,10 +65,12 @@ export function EditLessonModal({ lesson, children }: EditLessonModalProps) {
         const startDate = (formData.get('startDate') as string) || null;
         const capacityRaw = formData.get('capacity') as string;
         const capacity = capacityRaw ? parseInt(capacityRaw, 10) : null;
+        const levelRaw = formData.get('level') as string;
+        const level = levelRaw ? parseInt(levelRaw, 10) : null;
 
         updateMutation.mutate({
             id: lesson.id,
-            data: { name, description, imageUrl, startDate, capacity }
+            data: { name, description, imageUrl, startDate, capacity, level }
         }, {
             onSuccess: (result) => {
                 if (!result.error) setOpen(false);
@@ -112,6 +115,20 @@ export function EditLessonModal({ lesson, children }: EditLessonModalProps) {
                         <div className="grid gap-2">
                             <Label htmlFor="description">Açıklama</Label>
                             <Textarea id="description" name="description" defaultValue={lesson.description || ''} placeholder="Ders hakkında kısa bilgi..." />
+                        </div>
+                        <div className="grid gap-2">
+                            <Label htmlFor="level">Akademi Seviyesi</Label>
+                            <select
+                                id="level"
+                                name="level"
+                                defaultValue={lesson.level != null ? String(lesson.level) : ''}
+                                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                            >
+                                <option value="">Seçilmedi</option>
+                                <option value="1">Akademi 1</option>
+                                <option value="2">Akademi 2</option>
+                                <option value="3">Akademi 3</option>
+                            </select>
                         </div>
                         <div className="grid grid-cols-2 gap-4">
                             <div className="grid gap-2">

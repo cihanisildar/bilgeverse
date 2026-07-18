@@ -341,7 +341,7 @@ export default function ClassReportPage() {
                     <Card
                       key={student.id}
                       className="group cursor-pointer transition-all duration-300 hover:shadow-2xl hover:-translate-y-2 bg-white/90 backdrop-blur-sm border-white/30 overflow-hidden"
-                      onClick={() => router.push(`/dashboard/part7/admin/reports/students/${student.id}`)}
+                      onClick={() => router.push(`/dashboard/part7/admin/reports/students/${student.id}?fromClassroom=${classroomId}`)}
                     >
                       <div className={`h-2 bg-gradient-to-r ${getStudentLevelColor(student.points)}`} />
                       <CardContent className="p-4">

@@ -29,39 +29,85 @@ export default function FinanceOverview() {
     const balances = (summary?.balances ?? []).filter(
         (b) => b.currency === 'TL' || b.income > 0 || b.expense > 0
     );
+    const zekatBalances = (summary?.zekatBalances ?? []).filter(
+        (b) => b.currency === 'TL' || b.income > 0 || b.expense > 0
+    );
 
     return (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            {balances.map((b) => {
-                const meta = getCurrencyMeta(b.currency);
-                const negative = b.balance < 0;
-                return (
-                    <Card key={b.currency} className="border-none shadow-sm bg-white overflow-hidden">
-                        <div className={`h-1.5 ${negative ? 'bg-rose-400' : 'bg-emerald-400'}`} />
-                        <CardHeader className="flex flex-row items-center justify-between pb-1 pt-4">
-                            <CardTitle className="text-sm font-medium text-muted-foreground">
-                                {meta.label} Kasa
-                            </CardTitle>
-                            <Wallet className={`h-4 w-4 ${negative ? 'text-rose-500' : 'text-emerald-500'}`} />
-                        </CardHeader>
-                        <CardContent className="space-y-2">
-                            <div className={`text-2xl font-bold ${negative ? 'text-rose-600' : 'text-gray-900'}`}>
-                                {formatCurrency(b.balance, b.currency)}
-                            </div>
-                            <div className="flex items-center justify-between text-xs">
-                                <span className="flex items-center gap-1 text-emerald-600">
-                                    <TrendingUp className="h-3 w-3" />
-                                    {formatCurrency(b.income, b.currency)}
-                                </span>
-                                <span className="flex items-center gap-1 text-rose-500">
-                                    <TrendingDown className="h-3 w-3" />
-                                    {formatCurrency(b.expense, b.currency)}
-                                </span>
-                            </div>
-                        </CardContent>
-                    </Card>
-                );
-            })}
+        <div className="space-y-6">
+            <div>
+                <h3 className="text-sm font-semibold text-muted-foreground mb-3">Genel Kasa (Bağış hariç zekât)</h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                    {balances.map((b) => {
+                        const meta = getCurrencyMeta(b.currency);
+                        const negative = b.balance < 0;
+                        return (
+                            <Card key={b.currency} className="border-none shadow-sm bg-white overflow-hidden">
+                                <div className={`h-1.5 ${negative ? 'bg-rose-400' : 'bg-emerald-400'}`} />
+                                <CardHeader className="flex flex-row items-center justify-between pb-1 pt-4">
+                                    <CardTitle className="text-sm font-medium text-muted-foreground">
+                                        {meta.label} Kasa
+                                    </CardTitle>
+                                    <Wallet className={`h-4 w-4 ${negative ? 'text-rose-500' : 'text-emerald-500'}`} />
+                                </CardHeader>
+                                <CardContent className="space-y-2">
+                                    <div className={`text-2xl font-bold ${negative ? 'text-rose-600' : 'text-gray-900'}`}>
+                                        {formatCurrency(b.balance, b.currency)}
+                                    </div>
+                                    <div className="flex items-center justify-between text-xs">
+                                        <span className="flex items-center gap-1 text-emerald-600">
+                                            <TrendingUp className="h-3 w-3" />
+                                            {formatCurrency(b.income, b.currency)}
+                                        </span>
+                                        <span className="flex items-center gap-1 text-rose-500">
+                                            <TrendingDown className="h-3 w-3" />
+                                            {formatCurrency(b.expense, b.currency)}
+                                        </span>
+                                    </div>
+                                </CardContent>
+                            </Card>
+                        );
+                    })}
+                </div>
+            </div>
+
+            {zekatBalances.length > 0 && (
+                <div>
+                    <h3 className="text-sm font-semibold text-teal-700 mb-3">Zekât Kasası</h3>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                        {zekatBalances.map((b) => {
+                            const meta = getCurrencyMeta(b.currency);
+                            const negative = b.balance < 0;
+                            return (
+                                <Card key={b.currency} className="border-none shadow-sm bg-teal-50/60 overflow-hidden">
+                                    <div className={`h-1.5 ${negative ? 'bg-rose-400' : 'bg-teal-400'}`} />
+                                    <CardHeader className="flex flex-row items-center justify-between pb-1 pt-4">
+                                        <CardTitle className="text-sm font-medium text-teal-700">
+                                            {meta.label} Zekât Kasası
+                                        </CardTitle>
+                                        <Wallet className={`h-4 w-4 ${negative ? 'text-rose-500' : 'text-teal-500'}`} />
+                                    </CardHeader>
+                                    <CardContent className="space-y-2">
+                                        <div className={`text-2xl font-bold ${negative ? 'text-rose-600' : 'text-teal-800'}`}>
+                                            {formatCurrency(b.balance, b.currency)}
+                                        </div>
+                                        <div className="flex items-center justify-between text-xs">
+                                            <span className="flex items-center gap-1 text-emerald-600">
+                                                <TrendingUp className="h-3 w-3" />
+                                                {formatCurrency(b.income, b.currency)}
+                                            </span>
+                                            <span className="flex items-center gap-1 text-rose-500">
+                                                <TrendingDown className="h-3 w-3" />
+                                                {formatCurrency(b.expense, b.currency)}
+                                            </span>
+                                        </div>
+                                    </CardContent>
+                                </Card>
+                            );
+                        })}
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

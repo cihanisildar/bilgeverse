@@ -6,18 +6,23 @@ import { FinanceCurrency, FinanceType } from '@prisma/client';
  * income and expense taxonomies can evolve independently.
  */
 
-// --- Expense categories (req: personel / kira / etkinlik / dernek malzeme) ---
+// --- Expense categories (req: personel / kira / etkinlik / dernek malzeme + zekât / bilgespor / burs) ---
 export const EXPENSE_CATEGORIES = [
     { value: 'PERSONEL', label: 'Personel Gideri' },
     { value: 'KIRA', label: 'Kira Gideri' },
     { value: 'ETKINLIK', label: 'Etkinlik Gideri' },
     { value: 'MALZEME', label: 'Dernek Malzeme Gideri' },
+    { value: 'ZEKAT', label: 'Zekât' },
+    { value: 'BILGESPOR', label: 'Bilgespor Gideri' },
+    { value: 'BURS', label: 'Burs Gideri' },
     { value: 'DIGER', label: 'Diğer Gider' },
 ] as const;
 
-// --- Income sources / categories (req: bağış / ödeme / diğer gelirler) ---
+// --- Income sources / categories (req: bağış / ödeme / diğer gelirler + zekât / kumbara) ---
 export const INCOME_CATEGORIES = [
     { value: 'BAGIS', label: 'Bağış' },
+    { value: 'ZEKAT', label: 'Zekât' },
+    { value: 'KUMBARA', label: 'Kumbara' },
     { value: 'ODEME', label: 'Ödeme' },
     { value: 'DIGER', label: 'Diğer Gelir' },
 ] as const;

@@ -20,7 +20,7 @@ export interface Event {
     id: string;
     title: string;
     description: string;
-    date: string;
+    startDateTime: string;
     createdBy: {
         username: string;
         firstName?: string;

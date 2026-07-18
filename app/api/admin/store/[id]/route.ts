@@ -5,6 +5,56 @@ import { UserRole } from '@prisma/client';
 import { authOptions } from '@/app/api/auth/[...nextauth]/auth.config';
 import { deleteFromS3 } from '@/lib/s3';
 
+// PATCH: toggle active/passive status (soft enable/disable)
+export async function PATCH(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const session = await getServerSession(authOptions);
+
+    if (!session?.user || session.user.role !== UserRole.ADMIN) {
+      return NextResponse.json(
+        { error: 'Unauthorized: Only admin can access this endpoint' },
+        { status: 403 }
+      );
+    }
+
+    const itemId = params.id;
+    const body = await request.json();
+    const { isActive } = body;
+
+    if (typeof isActive !== 'boolean') {
+      return NextResponse.json(
+        { error: 'isActive (boolean) is required' },
+        { status: 400 }
+      );
+    }
+
+    const existingItem = await prisma.storeItem.findUnique({
+      where: { id: itemId },
+      select: { id: true }
+    });
+
+    if (!existingItem) {
+      return NextResponse.json({ error: 'Item not found' }, { status: 404 });
+    }
+
+    const updatedItem = await prisma.storeItem.update({
+      where: { id: itemId },
+      data: { isActive }
+    });
+
+    return NextResponse.json({ item: updatedItem });
+  } catch (error) {
+    console.error('Admin toggle store item error:', error);
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    );
+  }
+}
+
 export async function GET(
   request: NextRequest,
   { params }: { params: { id: string } }
@@ -187,11 +237,10 @@ export async function DELETE(
     }
 
     const itemId = params.id;
-    
-    // Get the item first to check if it has an image
+
     const existingItem = await prisma.storeItem.findUnique({
       where: { id: itemId },
-      select: { imageUrl: true }
+      select: { id: true }
     });
 
     if (!existingItem) {
@@ -201,34 +250,14 @@ export async function DELETE(
       );
     }
 
-    // First delete all related item requests
-    await prisma.itemRequest.deleteMany({
-      where: {
-        itemId: itemId
-      }
+    // Soft delete: deactivate the item so it disappears from the storefront but
+    // its purchase history (itemRequests) and other periods' items stay intact.
+    await prisma.storeItem.update({
+      where: { id: itemId },
+      data: { isActive: false }
     });
 
-    // Then delete the item from database
-    await prisma.storeItem.delete({
-      where: { id: itemId }
-    });
-
-    // Clean up the image file if it exists
-    if (existingItem.imageUrl) {
-      try {
-        // Extract the S3 key from the URL
-        const url = new URL(existingItem.imageUrl);
-        const key = url.pathname.substring(1); // Remove leading slash
-        
-        await deleteFromS3(key);
-        console.log(`Deleted image from S3: ${key}`);
-      } catch (fileError) {
-        // Log but don't fail the request if file deletion fails
-        console.warn('Failed to delete image from S3:', fileError);
-      }
-    }
-
-    return NextResponse.json({ message: 'Store item and related requests deleted successfully' });
+    return NextResponse.json({ message: 'Store item deactivated successfully' });
   } catch (error: any) {
     console.error('Admin delete store item error:', error);
     

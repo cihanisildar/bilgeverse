@@ -138,6 +138,7 @@ export interface AcademyLesson {
     name: string;
     description: string | null;
     imageUrl: string | null;
+    level: number | null;
     startDate: Date | string | null;
     capacity: number | null;
     assignments: AcademyAssignment[];

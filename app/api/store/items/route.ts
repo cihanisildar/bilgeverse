@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '../../auth/[...nextauth]/auth.config';
+import { getActivePeriod, storeItemWhere } from '@/lib/periods';
 
 export const dynamic = 'force-dynamic';
 
@@ -16,8 +17,10 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Global store - all authenticated users can see all items
+    // Storefront: only active items for the current period (+ legacy items)
+    const activePeriod = await getActivePeriod();
     const items = await prisma.storeItem.findMany({
+      where: storeItemWhere(activePeriod?.id, { onlyActive: true }),
       orderBy: {
         createdAt: 'desc'
       }

@@ -86,14 +86,17 @@ export function LessonShell({ lessonId, userId, userRoles, basePath, children }:
     const isStudent = userRoles.includes(UserRole.STUDENT);
     const isMember = lesson.students.some((s) => s.studentId === userId);
     const canManage = isAdminOrBoard || isAssigned;
+    // Students who aren't enrolled in this academy lesson only get the general
+    // curriculum view: Genel, Müfredat and Görevler — no attendance or materials.
+    const isNonMemberStudent = isStudent && !isMember && !canManage;
 
     const lessonBase = `${basePath}/lesson/${lesson.id}`;
 
     const navItems: NavItem[] = [
         { key: 'overview', label: 'Genel', icon: LayoutDashboard, segment: '', show: true },
-        { key: 'sessions', label: 'Oturumlar', icon: Calendar, segment: 'sessions', show: true },
+        { key: 'sessions', label: 'Yoklamalar', icon: Calendar, segment: 'sessions', show: !isNonMemberStudent },
         { key: 'syllabus', label: 'Müfredat', icon: List, segment: 'syllabus', show: true },
-        { key: 'materials', label: 'Materyaller', icon: FileBox, segment: 'materials', show: true },
+        { key: 'materials', label: 'Materyaller', icon: FileBox, segment: 'materials', show: !isNonMemberStudent },
         { key: 'tasks', label: 'Görevler', icon: Target, segment: 'tasks', show: true },
         { key: 'students', label: 'Öğrenciler', icon: Users, segment: 'students', show: !isStudent || isMember || canManage },
         { key: 'notes', label: 'Değerlendirme', icon: ClipboardList, segment: 'notes', show: canManage },
@@ -137,7 +140,7 @@ export function LessonShell({ lessonId, userId, userRoles, basePath, children }:
                                     </Badge>
                                     <Badge variant="outline" className="px-3 py-1 rounded-full border-indigo-200 text-indigo-700 bg-indigo-50">
                                         <Calendar className="h-3.5 w-3.5 mr-1.5" />
-                                        {lesson.sessions.length} Oturum
+                                        {lesson.sessions.length} Yoklama
                                     </Badge>
                                     {lesson.startDate && (
                                         <Badge variant="outline" className="px-3 py-1 rounded-full border-emerald-200 text-emerald-700 bg-emerald-50">

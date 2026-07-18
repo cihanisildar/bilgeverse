@@ -16,9 +16,18 @@ type User = {
   firstName?: string;
   lastName?: string;
   points: number;
+  allowedParts?: number[];
   tutorId?: string;
   createdAt: string;
 };
+
+// Adds/removes part 6 (Sosyal Medya) in the user's allowedParts list based on the toggle
+function mergeAllowedParts(current: number[] | undefined, socialAccess: boolean): number[] {
+  const set = new Set<number>(current ?? []);
+  if (socialAccess) set.add(6);
+  else set.delete(6);
+  return Array.from(set);
+}
 
 type Tutor = {
   id: string;
@@ -47,6 +56,7 @@ export default function EditUserPage() {
     points: 0,
     password: "",
     confirmPassword: "",
+    socialAccess: false,
   });
   const [formErrors, setFormErrors] = useState({
     username: "",
@@ -78,6 +88,7 @@ export default function EditUserPage() {
           points: data.user.points || 0,
           password: "",
           confirmPassword: "",
+          socialAccess: Array.isArray(data.user.allowedParts) && data.user.allowedParts.includes(6),
         });
       } catch (err) {
         console.error("Kullanıcı bilgilerini alırken hata:", err);
@@ -225,6 +236,7 @@ export default function EditUserPage() {
           tutorId:
             formData.roles.includes(UserRole.STUDENT) ? formData.tutorId : undefined,
           points: formData.points,
+          allowedParts: mergeAllowedParts(user?.allowedParts, formData.socialAccess),
         }),
       });
 
@@ -579,6 +591,24 @@ export default function EditUserPage() {
                 </div>
               )}
             </dl>
+          </div>
+
+          {/* Module access grants */}
+          <div className="bg-white rounded-xl border border-gray-200 p-6">
+            <h3 className="text-base font-semibold text-gray-800 mb-1">Ek Modül Erişimleri</h3>
+            <p className="text-sm text-gray-500 mb-4">Bu kullanıcıya normalde rolüyle erişemeyeceği modüller için özel izin verin.</p>
+            <label className="flex items-start gap-3 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={formData.socialAccess}
+                onChange={(e) => setFormData((prev) => ({ ...prev, socialAccess: e.target.checked }))}
+                className="mt-1 h-4 w-4 rounded border-gray-300 text-teal-600 focus:ring-teal-500"
+              />
+              <span>
+                <span className="block text-sm font-medium text-gray-800">Sosyal Medya erişimi</span>
+                <span className="block text-xs text-gray-500">Kullanıcı, admin olmadan "Sosyal Medya" bölümüne erişebilir. (Değişiklik için kullanıcının yeniden giriş yapması gerekebilir.)</span>
+              </span>
+            </label>
           </div>
 
           {/* Submit button */}

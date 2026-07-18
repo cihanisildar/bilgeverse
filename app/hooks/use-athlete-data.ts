@@ -10,6 +10,7 @@ import {
     deleteAthleteProfile,
     getTrainings,
     createTraining,
+    deleteTraining,
     getTrainingDetails,
     recordAttendance,
     recordPerformance,
@@ -189,6 +190,24 @@ export function useCreateTraining() {
         },
         onError: (error: Error) => {
             toast.error(error.message || 'Antrenman planlanırken bir hata oluştu');
+        }
+    });
+}
+
+export function useDeleteTraining() {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: (id: string) => deleteTraining(id),
+        onSuccess: (result) => {
+            if (result.error) {
+                toast.error(result.error);
+            } else {
+                queryClient.invalidateQueries({ queryKey: ['trainings'] });
+                toast.success('Antrenman silindi');
+            }
+        },
+        onError: (error: Error) => {
+            toast.error(error.message || 'Antrenman silinirken bir hata oluştu');
         }
     });
 }

@@ -3,6 +3,7 @@ import prisma from '@/lib/prisma';
 import { getServerSession } from 'next-auth';
 import { UserRole } from '@prisma/client';
 import { authOptions } from '../auth/[...nextauth]/auth.config';
+import { getActivePeriod, storeItemWhere } from '@/lib/periods';
 
 export const dynamic = 'force-dynamic';
 
@@ -17,8 +18,10 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Global store - all users see the same items
+    // Storefront: only active items for the current period (+ legacy items)
+    const activePeriod = await getActivePeriod();
     const items = await prisma.storeItem.findMany({
+      where: storeItemWhere(activePeriod?.id, { onlyActive: true }),
       orderBy: {
         createdAt: 'desc'
       }
@@ -65,11 +68,13 @@ export async function POST(request: NextRequest) {
     }
 
     try {
+      const activePeriod = await getActivePeriod();
       const newItem = await prisma.storeItem.create({
         data: {
           name,
           description,
           pointsRequired,
+          periodId: activePeriod?.id ?? null,
           ...(imageUrl && { imageUrl })
         }
       });

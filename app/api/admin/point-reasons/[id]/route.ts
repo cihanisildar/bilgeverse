@@ -26,12 +26,15 @@ export async function PUT(
 
     const { id } = params;
     const body = await request.json();
-    const { name, description, isActive } = body;
+    const { name, description, isActive, points, minPoints, maxPoints, icon, showInTips } = body;
 
     // Validate required fields
     if (!name || typeof name !== "string" || name.trim().length === 0) {
       return NextResponse.json({ error: "Name is required" }, { status: 400 });
     }
+
+    const toInt = (v: unknown) =>
+      v === null || v === undefined || v === "" ? null : Number.isFinite(Number(v)) ? Math.trunc(Number(v)) : null;
 
     // Check if the reason exists
     const existingReason = await prisma.pointReason.findUnique({
@@ -64,6 +67,11 @@ export async function PUT(
         name: name.trim(),
         description: description?.trim() || null,
         isActive: isActive !== undefined ? Boolean(isActive) : existingReason.isActive,
+        points: toInt(points),
+        minPoints: toInt(minPoints),
+        maxPoints: toInt(maxPoints),
+        icon: icon?.trim() || null,
+        showInTips: showInTips !== undefined ? Boolean(showInTips) : existingReason.showInTips,
       },
       include: {
         createdBy: {

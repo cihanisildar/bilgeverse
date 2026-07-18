@@ -16,10 +16,32 @@ export async function GET() {
       );
     }
 
-    const cards = await prisma.pointEarningCard.findMany({
-      where: { isActive: true },
+    const reasons = await prisma.pointReason.findMany({
+      where: { isActive: true, showInTips: true },
       orderBy: { createdAt: 'desc' },
+      select: {
+        id: true,
+        name: true,
+        description: true,
+        points: true,
+        minPoints: true,
+        maxPoints: true,
+        icon: true,
+        isActive: true,
+      },
     });
+
+    // Map to the shape the tips page expects (title/description/points)
+    const cards = reasons.map((r) => ({
+      id: r.id,
+      title: r.name,
+      description: r.description || "",
+      points: r.points ?? 0,
+      minPoints: r.minPoints,
+      maxPoints: r.maxPoints,
+      icon: r.icon,
+      isActive: r.isActive,
+    }));
 
     return NextResponse.json(cards);
   } catch (error) {

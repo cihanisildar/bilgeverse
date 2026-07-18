@@ -31,7 +31,7 @@ export function AcademyLessonOverview() {
 
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                 <StatCard icon={Users} label="Öğrenci" value={lesson.students.length} color="bg-blue-50 text-blue-600" />
-                <StatCard icon={Calendar} label="Oturum" value={lesson.sessions.length} color="bg-indigo-50 text-indigo-600" />
+                <StatCard icon={Calendar} label="Yoklama" value={lesson.sessions.length} color="bg-indigo-50 text-indigo-600" />
                 <StatCard icon={FileBox} label="Materyal" value={(lesson.materials || []).length} color="bg-emerald-50 text-emerald-600" />
                 <StatCard icon={Target} label="Görev" value={(lesson.tasks || []).length} color="bg-purple-50 text-purple-600" />
             </div>

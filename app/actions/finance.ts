@@ -102,20 +102,33 @@ export async function getFinanceSummary(): Promise<FinanceActionResponse<Finance
         await checkAuth();
 
         const grouped = await prisma.financeTransaction.groupBy({
-            by: ['currency', 'type'],
+            by: ['currency', 'type', 'category'],
             _sum: { amount: true },
             _count: { _all: true },
         });
 
+        const sumFor = (currency: FinanceCurrency, type: 'INCOME' | 'EXPENSE', onlyZekat: boolean) =>
+            grouped
+                .filter((g) => g.currency === currency && g.type === type && (onlyZekat ? g.category === 'ZEKAT' : g.category !== 'ZEKAT'))
+                .reduce((acc, g) => acc + (g._sum.amount?.toNumber() ?? 0), 0);
+
+        // General cash balance excludes zekât so the two funds stay separate.
         const balances: CurrencyBalance[] = ALL_CURRENCIES.map((currency) => {
-            const income = grouped.find((g) => g.currency === currency && g.type === 'INCOME')?._sum.amount?.toNumber() ?? 0;
-            const expense = grouped.find((g) => g.currency === currency && g.type === 'EXPENSE')?._sum.amount?.toNumber() ?? 0;
+            const income = sumFor(currency, 'INCOME', false);
+            const expense = sumFor(currency, 'EXPENSE', false);
+            return { currency, income, expense, balance: income - expense };
+        });
+
+        // Dedicated zekât cash balance.
+        const zekatBalances: CurrencyBalance[] = ALL_CURRENCIES.map((currency) => {
+            const income = sumFor(currency, 'INCOME', true);
+            const expense = sumFor(currency, 'EXPENSE', true);
             return { currency, income, expense, balance: income - expense };
         });
 
         const transactionCount = grouped.reduce((acc, g) => acc + g._count._all, 0);
 
-        return { error: null, data: { balances, transactionCount } };
+        return { error: null, data: { balances, zekatBalances, transactionCount } };
     } catch (error) {
         const message = error instanceof Error ? error.message : 'Özet getirilemedi';
         console.error('Error fetching finance summary:', error);

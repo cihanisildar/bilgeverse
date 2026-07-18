@@ -81,6 +81,14 @@ export async function isAuthorized(session: Session | null, partId: number): Pro
     
     if (partId === 1 && isBoardMember) return true;
 
-    if (roles.length === 0) return false;
-    return canAccessPart(roles, partId);
+    if (roles.length > 0 && canAccessPart(roles, partId)) return true;
+
+    // Per-user access grants (e.g. admin lets specific students use Sosyal Medya)
+    const dbUser = await prisma.user.findUnique({
+        where: { id: user.id },
+        select: { allowedParts: true }
+    });
+    if (dbUser?.allowedParts?.includes(partId)) return true;
+
+    return false;
 }

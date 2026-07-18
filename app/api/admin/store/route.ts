@@ -3,7 +3,7 @@ import prisma from '@/lib/prisma';
 import { getServerSession } from 'next-auth';
 import { UserRole } from '@prisma/client';
 import { authOptions } from '../../auth/[...nextauth]/auth.config';
-import { deleteFromS3 } from '@/lib/s3';
+import { getActivePeriod, storeItemWhere } from '@/lib/periods';
 
 export async function GET(request: NextRequest) {
   try {
@@ -16,11 +16,15 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Get all store items (global store)
+    // Show items for the active period (plus legacy items). Admin sees passive
+    // items too so they can re-activate them.
+    const activePeriod = await getActivePeriod();
     const items = await prisma.storeItem.findMany({
-      orderBy: {
-        createdAt: 'desc'
-      }
+      where: storeItemWhere(activePeriod?.id),
+      orderBy: [
+        { isActive: 'desc' },
+        { createdAt: 'desc' }
+      ]
     });
 
     return NextResponse.json({ items });
@@ -63,12 +67,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Create store item (global store)
+    // Create store item scoped to the active period
+    const activePeriod = await getActivePeriod();
     const newItem = await prisma.storeItem.create({
       data: {
         name,
         description,
         pointsRequired,
+        periodId: activePeriod?.id ?? null,
         ...(imageUrl && { imageUrl })
       }
     });
@@ -118,10 +124,9 @@ export async function DELETE(request: NextRequest) {
       );
     }
 
-    // Get the item first to check if it has an image
     const existingItem = await prisma.storeItem.findUnique({
       where: { id: itemId },
-      select: { imageUrl: true }
+      select: { id: true }
     });
 
     if (!existingItem) {
@@ -131,27 +136,14 @@ export async function DELETE(request: NextRequest) {
       );
     }
 
-    // Delete the item from database first
-    await prisma.storeItem.delete({
-      where: { id: itemId }
+    // Soft delete: deactivate the item instead of removing it. This keeps
+    // purchase history intact and never touches other periods' items.
+    await prisma.storeItem.update({
+      where: { id: itemId },
+      data: { isActive: false }
     });
 
-    // Clean up the image file if it exists
-    if (existingItem.imageUrl) {
-      try {
-        // Extract the S3 key from the URL
-        const url = new URL(existingItem.imageUrl);
-        const key = url.pathname.substring(1); // Remove leading slash
-        
-        await deleteFromS3(key);
-        console.log(`Deleted image from S3: ${key}`);
-      } catch (fileError) {
-        // Log but don't fail the request if file deletion fails
-        console.warn('Failed to delete image from S3:', fileError);
-      }
-    }
-
-    return NextResponse.json({ message: 'Store item deleted successfully' });
+    return NextResponse.json({ message: 'Store item deactivated successfully' });
   } catch (error) {
     console.error('Admin delete store item error:', error);
     return NextResponse.json(

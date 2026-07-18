@@ -3,6 +3,7 @@ import prisma from '@/lib/prisma';
 import { UserRole } from '@prisma/client';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '../../auth/[...nextauth]/auth.config';
+import { calculateMultipleUserPoints, calculateMultipleUserExperience } from '@/lib/points';
 
 export const dynamic = 'force-dynamic';
 
@@ -72,6 +73,12 @@ export async function GET(request: NextRequest) {
       }, { status: 200 });
     }
     const studentIds = students.map(s => s.id);
+    // Calculate per-student points/experience from transactions (active period),
+    // since User.points is not maintained as a running balance.
+    const [pointsMap, experienceMap] = await Promise.all([
+      calculateMultipleUserPoints(studentIds),
+      calculateMultipleUserExperience(studentIds),
+    ]);
     // Points transactions
     const pointsTransactions = await prisma.pointsTransaction.findMany({
       where: {
@@ -159,8 +166,8 @@ export async function GET(request: NextRequest) {
     const studentStats = students.map(student => ({
       id: student.id,
       name: student.firstName && student.lastName ? `${student.firstName} ${student.lastName}` : student.username,
-      points: student.points,
-      experience: student.experience
+      points: pointsMap.get(student.id) ?? 0,
+      experience: experienceMap.get(student.id) ?? 0
     }));
     // Get detailed points and experience lists
     const pointsList = pointsTransactions.map(transaction => ({

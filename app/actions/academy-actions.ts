@@ -46,6 +46,7 @@ export async function createAcademyLesson(data: {
     name: string;
     description?: string;
     imageUrl?: string;
+    level?: number | null;
     startDate?: string | null;
     capacity?: number | null;
 }): Promise<ActionResult<AcademyLesson>> {
@@ -53,10 +54,11 @@ export async function createAcademyLesson(data: {
     if (error) return { error, data: null };
 
     try {
-        const { startDate, capacity, ...rest } = data;
+        const { startDate, capacity, level, ...rest } = data;
         const lesson = await p.academyLesson.create({
             data: {
                 ...rest,
+                level: level ?? null,
                 startDate: startDate ? new Date(startDate) : null,
                 capacity: capacity ?? null,
             },
@@ -75,6 +77,7 @@ export async function updateAcademyLesson(id: string, data: {
     name?: string;
     description?: string;
     imageUrl?: string;
+    level?: number | null;
     startDate?: string | null;
     capacity?: number | null;
 }): Promise<ActionResult<AcademyLesson>> {
@@ -82,8 +85,9 @@ export async function updateAcademyLesson(id: string, data: {
     if (error) return { error, data: null };
 
     try {
-        const { startDate, capacity, ...rest } = data;
+        const { startDate, capacity, level, ...rest } = data;
         const updateData: any = { ...rest };
+        if (level !== undefined) updateData.level = level;
         if (startDate !== undefined) updateData.startDate = startDate ? new Date(startDate) : null;
         if (capacity !== undefined) updateData.capacity = capacity;
         const lesson = await p.academyLesson.update({

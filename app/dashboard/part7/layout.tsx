@@ -47,14 +47,11 @@ export default function AuthenticatedLayout({
   // Define navigation links based on role with Lucide icons
   const adminLinks: NavLink[] = [
     { href: '/dashboard/part7/admin', label: 'Gösterge Paneli', icon: <LayoutDashboard className="h-5 w-5" /> },
-    { href: '/dashboard/part7/admin/periods', label: 'Dönem Yönetimi', icon: <Clock className="h-5 w-5" /> },
-    { href: '/dashboard/part7/admin/announcements', label: 'Duyuru Panosu', icon: <Bell className="h-5 w-5" /> },
 
     { isSectionHeader: true, label: 'Karakter Eğitim Grupları' },
     { href: '/dashboard/part7/admin/events', label: 'Etkinlikler', icon: <Calendar className="h-5 w-5" /> },
-    { href: '/dashboard/part7/admin/weekly-reports', label: 'Haftalık Raporlar', icon: <BookOpen className="h-5 w-5" /> },
-    { href: '/dashboard/part7/admin/reports', label: 'Raporlar', icon: <PieChart className="h-5 w-5" /> },
 
+    // Bilgeverse: yalnızca puan/mağaza ile doğrudan ilgili başlıklar kalır
     { isSectionHeader: true, label: 'Bilgeverse' },
     { href: '/dashboard/part7/admin/points', label: 'Puan Yönetimi', icon: <Award className="h-5 w-5" /> },
     { href: '/dashboard/part7/admin/point-reasons', label: 'Puan Kriteri Oluşturma', icon: <FileText className="h-5 w-5" /> },
@@ -62,10 +59,20 @@ export default function AuthenticatedLayout({
     { href: '/dashboard/part7/admin/store', label: 'Mağaza Yönetimi', icon: <ShoppingBag className="h-5 w-5" /> },
     { href: '/dashboard/part7/admin/requests', label: 'Ürün Talepleri', icon: <ShoppingCart className="h-5 w-5" /> },
     { href: '/dashboard/part7/admin/leaderboard', label: 'Liderlik Tablosu', icon: <Trophy className="h-5 w-5" /> },
-    { href: '/dashboard/part7/admin/wishes', label: 'İstek ve Dilekler', icon: <ClipboardList className="h-5 w-5" /> },
 
+    // İnsan Kaynağı: Haftalık Raporlar + İK modülleri (part3)
+    { isSectionHeader: true, label: 'İnsan Kaynağı' },
+    { href: '/dashboard/part7/admin/weekly-reports', label: 'Haftalık Raporlar', icon: <BookOpen className="h-5 w-5" /> },
+    { href: '/dashboard/part3', label: 'İK Modülleri', icon: <School className="h-5 w-5" /> },
+
+    // Gençlik Merkezi: dernek geneli başlıklar + merkez modülleri (part10)
     { isSectionHeader: true, label: 'Gençlik Merkezi' },
+    { href: '/dashboard/part7/admin/announcements', label: 'Duyuru Panosu', icon: <Bell className="h-5 w-5" /> },
+    { href: '/dashboard/part7/admin/periods', label: 'Dönem Yönetimi', icon: <Clock className="h-5 w-5" /> },
+    { href: '/dashboard/part7/admin/wishes', label: 'İstek ve Dilekler', icon: <ClipboardList className="h-5 w-5" /> },
+    { href: '/dashboard/part7/admin/reports', label: 'Raporlar', icon: <PieChart className="h-5 w-5" /> },
     { href: '/dashboard/part7/admin/users', label: 'Kullanıcı Yönetimi', icon: <Users className="h-5 w-5" /> },
+    { href: '/dashboard/part10', label: 'Merkez Modülleri', icon: <Building2 className="h-5 w-5" /> },
   ];
 
   const tutorLinks: NavLink[] = [
@@ -73,11 +80,11 @@ export default function AuthenticatedLayout({
     { href: '/dashboard/part7/tutor/students', label: 'Grubum', icon: <Users className="h-5 w-5" /> },
     { href: '/dashboard/part7/tutor/leaderboard', label: 'Liderlik Tablosu', icon: <Trophy className="h-5 w-5" /> },
     { href: '/dashboard/part7/tutor/workshops', label: 'Atölyeler', icon: <Grid3x3 className="h-5 w-5" /> },
+    ...(isInAcademy ? [{ href: '/dashboard/part7/tutor/academy', label: 'Akademi', icon: <GraduationCap className="h-5 w-5" /> } as NavLink] : []),
     { isSeparator: true },
     { href: '/dashboard/part7/tutor/weekly-reports', label: 'Haftalık İlerleme Raporu', icon: <FileText className="h-5 w-5" /> },
     { href: '/dashboard/part7/tutor/tips', label: 'Nasıl Bilge Para Kazanılır', icon: <TrendingUp className="h-5 w-5" /> },
     { href: '/dashboard/part7/tutor/store', label: 'Öğrenci Mağazası', icon: <ShoppingCart className="h-5 w-5" /> },
-    ...(isInAcademy ? [{ href: '/dashboard/part7/tutor/academy', label: 'Akademi', icon: <GraduationCap className="h-5 w-5" /> } as NavLink] : []),
     ...(hasBoardMember ? [{ href: '/dashboard/part1', label: 'Yönetim Kurulu', icon: <Building2 className="h-5 w-5" /> } as NavLink] : []),
     { href: '/dashboard/part7/tutor/settings', label: 'Ayarlar', icon: <Settings className="h-5 w-5" /> },
   ];

@@ -17,10 +17,12 @@ import {
     parseISO
 } from 'date-fns';
 import { tr } from 'date-fns/locale';
-import { ChevronLeft, ChevronRight, Trophy, Dumbbell, Calendar as CalendarIcon, Clock, MapPin, ExternalLink, Info } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Trophy, Dumbbell, Calendar as CalendarIcon, Clock, MapPin, ExternalLink, Info, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { useDeleteTraining } from '@/app/hooks/use-athlete-data';
 import {
     Dialog,
     DialogContent,
@@ -52,6 +54,17 @@ export default function TrainingCalendar({ trainings, onSelectSession }: Trainin
     const [currentMonth, setCurrentMonth] = useState(new Date());
     const [selectedTraining, setSelectedTraining] = useState<Training | null>(null);
     const [selectedDayTrainings, setSelectedDayTrainings] = useState<{ day: Date, items: Training[] } | null>(null);
+    const [trainingToDelete, setTrainingToDelete] = useState<Training | null>(null);
+    const deleteTrainingMutation = useDeleteTraining();
+
+    const handleDeleteTraining = async () => {
+        if (!trainingToDelete) return;
+        const result = await deleteTrainingMutation.mutateAsync(trainingToDelete.id);
+        if (!result.error) {
+            setTrainingToDelete(null);
+            setSelectedTraining(null);
+        }
+    };
 
     const nextMonth = () => setCurrentMonth(addMonths(currentMonth, 1));
     const prevMonth = () => setCurrentMonth(subMonths(currentMonth, 1));
@@ -304,23 +317,46 @@ export default function TrainingCalendar({ trainings, onSelectSession }: Trainin
                                 </div>
                             </div>
 
-                            <DialogFooter className="gap-2 sm:gap-0">
-                                <Button variant="ghost" onClick={() => setSelectedTraining(null)} className="flex-1 sm:flex-none">Kapat</Button>
+                            <DialogFooter className="gap-2 sm:gap-0 sm:justify-between">
                                 <Button
-                                    onClick={() => {
-                                        onSelectSession(selectedTraining.id);
-                                        setSelectedTraining(null);
-                                    }}
-                                    className="bg-indigo-600 hover:bg-indigo-700 text-white flex-1 sm:flex-none"
+                                    variant="outline"
+                                    onClick={() => setTrainingToDelete(selectedTraining)}
+                                    className="text-rose-600 border-rose-200 hover:bg-rose-50 hover:text-rose-700 flex-1 sm:flex-none"
                                 >
-                                    <ExternalLink className="h-4 w-4 mr-2" />
-                                    Yoklama Sayfasına Git
+                                    <Trash2 className="h-4 w-4 mr-2" />
+                                    Sil
                                 </Button>
+                                <div className="flex gap-2">
+                                    <Button variant="ghost" onClick={() => setSelectedTraining(null)} className="flex-1 sm:flex-none">Kapat</Button>
+                                    <Button
+                                        onClick={() => {
+                                            onSelectSession(selectedTraining.id);
+                                            setSelectedTraining(null);
+                                        }}
+                                        className="bg-indigo-600 hover:bg-indigo-700 text-white flex-1 sm:flex-none"
+                                    >
+                                        <ExternalLink className="h-4 w-4 mr-2" />
+                                        Yoklama Sayfasına Git
+                                    </Button>
+                                </div>
                             </DialogFooter>
                         </>
                     )}
                 </DialogContent>
             </Dialog>
+
+            <ConfirmDialog
+                open={!!trainingToDelete}
+                onOpenChange={(open) => !open && setTrainingToDelete(null)}
+                onConfirm={handleDeleteTraining}
+                title="Antrenman silinsin mi?"
+                description={
+                    trainingToDelete
+                        ? `"${trainingToDelete.title}" oturumu ve varsa girilmiş yoklama/performans kayıtları kalıcı olarak silinecek. Bu işlem geri alınamaz.`
+                        : ''
+                }
+                loading={deleteTrainingMutation.isPending}
+            />
         </div>
     );
 }

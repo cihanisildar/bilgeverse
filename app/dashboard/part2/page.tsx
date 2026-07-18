@@ -66,33 +66,8 @@ export default async function Part2Page() {
             </Link>
           )}
 
-          {/* Admin Attendance Overview Card */}
-          {isAdmin && (
-            <Link href="/dashboard/part2/overview" className="block">
-              <Card className="border-0 shadow-lg rounded-xl overflow-hidden transition-all duration-200 hover:shadow-xl hover:-translate-y-1 cursor-pointer bg-gradient-to-br from-purple-50 to-pink-50">
-                <div className="h-2 bg-gradient-to-r from-purple-500 to-pink-500"></div>
-                <CardHeader>
-                  <div className="flex items-center space-x-4">
-                    <div className="w-16 h-16 flex items-center justify-center rounded-full bg-purple-100 text-purple-600">
-                      <PartyPopper className="h-8 w-8" />
-                    </div>
-                    <div>
-                      <CardTitle className="text-xl">Toplu Yoklama Özeti</CardTitle>
-                      <CardDescription className="mt-1">
-                        Tüm sınıfların haftalık yoklama durumu
-                      </CardDescription>
-                    </div>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex items-center text-sm font-medium text-gray-600">
-                    Özet Sayfasına Git
-                    <ArrowRight className="ml-2 h-4 w-4" />
-                  </div>
-                </CardContent>
-              </Card>
-            </Link>
-          )}
+          {/* "Toplu Yoklama Özeti" İnsan Kaynağı bölümüne taşındı
+              (/dashboard/part3/tutor-participation). */}
 
           {/* Syllabus Management Card */}
           {canManage && (

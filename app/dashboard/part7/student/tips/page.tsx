@@ -32,6 +32,20 @@ interface PointCard {
   isActive: boolean;
 }
 
+// Returns a human-readable points label, or null when the reason has no point value set
+function formatPoints(card: Pick<PointCard, "points" | "minPoints" | "maxPoints">): string | null {
+  const hasRange =
+    card.minPoints !== null && card.minPoints !== undefined &&
+    card.maxPoints !== null && card.maxPoints !== undefined;
+  if (hasRange) {
+    return `${card.minPoints} - ${card.maxPoints} puan`;
+  }
+  if (card.points !== null && card.points !== undefined && card.points > 0) {
+    return `+${card.points} puan`;
+  }
+  return null;
+}
+
 export default function TipsPage() {
   const [selectedCard, setSelectedCard] = useState<PointCard | null>(null);
   const [hoveredCard, setHoveredCard] = useState<string | null>(null);
@@ -191,18 +205,17 @@ export default function TipsPage() {
             
             <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-white leading-tight">
               <span className="bg-clip-text text-transparent bg-gradient-to-r from-purple-400 via-pink-400 to-blue-400">
-                Potansiyelinizi
+                Nasıl Bilge Para
               </span>
               <br />
-              <span className="text-white">Keşfedin</span>
+              <span className="text-white">Kazanırım?</span>
             </h1>
-            
+
             <p className="text-lg sm:text-xl text-gray-300 max-w-3xl mx-auto leading-relaxed">
-              Akademik yolculuğunuzda başarıya ulaşmanız için özel olarak hazırlanmış 
-              stratejiler ve ipuçları ile potansiyelinizi keşfedin.
+              Aşağıdaki yollarla Bilge Para kazanabilirsin.
             </p>
-            
-            <motion.div 
+
+            <motion.div
               className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-500/20 to-blue-500/20 backdrop-blur-sm border border-purple-500/30 rounded-full text-purple-300 text-sm"
               animate={{ 
                 boxShadow: [
@@ -276,18 +289,19 @@ export default function TipsPage() {
                         } : {}}
                         transition={{ duration: 0.5 }}
                       >
-                        {card.icon}
+                        {card.icon || "⭐"}
                       </motion.div>
-                      
+
                       <h3 className="text-xl font-bold text-white mb-2">
                         {card.title}
                       </h3>
-                      
+
                       <p className="text-gray-300 text-sm line-clamp-4 leading-relaxed">
                         {card.description}
                       </p>
 
                       {/* Points display */}
+                      {formatPoints(card) && (
                       <motion.div
                         className="mt-4 flex items-center justify-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-500/30 to-blue-500/30 backdrop-blur-sm border border-purple-500/50 rounded-full"
                         animate={hoveredCard === card.id ? {
@@ -298,13 +312,10 @@ export default function TipsPage() {
                       >
                         <TrendingUp className="h-4 w-4 text-green-400" />
                         <span className="text-white font-semibold">
-                          {(card.minPoints !== null && card.maxPoints !== null) ? (
-                            <>{card.minPoints} - {card.maxPoints} puan</>
-                          ) : (
-                            <>+{card.points} puan</>
-                          )}
+                          {formatPoints(card)}
                         </span>
                       </motion.div>
+                      )}
                     </div>
                   </div>
                 </motion.div>
@@ -408,7 +419,7 @@ export default function TipsPage() {
                     transition={{ delay: 0.2, duration: 0.5 }}
                     className="text-6xl mb-6"
                   >
-                    {selectedCard.icon}
+                    {selectedCard.icon || "⭐"}
                   </motion.div>
                   
                   <motion.h2
@@ -429,6 +440,7 @@ export default function TipsPage() {
                     {selectedCard.description}
                   </motion.p>
 
+                  {formatPoints(selectedCard) && (
                   <motion.div
                     initial={{ y: 20, opacity: 0 }}
                     animate={{ y: 0, opacity: 1 }}
@@ -437,13 +449,10 @@ export default function TipsPage() {
                   >
                     <TrendingUp className="h-5 w-5 text-green-400" />
                     <span className="text-white font-bold text-lg">
-                      {(selectedCard.minPoints !== null && selectedCard.maxPoints !== null) ? (
-                        <>{selectedCard.minPoints} - {selectedCard.maxPoints} puan</>
-                      ) : (
-                        <>+{selectedCard.points} puan</>
-                      )}
+                      {formatPoints(selectedCard)}
                     </span>
                   </motion.div>
+                  )}
                 </div>
               </div>
             </motion.div>

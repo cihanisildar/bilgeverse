@@ -172,7 +172,7 @@ export default function SyllabusDetailPage() {
       <div className="max-w-6xl mx-auto">
         <Button
           variant="ghost"
-          onClick={() => router.push('/dashboard/part2/syllabus')}
+          onClick={() => router.back()}
           className="mb-6"
         >
           <ArrowLeft className="h-4 w-4 mr-2" />

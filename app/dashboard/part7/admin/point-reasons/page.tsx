@@ -32,6 +32,11 @@ type PointReason = {
   name: string;
   description?: string;
   isActive: boolean;
+  points?: number | null;
+  minPoints?: number | null;
+  maxPoints?: number | null;
+  icon?: string | null;
+  showInTips?: boolean;
   createdAt: string;
   updatedAt: string;
   createdBy: {
@@ -84,6 +89,12 @@ function PointReasonsManagement() {
     name: "",
     description: "",
     isActive: true,
+    showInTips: false,
+    icon: "",
+    pointMode: "single" as "single" | "range",
+    points: "",
+    minPoints: "",
+    maxPoints: "",
   });
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
 
@@ -140,8 +151,35 @@ function PointReasonsManagement() {
       name: "",
       description: "",
       isActive: true,
+      showInTips: false,
+      icon: "",
+      pointMode: "single",
+      points: "",
+      minPoints: "",
+      maxPoints: "",
     });
     setEditingReason(null);
+  };
+
+  // Build the payload sent to the API from the current form state
+  const buildPayload = () => {
+    const base: Record<string, unknown> = {
+      name: formData.name,
+      description: formData.description,
+      isActive: formData.isActive,
+      showInTips: formData.showInTips,
+      icon: formData.icon,
+    };
+    if (formData.pointMode === "range") {
+      base.minPoints = formData.minPoints === "" ? null : Number(formData.minPoints);
+      base.maxPoints = formData.maxPoints === "" ? null : Number(formData.maxPoints);
+      base.points = null;
+    } else {
+      base.points = formData.points === "" ? null : Number(formData.points);
+      base.minPoints = null;
+      base.maxPoints = null;
+    }
+    return base;
   };
 
   // Handle create
@@ -157,7 +195,7 @@ function PointReasonsManagement() {
           "Content-Type": "application/json",
         },
         credentials: "include",
-        body: JSON.stringify(formData),
+        body: JSON.stringify(buildPayload()),
       });
 
       if (!response.ok) {
@@ -191,7 +229,7 @@ function PointReasonsManagement() {
           "Content-Type": "application/json",
         },
         credentials: "include",
-        body: JSON.stringify(formData),
+        body: JSON.stringify(buildPayload()),
       });
 
       if (!response.ok) {
@@ -246,10 +284,17 @@ function PointReasonsManagement() {
   // Open edit dialog
   const openEditDialog = (reason: PointReason) => {
     setEditingReason(reason);
+    const hasRange = reason.minPoints != null || reason.maxPoints != null;
     setFormData({
       name: reason.name,
       description: reason.description || "",
       isActive: reason.isActive,
+      showInTips: reason.showInTips ?? false,
+      icon: reason.icon || "",
+      pointMode: hasRange ? "range" : "single",
+      points: reason.points != null ? String(reason.points) : "",
+      minPoints: reason.minPoints != null ? String(reason.minPoints) : "",
+      maxPoints: reason.maxPoints != null ? String(reason.maxPoints) : "",
     });
     setIsEditDialogOpen(true);
   };
@@ -272,6 +317,97 @@ function PointReasonsManagement() {
     }
     return user.username;
   };
+
+  // Shared tips/points form fields for both create & edit dialogs.
+  // Called as a function (not a component) so inputs don't lose focus on re-render.
+  const pointFields = (idPrefix: string) => (
+    <div className="space-y-4 rounded-lg border border-blue-100 bg-blue-50/40 p-4">
+      <div className="flex items-center space-x-2">
+        <Switch
+          id={`${idPrefix}-showInTips`}
+          checked={formData.showInTips}
+          onCheckedChange={(checked) => setFormData({ ...formData, showInTips: checked })}
+        />
+        <Label htmlFor={`${idPrefix}-showInTips`}>Öğrenci "Nasıl Bilge Para Kazanırım" sayfasında göster</Label>
+      </div>
+
+      {formData.showInTips && (
+        <>
+          <div className="space-y-2">
+            <Label htmlFor={`${idPrefix}-icon`}>İkon (emoji)</Label>
+            <Input
+              id={`${idPrefix}-icon`}
+              value={formData.icon}
+              onChange={(e) => setFormData({ ...formData, icon: e.target.value })}
+              placeholder="Örn: 📚 ⭐ 🏆 (boş bırakılırsa ⭐ kullanılır)"
+              maxLength={4}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label>Puan Gösterimi</Label>
+            <div className="flex gap-2">
+              <Button
+                type="button"
+                variant={formData.pointMode === "single" ? "default" : "outline"}
+                size="sm"
+                onClick={() => setFormData({ ...formData, pointMode: "single" })}
+              >
+                Sabit Puan
+              </Button>
+              <Button
+                type="button"
+                variant={formData.pointMode === "range" ? "default" : "outline"}
+                size="sm"
+                onClick={() => setFormData({ ...formData, pointMode: "range" })}
+              >
+                Puan Aralığı
+              </Button>
+            </div>
+          </div>
+
+          {formData.pointMode === "single" ? (
+            <div className="space-y-2">
+              <Label htmlFor={`${idPrefix}-points`}>Puan</Label>
+              <Input
+                id={`${idPrefix}-points`}
+                type="number"
+                min={0}
+                value={formData.points}
+                onChange={(e) => setFormData({ ...formData, points: e.target.value })}
+                placeholder="Örn: 10 (boş bırakılırsa puan gösterilmez)"
+              />
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label htmlFor={`${idPrefix}-minPoints`}>Min. Puan</Label>
+                <Input
+                  id={`${idPrefix}-minPoints`}
+                  type="number"
+                  min={0}
+                  value={formData.minPoints}
+                  onChange={(e) => setFormData({ ...formData, minPoints: e.target.value })}
+                  placeholder="Örn: 5"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor={`${idPrefix}-maxPoints`}>Maks. Puan</Label>
+                <Input
+                  id={`${idPrefix}-maxPoints`}
+                  type="number"
+                  min={0}
+                  value={formData.maxPoints}
+                  onChange={(e) => setFormData({ ...formData, maxPoints: e.target.value })}
+                  placeholder="Örn: 20"
+                />
+              </div>
+            </div>
+          )}
+        </>
+      )}
+    </div>
+  );
 
   if (isLoading) {
     return (
@@ -351,6 +487,16 @@ function PointReasonsManagement() {
                     {reason._count && (
                       <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
                         {reason._count.transactions} kullanım
+                      </Badge>
+                    )}
+                    {reason.showInTips && (
+                      <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-200">
+                        Tips'te görünür
+                        {reason.minPoints != null && reason.maxPoints != null
+                          ? ` · ${reason.minPoints}-${reason.maxPoints}p`
+                          : reason.points != null
+                          ? ` · ${reason.points}p`
+                          : ""}
                       </Badge>
                     )}
                   </div>
@@ -514,6 +660,7 @@ function PointReasonsManagement() {
                 rows={3}
               />
             </div>
+            {pointFields("create")}
             <div className="flex items-center space-x-2">
               <Switch
                 id="isActive"
@@ -571,6 +718,7 @@ function PointReasonsManagement() {
                 rows={3}
               />
             </div>
+            {pointFields("edit")}
             <div className="flex items-center space-x-2">
               <Switch
                 id="edit-isActive"

@@ -77,7 +77,10 @@ export default function DashboardPage() {
     if (!loading && !user) {
       router.push('/login');
     }
-    if (!loading && user && isStudent && !isAdmin) {
+    // Students normally go straight to their own panel, unless an admin has granted
+    // them access to an extra module (e.g. Sosyal Medya) — then show the grid so
+    // they can reach it.
+    if (!loading && user && isStudent && !isAdmin && !(user.allowedParts && user.allowedParts.length > 0)) {
       router.replace('/dashboard/part7/student');
     }
   }, [loading, user, isStudent, isAdmin, router]);
@@ -108,7 +111,9 @@ export default function DashboardPage() {
 
   const roles = user.roles && user.roles.length > 0 ? user.roles : [user.role];
   const allowedPartIds = getAllowedParts(roles);
-  const visibleParts = PARTS.filter(part => allowedPartIds.includes(part.id) || (part.id === 1 && isBoardMember))
+  // Per-user grants (e.g. admin allows specific users into Sosyal Medya)
+  const extraPartIds = user.allowedParts ?? [];
+  const visibleParts = PARTS.filter(part => allowedPartIds.includes(part.id) || extraPartIds.includes(part.id) || (part.id === 1 && isBoardMember))
     .filter(part => !(isStudent && !isAdmin && (part.id === 4 || part.id === 11)))
     .filter(part => part.id !== 11 || isInAcademy || isAdmin || isBoardMember);
 

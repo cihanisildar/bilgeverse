@@ -29,7 +29,7 @@ type Event = {
   id: string;
   title: string;
   description: string;
-  date: string;
+  startDateTime: string;
   createdBy: {
     username: string;
     firstName?: string;
@@ -303,8 +303,8 @@ export default function StudentDashboard() {
   today.setHours(0, 0, 0, 0);
 
   const upcomingEvents = eventsData?.events
-    .filter((event) => new Date(event.date) >= today)
-    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+    .filter((event) => new Date(event.startDateTime) >= today)
+    .sort((a, b) => new Date(a.startDateTime).getTime() - new Date(b.startDateTime).getTime())
     .slice(0, 3) || [];
 
   // Get recent point history (last 5 transactions)
@@ -460,7 +460,7 @@ export default function StudentDashboard() {
                         <div className="flex items-center justify-between pt-4 border-t border-gray-50">
                           <div className="flex items-center gap-2 text-gray-500">
                             <Clock className="h-4 w-4" />
-                            <span className="text-xs font-bold">{format(new Date(event.date), 'd MMM', { locale: tr })}</span>
+                            <span className="text-xs font-bold">{format(new Date(event.startDateTime), 'd MMM', { locale: tr })}</span>
                           </div>
                           <Link href={`/dashboard/part7/student/events/${event.id}`} className="p-1.5 bg-gray-50 rounded-lg group-hover:bg-indigo-600 group-hover:text-white transition-all">
                              <ArrowRight className="h-4 w-4" />

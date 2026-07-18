@@ -828,3 +828,103 @@ export async function getTutorStudents() {
     return { error: 'Öğrenciler yüklenirken bir hata oluştu', data: null };
   }
 }
+
+/**
+ * Admin-only: fetch a specific rehber's active students so the admin can take
+ * attendance on that rehber's behalf (req: admin covers missing attendance).
+ */
+export async function getStudentsForTutor(tutorId: string) {
+  try {
+    const session = await getServerSession(authOptions);
+    const roles = (session?.user as any)?.roles || [(session?.user as any)?.role].filter(Boolean);
+    if (!roles.includes(UserRole.ADMIN) && !roles.includes(UserRole.BOARD_MEMBER)) {
+      return { error: 'Yetkisiz erişim', data: null };
+    }
+    // IMPORTANT: match the participation-summary query (/api/admin/tutor-participation),
+    // which intentionally does NOT filter by period membership. Otherwise the summary
+    // shows a rehber's group while this dialog comes back empty for students that are
+    // assigned via tutorId but not enrolled in the active period's PeriodStudent join.
+    const students = await prisma.user.findMany({
+      where: { tutorId, roles: { has: UserRole.STUDENT }, isActive: true, deletedAt: null },
+      select: { id: true, username: true, firstName: true, lastName: true },
+      orderBy: [{ firstName: 'asc' }, { lastName: 'asc' }],
+    });
+    return { error: null, data: students };
+  } catch (error) {
+    console.error('Error fetching students for tutor:', error);
+    return { error: 'Öğrenciler yüklenirken bir hata oluştu', data: null };
+  }
+}
+
+/**
+ * Admin-only: create an attendance session ON BEHALF OF a rehber and mark the
+ * present students. The session's creator is set to the rehber so it counts
+ * towards that rehber's participation stats.
+ */
+export async function adminTakeAttendanceForTutor(data: {
+  tutorId: string;
+  title: string;
+  sessionDate: string;
+  presentStudentIds: string[];
+}) {
+  try {
+    const session = await getServerSession(authOptions);
+    const roles = (session?.user as any)?.roles || [(session?.user as any)?.role].filter(Boolean);
+    if (!roles.includes(UserRole.ADMIN) && !roles.includes(UserRole.BOARD_MEMBER)) {
+      return { error: 'Yetkisiz erişim', data: null };
+    }
+    if (!data.tutorId || !data.title?.trim() || !data.sessionDate) {
+      return { error: 'Rehber, başlık ve tarih zorunludur', data: null };
+    }
+
+    // De-duplicate the present list so a student can't be awarded twice.
+    const presentStudentIds = Array.from(new Set(data.presentStudentIds));
+
+    // Award the same 30 points a rehber's manual check-in gives. Points need an
+    // active period; if none is active we still record attendance but skip points
+    // (rather than failing the whole operation).
+    const activePeriod = await getActivePeriod();
+
+    const created = await prisma.$transaction(async (tx) => {
+      const attendanceSession = await tx.attendanceSession.create({
+        data: {
+          title: data.title.trim(),
+          sessionDate: new Date(data.sessionDate),
+          status: AttendanceSessionStatus.COMPLETED,
+          createdById: data.tutorId, // counts for the rehber
+        },
+      });
+      if (presentStudentIds.length > 0) {
+        await tx.studentAttendance.createMany({
+          data: presentStudentIds.map((studentId) => ({
+            sessionId: attendanceSession.id,
+            studentId,
+            checkInMethod: CheckInMethod.MANUAL,
+          })),
+          skipDuplicates: true,
+        });
+
+        // 30 points per present student, attributed to the rehber, so it matches
+        // the rehber's own manual check-in flow and can be refunded on removal.
+        if (activePeriod) {
+          await tx.pointsTransaction.createMany({
+            data: presentStudentIds.map((studentId) => ({
+              studentId,
+              tutorId: data.tutorId,
+              points: 30,
+              type: TransactionType.AWARD,
+              reason: 'Haftalık Yoklama Katılımı',
+              periodId: activePeriod.id,
+            })),
+          });
+        }
+      }
+      return attendanceSession;
+    });
+
+    return { error: null, data: { id: created.id } };
+  } catch (error) {
+    console.error('Error taking attendance for tutor:', error);
+    return { error: 'Yoklama alınırken bir hata oluştu', data: null };
+  }
+}

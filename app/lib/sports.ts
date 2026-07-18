@@ -15,6 +15,9 @@ import {
  * (mirrors app/lib/finance.ts & app/lib/social.ts patterns).
  */
 
+// --- #5 Yaş grubu takımları (U12 → U18) ---
+export const AGE_GROUPS = ['U12', 'U13', 'U14', 'U15', 'U16', 'U17', 'U18'] as const;
+
 // --- #2 Üyelik durumu ---
 export const MEMBERSHIP_STATUSES: {
     value: MembershipStatus;

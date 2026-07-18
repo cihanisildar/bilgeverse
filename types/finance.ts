@@ -64,6 +64,8 @@ export interface CurrencyBalance {
 
 export interface FinanceSummary {
     balances: CurrencyBalance[];
+    /** Zekât kept as a separate ledger (req: zekât and bağış funds must never be mixed) */
+    zekatBalances: CurrencyBalance[];
     transactionCount: number;
 }
 

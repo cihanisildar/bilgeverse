@@ -98,7 +98,7 @@ export async function PUT(
 
     const userId = params.id;
     const body = await request.json();
-    const { username, email, roles, tutorId, firstName, lastName, points } = body;
+    const { username, email, roles, tutorId, firstName, lastName, points, allowedParts } = body;
     let { role } = body;
 
     // Check if user exists
@@ -210,6 +210,7 @@ export async function PUT(
           ...(firstName !== undefined && { firstName }),
           ...(lastName !== undefined && { lastName }),
           ...(points !== undefined && { points: parseInt(points) || 0 }),
+          ...(Array.isArray(allowedParts) && { allowedParts: allowedParts.map((n: any) => parseInt(n)).filter((n: number) => !isNaN(n)) }),
           ...(tutorId && { tutorId, studentClassroomId: classroomId })
         },
         select: {
@@ -221,6 +222,7 @@ export async function PUT(
           firstName: true,
           lastName: true,
           points: true,
+          allowedParts: true,
           tutorId: true
         }
       });
@@ -287,7 +289,7 @@ export async function PATCH(
     // Check if user exists
     const user = await prisma.user.findUnique({
       where: { id: userId },
-      select: { id: true, role: true, roles: true, tutorId: true }
+      select: { id: true, role: true, roles: true, tutorId: true, tutorStatus: true }
     });
 
     if (!user) {
@@ -295,6 +297,17 @@ export async function PATCH(
         { error: 'User not found' },
         { status: 404 }
       );
+    }
+
+    // Keep the Karakter Grupları rehber status (User.tutorStatus) in sync with the
+    // account's active/passive flag, so the two never contradict each other:
+    //  - deactivating here marks the rehber PASSIVE there
+    //  - reactivating a PASSIVE rehber restores them to ACTIVE (STANDBY/LEAVING kept)
+    let tutorStatusSync: { tutorStatus?: string } = {};
+    if (isActive === false) {
+      tutorStatusSync = { tutorStatus: 'PASSIVE' };
+    } else if (isActive === true && user.tutorStatus === 'PASSIVE') {
+      tutorStatusSync = { tutorStatus: 'ACTIVE' };
     }
 
     // For tutors, they can only update their own students' status
@@ -316,6 +329,7 @@ export async function PATCH(
       where: { id: userId },
       data: {
         isActive,
+        ...tutorStatusSync,
         statusChangedAt: new Date(),
         statusChangedBy: session.user.id
       },
@@ -323,6 +337,7 @@ export async function PATCH(
         id: true,
         username: true,
         isActive: true,
+        tutorStatus: true,
         statusChangedAt: true,
         statusChangedBy: true
       }

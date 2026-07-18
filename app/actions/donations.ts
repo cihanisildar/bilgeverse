@@ -240,10 +240,12 @@ export async function addDonation(data: AddDonationData): Promise<DonorActionRes
 
         // Create the donation and mirror it into the finance ledger as income so
         // the cash balance stays in sync (req: donations are a type of income).
+        const category = data.category === 'ZEKAT' ? 'ZEKAT' : 'BAGIS';
         const donation = await prisma.$transaction(async (tx) => {
             const created = await tx.donation.create({
                 data: {
                     ...data,
+                    category,
                     amount: data.amount,
                 },
                 include: { donor: { select: { firstName: true, lastName: true } } },
@@ -252,7 +254,7 @@ export async function addDonation(data: AddDonationData): Promise<DonorActionRes
             await tx.financeTransaction.create({
                 data: {
                     type: 'INCOME',
-                    category: 'BAGIS',
+                    category,
                     amount: new Prisma.Decimal(data.amount),
                     currency: mapDonationCurrency(created.currency),
                     source: `${created.donor.firstName} ${created.donor.lastName}`.trim(),

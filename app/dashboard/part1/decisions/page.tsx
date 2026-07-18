@@ -82,6 +82,14 @@ const statusColors: Record<'TODO' | 'IN_PROGRESS' | 'DONE', string> = {
     DONE: 'bg-green-100 text-green-800',
 };
 
+// A decision is overdue when it has a target date in the past and isn't completed yet.
+const isDecisionOverdue = (decision: { targetDate: string | null; status: 'TODO' | 'IN_PROGRESS' | 'DONE' }) => {
+    if (!decision.targetDate || decision.status === 'DONE') return false;
+    const target = new Date(decision.targetDate);
+    target.setHours(23, 59, 59, 999);
+    return target.getTime() < Date.now();
+};
+
 const filterLabels: Record<string, string> = {
     all: 'Tüm Kararlar',
     completed: 'Tamamlanan Kararlar',
@@ -134,7 +142,14 @@ export default function DecisionsOverviewPage() {
             if (result.error) {
                 throw new Error(result.error);
             }
-            setDecisions(result.data || []);
+            // Sort by target date, nearest first; decisions without a target date go last.
+            const sorted = (result.data || []).slice().sort((a, b) => {
+                if (!a.targetDate && !b.targetDate) return 0;
+                if (!a.targetDate) return 1;
+                if (!b.targetDate) return -1;
+                return new Date(a.targetDate).getTime() - new Date(b.targetDate).getTime();
+            });
+            setDecisions(sorted);
         } catch (error) {
             console.error('Error fetching decisions:', error);
             toast.error('Kararlar yüklenirken bir hata oluştu');
@@ -312,13 +327,17 @@ export default function DecisionsOverviewPage() {
                     <Loading message="Kararlar yükleniyor..." />
                 ) : decisions.length > 0 ? (
                     <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-                        {decisions.map((decision) => (
+                        {decisions.map((decision) => {
+                            const overdue = isDecisionOverdue(decision);
+                            return (
                             <Card
                                 key={decision.id}
-                                className="border-0 shadow-md rounded-xl overflow-hidden transition-all duration-200 hover:shadow-xl hover:-translate-y-1 cursor-pointer bg-white"
+                                className={`shadow-md rounded-xl overflow-hidden transition-all duration-200 hover:shadow-xl hover:-translate-y-1 cursor-pointer ${
+                                    overdue ? 'border-2 border-red-400 bg-red-50/40' : 'border-0 bg-white'
+                                }`}
                                 onClick={(e) => handleViewDetails(decision, e)}
                             >
-                                <div className="h-1.5 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500"></div>
+                                <div className={`h-1.5 ${overdue ? 'bg-red-500' : 'bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500'}`}></div>
                                 <CardHeader className="pb-3">
                                     <div className="flex items-start justify-between mb-2">
                                         <CardTitle className="text-lg font-bold text-gray-800 line-clamp-2 flex-1">
@@ -348,9 +367,10 @@ export default function DecisionsOverviewPage() {
 
                                     {/* Target Date */}
                                     {decision.targetDate && (
-                                        <div className="flex items-center gap-2 text-sm text-gray-600">
-                                            <Calendar className="h-4 w-4 text-gray-400" />
+                                        <div className={`flex items-center gap-2 text-sm ${overdue ? 'text-red-600 font-semibold' : 'text-gray-600'}`}>
+                                            <Calendar className={`h-4 w-4 ${overdue ? 'text-red-500' : 'text-gray-400'}`} />
                                             <span>Hedef: {format(new Date(decision.targetDate), 'dd MMM yyyy', { locale: tr })}</span>
+                                            {overdue && <Badge className="bg-red-100 text-red-700 ml-1">Gecikti</Badge>}
                                         </div>
                                     )}
 
@@ -382,7 +402,8 @@ export default function DecisionsOverviewPage() {
                                     </div>
                                 </CardContent>
                             </Card>
-                        ))}
+                            );
+                        })}
                     </div>
                 ) : (
                     <Card className="border-0 shadow-lg rounded-xl overflow-hidden">

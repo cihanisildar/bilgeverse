@@ -4,8 +4,10 @@ import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Search, UserPlus, Calendar as CalendarIcon, MoreVertical, Filter, Plus, X, User } from 'lucide-react';
+import { Search, UserPlus, Calendar as CalendarIcon, MoreVertical, Filter, Plus, X, User, ArrowUpCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { useQueryClient } from '@tanstack/react-query';
+import { promoteAthleteAgeGroups } from '@/app/actions/athlete-actions';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -30,7 +32,7 @@ import {
 import { useAthletes, useSportBranches, useUpsertAthleteProfile, useRegisterNewAthlete, useDeleteAthleteProfile, useSearchStudents } from '@/app/hooks/use-athlete-data';
 import { useDebounce } from '@/app/hooks/use-debounce';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { MEMBERSHIP_STATUSES, getMembershipMeta } from '@/app/lib/sports';
+import { MEMBERSHIP_STATUSES, getMembershipMeta, AGE_GROUPS } from '@/app/lib/sports';
 import { ReqMark, RequiredLegend } from './_components/ReqMark';
 
 const EMPTY_PROFILE = {
@@ -39,6 +41,7 @@ const EMPTY_PROFILE = {
     parentName: '',
     parentPhone: '',
     membershipStatus: 'ACTIVE',
+    ageGroup: '',
     licenseNumber: '',
     licenseExpiry: '',
     footballSchool: false,
@@ -65,6 +68,25 @@ export default function AthleteList() {
     const [editingAthlete, setEditingAthlete] = useState<any>(null);
     const [deletingAthleteId, setDeletingAthleteId] = useState<string | null>(null);
     const [saving, setSaving] = useState(false);
+    const [promoteOpen, setPromoteOpen] = useState(false);
+    const [promoting, setPromoting] = useState(false);
+    const queryClient = useQueryClient();
+
+    const handlePromoteSeason = async () => {
+        setPromoting(true);
+        try {
+            const result = await promoteAthleteAgeGroups();
+            if (result.error) {
+                toast.error(result.error);
+            } else {
+                toast.success(`Sezon terfisi tamamlandı. ${result.data?.promoted ?? 0} sporcu bir üst yaş grubuna taşındı.`);
+                queryClient.invalidateQueries({ queryKey: ['athletes'] });
+                setPromoteOpen(false);
+            }
+        } finally {
+            setPromoting(false);
+        }
+    };
 
     // New athlete form state
     const [newAthlete, setNewAthlete] = useState({
@@ -79,6 +101,7 @@ export default function AthleteList() {
         parentName: profileForm.parentName || null,
         parentPhone: profileForm.parentPhone || null,
         membershipStatus: profileForm.membershipStatus as any,
+        ageGroup: profileForm.ageGroup || null,
         licenseNumber: profileForm.licenseNumber || null,
         licenseExpiry: profileForm.licenseExpiry ? new Date(profileForm.licenseExpiry) : null,
         footballSchool: profileForm.footballSchool,
@@ -165,6 +188,7 @@ export default function AthleteList() {
                 parentName: athlete.parentName ?? '',
                 parentPhone: athlete.parentPhone ?? '',
                 membershipStatus: athlete.membershipStatus ?? 'ACTIVE',
+                ageGroup: athlete.ageGroup ?? '',
                 licenseNumber: athlete.licenseNumber ?? '',
                 licenseExpiry: athlete.licenseExpiry ? format(new Date(athlete.licenseExpiry), 'yyyy-MM-dd') : '',
                 footballSchool: athlete.footballSchool ?? false,
@@ -206,10 +230,33 @@ export default function AthleteList() {
                         onChange={(e) => setSearchQuery(e.target.value)}
                     />
                 </div>
-                <Button onClick={() => setIsAdding(true)} className="bg-indigo-600 hover:bg-indigo-700 text-white shadow-md">
-                    <UserPlus className="h-4 w-4 mr-2" /> Sporcu Ekle
-                </Button>
+                <div className="flex gap-2">
+                    <Button variant="outline" onClick={() => setPromoteOpen(true)} className="border-purple-200 text-purple-700 hover:bg-purple-50">
+                        <ArrowUpCircle className="h-4 w-4 mr-2" /> Sezon Terfisi
+                    </Button>
+                    <Button onClick={() => setIsAdding(true)} className="bg-indigo-600 hover:bg-indigo-700 text-white shadow-md">
+                        <UserPlus className="h-4 w-4 mr-2" /> Sporcu Ekle
+                    </Button>
+                </div>
             </div>
+
+            <AlertDialog open={promoteOpen} onOpenChange={setPromoteOpen}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Sezon Terfisi</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            Tüm sporcular bir üst yaş grubuna taşınacak (U12→U13, U13→U14 … U17→U18). U18 sporcular olduğu gibi kalır.
+                            Hiçbir veri silinmez; yalnızca yaş grubu etiketi güncellenir. Devam edilsin mi?
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel disabled={promoting}>Vazgeç</AlertDialogCancel>
+                        <AlertDialogAction onClick={(e) => { e.preventDefault(); handlePromoteSeason(); }} disabled={promoting} className="bg-purple-600 hover:bg-purple-700">
+                            {promoting ? 'Uygulanıyor...' : 'Evet, Terfi Ettir'}
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
 
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
                 {loading ? (
@@ -242,6 +289,9 @@ export default function AthleteList() {
                                         </div>
                                         <p className="text-xs text-gray-500 truncate">@{athlete.user.username}</p>
                                         <div className="flex flex-wrap gap-1 mt-2">
+                                            {(athlete as any).ageGroup && (
+                                                <Badge variant="secondary" className="text-[10px] px-2 py-0.5 bg-purple-600 text-white border-0 font-bold">{(athlete as any).ageGroup}</Badge>
+                                            )}
                                             {(athlete as any).footballSchool && (
                                                 <Badge variant="secondary" className="text-[10px] px-2 py-0.5 bg-green-600 text-white border-0">Futbol Okulu</Badge>
                                             )}
@@ -462,6 +512,17 @@ export default function AthleteList() {
                                     </SelectContent>
                                 </Select>
                             </div>
+                        </div>
+
+                        <div className="space-y-2">
+                            <Label>Yaş Grubu / Takım</Label>
+                            <Select value={profileForm.ageGroup || 'none'} onValueChange={(v) => setProfileForm({ ...profileForm, ageGroup: v === 'none' ? '' : v })}>
+                                <SelectTrigger className="rounded-xl"><SelectValue placeholder="Seçilmedi" /></SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="none">Seçilmedi</SelectItem>
+                                    {AGE_GROUPS.map((g) => (<SelectItem key={g} value={g}>{g}</SelectItem>))}
+                                </SelectContent>
+                            </Select>
                         </div>
 
                         <div className="space-y-2">

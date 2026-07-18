@@ -24,7 +24,7 @@ import {
   Activity,
   Target,
 } from "lucide-react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
 
@@ -43,10 +43,16 @@ export default function StudentReportPage() {
   const { user } = useAuth();
   const params = useParams();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [student, setStudent] = useState<Student | null>(null);
   const [loading, setLoading] = useState(true);
 
   const studentId = params.id as string;
+  // When arriving from a classroom performance report, return there instead of the main reports page
+  const fromClassroom = searchParams.get("fromClassroom");
+  const backHref = fromClassroom
+    ? `/dashboard/part7/admin/reports/classrooms/${fromClassroom}`
+    : "/dashboard/part7/admin/reports";
 
   useEffect(() => {
     if (studentId) {
@@ -133,11 +139,11 @@ export default function StudentReportPage() {
               Aradığınız öğrenci raporu bulunamadı veya erişim izniniz yok.
             </p>
             <Button
-              onClick={() => router.push("/dashboard/part7/admin/reports")}
+              onClick={() => router.push(backHref)}
               className="bg-gradient-to-r from-blue-500 to-indigo-500 hover:from-blue-600 hover:to-indigo-600"
             >
               <ArrowLeft className="h-4 w-4 mr-2" />
-              Raporlara Dön
+              {fromClassroom ? "Sınıf Raporuna Dön" : "Raporlara Dön"}
             </Button>
           </div>
         </Card>
@@ -154,7 +160,7 @@ export default function StudentReportPage() {
         <div className="flex items-center justify-start">
           <Button
             variant="outline"
-            onClick={() => router.push("/dashboard/part7/admin/reports")}
+            onClick={() => router.push(backHref)}
             className="flex items-center gap-2 bg-white/70 backdrop-blur-sm border-white/20 hover:bg-white/90 transition-all duration-200 shadow-sm text-sm sm:text-base"
           >
             <ArrowLeft className="h-4 w-4" />

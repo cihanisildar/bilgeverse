@@ -16,6 +16,7 @@ type AuthUser = {
   username: string;
   role: UserRole;
   roles: UserRole[];
+  allowedParts?: number[];
   firstName?: string;
   lastName?: string;
   points?: number;

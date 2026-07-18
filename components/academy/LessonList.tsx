@@ -107,9 +107,9 @@ export function LessonList({
         );
     }
 
-    return (
+    const renderGrid = (items: AcademyLesson[]) => (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {lessons.map((lesson) => {
+            {items.map((lesson) => {
                 const isJoined = lesson.students?.some(s => s.studentId === userId) || false;
                 return (
                     <LessonCard
@@ -120,6 +120,33 @@ export function LessonList({
                     />
                 );
             })}
+        </div>
+    );
+
+    // Group lessons by academy level (Akademi 1/2/3). If none are levelled, show a flat grid.
+    const hasLevels = lessons.some((l) => l.level != null);
+    if (!hasLevels) {
+        return renderGrid(lessons);
+    }
+
+    const groups: { key: string; title: string; items: AcademyLesson[] }[] = [
+        { key: '1', title: 'Akademi 1', items: lessons.filter((l) => l.level === 1) },
+        { key: '2', title: 'Akademi 2', items: lessons.filter((l) => l.level === 2) },
+        { key: '3', title: 'Akademi 3', items: lessons.filter((l) => l.level === 3) },
+        { key: 'other', title: 'Diğer Dersler', items: lessons.filter((l) => l.level == null || ![1, 2, 3].includes(l.level)) },
+    ].filter((g) => g.items.length > 0);
+
+    return (
+        <div className="space-y-10">
+            {groups.map((group) => (
+                <div key={group.key}>
+                    <div className="flex items-center gap-3 mb-4">
+                        <h2 className="text-xl font-bold text-gray-800">{group.title}</h2>
+                        <span className="text-sm text-gray-400">({group.items.length})</span>
+                    </div>
+                    {renderGrid(group.items)}
+                </div>
+            ))}
         </div>
     );
 }

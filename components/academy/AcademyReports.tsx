@@ -24,7 +24,7 @@ export function AcademyReports({ lessonId }: { lessonId: string }) {
 
     function exportCsv() {
         if (!report) return;
-        const header = ['Ad Soyad', 'Kullanıcı Adı', 'Katılım Oranı (%)', 'Katıldığı Oturum', 'Devamsızlık', 'Tamamlanan Görev', 'Kazanılan Bilge Para'];
+        const header = ['Ad Soyad', 'Kullanıcı Adı', 'Katılım Oranı (%)', 'Katıldığı Yoklama', 'Devamsızlık', 'Tamamlanan Görev', 'Kazanılan Bilge Para'];
         const rows = report.studentReports.map((r) => [
             `${r.student?.firstName || ''} ${r.student?.lastName || ''}`.trim(),
             r.student?.username || '',

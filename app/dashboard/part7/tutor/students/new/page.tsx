@@ -61,12 +61,10 @@ export default function NewStudentPage() {
         {/* Header */}
         <div className="mb-8">
           <div className="flex items-center gap-2 mb-2">
-            <Link href="/dashboard/part7/tutor/students">
-              <Button variant="ghost" size="sm" className="text-gray-500">
-                <ArrowLeft className="h-4 w-4 mr-1" />
-                Geri Dön
-              </Button>
-            </Link>
+            <Button variant="ghost" size="sm" className="text-gray-500" onClick={() => router.back()}>
+              <ArrowLeft className="h-4 w-4 mr-1" />
+              Geri Dön
+            </Button>
           </div>
           <h1 className="text-3xl font-bold text-gray-800 flex items-center">
             <GraduationCap className="mr-2 h-8 w-8 text-blue-600" />
@@ -137,10 +135,10 @@ export default function NewStudentPage() {
               </div>
               
               <div className="flex justify-end space-x-2 mt-6">
-                <Button 
-                  type="button" 
+                <Button
+                  type="button"
                   variant="outline"
-                  onClick={() => router.push('/dashboard/part7/tutor/students')}
+                  onClick={() => router.back()}
                 >
                   İptal
                 </Button>

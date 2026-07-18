@@ -17,8 +17,13 @@ export function getRoleBasedPath(role: UserRole | UserRole[]): string {
     return '/dashboard/part7/tutor';
   }
 
-  if (roles.includes(UserRole.STUDENT) || roles.includes((UserRole as any).ATHLETE)) {
+  if (roles.includes(UserRole.STUDENT)) {
     return '/dashboard/part7/student';
+  }
+
+  // Pure athletes (sports club members) get their read-only sports panel
+  if (roles.includes((UserRole as any).ATHLETE)) {
+    return '/dashboard/part9/me';
   }
 
   if (roles.includes(UserRole.BOARD_MEMBER) || roles.includes(UserRole.DONOR)) {

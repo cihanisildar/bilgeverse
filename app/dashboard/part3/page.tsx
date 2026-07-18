@@ -1,5 +1,5 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { ArrowLeft, FileText, UserCheck, BarChart3, ArrowRight } from 'lucide-react';
+import { ArrowLeft, FileText, UserCheck, BarChart3, ArrowRight, GraduationCap, HandCoins, UserSearch, BookOpen, ClipboardCheck, Users2 } from 'lucide-react';
 import { PARTS } from '@/app/lib/parts';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
@@ -55,6 +55,58 @@ export default async function Part3Page() {
             </Card>
           </Link>
 
+          {/* Character Groups Card */}
+          <Link href="/dashboard/part3/character-groups" className="block">
+            <Card className="border-0 shadow-lg rounded-xl overflow-hidden transition-all duration-200 hover:shadow-xl hover:-translate-y-1 cursor-pointer bg-gradient-to-br from-teal-50 to-cyan-50">
+              <div className="h-2 bg-gradient-to-r from-teal-500 to-cyan-500"></div>
+              <CardHeader>
+                <div className="flex items-center space-x-4">
+                  <div className="w-16 h-16 flex items-center justify-center rounded-full bg-teal-100 text-teal-600">
+                    <Users2 className="h-8 w-8" />
+                  </div>
+                  <div>
+                    <CardTitle className="text-xl">Karakter Eğitim Grupları</CardTitle>
+                    <CardDescription className="mt-1">
+                      Gruplar, sorumlu rehberler ve rehber durum takibi
+                    </CardDescription>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-center text-sm font-medium text-gray-600">
+                  Grup Takibine Git
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </div>
+              </CardContent>
+            </Card>
+          </Link>
+
+          {/* Toplu Yoklama / Rehber Katılımı Card */}
+          <Link href="/dashboard/part3/tutor-participation" className="block">
+            <Card className="border-0 shadow-lg rounded-xl overflow-hidden transition-all duration-200 hover:shadow-xl hover:-translate-y-1 cursor-pointer bg-gradient-to-br from-emerald-50 to-green-50">
+              <div className="h-2 bg-gradient-to-r from-emerald-500 to-green-500"></div>
+              <CardHeader>
+                <div className="flex items-center space-x-4">
+                  <div className="w-16 h-16 flex items-center justify-center rounded-full bg-emerald-100 text-emerald-600">
+                    <ClipboardCheck className="h-8 w-8" />
+                  </div>
+                  <div>
+                    <CardTitle className="text-xl">Toplu Yoklama Özeti</CardTitle>
+                    <CardDescription className="mt-1">
+                      Rehberlerin grup haftalık katılım performansı (renk kodlu)
+                    </CardDescription>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-center text-sm font-medium text-gray-600">
+                  Yoklama Özetine Git
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </div>
+              </CardContent>
+            </Card>
+          </Link>
+
           {/* Reports Dashboard Card */}
           <Link href="/dashboard/part3/reports" className="block">
             <Card className="border-0 shadow-lg rounded-xl overflow-hidden transition-all duration-200 hover:shadow-xl hover:-translate-y-1 cursor-pointer bg-gradient-to-br from-cyan-50 to-teal-50">
@@ -75,6 +127,110 @@ export default async function Part3Page() {
               <CardContent>
                 <div className="flex items-center text-sm font-medium text-gray-600">
                   Raporlara Git
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </div>
+              </CardContent>
+            </Card>
+          </Link>
+
+          {/* Graduated Students Card */}
+          <Link href="/dashboard/part3/graduates" className="block">
+            <Card className="border-0 shadow-lg rounded-xl overflow-hidden transition-all duration-200 hover:shadow-xl hover:-translate-y-1 cursor-pointer bg-gradient-to-br from-green-50 to-teal-50">
+              <div className="h-2 bg-gradient-to-r from-green-500 to-teal-500"></div>
+              <CardHeader>
+                <div className="flex items-center space-x-4">
+                  <div className="w-16 h-16 flex items-center justify-center rounded-full bg-green-100 text-green-600">
+                    <GraduationCap className="h-8 w-8" />
+                  </div>
+                  <div>
+                    <CardTitle className="text-xl">Mezun Öğrenciler</CardTitle>
+                    <CardDescription className="mt-1">
+                      Mezun öğrencilerin bilgilerini kaydedin ve takip edin
+                    </CardDescription>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-center text-sm font-medium text-gray-600">
+                  Mezunlara Git
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </div>
+              </CardContent>
+            </Card>
+          </Link>
+
+          {/* Scholarship Students Card */}
+          <Link href="/dashboard/part3/scholarships" className="block">
+            <Card className="border-0 shadow-lg rounded-xl overflow-hidden transition-all duration-200 hover:shadow-xl hover:-translate-y-1 cursor-pointer bg-gradient-to-br from-amber-50 to-orange-50">
+              <div className="h-2 bg-gradient-to-r from-amber-500 to-orange-500"></div>
+              <CardHeader>
+                <div className="flex items-center space-x-4">
+                  <div className="w-16 h-16 flex items-center justify-center rounded-full bg-amber-100 text-amber-600">
+                    <HandCoins className="h-8 w-8" />
+                  </div>
+                  <div>
+                    <CardTitle className="text-xl">Burs Alan Öğrenciler</CardTitle>
+                    <CardDescription className="mt-1">
+                      Burs alan öğrencilerin listesini yönetin
+                    </CardDescription>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-center text-sm font-medium text-gray-600">
+                  Burslulara Git
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </div>
+              </CardContent>
+            </Card>
+          </Link>
+
+          {/* Tutor Candidates Card */}
+          <Link href="/dashboard/part3/tutor-candidates" className="block">
+            <Card className="border-0 shadow-lg rounded-xl overflow-hidden transition-all duration-200 hover:shadow-xl hover:-translate-y-1 cursor-pointer bg-gradient-to-br from-indigo-50 to-blue-50">
+              <div className="h-2 bg-gradient-to-r from-indigo-500 to-blue-500"></div>
+              <CardHeader>
+                <div className="flex items-center space-x-4">
+                  <div className="w-16 h-16 flex items-center justify-center rounded-full bg-indigo-100 text-indigo-600">
+                    <UserSearch className="h-8 w-8" />
+                  </div>
+                  <div>
+                    <CardTitle className="text-xl">Rehber Adayları</CardTitle>
+                    <CardDescription className="mt-1">
+                      Rehber olarak düşünülen kişiler ve alınan kararlar
+                    </CardDescription>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-center text-sm font-medium text-gray-600">
+                  Adaylara Git
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </div>
+              </CardContent>
+            </Card>
+          </Link>
+
+          {/* Tutor Training Card */}
+          <Link href="/dashboard/part3/tutor-training" className="block">
+            <Card className="border-0 shadow-lg rounded-xl overflow-hidden transition-all duration-200 hover:shadow-xl hover:-translate-y-1 cursor-pointer bg-gradient-to-br from-cyan-50 to-sky-50">
+              <div className="h-2 bg-gradient-to-r from-cyan-500 to-sky-500"></div>
+              <CardHeader>
+                <div className="flex items-center space-x-4">
+                  <div className="w-16 h-16 flex items-center justify-center rounded-full bg-cyan-100 text-cyan-600">
+                    <BookOpen className="h-8 w-8" />
+                  </div>
+                  <div>
+                    <CardTitle className="text-xl">Rehber Eğitim Takibi</CardTitle>
+                    <CardDescription className="mt-1">
+                      Hangi rehberin hangi eğitimi aldığını takip edin
+                    </CardDescription>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-center text-sm font-medium text-gray-600">
+                  Eğitim Takibine Git
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </div>
               </CardContent>

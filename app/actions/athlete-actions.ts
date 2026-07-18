@@ -13,6 +13,7 @@ import {
 import { revalidatePath } from 'next/cache';
 import bcrypt from 'bcryptjs';
 import { hasRole } from '@/app/lib/auth-utils';
+import { AGE_GROUPS } from '@/app/lib/sports';
 
 // Sport Branch Actions
 export async function getSportBranches() {
@@ -111,6 +112,7 @@ export async function upsertAthleteProfile(data: {
     parentName?: string | null;
     parentPhone?: string | null;
     membershipStatus?: MembershipStatus;
+    ageGroup?: string | null;
     licenseNumber?: string | null;
     licenseExpiry?: Date | null;
     footballSchool?: boolean;
@@ -147,6 +149,7 @@ export async function upsertAthleteProfile(data: {
             parentName: data.parentName,
             parentPhone: data.parentPhone,
             membershipStatus: data.membershipStatus,
+            ageGroup: data.ageGroup,
             licenseNumber: data.licenseNumber,
             licenseExpiry: data.licenseExpiry,
             footballSchool: data.footballSchool,
@@ -232,6 +235,24 @@ export async function createTraining(data: {
     } catch (error) {
         console.error('Error creating training:', error);
         return { error: 'Antrenman oluşturulurken bir hata oluştu', data: null };
+    }
+}
+
+export async function deleteTraining(id: string) {
+    try {
+        const session = await getServerSession(authOptions);
+        if (!hasRole(session, [UserRole.ADMIN, UserRole.TUTOR, UserRole.ASISTAN])) {
+            return { error: 'Yetkisiz erişim', data: null };
+        }
+
+        // Attendances/performances cascade-delete via the schema relations
+        await prisma.athleteTraining.delete({ where: { id } });
+
+        revalidatePath('/dashboard/part9');
+        return { error: null, data: { id } };
+    } catch (error) {
+        console.error('Error deleting training:', error);
+        return { error: 'Antrenman silinirken bir hata oluştu', data: null };
     }
 }
 
@@ -399,6 +420,7 @@ export async function registerNewAthlete(data: {
     parentName?: string | null;
     parentPhone?: string | null;
     membershipStatus?: MembershipStatus;
+    ageGroup?: string | null;
     licenseNumber?: string | null;
     licenseExpiry?: Date | null;
     footballSchool?: boolean;
@@ -444,6 +466,7 @@ export async function registerNewAthlete(data: {
                     parentName: data.parentName,
                     parentPhone: data.parentPhone,
                     membershipStatus: data.membershipStatus,
+                    ageGroup: data.ageGroup,
                     licenseNumber: data.licenseNumber,
                     licenseExpiry: data.licenseExpiry,
                     footballSchool: data.footballSchool ?? false,
@@ -521,5 +544,131 @@ export async function getCoaches() {
     } catch (error) {
         console.error('Error fetching coaches:', error);
         return { error: 'Antrenörler yüklenirken bir hata oluştu', data: null };
+    }
+}
+
+/**
+ * Season promotion: bumps every athlete up one age group (U12→U13 … U17→U18).
+ * U18 athletes stay U18 (handled manually). No data is deleted — only the label
+ * moves, so all history is preserved.
+ */
+export async function promoteAthleteAgeGroups() {
+    try {
+        const session = await getServerSession(authOptions);
+        if (!hasRole(session, [UserRole.ADMIN, UserRole.TUTOR])) {
+            return { error: 'Terfi işlemi için yetkiniz yok', data: null };
+        }
+
+        let promoted = 0;
+        // Promote from the top down so we never double-bump the same athlete.
+        for (let i = AGE_GROUPS.length - 2; i >= 0; i--) {
+            const from = AGE_GROUPS[i];
+            const to = AGE_GROUPS[i + 1];
+            const res = await prisma.athleteProfile.updateMany({
+                where: { ageGroup: from },
+                data: { ageGroup: to },
+            });
+            promoted += res.count;
+        }
+
+        revalidatePath('/dashboard/part9');
+        return { error: null, data: { promoted } };
+    } catch (error) {
+        console.error('Error promoting athlete age groups:', error);
+        return { error: 'Terfi işlemi sırasında bir hata oluştu', data: null };
+    }
+}
+
+/** Set a single athlete's age group (manual, per-athlete change). */
+export async function setAthleteAgeGroup(userId: string, ageGroup: string | null) {
+    try {
+        const session = await getServerSession(authOptions);
+        if (!hasRole(session, [UserRole.ADMIN, UserRole.TUTOR, UserRole.ASISTAN])) {
+            return { error: 'Yetkisiz erişim', data: null };
+        }
+        await prisma.athleteProfile.update({
+            where: { userId },
+            data: { ageGroup },
+        });
+        revalidatePath('/dashboard/part9');
+        return { error: null, data: { success: true } };
+    } catch (error) {
+        console.error('Error setting athlete age group:', error);
+        return { error: 'Yaş grubu güncellenirken bir hata oluştu', data: null };
+    }
+}
+
+/**
+ * Read-only self-view for a logged-in athlete: their profile, branches, upcoming
+ * trainings, their own attendance & performance, and relevant announcements.
+ */
+export async function getMyAthleteOverview() {
+    try {
+        const session = await getServerSession(authOptions);
+        if (!session?.user?.id) {
+            return { error: 'Oturum bulunamadı', data: null };
+        }
+
+        const profile = await prisma.athleteProfile.findUnique({
+            where: { userId: session.user.id },
+            include: {
+                user: { select: { id: true, firstName: true, lastName: true, username: true } },
+                branches: { select: { id: true, name: true } },
+            },
+        });
+
+        if (!profile) {
+            return { error: 'Sporcu profili bulunamadı', data: null };
+        }
+
+        const branchIds = profile.branches.map((b) => b.id);
+        const now = new Date();
+
+        const [upcomingTrainings, attendances, performances, announcements] = await Promise.all([
+            branchIds.length
+                ? prisma.athleteTraining.findMany({
+                    where: { branchId: { in: branchIds }, date: { gte: now } },
+                    include: { branch: { select: { name: true } } },
+                    orderBy: { date: 'asc' },
+                    take: 10,
+                })
+                : Promise.resolve([]),
+            prisma.athleteAttendance.findMany({
+                where: { athleteId: profile.id },
+                include: { training: { select: { title: true, date: true, type: true } } },
+                orderBy: { training: { date: 'desc' } },
+                take: 30,
+            }),
+            prisma.athletePerformance.findMany({
+                where: { athleteId: profile.id },
+                include: { training: { select: { title: true, date: true } } },
+                orderBy: { training: { date: 'desc' } },
+                take: 30,
+            }),
+            prisma.sportAnnouncement.findMany({
+                where: { OR: [{ branchId: null }, { branchId: { in: branchIds } }] },
+                orderBy: { createdAt: 'desc' },
+                take: 10,
+            }),
+        ]);
+
+        const attendedCount = attendances.filter((a) => a.status === 'YAPILDI').length;
+        const totalMarked = attendances.length;
+        const attendanceRate = totalMarked > 0 ? Math.round((attendedCount / totalMarked) * 100) : null;
+
+        return {
+            error: null,
+            data: JSON.parse(JSON.stringify({
+                profile,
+                upcomingTrainings,
+                attendances,
+                performances,
+                announcements,
+                stats: { attendedCount, totalMarked, attendanceRate },
+            })),
+        };
+    } catch (error) {
+        console.error('Error fetching athlete overview:', error);
+        return { error: 'Panel yüklenirken bir hata oluştu', data: null };
     }
 }

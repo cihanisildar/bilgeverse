@@ -54,6 +54,23 @@ export function periodStudentWhere(periodId: string) {
 }
 
 /**
+ * Reusable Prisma `where` fragment for listing store items visible in a period.
+ * Includes items belonging to the given period plus legacy items that predate
+ * period-scoping (periodId === null), so old data keeps showing.
+ * @param periodId The active period id (or null/undefined to only show legacy items)
+ * @param opts.onlyActive When true, hides passive (soft-deleted) items — use for student/tutor storefront
+ */
+export function storeItemWhere(periodId?: string | null, opts?: { onlyActive?: boolean }) {
+  const periodClause = periodId
+    ? { OR: [{ periodId }, { periodId: null }] }
+    : { periodId: null };
+  return {
+    ...(opts?.onlyActive ? { isActive: true } : {}),
+    ...periodClause,
+  };
+}
+
+/**
  * Get period by ID
  * @param periodId The period ID
  * @returns The period or null if not found

@@ -1,0 +1,150 @@
+müşteri tarafından birçok problemin olduğu bildirildi hepsini incelemeni ve tek tek problemleri çözmeni istiyorum. gerektiğinden fazla token harcama:
+ 1. admin kısmında puan yönetimleri kısmında oluşturduğum sebep (admin/point-reasons) öğrencilerin gözünden bakılan /students/tips kısmında gözükmüyor
+ 2. oluşturulan etkinlikler öğrencilerin dashboard sayfasında gözükmesi gerekirken gözükmüyor. illa etkinlik sayfasına gidip bakmaları gerekiyor bir hata var.
+ 3. admin raporları kısmında sınıf raporları kısmında sınıf performans analizi kısmında öğrencilerin puanları gözükmüyor ve 0 olarak gözüküyor. aynı zamanda burada bir öğrenci üzerine basıldıktan sonra geri tuşuna basıldığında ana raporlar sayfasına göndermek yerine sınıf performans analizi kısmına göndermeliyiz kullanıcıyı
+ 4. bilgespor külübü içerisinde oluşturulan antrenman silinemiyor silinebilmeli
+ 5. bilgespor külübü kısmında oyuncular U12 den U18 e kadar takımlar içerisinde bulunuyorlarmış. hatta bu yıl U-12 de oynayan seneye U13 e aktarılmalıymış (bu manuel olsun ama kolayca yapılabilsin veri kaybolmasın) gibi şeyler istiyorlar bunu da ek olarak tasarla ve ekleyelim
+ 6. bilgespor klübüne kaydolan öğrenci kendi panelinden giriş yaptığı zaman hiçbir sayfa göremiyor bilgeveres içerisinde. oraya da tabii ki her sayfayı görmesin ama görebileceği (read only) sayfalar olsa kendisi ile alakalı süper olur. 
+ 7. mağaza kısmında: Dönem yönetiminde, yeni döneme geçildiğinde, ürün kısmında da aynı husus oluyor, bir ürün silince, eski dönemdeki ürün de siliniyor. 
+    Mesela ben bu yaz mağazaya 3 temel şey koydum. İnternetten boykot olmadığı sürece istediğiniz ürünü satın alabilirsiniz, istediğiniz oyunu satın alabilirsiniz ve oynadığınız oyunlardan oyun içi para alımı yapabilirsiniz, bunları ekleyeceğim ama ürün silince tüm dönemdeki tüm ürünler gidiyor
+	bana bu şekilde yazmışlar. belki pasif aktif muhabbetini yapabiliriz burada da 
+	
+
+EKSTRA OLARAK BANA GÖNDERİLEN DĞEİŞİKLİKLER LİSTESİ:
+--ÖĞRENCİ GİRİŞİ--
+1-) Nasıl Bilge Para Kazanırım kısmında, "Potansiyelinizi Keşfedin" , "Akademik yolculuğunuzda başarıya ulaşmanız için özel olarak hazırlanmış stratejiler ve ipuçları ile potansiyelinizi keşfedin." açıklamalarını tamamen kaldıralım. Kafa karıştırıyor. Potansiyel, akademik şeyler alakasız kaçıyor biraz. Orada sadece nasıl bilge para kazanırsın yazsa yeter. İlla ki bir şey yazacaksa bununla alakalı bir şey yazması lazım.
+
+2-) Akademide olmayan öğrenciler, “Akademi” sekmesinde, sadece müfredat kısmını görmeliler. Özellikle materyal kısmına erişimleri olmaması lazım.  Akademi’ye kayıt olan öğrencilerin görmesinde bir sakınca yok elbette. Atölyelerdeki mantık gibi olacak. Genel – Müfredat ve Görevler kısmını görse yeterli.
+
+3-) Yaz okulunda başlayacağımız ve bundan sonra devam edeceğim bir uygulama var. 1 BP = 1 TL olacak şekilde “Hepsi Burada”dan, oynadıkları oyunlardaki oyun içi paradan ve steamdan oyun alma seçenekleri açılacak. Ben sadece hepsiburada, steam gibi şeylerin görsellerini koyup geçeyim diyorum. Mağaza’ya şöyle koysak daha iyi olur diye bir opsiyonunuz varsa o da olur.
+
+Bu da bitince artık Öğrenci Paneli Nihai Kıvamına ulaşmış olacak inşallah.
+
+--REHBER GİRİŞİ--
+Öncelikle amacımız sistemi kullananın kafasının karışmaması. Birtakım hususlar kafa karışıklığı oluşturuyor. Bunların önüne geçmek lazım. Şimdi ben kafa karışıklığı yaratan şeyleri yazayım.
+
+1-) Şimdi ben “Öğrenci Ekle” sayfasına girdim. Sonra geri dön seçeneğine tıkladım. Beni “Gurubum” sayfasına atıyor. Burada beni geldiğim sayfaya yani “Rehber Paneli”ne atması lazım.
+2-) Müfredat’a tıkladım. Şimdi bu sayfadan geri dönmek istediğimde beni direkt buradan Rehber Paneline atıyor. Burada sıkıntı yok. Çünkü gittiğim yere geri geldim.
+Müfredat’a girdikten sonra herhangi bir müfredat konusuna tıkladım. Daha sonra geri döneceğim zaman (“Müfredatlara Dön” seçeneği var sol üstte ona tıklıyorum) beni normal müfredat sayfasına attı. Burada da sıkıntı yok. Çünkü gittiğim yere gere geldim. Ama;
+Ama akabinde tekrar geri dön dediğim zaman beni “Karakter Eğitim Gurupları” diye bir yere atıyor. Aslında burada “Rehber Paneline” atması lazım. Çünkü ben oradan gelmiştim. Kafam burada bi karışıyor bu sayfa nereden karşıma geldi diye.
+Sonra buradan tekrar geri dön’e basıyorum. Bu sefer de karşıma bambaşka bir panel daha çıkıyor. O bambaşka dediğim panelin rehber/lider girişi için bence tamamen kalkması lazım.
+Burada Müfredatta bir seçeneğe tıklayınca (mesela lise 1 müfredatında tıkladım) girdikten sonra geri dön tıklayınca tekrar tüm müfredat konuları açılıyor burası güzel ama bir kez daha geri dönünce rehberler paneline gelmem lazım.
+3-) Etkinlik Yönetimi çok güzel olmuş. Orada sadece bir fazlalık var. O da “Müfredat” seçeneği. Onun kaldırılması lazım. Yoksa akıl karışıklığı oluyor. Baştaki müfredatla bu müfredat arasındaki fark ne gibi düşündürmeye başlıyor. Neden hem orada hem burada var acaba farklı bir şey mi algısı oluşturuyor.
+4-) Akademi sekmesi, atölyelerin hemen altında olsa çok daha iyi olur. Soldaki panelde çizgi ile ayrılan yerde çizginin üst tarafında, atölyenin hemen altında. Her seferinde Atölyeyi orada aradığım için orası daha uygun olur diye düşündüm.
+
+Benim görebildiğim tüm hususlar bunlar. Bunlar bitince Rehber Paneli Nihayete erecek inşallah.
+
+
+
+--YÖNETİM KURULU—
+1-) “Devam eden kararlar” listesindeki kararlar, belirlediğim “hedef tarihi”ne göre sıralanması lazım. Hedef tarihi geçen kararların kırmızı renkte yanması lazım. 
+
+--ADMİN GİRİŞİ--
+1-) Yoklama alma hususunda rehber yardımcıları yetersiz kaldı ne yazık ki.  Son kontrollerde 2 ay boyunca hiç giriş yapmayan kişileri tespit ettik. Bu nedenle seneye mecburen yoklamalara admin de eşlik etsin dedik. Bunu dernek müdürümüz yapacak. Bu sebeple admin’e yoklama alma yetkisi tanımlanması lazım. Yani admin her hafta sonu Pazar günü yoklamaları kontrol edecek, yoklama almayan varsa onun yerine yoklama girecek. Israrla yoklama almayan liderleri de şutlayacağız.
+
+2-) Bazı rehberlerin sayfasına girmek istedik ama şifresi olmayınca erişemedik. Aslında admin olarak tüm kullanıcıların şifresini görsek çok iyi olur.
+
+--AKADEMİ--
+1-) Bizde Akademi 1 – 2 – 3 var. Dolayısıyla Akademiye girince böyle bir ayrım olsa. Müfredatta 4 farklı tanımlamıştım ya. Burada da böyle bir ayrım oluşturabilmemiz lazım.
+
+2-) “Oturumlar” yerine “Yoklamalar” yazılmalı. Oturumlar seçeneği çok anlaşılmadı.
+
+YORUM: Yoklama alma mantığını başta rehberlerde olduğu gibi basitleştirsek mi diye düşündüm. Ama bence mevcut hali baya kullanışlı. Sadece saat mefhumunu kaldırsak mı diye düşündüm. Çünkü ne kadar kolaylık o kadar kullanışlı olur. Bilemiyorum ama 😊
+
+--MALİYE--
+1-) Bağışçılar sadece bağış değil zekât atabiliyor. Atılan miktarın zekat mı olduğu bağış mı olduğunu seçebilmeliyiz.
+
+2-) Gelirler ve giderler bölümüne muhakkak “zekât” eklenmeli. Kasa kısmına da muhakkak “Zekât” eklenmeli. Çünkü zekât ile alakalı yapılan harcamalar ayrı bağış ayrı. Bizim kasamızdaki zekât ile bağış hesabını da her daim ayrı tutarız.
+
+3-) Gelirler kısmına “Kumbara” eklenmeli.
+
+4-) Giderler kısmına “Bilgespor” ve “Burs” seçenekleri eklenmeli. Çünkü bu iki kalemde giderlerimiz düzenli bir şekilde oluyor.
+
+--SOSYAL MEDYA—
+1-) Buradaki temel mesele şu: Sosyal Medya seçeneğini birkaç öğrenci kullanıyor. Onların da bunu kullanması için “ADMİN” hesabından giriş yapması gerekiyor. Böyle olunca o çocuk, bizim dernekte aldığımız her türlü kararı vs. görebilir. Aslında admin’in yetkilendirdiği kullanıcı hesapları “Sosyal Medya” seçeneğine erişebilse iyi olur.
+
+
+	Bunların dışında bilge spor kulübü için herhangi bir eksiklik göremedim. Sosyal medya, akademi ve bilge spor ancak gelecek yıl kullandıkça bazı eksiklikleri görebiliriz. Gayet güzel. 
+
+Son olarak yönetim kurulunda bekleyen ve devam eden kararlar açısından tarih sırasına göre sıralama olacaktı. Hedef Tarih belirliyorum ya. O hedef tarihe göre en yakından en uzağa doğru sıralama olacaktı. Bu yapılırsa büyük kolaylık olur.
+
+--İNSAN KAYNAĞI—
+1-) “Bilgeverse” içerisindeki “Haftalık Raporlar” kısmını “İnsan Kaynağı” içerisine taşımalıyız.
+
+	Ayrıca yeri gelmişken “Bilgeverse” içinde yer alan “Etkinlikler” başlığını da “Karakter Eğitimi” bölümüne taşımalıyız. Çünkü etkinlikler, Karakter eğitiminin bir parçasıdır. (Kes – Yapıştır)
+
+2-) “Karakter Eğitimi Gurupları” içerisinde yer alan “Toplu Yoklama Özeti” kısmı “İnsan Kaynağı” kısmına taşınmalı. Ve burada liderlerin değil sadece rehberlerin adı gözükmeli. Çünkü oradaki kimi liderlerin rehber gurubuyla alakası olmadığı gibi diğer liderler de rehber yardımcısı. Yani kafa karışıklığı olur. Sadece rehberlerin ismi olsun.
+
+Fakat burada haftalık yoklama kısmı neden herkeste %0 onu anlamadım. Örneğin Yasin Bozkurt, Muhammed Akkafa, Serdar Macit, Hamza Akyüz sisteme yoklama verisi giren guruplar. Onların da katılım oranı %0 gözüküyor. Yani alınan yoklamalar ile burası entegre olamamış gibi.
+
+Bu “Topla Yoklama Özeti” kısmını da “İnsan Kaynağı” içerisine taşırken “Raporlar” kısmında “haftalık katılım” sekmesi içine gömülebilir. Görebildiğim kadarıyla bu “Haftalık Katılım” sekmesinde rehberlerin düzenlediği “etkinlikler” ile alakalı takip için oluşturulmuş. Güzel de olmuş. Açıkçası buradaki tabloyu çok beğendim. Eğer mümkünse “Toplu Yoklama Özeti” kısmı da buna benzer olabilir. 
+
+Şimdi bu “Toplu Yoklama Özeti” kısmı çok ciddi bir mesele o yüzden detaylı olarak tekrar yazıyım. 
+
+Rehber gruplarının haftalık katılım performansını ölçmek istiyoruz. Her rehber kendi grubundaki öğrenciler için her buluşma sonrası yoklama girecek. (Zaten olur da girmezlerse diye “Telafi Yoklama” kısmını bile oluşturulmasını istedik.)  Sistem, haftalık katılan öğrenci sayısı ve yapılan buluşma sayısına haftalık katılım oranını otomatik hesaplayacak. Burada katılım oranına göre rehberlerin ismi yeşil sarı veya kırmızı yanacak.
+
+Eğer bir rehberin buluşmalarına öğrencilerin katılım oranı genel olarak %60 ve üzeri yeşil, %40 ila &60 arasındaysa sarı, %40’dan daha düşükse kırmızı yanacak. Biz böylece sistemden hangi rehberlerin guruplarını iyi götürdüğünü hangi rehberlerin guruplarını iyi götürmediğini görmüş olacağız. Kırmızı yanan rehberi gençlik merkezine çağırıp konuşup durumu anlayacağız mesela.
+
+Buradaki Panelde ise rehber adı, haftalık katılım oranı, renk durumu gözükecek. Rehberin ismine tıkladığımızda açılan sayfada rehberin öğrencileri gözükecek ve burada katılım oranı düşük ve yüksek öğrencileri görebileceğiz. 
+
+3-) “Öğretmen Terfileri”ne benzer bir şekilde “Rehber Adayları” başlığımız da olacak. Bu butona tıkladığımızda Rehber olarak düşündüğümüz kişileri ve onlar hakkında ne karar aldığımızı görebilmemiz gerekiyor.
+
+4-) Rehberlerin alması gereken eğitimleri yazdığımız ve hangi rehberlerin hangi eğitimleri aldığını takip edebileceğimiz bir yer olmalı. Mesela rehberlerin A, B, C, D, E, F, G eğitimlerini almış olmalı. Rehber 1 – A,B,C,D eğitimlerini almış diğer eğitimleri almamış. Bunları görüp rehberlerin durumlarını görebileceğimiz bir sayfa olmalı. O sayfada rehberler hakkında yönetim olarak kendimiz de not düşebilsek iyi olur. 
+
+5-) (Daha iyi anlaşılması için yapar zekaya yazdırdım)
+Bilgeverse sisteminde karakter eğitimi gruplarını ve bu gruplardan sorumlu rehberleri takip edebileceğimiz bir yapı istiyoruz.
+Sistemde şu bilgiler görülebilmeli:
+•	Dernekte toplam kaç karakter eğitimi grubu var? 
+•	Bu gruplar hangileri okulda hangileri merkezde bulunuyor? 
+•	Her grubun rehberi kim? 
+•	Hangi rehber aktif görevde? 
+•	Hangi rehber pasif durumda? 
+•	Hangi rehber hazırda bekliyor? 
+•	Hangi grubun rehber ihtiyacı var? 
+	Aslında bilgeverse Kullanıcı Yönetiminde aktif pasif diye seçenekler var burayla entegre edilebilir.
+Örneğin sistemde şu şekilde görünmeli:
+•	Ömer Dinçer Lisesi / Karakter Eğitimi Grubu / Rehber: Rehber 1 
+•	Fen Lisesi / Karakter Eğitimi Grubu / Rehber: Rehber 2 
+•	Merkez İmam Hatip Lisesi / Karakter Eğitimi Grubu / Rehber: Rehber 3 
+•	Merkez 1. Grup / Rehber: Rehber 4 
+•	Merkez 2. Grup / Rehber: Henüz atanmadı 
+
+Aktif olan rehberler:
+Rehber 1 – Rehber 2 – Rehber 3
+Hazırda Bekleyen Rehberler 
+Rehber 5
+Pasif olan rehberler
+Rehber 6 - Rehber 7
+Bunları sisteme bizim işleyebilmemiz gerekiyor.
+Böylece hangi okulda veya merkezde kaç grup olduğunu, bu gruplara hangi rehberlerin baktığını ve hangi gruplarda rehber eksikliği veya devamlılık problemi bulunduğunu sistem üzerinden takip edebilmeliyiz.
+Ayrıca rehberler için şu durumlar sisteme girilebilmeli:
+•	Aktif rehber 
+•	Pasif rehber 
+•	Hazırda bekleyen rehber 
+•	Ayrılacak / görevi bırakacak rehber 
+Bu yapı sayesinde bir grubun rehberi ayrıldığında veya grup sallantıya girdiğinde sistem üzerinden hızlıca müdahale edilebilir. Hazırda bekleyen rehberlerden biri ilgili gruba atanabilir. Böylece grupların durumu dağınık şekilde değil, tek ekrandan düzenli biçimde takip edilmiş olur.
+
+6-) Mezun öğrencilerimiz var. Bunların isim soy isim mezuniyet tarihi bilgilerini sisteme girmemiz lazım.
+
+7-) Burs alan öğrenciler listesini gireceğiz. Bunun için bir bölüm lazım. 
+
+
+
+--GENÇLİK MERKEZİ—
+1-) “Bilgeverse”  içerisindeki “Duyuru Panosu”, “Dönem Yönetimi”, “İstek ve Dilekler”, “Raporlar” ve “Kullanıcı Yönetimi” kısımları GENÇLİK MERKEZİ başlığı altında toplanması lazım. (Kes – Yapıştır)
+
+Yani mantık olarak Bilgeverse’de nasıl para kazanılır hangi ürünler vardır bunların kriterini oluşturma hususları kalacak. Bunlar doğrudan Bilgeverse ile alakalı.  
+
+Ama duyurular, dönem yönetimi, gençlerin istekleri, raporlar, kullanıcılar(yani dernek üyeleri) doğrudan gençlik merkezini ilgilendirir. Bu yüzden onları, Gençlik Merkezi içerisine taşımamız gerekiyor.
+
+2-) Demirbaş listesini girmeliyiz. (20 masa 30 sandalye 10 bilgisayar vs.)
+
+3-) Dernek müdürümüz tarafından yapılan, kendisinin süreç içerisinde sürekli takip ettiği ancak yönetim kurulu kararına girmeyen işler var. Mesela halı alındı mı? Kablo bağlandı mı? vs. Bu konularda dernek müdürünün yaptığı tüm bu işlemleri takip edebileceği to do list gibi bir görev takibi sistemi oluşturulmalı. Burada dernek müdürü hangi işleri yaptığını ve hangi işlerin ne aşamada olduğunu yazacak. Bu yönetimin dernek müdürünü denetlemesi, (performans açısından) dernek müdürünün de iş takibini kolaylaştırması ve ayrıca sahada işleyen işlerin yönetimce takibinin kolaylığı açısından faydalı olacaktır.
+
+4-) Aylık kira zammı, abonelik yenileme gibi süreli bir takım işler var. Dernek müdürü, bu tarz işleri gençlik merkezi içerisinde bir yere işlemeli. Belirlediği tarihte buralar kırmızı bir şekilde yanmalı. Mesela abonelik sözleşmesi 2028 ocak 1 de yenilecek gibi bir hedef tarih belirleyecek. Bu tarihte o bölüm kırmızı bir şekilde yanacak. Böylece süreli işleri kaçırmamak için takip kolaylığı sağlanmış olacak.
+
+5-) Personel alınırken nelere dikkat edilmeli. Bunun hakkında elimizde bir yönerge var onu gençlik merkezine ekleyeceğiz. 
+
+6-) “İşletme defteri ve diğer dernek defterleri (yönetim defteri üye defteri vs.) nasıl tutulur? İç denetim raporu ve kurul raporları nasıl tutulur? Derbis’e nasıl girilir?” Bu konularla alakalı gençlik merkezi içerisine bir yönerge ekleyeceğiz. (3-4 maddeler pdf veya Word dosyası şeklinde olacak) 
+
+

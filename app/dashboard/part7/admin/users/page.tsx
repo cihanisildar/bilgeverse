@@ -13,6 +13,8 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { HeaderSkeleton, SearchFilterSkeleton, UserCardSkeleton } from '@/app/components/ui/skeleton-shimmer';
 import { UserRole } from '@prisma/client';
 
@@ -53,6 +55,39 @@ export default function AdminUsersPage() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [finalConfirmationOpen, setFinalConfirmationOpen] = useState(false);
   const [userToDelete, setUserToDelete] = useState<{ id: string, username: string } | null>(null);
+
+  // State for quick password reset
+  const [passwordUser, setPasswordUser] = useState<{ id: string, username: string } | null>(null);
+  const [newPassword, setNewPassword] = useState('');
+  const [passwordLoading, setPasswordLoading] = useState(false);
+
+  const confirmResetPassword = async () => {
+    if (!passwordUser) return;
+    if (!newPassword || newPassword.length < 4) {
+      toast.error('Şifre en az 4 karakter olmalıdır');
+      return;
+    }
+    try {
+      setPasswordLoading(true);
+      const response = await fetch(`/api/users/${passwordUser.id}/password`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ password: newPassword }),
+      });
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || 'Şifre güncellenemedi');
+      }
+      toast.success(`${passwordUser.username} kullanıcısının şifresi güncellendi`);
+      setPasswordUser(null);
+      setNewPassword('');
+    } catch (err: any) {
+      toast.error(err.message || 'Şifre güncellenemedi');
+    } finally {
+      setPasswordLoading(false);
+    }
+  };
 
   // Debounced search function
   const debouncedSearch = useCallback(
@@ -540,6 +575,15 @@ export default function AdminUsersPage() {
                           Düzenle
                         </Link>
                         <button
+                          onClick={() => { setPasswordUser({ id: user.id, username: user.username }); setNewPassword(''); }}
+                          className="inline-flex items-center justify-center px-2.5 sm:px-3 py-1 sm:py-1.5 border border-amber-500 text-amber-600 bg-white hover:bg-amber-50 rounded-md transition-colors text-xs sm:text-sm"
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
+                          </svg>
+                          Şifre
+                        </button>
+                        <button
                           onClick={() => handleDeleteUser(user.id, user.username)}
                           className="inline-flex items-center justify-center px-2.5 sm:px-3 py-1 sm:py-1.5 border border-red-500 text-red-600 bg-white hover:bg-red-50 rounded-md transition-colors text-xs sm:text-sm"
                           disabled={deleteLoading}
@@ -558,6 +602,37 @@ export default function AdminUsersPage() {
           </div>
         </div>
       )}
+
+      {/* Quick Password Reset Dialog */}
+      <Dialog open={!!passwordUser} onOpenChange={(open) => { if (!open) { setPasswordUser(null); setNewPassword(''); } }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Şifre Sıfırla</DialogTitle>
+            <DialogDescription>
+              <strong>{passwordUser?.username}</strong> kullanıcısı için yeni bir şifre belirleyin. Şifreler güvenlik gereği geri okunamaz; belirlediğiniz bu şifreyle giriş yapabilirsiniz.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2 py-2">
+            <Label htmlFor="new-password">Yeni Şifre</Label>
+            <Input
+              id="new-password"
+              type="text"
+              value={newPassword}
+              onChange={(e) => setNewPassword(e.target.value)}
+              placeholder="Yeni şifre girin"
+              autoComplete="new-password"
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setPasswordUser(null); setNewPassword(''); }} disabled={passwordLoading}>
+              İptal
+            </Button>
+            <Button onClick={confirmResetPassword} disabled={passwordLoading} className="bg-amber-600 hover:bg-amber-700 text-white">
+              {passwordLoading ? 'Kaydediliyor...' : 'Şifreyi Güncelle'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Initial Delete Confirmation Dialog */}
       <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
