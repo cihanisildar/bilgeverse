@@ -2,8 +2,13 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireApiAuth } from '@/app/lib/auth-utils';
 import prisma from '@/lib/prisma';
 import { UserRole } from '@prisma/client';
+import { requireApiPartLicense } from '@/app/lib/permissions.server';
 
 export async function GET(req: NextRequest) {
+    // Kurum paketi kapısı — Beceri Atölyeleri (part 4)
+    const licenseGate = await requireApiPartLicense(4);
+    if (licenseGate.errorResponse) return licenseGate.errorResponse;
+
     try {
         const { errorResponse } = await requireApiAuth();
         if (errorResponse) return errorResponse;
@@ -41,6 +46,10 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
+    // Kurum paketi kapısı — Beceri Atölyeleri (part 4)
+    const licenseGate = await requireApiPartLicense(4);
+    if (licenseGate.errorResponse) return licenseGate.errorResponse;
+
     try {
         const { errorResponse } = await requireApiAuth([UserRole.ADMIN]);
         if (errorResponse) return errorResponse;

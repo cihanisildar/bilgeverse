@@ -1,7 +1,7 @@
 import { getServerSession, Session } from 'next-auth';
 import { redirect } from 'next/navigation';
 import { authOptions } from '@/app/api/auth/[...nextauth]/auth.config';
-import { isAuthorized } from './permissions';
+import { isAuthorized, isPartLicensed, PART_NOT_LICENSED } from './permissions.server';
 import { UserRole } from '@prisma/client';
 import { NextResponse } from 'next/server';
 
@@ -79,11 +79,20 @@ export async function requireApiAuth(roles?: UserRole[]) {
  * A centralized utility for Server Actions.
  * Returns either the session or an error object.
  */
-export async function requireActionAuth(roles?: UserRole[]) {
+export async function requireActionAuth(roles?: UserRole[], options?: { partId?: number }) {
     const session = await getServerSession(authOptions);
 
     if (!session?.user) {
         return { session: null, error: 'Oturum açmanız gerekiyor' };
+    }
+
+    // Kurum paketi kapısı rol kontrolünden ÖNCE: kurumun satın almadığı bir
+    // modülü hiçbir rol açamamalı. Sayfa katmanındaki requireAuth({ partId })
+    // ile aynı kural; buradaki kopya, action'ın doğrudan çağrılmasını kapatır.
+    if (options?.partId !== undefined) {
+        if (!(await isPartLicensed(session, options.partId))) {
+            return { session: null, error: PART_NOT_LICENSED };
+        }
     }
 
     if (roles && roles.length > 0) {

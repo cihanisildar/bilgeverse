@@ -1,11 +1,17 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { ArrowLeft, FileText, UserCheck, BarChart3, ArrowRight, GraduationCap, HandCoins, UserSearch, BookOpen, ClipboardCheck, Users2 } from 'lucide-react';
+import { ArrowLeft, FileText, UserCheck, BarChart3, ArrowRight, GraduationCap, HandCoins, UserSearch, BookOpen, ClipboardCheck } from 'lucide-react';
 import { PARTS } from '@/app/lib/parts';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import PartDocuments from '@/app/components/PartDocuments';
+import { requireAuth } from '@/app/lib/auth-utils';
 
 export default async function Part3Page() {
+  // Oturum + kurum paketi kontrolü. Bu çağrı olmadan sayfa build sırasında
+  // statik üretilmeye çalışılıyor ve içindeki PartDocuments kurum bağlamı
+  // bulamadığı için boş dönüyordu.
+  await requireAuth({ partId: 3 });
+
   const part = PARTS.find(p => p.id === 3);
 
   return (
@@ -55,31 +61,8 @@ export default async function Part3Page() {
             </Card>
           </Link>
 
-          {/* Character Groups Card */}
-          <Link href="/dashboard/part3/character-groups" className="block">
-            <Card className="border-0 shadow-lg rounded-xl overflow-hidden transition-all duration-200 hover:shadow-xl hover:-translate-y-1 cursor-pointer bg-gradient-to-br from-teal-50 to-cyan-50">
-              <div className="h-2 bg-gradient-to-r from-teal-500 to-cyan-500"></div>
-              <CardHeader>
-                <div className="flex items-center space-x-4">
-                  <div className="w-16 h-16 flex items-center justify-center rounded-full bg-teal-100 text-teal-600">
-                    <Users2 className="h-8 w-8" />
-                  </div>
-                  <div>
-                    <CardTitle className="text-xl">Karakter Eğitim Grupları</CardTitle>
-                    <CardDescription className="mt-1">
-                      Gruplar, sorumlu rehberler ve rehber durum takibi
-                    </CardDescription>
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="flex items-center text-sm font-medium text-gray-600">
-                  Grup Takibine Git
-                  <ArrowRight className="ml-2 h-4 w-4" />
-                </div>
-              </CardContent>
-            </Card>
-          </Link>
+          {/* NOT: "Değerler Halkası Grupları" kartı buradan kaldırıldı — sayfa
+              part2'ye (Değerler Halkası) taşındı ve oradan erişiliyor. */}
 
           {/* Toplu Yoklama / Rehber Katılımı Card */}
           <Link href="/dashboard/part3/tutor-participation" className="block">
@@ -231,6 +214,32 @@ export default async function Part3Page() {
               <CardContent>
                 <div className="flex items-center text-sm font-medium text-gray-600">
                   Eğitim Takibine Git
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </div>
+              </CardContent>
+            </Card>
+          </Link>
+
+          {/* Haftalık Raporlar — Bilgeverse (part7) altındaydı, buraya taşındı */}
+          <Link href="/dashboard/part3/weekly-reports" className="block">
+            <Card className="border-0 shadow-lg rounded-xl overflow-hidden transition-all duration-200 hover:shadow-xl hover:-translate-y-1 cursor-pointer bg-gradient-to-br from-violet-50 to-purple-50">
+              <div className="h-2 bg-gradient-to-r from-violet-500 to-purple-500"></div>
+              <CardHeader>
+                <div className="flex items-center space-x-4">
+                  <div className="w-16 h-16 flex items-center justify-center rounded-full bg-violet-100 text-violet-600">
+                    <ClipboardCheck className="h-8 w-8" />
+                  </div>
+                  <div>
+                    <CardTitle className="text-xl">Haftalık Raporlar</CardTitle>
+                    <CardDescription className="mt-1">
+                      Rehberlerin haftalık ilerleme raporlarını inceleyin ve değerlendirin
+                    </CardDescription>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-center text-sm font-medium text-gray-600">
+                  Haftalık Raporlara Git
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </div>
               </CardContent>

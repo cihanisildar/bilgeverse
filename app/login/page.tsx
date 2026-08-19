@@ -7,14 +7,31 @@ import { useSearchParams, useRouter } from 'next/navigation';
 import { useToast } from '@/app/hooks/use-toast';
 import { useAuth } from '../contexts/AuthContext';
 
+const ORG_CODE_STORAGE_KEY = 'bilgeverse.orgCode';
+
 function LoginForm() {
+  const [orgCode, setOrgCode] = useState('');
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
-  const { login, loading, user, isAdmin, isTutor, isStudent } = useAuth();
+  const { login, loading, user, isAdmin, isTutor, isStudent, isSuperAdmin } = useAuth();
   const toast = useToast();
   const searchParams = useSearchParams();
   const router = useRouter();
   const callbackUrl = searchParams.get('callbackUrl');
+
+  // Kurum kodunu her girişte yeniden yazdırmamak için: önce ?org= parametresi,
+  // yoksa son kullanılan kod hatırlanır.
+  useEffect(() => {
+    const fromUrl = searchParams.get('org');
+    if (fromUrl) {
+      setOrgCode(fromUrl.toUpperCase());
+      return;
+    }
+    const remembered = typeof window !== 'undefined'
+      ? window.localStorage.getItem(ORG_CODE_STORAGE_KEY)
+      : null;
+    if (remembered) setOrgCode(remembered);
+  }, [searchParams]);
 
   // Redirect if already logged in
   useEffect(() => {
@@ -23,7 +40,9 @@ function LoginForm() {
       router.push(callbackUrl);
       return;
     }
-    if (isAdmin) {
+    if (isSuperAdmin) {
+      router.push('/superadmin');
+    } else if (isAdmin) {
       // Admins land on the main dashboard (all sections) instead of the
       // Bilgeverse admin panel, so no left sidebar opens on login.
       router.push('/dashboard');
@@ -39,13 +58,16 @@ function LoginForm() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!username || !password) {
-      toast.error('Kullanıcı adı ve şifre gereklidir');
+    if (!orgCode || !username || !password) {
+      toast.error('Kurum kodu, kullanıcı adı ve şifre gereklidir');
       return;
     }
 
     try {
-      await login(username.toLowerCase(), password, callbackUrl || undefined);
+      await login(orgCode.trim().toUpperCase(), username.toLowerCase(), password, callbackUrl || undefined);
+      if (typeof window !== 'undefined') {
+        window.localStorage.setItem(ORG_CODE_STORAGE_KEY, orgCode.trim().toUpperCase());
+      }
     } catch (err: any) {
       console.error('Login error:', err);
       toast.error('Giriş başarısız. Lütfen tekrar deneyin.');
@@ -69,6 +91,26 @@ function LoginForm() {
 
         <form onSubmit={handleSubmit} className="mt-8 space-y-6">
           <div className="space-y-4">
+            <div>
+              <label htmlFor="orgCode" className="block text-sm font-medium text-gray-700">
+                Kurum Kodu
+              </label>
+              <div className="mt-1 relative">
+                <input
+                  id="orgCode"
+                  type="text"
+                  value={orgCode}
+                  onChange={(e) => setOrgCode(e.target.value.toUpperCase())}
+                  autoCapitalize="characters"
+                  autoComplete="organization"
+                  className="block w-full px-4 py-3 rounded-lg border border-gray-200 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 uppercase tracking-wide"
+                  placeholder="ÖRN: BILGEDER"
+                  disabled={loading}
+                  required
+                />
+              </div>
+            </div>
+
             <div>
               <label htmlFor="username" className="block text-sm font-medium text-gray-700">
                 Kullanıcı Adı

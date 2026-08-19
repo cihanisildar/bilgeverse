@@ -2,10 +2,34 @@
 
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/app/api/auth/[...nextauth]/auth.config';
+import { isPartLicensed, requirePartLicense } from '@/app/lib/permissions.server';
 import prisma from '@/lib/prisma';
 import { UserRole, FinanceType, FinanceCurrency, Prisma } from '@prisma/client';
 import { revalidatePath } from 'next/cache';
 import { getCategoryLabel } from '@/app/lib/finance';
+
+/**
+ * Kurumun Maliye paketi (part 8) + oturum.
+ *
+ * Paket yoksa null döner; çağıran taraftaki mevcut oturum/rol kontrolleri
+ * isteği zaten reddeder. Sayfa katmanı ayrıca requireAuth({ partId: 8 })
+ * ile kapılı — buradaki kapı, server action'ın doğrudan çağrılması hâlini kapatır.
+ */
+const LICENSED_PART = 8;
+
+async function getLicensedSession() {
+    const session = await getServerSession(authOptions);
+    if (!session?.user) return null;
+    if (!(await isPartLicensed(session, LICENSED_PART))) return null;
+    return session;
+}
+
+/** Oturuma bakmayan okuma uçları için yalnız paket kontrolü. */
+async function requireLicense() {
+    const gate = await requirePartLicense(LICENSED_PART);
+    return { ok: !gate.error, error: gate.error };
+}
+
 import {
     FinanceTransaction,
     FinanceActionResponse,
@@ -21,7 +45,7 @@ import {
 const ALL_CURRENCIES: FinanceCurrency[] = ['TL', 'USD', 'EUR', 'GOLD'];
 
 async function checkAuth() {
-    const session = await getServerSession(authOptions);
+    const session = await getLicensedSession();
     if (!session?.user) {
         throw new Error('Unauthorized');
     }
@@ -64,6 +88,8 @@ function serialize(t: Prisma.FinanceTransactionGetPayload<{ include: typeof tran
 export async function getFinanceTransactions(
     filters: FinanceFilters = {}
 ): Promise<FinanceActionResponse<FinanceTransaction[]>> {
+    const lic = await requireLicense();
+    if (!lic.ok) return { error: lic.error, data: null };
     try {
         await checkAuth();
 
@@ -98,6 +124,8 @@ export async function getFinanceTransactions(
 }
 
 export async function getFinanceSummary(): Promise<FinanceActionResponse<FinanceSummary>> {
+    const lic = await requireLicense();
+    if (!lic.ok) return { error: lic.error, data: null };
     try {
         await checkAuth();
 
@@ -139,6 +167,8 @@ export async function getFinanceSummary(): Promise<FinanceActionResponse<Finance
 export async function createFinanceTransaction(
     data: CreateTransactionData
 ): Promise<FinanceActionResponse<FinanceTransaction>> {
+    const lic = await requireLicense();
+    if (!lic.ok) return { error: lic.error, data: null };
     try {
         const session = await checkAuth();
 
@@ -176,6 +206,8 @@ export async function updateFinanceTransaction(
     id: string,
     data: UpdateTransactionData
 ): Promise<FinanceActionResponse<FinanceTransaction>> {
+    const lic = await requireLicense();
+    if (!lic.ok) return { error: lic.error, data: null };
     try {
         await checkAuth();
 
@@ -216,6 +248,8 @@ export async function updateFinanceTransaction(
 export async function deleteFinanceTransaction(
     id: string
 ): Promise<{ error: string | null; success: boolean }> {
+    const lic = await requireLicense();
+    if (!lic.ok) return { error: lic.error, success: false };
     try {
         await checkAuth();
 
@@ -247,6 +281,8 @@ export async function getMonthlyReport(
     year: number,
     month: number
 ): Promise<FinanceActionResponse<MonthlyReport>> {
+    const lic = await requireLicense();
+    if (!lic.ok) return { error: lic.error, data: null };
     try {
         await checkAuth();
 

@@ -2,12 +2,17 @@ import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { getServerSession } from 'next-auth';
 import { authOptions } from '../../../../auth/[...nextauth]/auth.config';
+import { requireApiPartLicense } from '@/app/lib/permissions.server';
 
 // GET - Fetch a specific question
 export async function GET(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
+    // Kurum paketi kapısı — İnsan Kaynağı (part 3)
+    const licenseGate = await requireApiPartLicense(3);
+    if (licenseGate.errorResponse) return licenseGate.errorResponse;
+
   try {
     const session = await getServerSession(authOptions);
 
@@ -56,6 +61,10 @@ export async function PUT(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
+    // Kurum paketi kapısı — İnsan Kaynağı (part 3)
+    const licenseGate = await requireApiPartLicense(3);
+    if (licenseGate.errorResponse) return licenseGate.errorResponse;
+
   try {
     const session = await getServerSession(authOptions);
 
@@ -156,6 +165,10 @@ export async function DELETE(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
+    // Kurum paketi kapısı — İnsan Kaynağı (part 3)
+    const licenseGate = await requireApiPartLicense(3);
+    if (licenseGate.errorResponse) return licenseGate.errorResponse;
+
   try {
     const session = await getServerSession(authOptions);
 

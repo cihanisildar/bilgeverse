@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/app/api/auth/[...nextauth]/auth.config';
 import prisma from '@/lib/prisma';
 import { UserRole, WorkshopJoinRequestStatus } from '@prisma/client';
+import { requireApiPartLicense } from '@/app/lib/permissions.server';
 
 /**
  * GET /api/workshops/[id]/join-requests
@@ -13,6 +14,10 @@ export async function GET(
     req: NextRequest,
     { params }: { params: { id: string } }
 ) {
+    // Kurum paketi kapısı — Beceri Atölyeleri (part 4)
+    const licenseGate = await requireApiPartLicense(4);
+    if (licenseGate.errorResponse) return licenseGate.errorResponse;
+
     try {
         const session = await getServerSession(authOptions);
         if (!session?.user) {
@@ -79,6 +84,10 @@ export async function POST(
     req: NextRequest,
     { params }: { params: { id: string } }
 ) {
+    // Kurum paketi kapısı — Beceri Atölyeleri (part 4)
+    const licenseGate = await requireApiPartLicense(4);
+    if (licenseGate.errorResponse) return licenseGate.errorResponse;
+
     try {
         const session = await getServerSession(authOptions);
         if (!session?.user) {

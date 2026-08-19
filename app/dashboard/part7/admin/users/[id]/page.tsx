@@ -21,11 +21,33 @@ type User = {
   createdAt: string;
 };
 
-// Adds/removes part 6 (Sosyal Medya) in the user's allowedParts list based on the toggle
-function mergeAllowedParts(current: number[] | undefined, socialAccess: boolean): number[] {
+/**
+ * Kullanıcıya tek tek verilebilen ek modüller.
+ *
+ * Liste hâlinde tutuluyor ki yeni bir modül istendiğinde yalnız buraya bir
+ * satır eklensin — daha önce Sosyal Medya tek bir boolean olarak sabit
+ * yazılmıştı ve her yeni modül üç ayrı yerde değişiklik gerektiriyordu.
+ */
+const GRANTABLE_PARTS = [
+  {
+    id: 6,
+    label: 'Sosyal Medya erişimi',
+    description: 'Kullanıcı, admin olmadan "Sosyal Medya" bölümüne erişebilir.',
+  },
+  {
+    id: 9,
+    label: 'Bilge Spor Kulübü erişimi',
+    description: 'Kullanıcı, admin olmadan "Bilge Spor Kulübü" bölümüne erişebilir.',
+  },
+] as const;
+
+/** Seçili ek modülleri kullanıcının allowedParts listesine yazar. */
+function mergeAllowedParts(current: number[] | undefined, granted: number[]): number[] {
   const set = new Set<number>(current ?? []);
-  if (socialAccess) set.add(6);
-  else set.delete(6);
+  for (const { id } of GRANTABLE_PARTS) {
+    if (granted.includes(id)) set.add(id);
+    else set.delete(id);
+  }
   return Array.from(set);
 }
 
@@ -56,7 +78,7 @@ export default function EditUserPage() {
     points: 0,
     password: "",
     confirmPassword: "",
-    socialAccess: false,
+    grantedParts: [] as number[],
   });
   const [formErrors, setFormErrors] = useState({
     username: "",
@@ -88,7 +110,9 @@ export default function EditUserPage() {
           points: data.user.points || 0,
           password: "",
           confirmPassword: "",
-          socialAccess: Array.isArray(data.user.allowedParts) && data.user.allowedParts.includes(6),
+          grantedParts: Array.isArray(data.user.allowedParts)
+            ? GRANTABLE_PARTS.map((p) => p.id).filter((id) => data.user.allowedParts.includes(id))
+            : [],
         });
       } catch (err) {
         console.error("Kullanıcı bilgilerini alırken hata:", err);
@@ -236,7 +260,7 @@ export default function EditUserPage() {
           tutorId:
             formData.roles.includes(UserRole.STUDENT) ? formData.tutorId : undefined,
           points: formData.points,
-          allowedParts: mergeAllowedParts(user?.allowedParts, formData.socialAccess),
+          allowedParts: mergeAllowedParts(user?.allowedParts, formData.grantedParts),
         }),
       });
 
@@ -597,18 +621,33 @@ export default function EditUserPage() {
           <div className="bg-white rounded-xl border border-gray-200 p-6">
             <h3 className="text-base font-semibold text-gray-800 mb-1">Ek Modül Erişimleri</h3>
             <p className="text-sm text-gray-500 mb-4">Bu kullanıcıya normalde rolüyle erişemeyeceği modüller için özel izin verin.</p>
-            <label className="flex items-start gap-3 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={formData.socialAccess}
-                onChange={(e) => setFormData((prev) => ({ ...prev, socialAccess: e.target.checked }))}
-                className="mt-1 h-4 w-4 rounded border-gray-300 text-teal-600 focus:ring-teal-500"
-              />
-              <span>
-                <span className="block text-sm font-medium text-gray-800">Sosyal Medya erişimi</span>
-                <span className="block text-xs text-gray-500">Kullanıcı, admin olmadan "Sosyal Medya" bölümüne erişebilir. (Değişiklik için kullanıcının yeniden giriş yapması gerekebilir.)</span>
-              </span>
-            </label>
+            <div className="space-y-3">
+              {GRANTABLE_PARTS.map((part) => (
+                <label key={part.id} className="flex items-start gap-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={formData.grantedParts.includes(part.id)}
+                    onChange={(e) =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        grantedParts: e.target.checked
+                          ? [...prev.grantedParts, part.id]
+                          : prev.grantedParts.filter((id) => id !== part.id),
+                      }))
+                    }
+                    className="mt-1 h-4 w-4 rounded border-gray-300 text-teal-600 focus:ring-teal-500"
+                  />
+                  <span>
+                    <span className="block text-sm font-medium text-gray-800">{part.label}</span>
+                    <span className="block text-xs text-gray-500">{part.description}</span>
+                  </span>
+                </label>
+              ))}
+            </div>
+            <p className="text-xs text-gray-400 mt-3">
+              Değişiklik en geç 5 dakika içinde kullanıcının oturumuna yansır; hemen
+              geçerli olması için kullanıcı çıkış yapıp yeniden girebilir.
+            </p>
           </div>
 
           {/* Submit button */}

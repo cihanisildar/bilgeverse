@@ -27,7 +27,8 @@ import {
 interface NavItem {
     label: string;
     icon: any;
-    href: string;
+    /** `basePath`'e eklenen göreli yol; '' genel bakış sayfasıdır. */
+    path: string;
     /** Only visible to managers (admin/coach). Athletes get a reduced menu. */
     managerOnly?: boolean;
     /** Only visible to athletes (their own read-only view). */
@@ -35,25 +36,42 @@ interface NavItem {
 }
 
 const NAV_ITEMS: NavItem[] = [
-    { label: 'Panelim', icon: LayoutDashboard, href: '/dashboard/part9/me', athleteOnly: true },
-    { label: 'Genel Bakış', icon: LayoutDashboard, href: '/dashboard/part9', managerOnly: true },
-    { label: 'Sporcular', icon: Users, href: '/dashboard/part9/athletes', managerOnly: true },
-    { label: 'Branşlar', icon: Dumbbell, href: '/dashboard/part9/branches', managerOnly: true },
-    { label: 'Antrenman', icon: CalendarDays, href: '/dashboard/part9/schedule' },
-    { label: 'Katılım', icon: ClipboardCheck, href: '/dashboard/part9/attendance-overview', managerOnly: true },
-    { label: 'Performans', icon: LineChart, href: '/dashboard/part9/performance', managerOnly: true },
-    { label: 'Turnuvalar', icon: Trophy, href: '/dashboard/part9/tournaments' },
-    { label: 'Disiplin', icon: Gavel, href: '/dashboard/part9/discipline', managerOnly: true },
-    { label: 'Ekipman', icon: Package, href: '/dashboard/part9/equipment', managerOnly: true },
-    { label: 'Futbol Okulu', icon: CircleDollarSign, href: '/dashboard/part9/football-school', managerOnly: true },
-    { label: 'Maliye', icon: Wallet, href: '/dashboard/part9/finance', managerOnly: true },
-    { label: 'Duyurular', icon: Megaphone, href: '/dashboard/part9/announcements' },
-    { label: 'Geri Bildirim', icon: MessageSquare, href: '/dashboard/part9/feedback' },
-    { label: 'Raporlar', icon: FileBarChart, href: '/dashboard/part9/reports', managerOnly: true },
-    { label: 'Belgeler', icon: FolderOpen, href: '/dashboard/part9/documents' },
+    { label: 'Panelim', icon: LayoutDashboard, path: '/me', athleteOnly: true },
+    { label: 'Genel Bakış', icon: LayoutDashboard, path: '', managerOnly: true },
+    { label: 'Sporcular', icon: Users, path: '/athletes', managerOnly: true },
+    { label: 'Branşlar', icon: Dumbbell, path: '/branches', managerOnly: true },
+    { label: 'Antrenman', icon: CalendarDays, path: '/schedule' },
+    { label: 'Katılım', icon: ClipboardCheck, path: '/attendance-overview', managerOnly: true },
+    { label: 'Performans', icon: LineChart, path: '/performance', managerOnly: true },
+    { label: 'Turnuvalar', icon: Trophy, path: '/tournaments' },
+    { label: 'Disiplin', icon: Gavel, path: '/discipline', managerOnly: true },
+    { label: 'Ekipman', icon: Package, path: '/equipment', managerOnly: true },
+    { label: 'Futbol Okulu', icon: CircleDollarSign, path: '/football-school', managerOnly: true },
+    { label: 'Maliye', icon: Wallet, path: '/finance', managerOnly: true },
+    { label: 'Duyurular', icon: Megaphone, path: '/announcements' },
+    { label: 'Geri Bildirim', icon: MessageSquare, path: '/feedback' },
+    { label: 'Raporlar', icon: FileBarChart, path: '/reports', managerOnly: true },
+    { label: 'Belgeler', icon: FolderOpen, path: '/documents' },
 ];
 
-export default function SportsShell({ children }: { children: React.ReactNode }) {
+/**
+ * Spor Kulübü'nün sayfa İÇİ menüsü.
+ *
+ * `basePath` ile iki yerden kullanılır: kendi modülünde (/dashboard/part9) ve
+ * Bilgeverse içindeki ikinci girişinde (/dashboard/part7/sports). Bilgeverse
+ * tarafında sol ana menüde modül TEK satır olarak durur — bölümler arasında
+ * gezinme buradan yapılır, ana menü 16 başlıkla dolmaz.
+ */
+export default function SportsShell({
+    children,
+    basePath = '/dashboard/part9',
+    backHref = '/dashboard',
+}: {
+    children: React.ReactNode;
+    basePath?: string;
+    /** null verilirse "geri dön" bağlantısı gizlenir (kabuk zaten menü sunuyorsa). */
+    backHref?: string | null;
+}) {
     const pathname = usePathname();
     const { user } = useAuth();
 
@@ -72,12 +90,14 @@ export default function SportsShell({ children }: { children: React.ReactNode })
         <div className="min-h-screen bg-gray-50 p-4 sm:p-6 lg:p-8">
             <div className="max-w-7xl mx-auto">
                 <div className="mb-6">
-                    <Link href="/dashboard">
-                        <Button variant="ghost" className="mb-4 -ml-2 text-gray-500 hover:text-indigo-600">
-                            <ArrowLeft className="h-4 w-4 mr-2" />
-                            Ana Sayfaya Dön
-                        </Button>
-                    </Link>
+                    {backHref && (
+                        <Link href={backHref}>
+                            <Button variant="ghost" className="mb-4 -ml-2 text-gray-500 hover:text-indigo-600">
+                                <ArrowLeft className="h-4 w-4 mr-2" />
+                                Ana Sayfaya Dön
+                            </Button>
+                        </Link>
+                    )}
                     <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 tracking-tight">
                         <span className="bg-clip-text text-transparent bg-gradient-to-r from-slate-700 to-indigo-600">
                             Bilge Spor Kulübü
@@ -93,15 +113,13 @@ export default function SportsShell({ children }: { children: React.ReactNode })
                     <nav className="lg:sticky lg:top-8 h-max">
                         <div className="flex lg:flex-col gap-1.5 overflow-x-auto lg:overflow-visible bg-white rounded-2xl border border-gray-200 p-2 shadow-sm">
                             {items.map((item) => {
-                                const active =
-                                    item.href === '/dashboard/part9'
-                                        ? pathname === item.href
-                                        : pathname.startsWith(item.href);
+                                const href = `${basePath}${item.path}`;
+                                const active = item.path === '' ? pathname === href : pathname.startsWith(href);
                                 const Icon = item.icon;
                                 return (
                                     <Link
-                                        key={item.href}
-                                        href={item.href}
+                                        key={href}
+                                        href={href}
                                         className={`flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-semibold whitespace-nowrap transition-all ${
                                             active
                                                 ? 'bg-gradient-to-r from-slate-700 to-indigo-600 text-white shadow-md'

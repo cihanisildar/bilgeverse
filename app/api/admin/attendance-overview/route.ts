@@ -5,6 +5,7 @@ import { authOptions } from '@/app/api/auth/[...nextauth]/auth.config';
 import prisma from '@/lib/prisma';
 import { UserRole } from '@prisma/client';
 import { requireActivePeriod, periodStudentWhere } from '@/lib/periods';
+import { requireApiPartLicense } from '@/app/lib/permissions.server';
 
 // Helper to get current week
 function getCurrentWeek(): { start: Date; end: Date } {
@@ -20,6 +21,10 @@ function getCurrentWeek(): { start: Date; end: Date } {
 }
 
 export async function GET() {
+    // Kurum paketi kapısı — Değerler Halkası (part 2)
+    const licenseGate = await requireApiPartLicense(2);
+    if (licenseGate.errorResponse) return licenseGate.errorResponse;
+
     try {
         const session = await getServerSession(authOptions);
 

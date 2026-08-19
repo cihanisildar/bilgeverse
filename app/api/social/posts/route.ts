@@ -4,11 +4,16 @@ import { UserRole, SocialPlatform, PostStatus } from '@prisma/client';
 import { getServerSession } from 'next-auth';
 import logger from '@/lib/logger';
 import { authOptions } from '../../auth/[...nextauth]/auth.config';
+import { requireApiPartLicense } from '@/app/lib/permissions.server';
 
 export const dynamic = 'force-dynamic';
 
 // Get all social posts
 export async function GET(request: NextRequest) {
+    // Kurum paketi kapısı — Sosyal Medya (part 6)
+    const licenseGate = await requireApiPartLicense(6);
+    if (licenseGate.errorResponse) return licenseGate.errorResponse;
+
     try {
         const session = await getServerSession(authOptions);
 
@@ -52,6 +57,10 @@ export async function GET(request: NextRequest) {
 
 // Create a new social post
 export async function POST(request: NextRequest) {
+    // Kurum paketi kapısı — Sosyal Medya (part 6)
+    const licenseGate = await requireApiPartLicense(6);
+    if (licenseGate.errorResponse) return licenseGate.errorResponse;
+
     try {
         const session = await getServerSession(authOptions);
 
@@ -107,6 +116,10 @@ export async function POST(request: NextRequest) {
 
 // Update a social post
 export async function PUT(request: NextRequest) {
+    // Kurum paketi kapısı — Sosyal Medya (part 6)
+    const licenseGate = await requireApiPartLicense(6);
+    if (licenseGate.errorResponse) return licenseGate.errorResponse;
+
     try {
         const session = await getServerSession(authOptions);
 
@@ -172,6 +185,10 @@ export async function PUT(request: NextRequest) {
 
 // Delete a social post
 export async function DELETE(request: NextRequest) {
+    // Kurum paketi kapısı — Sosyal Medya (part 6)
+    const licenseGate = await requireApiPartLicense(6);
+    if (licenseGate.errorResponse) return licenseGate.errorResponse;
+
     try {
         const session = await getServerSession(authOptions);
 

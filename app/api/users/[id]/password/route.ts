@@ -61,7 +61,8 @@ export async function PUT(
     // Update user's password
     await prisma.user.update({
       where: { id: userId },
-      data: { password: hashedPassword }
+      // Damga, kullanıcının açık kalan oturumlarını düşürür (auth.config.ts).
+      data: { password: hashedPassword, passwordChangedAt: new Date() }
     });
 
     return NextResponse.json({

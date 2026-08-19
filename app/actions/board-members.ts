@@ -42,7 +42,7 @@ export interface UserSummary {
 
 export async function getBoardMembers() {
     try {
-        const { error } = await requireActionAuth([UserRole.ADMIN, UserRole.BOARD_MEMBER]);
+        const { error } = await requireActionAuth([UserRole.ADMIN, UserRole.BOARD_MEMBER], { partId: 1 });
         if (error) return { error, data: null };
 
         // Get total number of relevant meetings (Completed, Ongoing, or Planned but past/current)
@@ -140,7 +140,7 @@ export async function getBoardMembers() {
 
 export async function getBoardMemberById(id: string) {
     try {
-        const { error } = await requireActionAuth([UserRole.ADMIN, UserRole.BOARD_MEMBER]);
+        const { error } = await requireActionAuth([UserRole.ADMIN, UserRole.BOARD_MEMBER], { partId: 1 });
         if (error) return { error, data: null };
 
         const boardMember = await prisma.boardMember.findUnique({
@@ -190,7 +190,7 @@ export async function getBoardMemberById(id: string) {
 
 export async function createBoardMember(data: unknown) {
     try {
-        const { error } = await requireActionAuth([UserRole.ADMIN]);
+        const { error } = await requireActionAuth([UserRole.ADMIN], { partId: 1 });
         if (error) return { error, data: null };
 
         const validated = createBoardMemberSchema.parse(data);
@@ -301,7 +301,7 @@ export async function createBoardMember(data: unknown) {
 
 export async function updateBoardMember(id: string, data: unknown) {
     try {
-        const { error } = await requireActionAuth([UserRole.ADMIN]);
+        const { error } = await requireActionAuth([UserRole.ADMIN], { partId: 1 });
         if (error) return { error, data: null };
 
         const validated = updateBoardMemberSchema.parse(data);
@@ -375,7 +375,7 @@ export async function updateBoardMember(id: string, data: unknown) {
 
 export async function deleteBoardMember(id: string) {
     try {
-        const { error } = await requireActionAuth([UserRole.ADMIN]);
+        const { error } = await requireActionAuth([UserRole.ADMIN], { partId: 1 });
         if (error) return { error, data: null };
 
         if (!id || typeof id !== 'string') {
@@ -423,7 +423,7 @@ export async function deleteBoardMember(id: string) {
 
 export async function toggleBoardMemberStatus(id: string) {
     try {
-        const { error } = await requireActionAuth([UserRole.ADMIN]);
+        const { error } = await requireActionAuth([UserRole.ADMIN], { partId: 1 });
         if (error) return { error, data: null };
 
         const boardMember = await prisma.boardMember.findUnique({
@@ -509,7 +509,7 @@ export async function toggleBoardMemberStatus(id: string) {
 // Helper function to get all users (for selection in UI)
 export async function getAllUsers() {
     try {
-        const { error } = await requireActionAuth([UserRole.ADMIN]);
+        const { error } = await requireActionAuth([UserRole.ADMIN], { partId: 1 });
         if (error) return { error, data: null };
 
         const users = await prisma.user.findMany({

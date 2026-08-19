@@ -1,5 +1,5 @@
 import { requireAuth } from '@/app/lib/auth-utils';
-import { isAuthorized } from '@/app/lib/permissions';
+import { isAuthorized } from '@/app/lib/permissions.server';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';

@@ -2,11 +2,16 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/app/api/auth/[...nextauth]/auth.config';
 import prisma from '@/lib/prisma';
+import { requireApiPartLicense } from '@/app/lib/permissions.server';
 
 export async function DELETE(
     request: Request,
     { params }: { params: { id: string } }
 ) {
+    // Kurum paketi kapısı — Değerler Halkası (part 2)
+    const licenseGate = await requireApiPartLicense(2);
+    if (licenseGate.errorResponse) return licenseGate.errorResponse;
+
     try {
         const session = await getServerSession(authOptions);
 
@@ -40,6 +45,10 @@ export async function PATCH(
     request: Request,
     { params }: { params: { id: string } }
 ) {
+    // Kurum paketi kapısı — Değerler Halkası (part 2)
+    const licenseGate = await requireApiPartLicense(2);
+    if (licenseGate.errorResponse) return licenseGate.errorResponse;
+
     try {
         const session = await getServerSession(authOptions);
 

@@ -1,7 +1,8 @@
 'use server';
 
 import { requireActionAuth, hasRole } from '@/app/lib/auth-utils';
-import prisma from '@/lib/prisma';
+import prisma, { prismaUnscoped } from '@/lib/prisma';
+import { runAsOrg } from '@/lib/tenant-context';
 import { UserRole, FeedbackRating, NotificationType } from '@prisma/client';
 import crypto from 'crypto';
 
@@ -56,7 +57,7 @@ export interface UpdateClassroomProgressData {
 
 export async function getSyllabi() {
   try {
-    const { session, error } = await requireActionAuth();
+    const { session, error } = await requireActionAuth(undefined, { partId: 2 });
     if (error) return { error, data: null };
 
     const user = session!.user;
@@ -124,7 +125,7 @@ export async function getSyllabi() {
 
 export async function getSyllabus(syllabusId: string) {
   try {
-    const { session } = await requireActionAuth();
+    const { session } = await requireActionAuth(undefined, { partId: 2 });
 
     const syllabus = await prisma.syllabus.findUnique({
       where: { id: syllabusId },
@@ -212,9 +213,12 @@ export async function getSyllabus(syllabusId: string) {
   }
 }
 
+// HERKESE AÇIK: veli bu sayfayı oturum açmadan görür, dolayısıyla kurum
+// bağlamı yoktur. `shareToken` rastgele ve global benzersizdir — yetkilendirme
+// token'ın kendisidir — bu yüzden arama uzantısız client ile yapılır.
 export async function getSyllabusByShareToken(shareToken: string) {
   try {
-    const syllabus = await prisma.syllabus.findUnique({
+    const syllabus = await prismaUnscoped.syllabus.findUnique({
       where: { shareToken },
       include: {
         createdBy: {
@@ -267,7 +271,7 @@ export async function getSyllabusByShareToken(shareToken: string) {
 
 export async function createSyllabus(data: CreateSyllabusData) {
   try {
-    const { session, error } = await requireActionAuth([UserRole.ADMIN]);
+    const { session, error } = await requireActionAuth([UserRole.ADMIN], { partId: 2 });
     if (error) return { error, data: null };
     const user = session!.user;
     const isAdmin = hasRole(session, [UserRole.ADMIN]);
@@ -279,12 +283,15 @@ export async function createSyllabus(data: CreateSyllabusData) {
         driveLink: data.driveLink,
         isGlobal: isAdmin ? (data.isGlobal ?? false) : false,
         createdById: user.id,
+        // organizationId ELLE veriliyor: tenant extension yalnız üst seviye
+        // args'ı görür, iç içe ilişki yazmalarına kurum ekleyemez.
         lessons: {
           create: data.lessons.map((lesson, index) => ({
             title: lesson.title,
             description: lesson.description,
             driveLink: lesson.driveLink,
             orderIndex: index,
+            organizationId: user.organizationId,
           })),
         },
       },
@@ -326,7 +333,7 @@ export async function createSyllabus(data: CreateSyllabusData) {
 
 export async function updateSyllabus(syllabusId: string, data: UpdateSyllabusData) {
   try {
-    const { error } = await requireActionAuth([UserRole.ADMIN, UserRole.TUTOR]);
+    const { error } = await requireActionAuth([UserRole.ADMIN, UserRole.TUTOR], { partId: 2 });
     if (error) return { error, data: null };
 
     const syllabus = await prisma.syllabus.update({
@@ -370,7 +377,7 @@ export async function updateSyllabus(syllabusId: string, data: UpdateSyllabusDat
 
 export async function generateShareTokenForSyllabus(syllabusId: string) {
   try {
-    const { error } = await requireActionAuth([UserRole.ADMIN, UserRole.TUTOR]);
+    const { error } = await requireActionAuth([UserRole.ADMIN, UserRole.TUTOR], { partId: 2 });
     if (error) return { error, data: null };
 
     const shareToken = crypto.randomBytes(32).toString('hex');
@@ -398,7 +405,7 @@ export async function generateShareTokenForSyllabus(syllabusId: string) {
 
 export async function updateSyllabusLesson(lessonId: string, data: UpdateSyllabusLessonData) {
   try {
-    const { session, error } = await requireActionAuth([UserRole.ADMIN, UserRole.TUTOR]);
+    const { session, error } = await requireActionAuth([UserRole.ADMIN, UserRole.TUTOR], { partId: 2 });
     if (error) return { error, data: null };
 
     // For lesson metadata (title, description), update the lesson directly
@@ -488,7 +495,7 @@ export async function addLessonToSyllabus(syllabusId: string, data: {
   driveLink?: string;
 }) {
   try {
-    const { error } = await requireActionAuth([UserRole.ADMIN, UserRole.TUTOR]);
+    const { error } = await requireActionAuth([UserRole.ADMIN, UserRole.TUTOR], { partId: 2 });
     if (error) return { error, data: null };
 
     const maxLesson = await prisma.syllabusLesson.findFirst({
@@ -524,7 +531,7 @@ export async function addLessonToSyllabus(syllabusId: string, data: {
 
 export async function deleteSyllabusLesson(lessonId: string) {
   try {
-    const { error } = await requireActionAuth([UserRole.ADMIN, UserRole.TUTOR]);
+    const { error } = await requireActionAuth([UserRole.ADMIN, UserRole.TUTOR], { partId: 2 });
     if (error) return { error, data: null };
 
     await prisma.syllabusLesson.delete({
@@ -540,7 +547,7 @@ export async function deleteSyllabusLesson(lessonId: string) {
 
 export async function deleteSyllabus(syllabusId: string) {
   try {
-    const { error } = await requireActionAuth([UserRole.ADMIN, UserRole.TUTOR]);
+    const { error } = await requireActionAuth([UserRole.ADMIN, UserRole.TUTOR], { partId: 2 });
     if (error) return { error, data: null };
 
     await prisma.syllabus.delete({
@@ -554,29 +561,33 @@ export async function deleteSyllabus(syllabusId: string) {
   }
 }
 
+// HERKESE AÇIK: veli oturum açmadan gönderir. Kurum, geri bildirimin ait olduğu
+// müfredattan türetilir ve kalan işlemler o kurum adına çalıştırılır.
 export async function submitParentFeedback(data: SubmitFeedbackData) {
   try {
-    const feedback = await prisma.parentFeedback.create({
-      data,
-    });
-
-    const syllabus = await prisma.syllabus.findUnique({
+    const target = await prismaUnscoped.syllabus.findUnique({
       where: { id: data.syllabusId },
-      include: {
-        createdBy: true,
-      },
+      select: { id: true, title: true, createdById: true, organizationId: true },
     });
 
-    if (syllabus) {
+    if (!target) {
+      return { error: 'Müfredat bulunamadı', data: null };
+    }
+
+    const { feedback, syllabus } = await runAsOrg(target.organizationId, async () => {
+      const feedback = await prisma.parentFeedback.create({ data });
+
       await prisma.notification.create({
         data: {
-          userId: syllabus.createdById,
+          userId: target.createdById,
           type: 'SYLLABUS_FEEDBACK' as NotificationType,
           title: 'Yeni Veli Geri Bildirimi',
-          message: `"${syllabus.title}" müfredatınız için yeni bir veli geri bildirimi alındı.`,
+          message: `"${target.title}" müfredatınız için yeni bir veli geri bildirimi alındı.`,
         },
       });
-    }
+
+      return { feedback, syllabus: target };
+    });
 
     return {
       error: null,
@@ -593,7 +604,7 @@ export async function submitParentFeedback(data: SubmitFeedbackData) {
 
 export async function getClassroomLessonProgress(classroomId: string, syllabusId: string) {
   try {
-    const { error } = await requireActionAuth([UserRole.ADMIN, UserRole.TUTOR]);
+    const { error } = await requireActionAuth([UserRole.ADMIN, UserRole.TUTOR], { partId: 2 });
     if (error) return { error, data: null };
 
     const progress = await prisma.classroomLessonProgress.findMany({
@@ -628,7 +639,7 @@ export async function getClassroomLessonProgress(classroomId: string, syllabusId
 
 export async function updateClassroomLessonProgress(data: UpdateClassroomProgressData) {
   try {
-    const { session, error } = await requireActionAuth([UserRole.ADMIN, UserRole.TUTOR]);
+    const { session, error } = await requireActionAuth([UserRole.ADMIN, UserRole.TUTOR], { partId: 2 });
     if (error) return { error, data: null };
     const userNode = session!.user;
     const isAdmin = hasRole(session, [UserRole.ADMIN]);
@@ -683,7 +694,7 @@ export async function updateClassroomLessonProgress(data: UpdateClassroomProgres
 
 export async function toggleGlobalStatus(syllabusId: string) {
   try {
-    const { error } = await requireActionAuth([UserRole.ADMIN]);
+    const { error } = await requireActionAuth([UserRole.ADMIN], { partId: 2 });
     if (error) return { error: 'Sadece yöneticiler müfredatı global yapabilir', data: null };
 
     const currentSyllabus = await prisma.syllabus.findUnique({
@@ -717,7 +728,7 @@ export async function toggleGlobalStatus(syllabusId: string) {
 
 export async function getGlobalSyllabusProgress(params?: { search?: string, page?: number, pageSize?: number }) {
   try {
-    const { error } = await requireActionAuth([UserRole.ADMIN]);
+    const { error } = await requireActionAuth([UserRole.ADMIN], { partId: 2 });
     if (error) return { error, data: null };
 
     const page = params?.page || 1;
@@ -839,7 +850,7 @@ export async function getGlobalSyllabusProgress(params?: { search?: string, page
 
 export async function getClassroomSyllabusDetail(classroomId: string, syllabusId: string) {
   try {
-    const { error } = await requireActionAuth([UserRole.ADMIN]);
+    const { error } = await requireActionAuth([UserRole.ADMIN], { partId: 2 });
     if (error) return { error, data: null };
 
     const syllabus = await prisma.syllabus.findUnique({

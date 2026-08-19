@@ -85,7 +85,7 @@ export async function POST(request: NextRequest) {
         }
 
         // Check if template with same name already exists
-        const existingTemplate = await prisma.tagTemplate.findUnique({
+        const existingTemplate = await prisma.tagTemplate.findFirst({
             where: { name: name.trim() },
         });
 

@@ -2,12 +2,36 @@
 
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/app/api/auth/[...nextauth]/auth.config';
+import { isPartLicensed, requirePartLicense } from '@/app/lib/permissions.server';
 import prisma from '@/lib/prisma';
 import { UserRole, CheckInMethod } from '@prisma/client';
 
+/**
+ * Kurumun Yönetim Kurulu paketi (part 1) + oturum.
+ *
+ * Paket yoksa null döner; çağıran taraftaki mevcut oturum/rol kontrolleri
+ * isteği zaten reddeder. Sayfa katmanı ayrıca requireAuth({ partId: 1 })
+ * ile kapılı — buradaki kapı, server action'ın doğrudan çağrılması hâlini kapatır.
+ */
+const LICENSED_PART = 1;
+
+async function getLicensedSession() {
+    const session = await getServerSession(authOptions);
+    if (!session?.user) return null;
+    if (!(await isPartLicensed(session, LICENSED_PART))) return null;
+    return session;
+}
+
+/** Oturuma bakmayan okuma uçları için yalnız paket kontrolü. */
+async function requireLicense() {
+    const gate = await requirePartLicense(LICENSED_PART);
+    return { ok: !gate.error, error: gate.error };
+}
+
+
 export async function getMeetingAttendance(meetingId: string) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await getLicensedSession();
 
     if (!session?.user) {
       return { error: 'Yetkisiz erişim', data: null };
@@ -67,7 +91,7 @@ export async function getMeetingAttendance(meetingId: string) {
 
 export async function checkInWithQR(meetingId: string) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await getLicensedSession();
 
     if (!session?.user) {
       return { error: 'Yetkisiz erişim', data: null };
@@ -155,7 +179,7 @@ export async function checkInWithQR(meetingId: string) {
 
 export async function manualCheckIn(meetingId: string, userId: string) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await getLicensedSession();
 
     if (!session?.user) {
       return { error: 'Yetkisiz erişim: Sadece yöneticiler manuel giriş yapabilir', data: null };
@@ -232,7 +256,7 @@ export async function manualCheckIn(meetingId: string, userId: string) {
 
 export async function removeAttendance(attendanceId: string) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await getLicensedSession();
 
     if (!session?.user) {
       return { error: 'Yetkisiz erişim: Sadece yöneticiler katılım kaydını silebilir', data: null };
@@ -259,7 +283,7 @@ export async function removeAttendance(attendanceId: string) {
 
 export async function markAttendance(attendanceId: string, attended: boolean) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await getLicensedSession();
 
     if (!session?.user) {
       return { error: 'Yetkisiz erişim: Sadece yöneticiler katılımı işaretleyebilir', data: null };

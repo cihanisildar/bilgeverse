@@ -2,13 +2,37 @@
 
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/app/api/auth/[...nextauth]/auth.config';
+import { isPartLicensed, requirePartLicense } from '@/app/lib/permissions.server';
 import prisma from '@/lib/prisma';
 import { createDecisionSchema, updateDecisionSchema } from '@/lib/validations/decisions';
 import { UserRole, DecisionStatus } from '@prisma/client';
 
+/**
+ * Kurumun Yönetim Kurulu paketi (part 1) + oturum.
+ *
+ * Paket yoksa null döner; çağıran taraftaki mevcut oturum/rol kontrolleri
+ * isteği zaten reddeder. Sayfa katmanı ayrıca requireAuth({ partId: 1 })
+ * ile kapılı — buradaki kapı, server action'ın doğrudan çağrılması hâlini kapatır.
+ */
+const LICENSED_PART = 1;
+
+async function getLicensedSession() {
+    const session = await getServerSession(authOptions);
+    if (!session?.user) return null;
+    if (!(await isPartLicensed(session, LICENSED_PART))) return null;
+    return session;
+}
+
+/** Oturuma bakmayan okuma uçları için yalnız paket kontrolü. */
+async function requireLicense() {
+    const gate = await requirePartLicense(LICENSED_PART);
+    return { ok: !gate.error, error: gate.error };
+}
+
+
 export async function getMeetingDecisions(meetingId: string) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await getLicensedSession();
 
     if (!session?.user) {
       return { error: 'Yetkisiz erişim', data: null };
@@ -63,7 +87,7 @@ export async function getMeetingDecisions(meetingId: string) {
 
 export async function createDecision(meetingId: string, data: unknown) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await getLicensedSession();
 
     if (!session?.user) {
       return { error: 'Yetkisiz erişim: Sadece yöneticiler karar oluşturabilir', data: null };
@@ -85,9 +109,12 @@ export async function createDecision(meetingId: string, data: unknown) {
         title: validated.title,
         description: validated.description || null,
         targetDate: validated.targetDate ? new Date(validated.targetDate) : null,
+        // organizationId ELLE veriliyor: tenant extension yalnız üst seviye
+        // args'ı görür, iç içe ilişki yazmalarına kurum ekleyemez.
         responsibleUsers: {
           create: validated.responsibleUserIds.map((userId) => ({
             userId,
+            organizationId: session.user.organizationId,
           })),
         },
       },
@@ -138,7 +165,7 @@ export async function createDecision(meetingId: string, data: unknown) {
 
 export async function updateDecision(id: string, data: unknown) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await getLicensedSession();
 
     if (!session?.user) {
       return { error: 'Yetkisiz erişim: Sadece yöneticiler karar güncelleyebilir', data: null };
@@ -224,7 +251,7 @@ export async function updateDecision(id: string, data: unknown) {
 
 export async function updateDecisionStatus(id: string, status: DecisionStatus) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await getLicensedSession();
 
     if (!session?.user) {
       return { error: 'Yetkisiz erişim: Sadece yöneticiler karar durumunu güncelleyebilir', data: null };
@@ -285,7 +312,7 @@ export async function updateDecisionStatus(id: string, status: DecisionStatus) {
 
 export async function deleteDecision(id: string) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await getLicensedSession();
 
     if (!session?.user) {
       return { error: 'Yetkisiz erişim: Sadece yöneticiler karar silebilir', data: null };
@@ -312,7 +339,7 @@ export async function deleteDecision(id: string) {
 
 export async function getAllDecisions(statusFilter?: 'all' | 'completed' | 'todo' | 'in-progress' | 'pending') {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await getLicensedSession();
 
     if (!session?.user) {
       return { error: 'Yetkisiz erişim', data: null };
@@ -394,7 +421,7 @@ export async function getAllDecisions(statusFilter?: 'all' | 'completed' | 'todo
 
 export async function getDecisionStatistics() {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await getLicensedSession();
 
     if (!session?.user) {
       return { error: 'Yetkisiz erişim', data: null };

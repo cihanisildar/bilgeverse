@@ -299,7 +299,7 @@ export async function PATCH(
       );
     }
 
-    // Keep the Karakter Grupları rehber status (User.tutorStatus) in sync with the
+    // Keep the Değerler Halkası Grupları rehber status (User.tutorStatus) in sync with the
     // account's active/passive flag, so the two never contradict each other:
     //  - deactivating here marks the rehber PASSIVE there
     //  - reactivating a PASSIVE rehber restores them to ACTIVE (STANDBY/LEAVING kept)

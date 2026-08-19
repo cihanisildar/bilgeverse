@@ -53,7 +53,7 @@ export interface UpdateEventTypeData {
 // Get all Part2 events with optional filtering
 export async function getPart2Events(filters?: EventFilters): Promise<ActionResponse> {
     try {
-        const { error } = await requireActionAuth();
+        const { error } = await requireActionAuth(undefined, { partId: 2 });
         if (error) return { success: false, error };
 
         const where: Record<string, any> = {};
@@ -106,7 +106,7 @@ export async function getPart2Events(filters?: EventFilters): Promise<ActionResp
 // Get single Part2 event by ID
 export async function getPart2Event(eventId: string): Promise<ActionResponse> {
     try {
-        const { error } = await requireActionAuth();
+        const { error } = await requireActionAuth(undefined, { partId: 2 });
         if (error) return { success: false, error };
 
         const event = await prisma.part2Event.findUnique({
@@ -154,7 +154,7 @@ export async function getPart2Event(eventId: string): Promise<ActionResponse> {
 // Create new Part2 event
 export async function createPart2Event(data: CreateEventData): Promise<ActionResponse> {
     try {
-        const { session, error } = await requireActionAuth([UserRole.ADMIN, UserRole.TUTOR]);
+        const { session, error } = await requireActionAuth([UserRole.ADMIN, UserRole.TUTOR], { partId: 2 });
         if (error) return { success: false, error };
 
         const user = session!.user;
@@ -218,7 +218,7 @@ export async function updatePart2Event(
     data: UpdateEventData
 ): Promise<ActionResponse> {
     try {
-        const { session, error } = await requireActionAuth();
+        const { session, error } = await requireActionAuth(undefined, { partId: 2 });
         if (error) return { success: false, error };
 
         const user = session!.user;
@@ -269,7 +269,7 @@ export async function updatePart2Event(
 // Delete Part2 event
 export async function deletePart2Event(eventId: string): Promise<ActionResponse> {
     try {
-        const { session, error } = await requireActionAuth();
+        const { session, error } = await requireActionAuth(undefined, { partId: 2 });
         if (error) return { success: false, error };
 
         const user = session!.user;
@@ -301,7 +301,7 @@ export async function deletePart2Event(eventId: string): Promise<ActionResponse>
 // Generate QR code for Part2 event
 export async function generateQRCodeForPart2Event(eventId: string): Promise<ActionResponse> {
     try {
-        const { error } = await requireActionAuth([UserRole.ADMIN, UserRole.TUTOR]);
+        const { error } = await requireActionAuth([UserRole.ADMIN, UserRole.TUTOR], { partId: 2 });
         if (error) return { success: false, error };
 
         const event = await prisma.part2Event.findUnique({
@@ -335,7 +335,7 @@ export async function generateQRCodeForPart2Event(eventId: string): Promise<Acti
 // Register for Part2 event
 export async function registerForPart2Event(eventId: string): Promise<ActionResponse> {
     try {
-        const { session, error } = await requireActionAuth();
+        const { session, error } = await requireActionAuth(undefined, { partId: 2 });
         if (error) return { success: false, error };
         const userNode = session!.user;
 
@@ -399,7 +399,7 @@ export async function registerForPart2Event(eventId: string): Promise<ActionResp
 // Check in to Part2 event (QR or manual)
 export async function checkInToPart2Event(eventId: string, qrToken?: string): Promise<ActionResponse> {
     try {
-        const { session, error } = await requireActionAuth();
+        const { session, error } = await requireActionAuth(undefined, { partId: 2 });
         if (error) return { success: false, error };
         const userNode = session!.user;
 
@@ -496,7 +496,7 @@ export async function checkInToPart2Event(eventId: string, qrToken?: string): Pr
 // Get all Part2 event types
 export async function getPart2EventTypes(): Promise<ActionResponse> {
     try {
-        const { error } = await requireActionAuth();
+        const { error } = await requireActionAuth(undefined, { partId: 2 });
         if (error) return { success: false, error };
 
         const eventTypes = await prisma.part2EventType.findMany({
@@ -514,7 +514,7 @@ export async function getPart2EventTypes(): Promise<ActionResponse> {
 // Create Part2 event type (admin/tutor only)
 export async function createPart2EventType(data: CreateEventTypeData): Promise<ActionResponse> {
     try {
-        const { error } = await requireActionAuth([UserRole.ADMIN, UserRole.TUTOR]);
+        const { error } = await requireActionAuth([UserRole.ADMIN, UserRole.TUTOR], { partId: 2 });
         if (error) return { success: false, error };
 
         const eventType = await prisma.part2EventType.create({
@@ -541,7 +541,7 @@ export async function updatePart2EventType(
     data: UpdateEventTypeData
 ): Promise<ActionResponse> {
     try {
-        const { error } = await requireActionAuth([UserRole.ADMIN]);
+        const { error } = await requireActionAuth([UserRole.ADMIN], { partId: 2 });
         if (error) return { success: false, error };
 
         const eventType = await prisma.part2EventType.update({
@@ -559,7 +559,7 @@ export async function updatePart2EventType(
 // Delete Part2 event type
 export async function deletePart2EventType(eventTypeId: string): Promise<ActionResponse> {
     try {
-        const { error } = await requireActionAuth([UserRole.ADMIN]);
+        const { error } = await requireActionAuth([UserRole.ADMIN], { partId: 2 });
         if (error) return { success: false, error };
 
         await prisma.part2EventType.delete({
@@ -576,7 +576,7 @@ export async function deletePart2EventType(eventTypeId: string): Promise<ActionR
 // Get all users for manual participant addition
 export async function getStudentsForEvent(): Promise<ActionResponse> {
     try {
-        const { error } = await requireActionAuth([UserRole.ADMIN, UserRole.TUTOR]);
+        const { error } = await requireActionAuth([UserRole.ADMIN, UserRole.TUTOR], { partId: 2 });
         if (error) return { success: false, error };
 
         const users = await prisma.user.findMany({
@@ -608,7 +608,7 @@ export async function addParticipantToPart2Event(
     studentId: string
 ): Promise<ActionResponse> {
     try {
-        const { error } = await requireActionAuth([UserRole.ADMIN, UserRole.TUTOR]);
+        const { error } = await requireActionAuth([UserRole.ADMIN, UserRole.TUTOR], { partId: 2 });
         if (error) return { success: false, error };
 
         const event = await prisma.part2Event.findUnique({
@@ -675,7 +675,7 @@ export async function removeParticipantFromPart2Event(
     studentId: string
 ): Promise<ActionResponse> {
     try {
-        const { error } = await requireActionAuth([UserRole.ADMIN, UserRole.TUTOR]);
+        const { error } = await requireActionAuth([UserRole.ADMIN, UserRole.TUTOR], { partId: 2 });
         if (error) return { success: false, error };
 
         await prisma.part2EventParticipant.delete({

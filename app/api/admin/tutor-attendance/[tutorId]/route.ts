@@ -4,11 +4,16 @@ import { authOptions } from '@/app/api/auth/[...nextauth]/auth.config';
 import prisma from '@/lib/prisma';
 import { UserRole } from '@prisma/client';
 import { requireActivePeriod, periodStudentWhere } from '@/lib/periods';
+import { requireApiPartLicense } from '@/app/lib/permissions.server';
 
 export async function GET(
     request: Request,
     { params }: { params: { tutorId: string } }
 ) {
+    // Kurum paketi kapısı — İnsan Kaynağı (part 3)
+    const licenseGate = await requireApiPartLicense(3);
+    if (licenseGate.errorResponse) return licenseGate.errorResponse;
+
     try {
         const session = await getServerSession(authOptions);
         if (!session?.user) {

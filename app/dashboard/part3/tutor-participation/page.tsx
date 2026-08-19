@@ -47,6 +47,7 @@ export default function TutorParticipationPage() {
     });
     const qc = useQueryClient();
     const tutors: TutorRow[] = data?.tutors || [];
+    const period: { id: string; name: string } | null = data?.period ?? null;
     const [expanded, setExpanded] = useState<string | null>(null);
     const [search, setSearch] = useState('');
 
@@ -105,9 +106,21 @@ export default function TutorParticipationPage() {
                     <div className="p-2 bg-emerald-100 rounded-lg"><ClipboardCheck className="h-6 w-6 text-emerald-600" /></div>
                     <div>
                         <h1 className="text-2xl font-bold text-gray-800">Toplu Yoklama Özeti</h1>
-                        <p className="text-sm text-gray-500">Rehberlerin grup haftalık katılım performansı</p>
+                        <p className="text-sm text-gray-500">
+                            {period
+                                ? <>Aktif dönem: <span className="font-medium text-gray-700">{period.name}</span> — yalnızca aktif rehberler ve bu döneme ait yoklamalar</>
+                                : 'Rehberlerin grup haftalık katılım performansı'}
+                        </p>
                     </div>
                 </div>
+
+                {!isLoading && !period && (
+                    <Card className="mb-4 border-amber-200 bg-amber-50">
+                        <CardContent className="py-4 text-sm text-amber-800">
+                            {data?.message || 'Aktif dönem bulunamadı.'}
+                        </CardContent>
+                    </Card>
+                )}
 
                 {/* Legend */}
                 <div className="flex flex-wrap gap-4 mb-4 text-xs text-gray-600">
@@ -124,7 +137,11 @@ export default function TutorParticipationPage() {
                 {isLoading ? (
                     <div className="space-y-3">{[0, 1, 2, 3].map((i) => <div key={i} className="h-20 rounded-xl bg-gray-100 animate-pulse" />)}</div>
                 ) : filtered.length === 0 ? (
-                    <Card><CardContent className="py-12 text-center text-gray-500">Rehber bulunamadı.</CardContent></Card>
+                    <Card><CardContent className="py-12 text-center text-gray-500">
+                        {period
+                            ? 'Bu dönemde aktif rehber bulunamadı. Değerler Halkası Grupları ekranından rehberleri "Aktif" olarak işaretleyin.'
+                            : 'Rehber bulunamadı.'}
+                    </CardContent></Card>
                 ) : (
                     <div className="space-y-2">
                         {filtered.map((t) => {

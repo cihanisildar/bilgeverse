@@ -1,23 +1,21 @@
 import { PrismaClient } from '@prisma/client';
+import { DEFAULT_SPORT_BRANCHES } from '../lib/org-defaults';
+import { ROOT_ORG_ID } from '../lib/constants/tenant';
 
+// Bu script uzantısız (tenant filtresi olmayan) client kullanır; kurum bu yüzden
+// açıkça verilir. Varsayılan olarak ana kuruma yazar.
 const prisma = new PrismaClient();
 
+const organizationId = process.env.ORG_ID || ROOT_ORG_ID;
+
 async function main() {
-    const branches = [
-        { name: 'Futbol', description: 'Futbol branşı eğitim ve müsabakaları' },
-        { name: 'Basketbol', description: 'Basketbol branşı eğitim ve müsabakaları' },
-        { name: 'Voleybol', description: 'Voleybol branşı eğitim ve müsabakaları' },
-        { name: 'Yüzme', description: 'Yüzme branşı eğitim ve müsabakaları' },
-        { name: 'Okçuluk', description: 'Okçuluk branşı eğitim ve müsabakaları' }
-    ];
+    console.log(`Seeding sport branches for organization ${organizationId}...`);
 
-    console.log('Seeding sport branches...');
-
-    for (const branch of branches) {
+    for (const branch of DEFAULT_SPORT_BRANCHES) {
         await prisma.sportBranch.upsert({
-            where: { name: branch.name },
+            where: { organizationId_name: { organizationId, name: branch.name } },
             update: {},
-            create: branch,
+            create: { ...branch, organizationId },
         });
     }
 

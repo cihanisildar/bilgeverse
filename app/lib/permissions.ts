@@ -1,5 +1,13 @@
 import { UserRole } from '@prisma/client';
-import prisma from '@/lib/prisma';
+
+/**
+ * Rol → modül eşlemesi. Bu dosya BİLİNÇLİ olarak saf tutulur: içinde Prisma
+ * veya başka bir sunucu bağımlılığı yoktur, çünkü client component'lerden
+ * (örn. `app/dashboard/page.tsx`) da import ediliyor.
+ *
+ * Oturum gerektiren, veritabanına bakan kontroller `permissions.server.ts`
+ * içindedir.
+ */
 
 /**
  * Defines which parts each role can access on the dashboard page
@@ -46,49 +54,4 @@ export function getAllowedParts(roleList: UserRole[]): number[] {
     });
 
     return Array.from(allAllowedParts);
-}
-
-import { Session } from 'next-auth';
-
-/**
- * Higher-level helper for server components to check if a user is authorized for a part
- * @param session - The NextAuth session
- * @param partId - The part ID to check
- */
-export async function isAuthorized(session: Session | null, partId: number): Promise<boolean> {
-    if (!session?.user) return false;
-
-    const user = session.user;
-    const roles = (user.roles || (user.role ? [user.role] : [])) as UserRole[];
-
-    // Explicitly allow board members to access part 1 if they have the role
-    // or if they are marked as isBoardMember in the session
-    let isBoardMember = roles.includes(UserRole.BOARD_MEMBER) || (user as any).isBoardMember;
-    
-    // Fallback database check for board members if session is stale
-    if (!isBoardMember && partId === 1) {
-        const dbUser = await prisma.user.findUnique({
-            where: { id: user.id },
-            include: { boardMember: { select: { isActive: true } } }
-        });
-        
-        if (dbUser) {
-            isBoardMember = dbUser.roles.includes(UserRole.BOARD_MEMBER) || 
-                           dbUser.role === UserRole.BOARD_MEMBER ||
-                           !!dbUser.boardMember?.isActive;
-        }
-    }
-    
-    if (partId === 1 && isBoardMember) return true;
-
-    if (roles.length > 0 && canAccessPart(roles, partId)) return true;
-
-    // Per-user access grants (e.g. admin lets specific students use Sosyal Medya)
-    const dbUser = await prisma.user.findUnique({
-        where: { id: user.id },
-        select: { allowedParts: true }
-    });
-    if (dbUser?.allowedParts?.includes(partId)) return true;
-
-    return false;
 }

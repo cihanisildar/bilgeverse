@@ -2,6 +2,7 @@
 
 import React from 'react';
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -24,6 +25,15 @@ const STAT_CARDS = (d: SportsOverviewData) => [
 
 export default function SportsOverview() {
     const { data, isLoading: loading } = useSportsOverview();
+    const pathname = usePathname();
+
+    // Bu bileşen iki kabuktan render ediliyor: kendi modülü (/dashboard/part9)
+    // ve Bilgeverse içindeki kopyası (/dashboard/part7/sports). Buradaki linkler
+    // sabit yazılırsa kullanıcı Bilgeverse'ten dışarı düşer; o yüzden bulunulan
+    // kabuğa göre türetiliyor.
+    const inBilgeverse = pathname?.startsWith('/dashboard/part7/sports') ?? false;
+    const base = inBilgeverse ? '/dashboard/part7/sports' : '/dashboard/part9';
+    const socialBase = inBilgeverse ? '/dashboard/part7/social' : '/dashboard/part6';
 
     if (loading) {
         return (
@@ -41,13 +51,13 @@ export default function SportsOverview() {
 
     const alerts: { label: string; count: number; href: string; icon: any; color: string }[] = [];
     if (data.duesOutstanding > 0)
-        alerts.push({ label: 'Aidat borcu olan kayıt', count: data.duesOutstanding, href: '/dashboard/part9/football-school', icon: Wallet, color: 'border-red-200 bg-red-50 text-red-700' });
+        alerts.push({ label: 'Aidat borcu olan kayıt', count: data.duesOutstanding, href: `${base}/football-school`, icon: Wallet, color: 'border-red-200 bg-red-50 text-red-700' });
     if (data.expiringLicenses > 0)
-        alerts.push({ label: 'Lisans süresi yaklaşan', count: data.expiringLicenses, href: '/dashboard/part9/athletes', icon: IdCard, color: 'border-amber-200 bg-amber-50 text-amber-700' });
+        alerts.push({ label: 'Lisans süresi yaklaşan', count: data.expiringLicenses, href: `${base}/athletes`, icon: IdCard, color: 'border-amber-200 bg-amber-50 text-amber-700' });
     if (data.expiringHealth > 0)
-        alerts.push({ label: 'Sağlık raporu süresi yaklaşan', count: data.expiringHealth, href: '/dashboard/part9/athletes', icon: HeartPulse, color: 'border-orange-200 bg-orange-50 text-orange-700' });
+        alerts.push({ label: 'Sağlık raporu süresi yaklaşan', count: data.expiringHealth, href: `${base}/athletes`, icon: HeartPulse, color: 'border-orange-200 bg-orange-50 text-orange-700' });
     if (data.newFeedback > 0)
-        alerts.push({ label: 'Yeni geri bildirim', count: data.newFeedback, href: '/dashboard/part9/feedback', icon: MessageSquare, color: 'border-blue-200 bg-blue-50 text-blue-700' });
+        alerts.push({ label: 'Yeni geri bildirim', count: data.newFeedback, href: `${base}/feedback`, icon: MessageSquare, color: 'border-blue-200 bg-blue-50 text-blue-700' });
 
     return (
         <div className="space-y-6">
@@ -102,7 +112,7 @@ export default function SportsOverview() {
                             <h3 className="text-sm font-bold text-gray-700 flex items-center gap-2">
                                 <Megaphone className="h-4 w-4 text-indigo-500" /> Son Duyurular
                             </h3>
-                            <Link href="/dashboard/part9/announcements" className="text-xs font-semibold text-indigo-600 hover:underline">
+                            <Link href={`${base}/announcements`} className="text-xs font-semibold text-indigo-600 hover:underline">
                                 Tümü
                             </Link>
                         </div>
@@ -141,7 +151,7 @@ export default function SportsOverview() {
                                 etiketli olarak yönetilir.
                             </p>
                         </div>
-                        <Link href="/dashboard/part6/posts?filter=sports" className="mt-4">
+                        <Link href={`${socialBase}/posts?filter=sports`} className="mt-4">
                             <Button variant="outline" className="border-pink-200 text-pink-700 hover:bg-pink-50">
                                 Spor İçeriklerine Git <ArrowRight className="h-4 w-4 ml-2" />
                             </Button>

@@ -3,10 +3,15 @@ import prisma from '@/lib/prisma';
 import { UserRole, TutorPromotionStatus } from '@prisma/client';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/app/api/auth/[...nextauth]/auth.config';
+import { requireApiPartLicense } from '@/app/lib/permissions.server';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET(request: NextRequest) {
+    // Kurum paketi kapısı — İnsan Kaynağı (part 3)
+    const licenseGate = await requireApiPartLicense(3);
+    if (licenseGate.errorResponse) return licenseGate.errorResponse;
+
     try {
         const session = await getServerSession(authOptions);
         if (!session?.user) {
@@ -76,6 +81,10 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
+    // Kurum paketi kapısı — İnsan Kaynağı (part 3)
+    const licenseGate = await requireApiPartLicense(3);
+    if (licenseGate.errorResponse) return licenseGate.errorResponse;
+
     try {
         const session = await getServerSession(authOptions);
         if (!session?.user) {

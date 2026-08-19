@@ -10,49 +10,59 @@ export const config = {
     "/api/admin/:path*",
     "/api/tutor/:path*",
     "/api/student/:path*",
+    "/api/superadmin/:path*",
     // Protected pages
     "/dashboard/:path*",
+    "/superadmin/:path*",
     "/check-in/:path*", // Check-in pages require authentication
   ]
 };
 
+/**
+ * Middleware her istekte çalışır ve çıktısı üretim log'larına düşer.
+ * Buradan ASLA sır (NEXT_AUTH_SECRET) ya da çerez basılmaz: log'lara erişen
+ * biri o sırla istediği rolde token üretebilir. Ayrıntılı iz yalnız
+ * geliştirmede açıktır.
+ */
+const debug = (...args: unknown[]) => {
+  if (process.env.NODE_ENV !== 'production') console.log(...args);
+};
+
 export async function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
-  console.log('Middleware - Request URL:', request.url);
-  console.log('Middleware - Pathname:', pathname);
-  console.log('Middleware - NEXT_AUTH_SECRET:', process.env.NEXT_AUTH_SECRET);
-  console.log('Middleware - Cookies:', request.cookies.toString());
+  debug('Middleware - Request URL:', request.url);
+  debug('Middleware - Pathname:', pathname);
 
   // Skip middleware for public assets and auth API routes
   if (pathname.startsWith('/_next/') ||
     pathname.startsWith('/api/auth/') ||
     pathname === '/api/register' ||
     pathname === '/favicon.ico') {
-    console.log('Skipping middleware for:', pathname);
+    debug('Skipping middleware for:', pathname);
     return NextResponse.next();
   }
 
   // Allow public paths
   if (pathname === '/' || pathname === '/login' || pathname === '/register') {
-    console.log('Public path accessed:', pathname);
+    debug('Public path accessed:', pathname);
     return NextResponse.next();
   }
 
   // Allow public syllabus feedback pages (no auth required)
   if (pathname.startsWith('/syllabus/')) {
-    console.log('Public syllabus page accessed:', pathname);
+    debug('Public syllabus page accessed:', pathname);
     return NextResponse.next();
   }
 
   try {
-    console.log('Checking auth for path:', pathname);
+    debug('Checking auth for path:', pathname);
 
     const token = await getToken({
       req: request,
       secret: process.env.NEXT_AUTH_SECRET,
     });
 
-    console.log('Token check result:', {
+    debug('Token check result:', {
       hasToken: !!token,
       role: token?.role,
       roles: (token as any)?.roles,
@@ -62,7 +72,7 @@ export async function middleware(request: NextRequest) {
     const isApiRoute = pathname.startsWith('/api/');
 
     if (!token) {
-      console.log('No token found - redirecting to login');
+      debug('No token found - redirecting to login');
       const loginUrl = new URL('/login', request.url);
       loginUrl.searchParams.set('callbackUrl', pathname);
       return isApiRoute
@@ -83,6 +93,43 @@ export async function middleware(request: NextRequest) {
     const isMeetingDetailPage = pathname.match(/\/dashboard\/part1\/meetings\/[^\/]+$/);
     const isAttendanceDetailPage = pathname.match(/\/dashboard\/part2\/attendance\/[^\/]+$/);
 
+    // --- Çok kurumlu kontroller ---
+    const isSuperAdmin = Boolean((token as any)?.isSuperAdmin);
+    const orgParts = ((token as any)?.orgParts as number[]) || [];
+
+    // Göç öncesi oluşturulmuş (kurumsuz) oturumlar geçersizdir.
+    if (!(token as any)?.organizationId) {
+      const loginUrl = new URL('/login', request.url);
+      return isApiRoute
+        ? NextResponse.json({ error: 'Oturum geçersiz, lütfen tekrar giriş yapın' }, { status: 401 })
+        : NextResponse.redirect(loginUrl);
+    }
+
+    // Süper admin paneli yalnız süper adminlere; süper admin de kurum
+    // sayfalarında işi olmadığı için kendi paneline yönlendirilir.
+    if (pathname.startsWith('/superadmin') || pathname.startsWith('/api/superadmin')) {
+      if (!isSuperAdmin) {
+        return isApiRoute
+          ? NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+          : NextResponse.redirect(new URL('/dashboard', request.url));
+      }
+      return NextResponse.next();
+    }
+    if (isSuperAdmin && pathname.startsWith('/dashboard')) {
+      return NextResponse.redirect(new URL('/superadmin', request.url));
+    }
+
+    // Paket kapısı: kurumun lisanslamadığı modüle hiç girilemez.
+    // (Ucuz ön eleme; asıl karar sunucuda isAuthorized ile DB'den verilir.)
+    const partMatch = pathname.match(/^\/dashboard\/part(\d+)/);
+    if (partMatch) {
+      const partId = Number(partMatch[1]);
+      if (!orgParts.includes(partId)) {
+        debug(`Part ${partId} kurumun paketinde yok, /dashboard'a yönlendiriliyor`);
+        return NextResponse.redirect(new URL('/dashboard', request.url));
+      }
+    }
+
     const userRoles = ((token as any)?.roles as UserRole[]) || (token?.role ? [token.role as UserRole] : []);
     const hasAdmin = userRoles.includes(UserRole.ADMIN);
     const hasBoardMember = userRoles.includes(UserRole.BOARD_MEMBER);
@@ -94,7 +141,7 @@ export async function middleware(request: NextRequest) {
       if (!hasAdmin && !hasTutor && !hasBoardMember) {
         // Students can access check-in pages
         if (!isCheckInPage) {
-          console.log('Non-tutor user attempting to access part2, redirecting');
+          debug('Non-tutor user attempting to access part2, redirecting');
           const roleBasedPath = '/dashboard/part7/student';
           return NextResponse.redirect(new URL(roleBasedPath, request.url));
         }
@@ -104,10 +151,16 @@ export async function middleware(request: NextRequest) {
     // Redirect students away from the main /dashboard page
     if (pathname === '/dashboard') {
       if (hasStudent && !hasAdmin && !hasBoardMember) {
-        console.log('Student attempting to access /dashboard, redirecting to part7/student');
+        debug('Student attempting to access /dashboard, redirecting to part7/student');
         return NextResponse.redirect(new URL('/dashboard/part7/student', request.url));
       }
     }
+
+    // Kullanıcıya tek tek verilmiş ek modül izinleri (Kullanıcı Yönetimi'ndeki
+    // "Ek modül erişimi" anahtarları). Bu alan token'da olmadığı sürece
+    // aşağıdaki yönlendirme, izin verilmiş bir modüle girişi de engelliyordu.
+    const userAllowedParts = ((token as any)?.allowedParts as number[]) || [];
+    const grantedThisPart = partMatch ? userAllowedParts.includes(Number(partMatch[1])) : false;
 
     // Redirect non-admin/board users away from parts 1, 3-6 and 8-9 to part 7 (except check-in and detail pages)
     if (pathname.startsWith('/dashboard/part') &&
@@ -115,9 +168,10 @@ export async function middleware(request: NextRequest) {
       !pathname.startsWith('/dashboard/part2') &&
       !pathname.startsWith('/dashboard/part4') &&
       !isCheckInPage &&
-      !isMeetingDetailPage) {
+      !isMeetingDetailPage &&
+      !grantedThisPart) {
       if (!hasAdmin && !hasBoardMember) {
-        console.log('Non-admin/board user attempting to access restricted part, redirecting to part 7');
+        debug('Non-admin/board user attempting to access restricted part, redirecting to part 7');
         const roleBasedPath = hasStudent
           ? '/dashboard/part7/student'
           : hasTutor
@@ -133,13 +187,13 @@ export async function middleware(request: NextRequest) {
       // Allow privileged users to GET periods (needed for event creation)
       if (pathname === '/api/admin/periods' && request.method === 'GET') {
         if (!hasAdmin && !hasTutor && !hasBoardMember) {
-          console.log('Unauthorized user attempting to access periods');
+          debug('Unauthorized user attempting to access periods');
           return isApiRoute
             ? NextResponse.json({ error: 'Forbidden: Admin, Board Member, Tutor, or Asistan access required' }, { status: 403 })
             : NextResponse.redirect(new URL('/', request.url));
         }
       } else if (!hasAdmin && !hasBoardMember) {
-        console.log('Non-privileged user attempting to access admin route');
+        debug('Non-privileged user attempting to access admin route');
         return isApiRoute
           ? NextResponse.json({ error: 'Forbidden: Admin or Board Member access required' }, { status: 403 })
           : NextResponse.redirect(new URL('/', request.url));
@@ -148,7 +202,7 @@ export async function middleware(request: NextRequest) {
 
     if (pathname.startsWith('/dashboard/part7/tutor') || pathname.startsWith('/api/tutor')) {
       if (!hasTutor && !hasBoardMember && !hasAdmin) {
-        console.log('Non-tutor/asistan/board-member/admin user attempting to access tutor route');
+        debug('Non-tutor/asistan/board-member/admin user attempting to access tutor route');
         return isApiRoute
           ? NextResponse.json({ error: 'Forbidden: Tutor, Asistan, Board Member, or Admin access required' }, { status: 403 })
           : NextResponse.redirect(new URL('/', request.url));
@@ -158,7 +212,7 @@ export async function middleware(request: NextRequest) {
     if (pathname.startsWith('/api/student/reports')) {
       // Allow ADMIN, TUTOR, ASISTAN, BOARD_MEMBER and STUDENT for /api/student/reports endpoints
       if (!hasAdmin && !hasTutor && !hasBoardMember && !hasStudent) {
-        console.log('Unauthorized user attempting to access student reports API');
+        debug('Unauthorized user attempting to access student reports API');
         return isApiRoute
           ? NextResponse.json({ error: 'Forbidden: Admin, Tutor, Asistan, Board Member, or Student access required' }, { status: 403 })
           : NextResponse.redirect(new URL('/', request.url));
@@ -166,7 +220,7 @@ export async function middleware(request: NextRequest) {
     }
     else if (pathname.startsWith('/dashboard/part7/student') || pathname.startsWith('/api/student')) {
       if (!hasStudent && !hasAdmin && !hasBoardMember) {
-        console.log('Non-student (or admin/board) user attempting to access student route');
+        debug('Non-student (or admin/board) user attempting to access student route');
         return isApiRoute
           ? NextResponse.json({ error: 'Forbidden: Student, Admin, or Board Member access required' }, { status: 403 })
           : NextResponse.redirect(new URL('/', request.url));
@@ -181,7 +235,7 @@ export async function middleware(request: NextRequest) {
     response.headers.set('x-middleware-cache', 'no-cache');
     response.headers.set('Cache-Control', 'no-store, must-revalidate');
 
-    console.log('Auth check passed, proceeding with request');
+    debug('Auth check passed, proceeding with request');
     return response;
   } catch (error) {
     console.error('Middleware error:', error);

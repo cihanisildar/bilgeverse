@@ -3,9 +3,13 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import {
-    ArrowLeft, ArrowRight, Package, ClipboardList, AlarmClock, FileText, UserPlus,
-    Bell, Clock, MessageSquare, PieChart, Users,
+    ArrowLeft, ArrowRight, Package, ClipboardList, AlarmClock, FileText, UserPlus, BellRing,
 } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { format } from 'date-fns';
+import { tr } from 'date-fns/locale';
+import { getRecurringReminders } from '@/app/actions/center';
+import { daysUntil, repeatShortLabel } from '@/app/lib/recurring';
 
 const CENTER_MODULES = [
     { href: '/dashboard/part10/inventory', title: 'Demirbaş Listesi', desc: 'Masa, sandalye, bilgisayar vb. envanteri yönetin', icon: Package, from: 'from-emerald-500', to: 'to-teal-500', bg: 'bg-emerald-100', text: 'text-emerald-600' },
@@ -15,14 +19,9 @@ const CENTER_MODULES = [
     { href: '/dashboard/part10/admin', title: 'Oryantasyon', desc: 'Yeni öğrenci oryantasyon süreci', icon: UserPlus, from: 'from-violet-500', to: 'to-purple-500', bg: 'bg-violet-100', text: 'text-violet-600' },
 ];
 
-// Moved here from "Bilgeverse" per the reorganisation (routes stay under part7 admin)
-const MOVED_MODULES = [
-    { href: '/dashboard/part7/admin/announcements', title: 'Duyuru Panosu', desc: 'Duyuruları yönetin', icon: Bell, from: 'from-blue-500', to: 'to-cyan-500', bg: 'bg-blue-100', text: 'text-blue-600' },
-    { href: '/dashboard/part7/admin/periods', title: 'Dönem Yönetimi', desc: 'Dönemleri yönetin', icon: Clock, from: 'from-teal-500', to: 'to-emerald-500', bg: 'bg-teal-100', text: 'text-teal-600' },
-    { href: '/dashboard/part7/admin/wishes', title: 'İstek ve Dilekler', desc: 'Gençlerin istek ve dilekleri', icon: MessageSquare, from: 'from-fuchsia-500', to: 'to-pink-500', bg: 'bg-fuchsia-100', text: 'text-fuchsia-600' },
-    { href: '/dashboard/part7/admin/reports', title: 'Raporlar', desc: 'Genel raporlar', icon: PieChart, from: 'from-cyan-500', to: 'to-sky-500', bg: 'bg-cyan-100', text: 'text-cyan-600' },
-    { href: '/dashboard/part7/admin/users', title: 'Kullanıcı Yönetimi', desc: 'Dernek üyeleri / kullanıcılar', icon: Users, from: 'from-slate-500', to: 'to-gray-500', bg: 'bg-slate-100', text: 'text-slate-600' },
-];
+// NOT: "Dernek Yönetimi" kartları (Duyuru Panosu, Dönem Yönetimi, İstek ve
+// Dilekler, Raporlar, Kullanıcı Yönetimi) buradan kaldırıldı — bunlar Paket 1
+// (Bilgeverse) kapsamındadır ve part7 admin sidebar'ından erişilir.
 
 function ModuleCard({ m }: { m: typeof CENTER_MODULES[number] }) {
     const Icon = m.icon;
@@ -51,6 +50,49 @@ function ModuleCard({ m }: { m: typeof CENTER_MODULES[number] }) {
     );
 }
 
+/**
+ * Süreli işlerin hatırlatma şeridi.
+ *
+ * Müşteri "bu işler bize bir şekilde hatırlatılmalı" dediği için hatırlatma
+ * Süreli İşler sayfasının içinde kalmıyor: merkeze girer girmez burada da
+ * görünüyor. Her işin kendi "kaç gün önceden" değeri var (RecurringTask.leadDays).
+ */
+async function ReminderStrip() {
+    const res = await getRecurringReminders();
+    // serialize() JSON turu attığı için tarihler runtime'da string; statik tip
+    // hâlâ Date olduğundan unknown üzerinden çevriliyor.
+    const items = (res.data ?? []) as unknown as { id: string; title: string; dueDate: string; repeat: string }[];
+    if (items.length === 0) return null;
+
+    return (
+        <div className="mb-8 rounded-xl border-2 border-rose-300 bg-rose-50/70 p-4">
+            <div className="flex items-center gap-2 mb-3">
+                <BellRing className="h-5 w-5 text-rose-600" />
+                <p className="font-semibold text-rose-800">Süreli iş hatırlatması — {items.length} işin zamanı geldi</p>
+            </div>
+            <ul className="space-y-1.5">
+                {items.map((t) => {
+                    const days = daysUntil(t.dueDate);
+                    return (
+                        <li key={t.id} className="flex items-center justify-between gap-3 text-sm flex-wrap">
+                            <span className="text-gray-800">
+                                <span className="font-medium">{t.title}</span>
+                                <span className="text-gray-500"> — {format(new Date(t.dueDate), 'd MMMM yyyy', { locale: tr })} · {repeatShortLabel(t.repeat)}</span>
+                            </span>
+                            <Badge className={days < 0 ? 'bg-red-600 text-white' : 'bg-rose-100 text-rose-700 border-rose-200'}>
+                                {days < 0 ? `${Math.abs(days)} gün gecikti` : days === 0 ? 'Bugün' : `${days} gün kaldı`}
+                            </Badge>
+                        </li>
+                    );
+                })}
+            </ul>
+            <Link href="/dashboard/part10/recurring" className="mt-3 inline-flex items-center text-sm font-semibold text-rose-700 hover:underline">
+                Süreli İşler&apos;e git <ArrowRight className="ml-1 h-4 w-4" />
+            </Link>
+        </div>
+    );
+}
+
 export default async function Part10Page() {
     await requireAuth({ partId: 10 });
 
@@ -68,13 +110,10 @@ export default async function Part10Page() {
                     <p className="text-gray-600">Merkez yönetimi, demirbaş, görev takibi ve yönergeler</p>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-10">
-                    {CENTER_MODULES.map((m) => <ModuleCard key={m.href} m={m} />)}
-                </div>
+                <ReminderStrip />
 
-                <h2 className="text-xl font-bold text-gray-800 mb-4">Dernek Yönetimi</h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {MOVED_MODULES.map((m) => <ModuleCard key={m.href} m={m} />)}
+                    {CENTER_MODULES.map((m) => <ModuleCard key={m.href} m={m} />)}
                 </div>
             </div>
         </div>

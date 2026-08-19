@@ -37,13 +37,19 @@ type AuthUser = {
     academyStudents: number;
   };
   isInAcademy?: boolean;
+  organizationId?: string;
+  organizationCode?: string;
+  organizationName?: string;
+  isSuperAdmin?: boolean;
+  /** Kurumun paketlerinden gelen açık modül (part) id'leri. */
+  orgParts?: number[];
 };
 
 type AuthContextType = {
   user: AuthUser | null;
   loading: boolean;
   isAuthenticated: boolean;
-  login: (username: string, password: string, callbackUrl?: string) => Promise<void>;
+  login: (orgCode: string, username: string, password: string, callbackUrl?: string) => Promise<void>;
   logout: () => Promise<void>;
   checkAuth: () => Promise<void>;
   refreshUser: () => Promise<void>;
@@ -52,6 +58,9 @@ type AuthContextType = {
   isTutor: boolean;
   isStudent: boolean;
   isInAcademy: boolean;
+  isSuperAdmin: boolean;
+  /** Kurumun lisansladığı modül id'leri (görsel filtreleme için). */
+  orgParts: number[];
 };
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -136,28 +145,22 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [session?.user?.id, status]); // Only depend on user ID and status, not the entire session
 
-  const login = async (username: string, password: string, callbackUrl?: string) => {
+  const login = async (orgCode: string, username: string, password: string, callbackUrl?: string) => {
     try {
       setLoading(true);
-      console.log('Login attempt started for user:', username);
 
       const result = await signIn('credentials', {
+        orgCode,
         username,
         password,
         redirect: false,
       });
 
-      console.log('SignIn result:', result);
-
       if (result?.error) {
         // Show specific error message
         const errorMessage = result.error === 'CredentialsSignin'
-          ? 'Kullanıcı adı veya şifre hatalı'
-          : result.error === 'Missing credentials'
-            ? 'Kullanıcı adı ve şifre gereklidir'
-            : result.error === 'Invalid username or password'
-              ? 'Kullanıcı adı veya şifre hatalı'
-              : result.error;
+          ? 'Kurum kodu, kullanıcı adı veya şifre hatalı'
+          : result.error;
 
         console.error('Login error:', errorMessage);
         toast.error(errorMessage);
@@ -184,7 +187,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         const currentSession = await getSession();
         const sessionUser = currentSession?.user as any;
         const roles: string[] = sessionUser?.roles || (sessionUser?.role ? [sessionUser.role] : []);
-        if (roles.includes('ADMIN')) {
+        if (sessionUser?.isSuperAdmin) {
+          defaultRedirect = '/superadmin';
+        } else if (roles.includes('ADMIN')) {
           // Admins land on the main dashboard (all sections), not the Bilgeverse
           // admin panel, to avoid the confusing left sidebar on login.
           defaultRedirect = '/dashboard';
@@ -266,6 +271,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     (user?._count?.academyAssignments || 0) > 0 || 
     (user?._count?.academyStudents || 0) > 0
   );
+  const isSuperAdmin = Boolean(user?.isSuperAdmin);
+  const orgParts = user?.orgParts ?? [];
   const isAuthenticated = Boolean(user && !loading);
 
   return (
@@ -283,6 +290,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         isTutor,
         isStudent,
         isInAcademy,
+        isSuperAdmin,
+        orgParts,
       }}
     >
       {children}

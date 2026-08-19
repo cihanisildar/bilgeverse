@@ -1,8 +1,13 @@
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import PartDocuments from '@/app/components/PartDocuments';
+import { requireAuth } from '@/app/lib/auth-utils';
 
-export default function SocialDocumentsPage() {
+export default async function SocialDocumentsPage() {
+    // Oturum + kurum paketi kontrolü; ayrıca sayfanın build sırasında statik
+    // üretilip PartDocuments'ın kurum bağlamı bulamamasını engeller.
+    await requireAuth({ partId: 6 });
+
     return (
         <div className="space-y-6">
             <div className="flex items-center justify-between flex-wrap gap-4">

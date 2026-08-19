@@ -52,7 +52,7 @@ export async function PUT(
 
     // Check if name is being changed and if new name already exists
     if (data.name.trim() !== existingEventType.name) {
-      const nameExists = await prisma.eventType.findUnique({
+      const nameExists = await prisma.eventType.findFirst({
         where: { name: data.name.trim() }
       });
 

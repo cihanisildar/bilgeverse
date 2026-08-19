@@ -2,6 +2,7 @@
 
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/app/api/auth/[...nextauth]/auth.config';
+import { isPartLicensed, requirePartLicense } from '@/app/lib/permissions.server';
 import prisma from '@/lib/prisma';
 import {
     UserRole,
@@ -18,6 +19,29 @@ import { revalidatePath } from 'next/cache';
 import { hasRole } from '@/app/lib/auth-utils';
 import { createNotification } from '@/app/actions/notifications';
 import { DEFAULT_DISCIPLINE_RULES } from '@/app/lib/sports';
+
+/**
+ * Kurumun Bilge Spor Kulübü paketi (part 9) + oturum.
+ *
+ * Paket yoksa null döner; çağıran taraftaki mevcut oturum/rol kontrolleri
+ * isteği zaten reddeder. Sayfa katmanı ayrıca requireAuth({ partId: 9 })
+ * ile kapılı — buradaki kapı, server action'ın doğrudan çağrılması hâlini kapatır.
+ */
+const LICENSED_PART = 9;
+
+async function getLicensedSession() {
+    const session = await getServerSession(authOptions);
+    if (!session?.user) return null;
+    if (!(await isPartLicensed(session, LICENSED_PART))) return null;
+    return session;
+}
+
+/** Oturuma bakmayan okuma uçları için yalnız paket kontrolü. */
+async function requireLicense() {
+    const gate = await requirePartLicense(LICENSED_PART);
+    return { ok: !gate.error, error: gate.error };
+}
+
 
 const MANAGE_ROLES = [UserRole.ADMIN, UserRole.TUTOR, UserRole.ASISTAN];
 
@@ -36,6 +60,8 @@ function num(v: unknown): number {
 // =====================================================================
 
 export async function getAthleteEvaluations(athleteId: string) {
+    const lic = await requireLicense();
+    if (!lic.ok) return { error: lic.error, data: null };
     try {
         const evaluations = await prisma.athleteEvaluation.findMany({
             where: { athleteId },
@@ -58,7 +84,7 @@ export async function createEvaluation(data: {
     date?: Date;
 }) {
     try {
-        const session = await getServerSession(authOptions);
+        const session = await getLicensedSession();
         if (!hasRole(session, MANAGE_ROLES)) return unauthorized();
 
         const evaluation = await prisma.athleteEvaluation.create({
@@ -72,6 +98,7 @@ export async function createEvaluation(data: {
         });
 
         revalidatePath('/dashboard/part9');
+        revalidatePath('/dashboard/part7/sports');
         return { error: null, data: evaluation };
     } catch (error) {
         console.error('Error creating evaluation:', error);
@@ -81,10 +108,11 @@ export async function createEvaluation(data: {
 
 export async function deleteEvaluation(id: string) {
     try {
-        const session = await getServerSession(authOptions);
+        const session = await getLicensedSession();
         if (!hasRole(session, MANAGE_ROLES)) return unauthorized();
         await prisma.athleteEvaluation.delete({ where: { id } });
         revalidatePath('/dashboard/part9');
+        revalidatePath('/dashboard/part7/sports');
         return { error: null, data: { success: true } };
     } catch (error) {
         console.error('Error deleting evaluation:', error);
@@ -97,6 +125,8 @@ export async function deleteEvaluation(id: string) {
 // =====================================================================
 
 export async function getDisciplineRules() {
+    const lic = await requireLicense();
+    if (!lic.ok) return { error: lic.error, data: null };
     try {
         let rules = await prisma.disciplineRule.findMany({
             orderBy: { order: 'asc' },
@@ -129,7 +159,7 @@ export async function upsertDisciplineRule(data: {
     isActive?: boolean;
 }) {
     try {
-        const session = await getServerSession(authOptions);
+        const session = await getLicensedSession();
         if (!hasRole(session, MANAGE_ROLES)) return unauthorized();
 
         const rule = data.id
@@ -142,6 +172,7 @@ export async function upsertDisciplineRule(data: {
             });
 
         revalidatePath('/dashboard/part9');
+        revalidatePath('/dashboard/part7/sports');
         return { error: null, data: rule };
     } catch (error) {
         console.error('Error upserting discipline rule:', error);
@@ -151,10 +182,11 @@ export async function upsertDisciplineRule(data: {
 
 export async function deleteDisciplineRule(id: string) {
     try {
-        const session = await getServerSession(authOptions);
+        const session = await getLicensedSession();
         if (!hasRole(session, MANAGE_ROLES)) return unauthorized();
         await prisma.disciplineRule.delete({ where: { id } });
         revalidatePath('/dashboard/part9');
+        revalidatePath('/dashboard/part7/sports');
         return { error: null, data: { success: true } };
     } catch (error) {
         console.error('Error deleting discipline rule:', error);
@@ -163,6 +195,8 @@ export async function deleteDisciplineRule(id: string) {
 }
 
 export async function getDisciplineRecords(athleteId?: string) {
+    const lic = await requireLicense();
+    if (!lic.ok) return { error: lic.error, data: null };
     try {
         const records = await prisma.disciplineRecord.findMany({
             where: athleteId ? { athleteId } : undefined,
@@ -188,7 +222,7 @@ export async function createDisciplineRecord(data: {
     note?: string;
 }) {
     try {
-        const session = await getServerSession(authOptions);
+        const session = await getLicensedSession();
         if (!hasRole(session, MANAGE_ROLES)) return unauthorized();
 
         const record = await prisma.disciplineRecord.create({
@@ -204,6 +238,7 @@ export async function createDisciplineRecord(data: {
         });
 
         revalidatePath('/dashboard/part9');
+        revalidatePath('/dashboard/part7/sports');
         return { error: null, data: record };
     } catch (error) {
         console.error('Error creating discipline record:', error);
@@ -213,10 +248,11 @@ export async function createDisciplineRecord(data: {
 
 export async function deleteDisciplineRecord(id: string) {
     try {
-        const session = await getServerSession(authOptions);
+        const session = await getLicensedSession();
         if (!hasRole(session, MANAGE_ROLES)) return unauthorized();
         await prisma.disciplineRecord.delete({ where: { id } });
         revalidatePath('/dashboard/part9');
+        revalidatePath('/dashboard/part7/sports');
         return { error: null, data: { success: true } };
     } catch (error) {
         console.error('Error deleting discipline record:', error);
@@ -229,6 +265,8 @@ export async function deleteDisciplineRecord(id: string) {
 // =====================================================================
 
 export async function getTournaments() {
+    const lic = await requireLicense();
+    if (!lic.ok) return { error: lic.error, data: null };
     try {
         const tournaments = await prisma.tournament.findMany({
             include: {
@@ -255,7 +293,7 @@ export async function upsertTournament(data: {
     description?: string;
 }) {
     try {
-        const session = await getServerSession(authOptions);
+        const session = await getLicensedSession();
         if (!hasRole(session, MANAGE_ROLES)) return unauthorized();
 
         const payload = {
@@ -273,6 +311,7 @@ export async function upsertTournament(data: {
             : await prisma.tournament.create({ data: { ...payload, createdById: session!.user.id } });
 
         revalidatePath('/dashboard/part9');
+        revalidatePath('/dashboard/part7/sports');
         return { error: null, data: tournament };
     } catch (error) {
         console.error('Error upserting tournament:', error);
@@ -282,10 +321,11 @@ export async function upsertTournament(data: {
 
 export async function deleteTournament(id: string) {
     try {
-        const session = await getServerSession(authOptions);
+        const session = await getLicensedSession();
         if (!hasRole(session, MANAGE_ROLES)) return unauthorized();
         await prisma.tournament.delete({ where: { id } });
         revalidatePath('/dashboard/part9');
+        revalidatePath('/dashboard/part7/sports');
         return { error: null, data: { success: true } };
     } catch (error) {
         console.error('Error deleting tournament:', error);
@@ -294,6 +334,8 @@ export async function deleteTournament(id: string) {
 }
 
 export async function getMatches(params?: { branchId?: string; tournamentId?: string }) {
+    const lic = await requireLicense();
+    if (!lic.ok) return { error: lic.error, data: null };
     try {
         const matches = await prisma.sportMatch.findMany({
             where: {
@@ -328,7 +370,7 @@ export async function upsertMatch(data: {
     notes?: string;
 }) {
     try {
-        const session = await getServerSession(authOptions);
+        const session = await getLicensedSession();
         if (!hasRole(session, MANAGE_ROLES)) return unauthorized();
 
         // Auto-derive result from scores when both are present and result not forced.
@@ -355,6 +397,7 @@ export async function upsertMatch(data: {
             : await prisma.sportMatch.create({ data: { ...payload, createdById: session!.user.id } });
 
         revalidatePath('/dashboard/part9');
+        revalidatePath('/dashboard/part7/sports');
         return { error: null, data: match };
     } catch (error) {
         console.error('Error upserting match:', error);
@@ -364,10 +407,11 @@ export async function upsertMatch(data: {
 
 export async function deleteMatch(id: string) {
     try {
-        const session = await getServerSession(authOptions);
+        const session = await getLicensedSession();
         if (!hasRole(session, MANAGE_ROLES)) return unauthorized();
         await prisma.sportMatch.delete({ where: { id } });
         revalidatePath('/dashboard/part9');
+        revalidatePath('/dashboard/part7/sports');
         return { error: null, data: { success: true } };
     } catch (error) {
         console.error('Error deleting match:', error);
@@ -376,6 +420,8 @@ export async function deleteMatch(id: string) {
 }
 
 export async function getMatchRoster(matchId: string) {
+    const lic = await requireLicense();
+    if (!lic.ok) return { error: lic.error, data: null };
     try {
         const match = await prisma.sportMatch.findUnique({
             where: { id: matchId },
@@ -402,7 +448,7 @@ export async function saveMatchRoster(
     participations: { athleteId: string; isStarter: boolean; goals: number; assists: number; notes?: string }[]
 ) {
     try {
-        const session = await getServerSession(authOptions);
+        const session = await getLicensedSession();
         if (!hasRole(session, MANAGE_ROLES)) return unauthorized();
 
         await prisma.$transaction([
@@ -420,6 +466,7 @@ export async function saveMatchRoster(
         ]);
 
         revalidatePath('/dashboard/part9');
+        revalidatePath('/dashboard/part7/sports');
         return { error: null, data: { success: true } };
     } catch (error) {
         console.error('Error saving match roster:', error);
@@ -429,6 +476,8 @@ export async function saveMatchRoster(
 
 /** #13 Sezon istatistikleri: takım G/M/B + sporcu gol/asist/maç (on-the-fly). */
 export async function getSportSeasonStats(params?: { branchId?: string; season?: number }) {
+    const lic = await requireLicense();
+    if (!lic.ok) return { error: lic.error, data: null };
     try {
         let dateFilter: { gte: Date; lte: Date } | undefined;
         if (params?.season) {
@@ -492,6 +541,8 @@ export async function getSportSeasonStats(params?: { branchId?: string; season?:
 // =====================================================================
 
 export async function getEquipment(params?: { status?: EquipmentStatus; branchId?: string }) {
+    const lic = await requireLicense();
+    if (!lic.ok) return { error: lic.error, data: null };
     try {
         const items = await prisma.equipment.findMany({
             where: { status: params?.status, branchId: params?.branchId },
@@ -520,7 +571,7 @@ export async function upsertEquipment(data: {
     notes?: string;
 }) {
     try {
-        const session = await getServerSession(authOptions);
+        const session = await getLicensedSession();
         if (!hasRole(session, MANAGE_ROLES)) return unauthorized();
 
         const payload = {
@@ -539,6 +590,7 @@ export async function upsertEquipment(data: {
             : await prisma.equipment.create({ data: payload });
 
         revalidatePath('/dashboard/part9');
+        revalidatePath('/dashboard/part7/sports');
         return { error: null, data: item };
     } catch (error) {
         console.error('Error upserting equipment:', error);
@@ -548,10 +600,11 @@ export async function upsertEquipment(data: {
 
 export async function deleteEquipment(id: string) {
     try {
-        const session = await getServerSession(authOptions);
+        const session = await getLicensedSession();
         if (!hasRole(session, MANAGE_ROLES)) return unauthorized();
         await prisma.equipment.delete({ where: { id } });
         revalidatePath('/dashboard/part9');
+        revalidatePath('/dashboard/part7/sports');
         return { error: null, data: { success: true } };
     } catch (error) {
         console.error('Error deleting equipment:', error);
@@ -564,6 +617,8 @@ export async function deleteEquipment(id: string) {
 // =====================================================================
 
 export async function getFootballFees(params?: { status?: FeeStatus; periodMonth?: Date }) {
+    const lic = await requireLicense();
+    if (!lic.ok) return { error: lic.error, data: null };
     try {
         // Mark overdue fees lazily on read.
         await prisma.footballFee.updateMany({
@@ -599,7 +654,7 @@ export async function getFootballFees(params?: { status?: FeeStatus; periodMonth
 /** Belirli ay için tüm futbol okulu sporcularına aidat oluştur. */
 export async function generateMonthlyFees(data: { periodMonth: Date; amount: number; dueDate?: Date }) {
     try {
-        const session = await getServerSession(authOptions);
+        const session = await getLicensedSession();
         if (!hasRole(session, MANAGE_ROLES)) return unauthorized();
 
         const periodStart = new Date(data.periodMonth.getFullYear(), data.periodMonth.getMonth(), 1);
@@ -628,6 +683,7 @@ export async function generateMonthlyFees(data: { periodMonth: Date; amount: num
         }
 
         revalidatePath('/dashboard/part9');
+        revalidatePath('/dashboard/part7/sports');
         return { error: null, data: { created, total: athletes.length } };
     } catch (error) {
         console.error('Error generating monthly fees:', error);
@@ -638,7 +694,7 @@ export async function generateMonthlyFees(data: { periodMonth: Date; amount: num
 /** #18 Ödeme kaydet + #23 SportTransaction INCOME otomatik. */
 export async function recordFeePayment(feeId: string, payment: { amount: number; date?: Date; description?: string }) {
     try {
-        const session = await getServerSession(authOptions);
+        const session = await getLicensedSession();
         if (!hasRole(session, MANAGE_ROLES)) return unauthorized();
 
         const fee = await prisma.footballFee.findUnique({
@@ -682,6 +738,7 @@ export async function recordFeePayment(feeId: string, payment: { amount: number;
         });
 
         revalidatePath('/dashboard/part9');
+        revalidatePath('/dashboard/part7/sports');
         return { error: null, data: { id: result.id, amount: num(result.amount) } };
     } catch (error) {
         console.error('Error recording fee payment:', error);
@@ -691,6 +748,8 @@ export async function recordFeePayment(feeId: string, payment: { amount: number;
 
 /** #19 Borçlu sporcular + veli iletişim bilgisi. */
 export async function getDuesReminders() {
+    const lic = await requireLicense();
+    if (!lic.ok) return { error: lic.error, data: null };
     try {
         await prisma.footballFee.updateMany({
             where: { status: 'PENDING', dueDate: { lt: new Date() } },
@@ -719,7 +778,7 @@ export async function getDuesReminders() {
 /** #19 Borçlu sporcuya (kullanıcı hesabına) aidat hatırlatma bildirimi gönder. */
 export async function sendDuesReminder(feeId: string) {
     try {
-        const session = await getServerSession(authOptions);
+        const session = await getLicensedSession();
         if (!hasRole(session, MANAGE_ROLES)) return unauthorized();
 
         const fee = await prisma.footballFee.findUnique({
@@ -737,6 +796,7 @@ export async function sendDuesReminder(feeId: string) {
         });
 
         revalidatePath('/dashboard/part9');
+        revalidatePath('/dashboard/part7/sports');
         return { error: null, data: { success: true } };
     } catch (error) {
         console.error('Error sending dues reminder:', error);
@@ -749,6 +809,8 @@ export async function sendDuesReminder(feeId: string) {
 // =====================================================================
 
 export async function getSportTransactions(params?: { type?: FinanceType; startDate?: Date; endDate?: Date }) {
+    const lic = await requireLicense();
+    if (!lic.ok) return { error: lic.error, data: null };
     try {
         const txs = await prisma.sportTransaction.findMany({
             where: {
@@ -775,7 +837,7 @@ export async function createSportTransaction(data: {
     transactionDate?: Date;
 }) {
     try {
-        const session = await getServerSession(authOptions);
+        const session = await getLicensedSession();
         if (!hasRole(session, MANAGE_ROLES)) return unauthorized();
 
         const tx = await prisma.sportTransaction.create({
@@ -790,6 +852,7 @@ export async function createSportTransaction(data: {
             },
         });
         revalidatePath('/dashboard/part9');
+        revalidatePath('/dashboard/part7/sports');
         return { error: null, data: { ...tx, amount: num(tx.amount) } };
     } catch (error) {
         console.error('Error creating sport transaction:', error);
@@ -799,10 +862,11 @@ export async function createSportTransaction(data: {
 
 export async function deleteSportTransaction(id: string) {
     try {
-        const session = await getServerSession(authOptions);
+        const session = await getLicensedSession();
         if (!hasRole(session, MANAGE_ROLES)) return unauthorized();
         await prisma.sportTransaction.delete({ where: { id } });
         revalidatePath('/dashboard/part9');
+        revalidatePath('/dashboard/part7/sports');
         return { error: null, data: { success: true } };
     } catch (error) {
         console.error('Error deleting sport transaction:', error);
@@ -811,6 +875,8 @@ export async function deleteSportTransaction(id: string) {
 }
 
 export async function getSportFinanceSummary(params?: { startDate?: Date; endDate?: Date }) {
+    const lic = await requireLicense();
+    if (!lic.ok) return { error: lic.error, data: null };
     try {
         const txs = await prisma.sportTransaction.findMany({
             where: { transactionDate: { gte: params?.startDate, lte: params?.endDate } },
@@ -844,6 +910,8 @@ export async function getSportFinanceSummary(params?: { startDate?: Date; endDat
 // =====================================================================
 
 export async function getSportAnnouncements() {
+    const lic = await requireLicense();
+    if (!lic.ok) return { error: lic.error, data: null };
     try {
         const announcements = await prisma.sportAnnouncement.findMany({
             include: {
@@ -866,7 +934,7 @@ export async function createSportAnnouncement(data: {
     branchId?: string | null;
 }) {
     try {
-        const session = await getServerSession(authOptions);
+        const session = await getLicensedSession();
         if (!hasRole(session, MANAGE_ROLES)) return unauthorized();
 
         const announcement = await prisma.sportAnnouncement.create({
@@ -879,6 +947,7 @@ export async function createSportAnnouncement(data: {
             },
         });
         revalidatePath('/dashboard/part9');
+        revalidatePath('/dashboard/part7/sports');
         return { error: null, data: announcement };
     } catch (error) {
         console.error('Error creating announcement:', error);
@@ -888,10 +957,11 @@ export async function createSportAnnouncement(data: {
 
 export async function deleteSportAnnouncement(id: string) {
     try {
-        const session = await getServerSession(authOptions);
+        const session = await getLicensedSession();
         if (!hasRole(session, MANAGE_ROLES)) return unauthorized();
         await prisma.sportAnnouncement.delete({ where: { id } });
         revalidatePath('/dashboard/part9');
+        revalidatePath('/dashboard/part7/sports');
         return { error: null, data: { success: true } };
     } catch (error) {
         console.error('Error deleting announcement:', error);
@@ -905,7 +975,7 @@ export async function deleteSportAnnouncement(id: string) {
 
 export async function getSportFeedback(params?: { status?: FeedbackStatus; mine?: boolean }) {
     try {
-        const session = await getServerSession(authOptions);
+        const session = await getLicensedSession();
         if (!session?.user) return unauthorized();
 
         // Yönetici değilse sadece kendi gönderdiklerini görür.
@@ -935,7 +1005,7 @@ export async function createSportFeedback(data: {
     category?: string;
 }) {
     try {
-        const session = await getServerSession(authOptions);
+        const session = await getLicensedSession();
         if (!session?.user) return unauthorized();
 
         // Gönderen sporcu ise athleteProfile bağla.
@@ -954,6 +1024,7 @@ export async function createSportFeedback(data: {
             },
         });
         revalidatePath('/dashboard/part9');
+        revalidatePath('/dashboard/part7/sports');
         return { error: null, data: feedback };
     } catch (error) {
         console.error('Error creating feedback:', error);
@@ -963,7 +1034,7 @@ export async function createSportFeedback(data: {
 
 export async function respondSportFeedback(id: string, data: { response: string; status?: FeedbackStatus }) {
     try {
-        const session = await getServerSession(authOptions);
+        const session = await getLicensedSession();
         if (!hasRole(session, MANAGE_ROLES)) return unauthorized();
 
         const feedback = await prisma.sportFeedback.update({
@@ -987,6 +1058,7 @@ export async function respondSportFeedback(id: string, data: { response: string;
         }
 
         revalidatePath('/dashboard/part9');
+        revalidatePath('/dashboard/part7/sports');
         return { error: null, data: feedback };
     } catch (error) {
         console.error('Error responding to feedback:', error);
@@ -996,10 +1068,11 @@ export async function respondSportFeedback(id: string, data: { response: string;
 
 export async function updateFeedbackStatus(id: string, status: FeedbackStatus) {
     try {
-        const session = await getServerSession(authOptions);
+        const session = await getLicensedSession();
         if (!hasRole(session, MANAGE_ROLES)) return unauthorized();
         const feedback = await prisma.sportFeedback.update({ where: { id }, data: { status } });
         revalidatePath('/dashboard/part9');
+        revalidatePath('/dashboard/part7/sports');
         return { error: null, data: feedback };
     } catch (error) {
         console.error('Error updating feedback status:', error);
@@ -1009,10 +1082,11 @@ export async function updateFeedbackStatus(id: string, status: FeedbackStatus) {
 
 export async function deleteSportFeedback(id: string) {
     try {
-        const session = await getServerSession(authOptions);
+        const session = await getLicensedSession();
         if (!hasRole(session, MANAGE_ROLES)) return unauthorized();
         await prisma.sportFeedback.delete({ where: { id } });
         revalidatePath('/dashboard/part9');
+        revalidatePath('/dashboard/part7/sports');
         return { error: null, data: { success: true } };
     } catch (error) {
         console.error('Error deleting feedback:', error);
@@ -1025,6 +1099,8 @@ export async function deleteSportFeedback(id: string) {
 // =====================================================================
 
 export async function getAttendanceOverview(branchId?: string) {
+    const lic = await requireLicense();
+    if (!lic.ok) return { error: lic.error, data: null };
     try {
         const athletes = await prisma.athleteProfile.findMany({
             where: branchId ? { branches: { some: { id: branchId } } } : undefined,
@@ -1065,6 +1141,8 @@ export async function getAttendanceOverview(branchId?: string) {
 // =====================================================================
 
 export async function getSportReport(year: number, month?: number) {
+    const lic = await requireLicense();
+    if (!lic.ok) return { error: lic.error, data: null };
     try {
         const start = month != null ? new Date(year, month, 1) : new Date(year, 0, 1);
         const end = month != null ? new Date(year, month + 1, 0, 23, 59, 59) : new Date(year, 11, 31, 23, 59, 59);
@@ -1161,6 +1239,8 @@ export async function getSportReport(year: number, month?: number) {
 // =====================================================================
 
 export async function getSportsOverview() {
+    const lic = await requireLicense();
+    if (!lic.ok) return { error: lic.error, data: null };
     try {
         const now = new Date();
         const soon = new Date();

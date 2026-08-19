@@ -27,6 +27,15 @@ export async function PUT(request: NextRequest) {
       );
     }
 
+    // Asgari uzunluk burada da zorunlu: bu uç nokta panelin şifre değiştirme
+    // ekranlarının tamamı tarafından kullanılıyor.
+    if (typeof newPassword !== 'string' || newPassword.length < 8) {
+      return NextResponse.json(
+        { error: 'Yeni şifre en az 8 karakter olmalıdır' },
+        { status: 400 }
+      );
+    }
+
     // Get user with password
     const user = await prisma.user.findUnique({
       where: { id: session.user.id }
@@ -55,7 +64,8 @@ export async function PUT(request: NextRequest) {
     // Update user's password
     await prisma.user.update({
       where: { id: session.user.id },
-      data: { password: hashedPassword }
+      // Damga, diğer cihazlarda açık kalan oturumları düşürür (auth.config.ts).
+      data: { password: hashedPassword, passwordChangedAt: new Date() }
     });
 
     return NextResponse.json({

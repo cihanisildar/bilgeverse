@@ -142,7 +142,7 @@ export default function OverallStatsReport({ userRole }: OverallStatsReportProps
 
   const getActivityIcon = (activityName: string) => {
     switch (activityName) {
-      case 'Sohbet (Karakter Eğitimi)':
+      case 'Sohbet (Değerler Halkası)':
         return <MessageCircle className="h-4 w-4" />;
       case 'Atölye Faaliyetleri':
         return <Palette className="h-4 w-4" />;
@@ -157,7 +157,7 @@ export default function OverallStatsReport({ userRole }: OverallStatsReportProps
 
   const getActivityColor = (activityName: string) => {
     switch (activityName) {
-      case 'Sohbet (Karakter Eğitimi)':
+      case 'Sohbet (Değerler Halkası)':
         return 'bg-blue-100 text-blue-800';
       case 'Atölye Faaliyetleri':
         return 'bg-green-100 text-green-800';

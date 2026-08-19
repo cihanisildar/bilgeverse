@@ -1,7 +1,12 @@
 import React from 'react';
 import PartDocuments from '@/app/components/PartDocuments';
+import { requireAuth } from '@/app/lib/auth-utils';
 
-export default function Page() {
+export default async function Page() {
+    // Oturum + kurum paketi kontrolü; ayrıca sayfanın build sırasında statik
+    // üretilip PartDocuments'ın kurum bağlamı bulamamasını engeller.
+    await requireAuth({ partId: 9 });
+
     return (
         <div className="space-y-4">
             <div>

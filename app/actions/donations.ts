@@ -2,10 +2,34 @@
 
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/app/api/auth/[...nextauth]/auth.config';
+import { isPartLicensed, requirePartLicense } from '@/app/lib/permissions.server';
 import prisma from '@/lib/prisma';
 import { UserRole, Prisma } from '@prisma/client';
 import { revalidatePath } from 'next/cache';
 import { mapDonationCurrency } from '@/app/lib/finance';
+
+/**
+ * Kurumun Maliye paketi (part 8) + oturum.
+ *
+ * Paket yoksa null döner; çağıran taraftaki mevcut oturum/rol kontrolleri
+ * isteği zaten reddeder. Sayfa katmanı ayrıca requireAuth({ partId: 8 })
+ * ile kapılı — buradaki kapı, server action'ın doğrudan çağrılması hâlini kapatır.
+ */
+const LICENSED_PART = 8;
+
+async function getLicensedSession() {
+    const session = await getServerSession(authOptions);
+    if (!session?.user) return null;
+    if (!(await isPartLicensed(session, LICENSED_PART))) return null;
+    return session;
+}
+
+/** Oturuma bakmayan okuma uçları için yalnız paket kontrolü. */
+async function requireLicense() {
+    const gate = await requirePartLicense(LICENSED_PART);
+    return { ok: !gate.error, error: gate.error };
+}
+
 import {
     Donor,
     Donation,
@@ -17,7 +41,7 @@ import {
 } from '@/types/donations';
 
 async function checkAuth() {
-    const session = await getServerSession(authOptions);
+    const session = await getLicensedSession();
     if (!session?.user) {
         throw new Error('Unauthorized');
     }
@@ -34,6 +58,8 @@ async function checkAuth() {
 }
 
 export async function getDonors(search?: string): Promise<DonorActionResponse<Donor[]>> {
+    const lic = await requireLicense();
+    if (!lic.ok) return { error: lic.error, data: null };
     try {
         await checkAuth();
 
@@ -96,6 +122,8 @@ export async function getDonors(search?: string): Promise<DonorActionResponse<Do
 }
 
 export async function getDonorDetails(id: string): Promise<DonorActionResponse<DonorDetails>> {
+    const lic = await requireLicense();
+    if (!lic.ok) return { error: lic.error, data: null };
     try {
         await checkAuth();
 
@@ -148,6 +176,8 @@ export async function getDonorDetails(id: string): Promise<DonorActionResponse<D
 }
 
 export async function createDonor(data: CreateDonorData): Promise<DonorActionResponse<Donor>> {
+    const lic = await requireLicense();
+    if (!lic.ok) return { error: lic.error, data: null };
     try {
         await checkAuth();
 
@@ -190,6 +220,8 @@ export async function createDonor(data: CreateDonorData): Promise<DonorActionRes
 }
 
 export async function updateDonor(id: string, data: UpdateDonorData): Promise<DonorActionResponse<Donor>> {
+    const lic = await requireLicense();
+    if (!lic.ok) return { error: lic.error, data: null };
     try {
         await checkAuth();
 
@@ -234,6 +266,8 @@ export async function updateDonor(id: string, data: UpdateDonorData): Promise<Do
 }
 
 export async function addDonation(data: AddDonationData): Promise<DonorActionResponse<Donation>> {
+    const lic = await requireLicense();
+    if (!lic.ok) return { error: lic.error, data: null };
     try {
         const session = await checkAuth();
         const createdById = (session.user as any).id ?? null;
@@ -290,6 +324,8 @@ export async function addDonation(data: AddDonationData): Promise<DonorActionRes
 }
 
 export async function deleteDonation(id: string): Promise<{ error: string | null; success: boolean }> {
+    const lic = await requireLicense();
+    if (!lic.ok) return { error: lic.error, success: false };
     try {
         await checkAuth();
 
@@ -307,6 +343,8 @@ export async function deleteDonation(id: string): Promise<{ error: string | null
 }
 
 export async function deleteDonor(id: string): Promise<{ error: string | null; success: boolean }> {
+    const lic = await requireLicense();
+    if (!lic.ok) return { error: lic.error, success: false };
     try {
         await checkAuth();
 

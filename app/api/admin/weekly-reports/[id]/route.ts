@@ -3,12 +3,17 @@ import prisma from "@/lib/prisma";
 import { getServerSession } from 'next-auth';
 import { UserRole } from '@prisma/client';
 import { authOptions } from '../../../auth/[...nextauth]/auth.config';
+import { requireApiPartLicense } from '@/app/lib/permissions.server';
 
 // GET - Fetch individual weekly report for admin review
 export async function GET(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
+    // Kurum paketi kapısı — İnsan Kaynağı (part 3)
+    const licenseGate = await requireApiPartLicense(3);
+    if (licenseGate.errorResponse) return licenseGate.errorResponse;
+
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user) {
@@ -110,6 +115,10 @@ export async function PUT(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
+    // Kurum paketi kapısı — İnsan Kaynağı (part 3)
+    const licenseGate = await requireApiPartLicense(3);
+    if (licenseGate.errorResponse) return licenseGate.errorResponse;
+
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user) {

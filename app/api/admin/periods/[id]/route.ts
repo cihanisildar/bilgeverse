@@ -108,7 +108,7 @@ export async function PUT(
 
     // If changing name, check for duplicates
     if (name && name !== existingPeriod.name) {
-      const duplicatePeriod = await prisma.period.findUnique({
+      const duplicatePeriod = await prisma.period.findFirst({
         where: { name }
       });
 

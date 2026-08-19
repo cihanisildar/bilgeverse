@@ -4,8 +4,13 @@ import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/app/api/auth/[...nextauth]/auth.config';
 import prisma from '@/lib/prisma';
 import { UserRole } from '@prisma/client';
+import { requireApiPartLicense } from '@/app/lib/permissions.server';
 
 export async function GET(req: NextRequest) {
+    // Kurum paketi kapısı — Beceri Atölyeleri (part 4)
+    const licenseGate = await requireApiPartLicense(4);
+    if (licenseGate.errorResponse) return licenseGate.errorResponse;
+
     try {
         const session = await getServerSession(authOptions);
         if (!session?.user) {

@@ -646,7 +646,7 @@ function PointReasonsManagement() {
                 id="name"
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                placeholder="Örn: Karakter Eğitimi, Proje Çalışması..."
+                placeholder="Örn: Değerler Halkası, Proje Çalışması..."
                 required
               />
             </div>
@@ -704,7 +704,7 @@ function PointReasonsManagement() {
                 id="edit-name"
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                placeholder="Örn: Karakter Eğitimi, Proje Çalışması..."
+                placeholder="Örn: Değerler Halkası, Proje Çalışması..."
                 required
               />
             </div>

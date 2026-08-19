@@ -1,5 +1,5 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { ArrowLeft, FileText, Calendar, BookOpen, ArrowRight, PartyPopper, Network } from 'lucide-react';
+import { ArrowLeft, FileText, Calendar, BookOpen, ArrowRight, PartyPopper, Network, Users, ClipboardList } from 'lucide-react';
 import { PARTS } from '@/app/lib/parts';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
@@ -66,9 +66,6 @@ export default async function Part2Page() {
             </Link>
           )}
 
-          {/* "Toplu Yoklama Özeti" İnsan Kaynağı bölümüne taşındı
-              (/dashboard/part3/tutor-participation). */}
-
           {/* Syllabus Management Card */}
           {canManage && (
             <Link href="/dashboard/part2/syllabus" className="block">
@@ -118,6 +115,118 @@ export default async function Part2Page() {
                 <CardContent>
                   <div className="flex items-center text-sm font-medium text-gray-600">
                     Analiz Sayfasına Git
+                    <ArrowRight className="ml-2 h-4 w-4" />
+                  </div>
+                </CardContent>
+              </Card>
+            </Link>
+          )}
+
+          {/* Etkinlikler — Bilgeverse (part7) sidebar'ından buraya taşındı */}
+          {canManage && (
+            <Link href="/dashboard/part7/admin/events" className="block">
+              <Card className="border-0 shadow-lg rounded-xl overflow-hidden transition-all duration-200 hover:shadow-xl hover:-translate-y-1 cursor-pointer bg-gradient-to-br from-amber-50 to-orange-50">
+                <div className="h-2 bg-gradient-to-r from-amber-500 to-orange-500"></div>
+                <CardHeader>
+                  <div className="flex items-center space-x-4">
+                    <div className="w-16 h-16 flex items-center justify-center rounded-full bg-amber-100 text-amber-600">
+                      <PartyPopper className="h-8 w-8" />
+                    </div>
+                    <div>
+                      <CardTitle className="text-xl">Etkinlikler</CardTitle>
+                      <CardDescription className="mt-1">
+                        Grup etkinliklerini planlayın ve katılımı takip edin
+                      </CardDescription>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex items-center text-sm font-medium text-gray-600">
+                    Etkinliklere Git
+                    <ArrowRight className="ml-2 h-4 w-4" />
+                  </div>
+                </CardContent>
+              </Card>
+            </Link>
+          )}
+
+          {/* Değerler Halkası Grupları — sayfa İnsan Kaynağı'ndan buraya taşındı, part3'teki kart kaldırıldı */}
+          {canManage && (
+            <Link href="/dashboard/part2/character-groups" className="block">
+              <Card className="border-0 shadow-lg rounded-xl overflow-hidden transition-all duration-200 hover:shadow-xl hover:-translate-y-1 cursor-pointer bg-gradient-to-br from-emerald-50 to-green-50">
+                <div className="h-2 bg-gradient-to-r from-emerald-500 to-green-500"></div>
+                <CardHeader>
+                  <div className="flex items-center space-x-4">
+                    <div className="w-16 h-16 flex items-center justify-center rounded-full bg-emerald-100 text-emerald-600">
+                      <Users className="h-8 w-8" />
+                    </div>
+                    <div>
+                      <CardTitle className="text-xl">Değerler Halkası Grupları</CardTitle>
+                      <CardDescription className="mt-1">
+                        Grupları ve rehber atamalarını yönetin
+                      </CardDescription>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex items-center text-sm font-medium text-gray-600">
+                    Gruplara Git
+                    <ArrowRight className="ml-2 h-4 w-4" />
+                  </div>
+                </CardContent>
+              </Card>
+            </Link>
+          )}
+
+          {/* Toplu Yoklama Özeti — İnsan Kaynağı'ndan buraya taşındı */}
+          {canManage && (
+            <Link href="/dashboard/part3/tutor-participation" className="block">
+              <Card className="border-0 shadow-lg rounded-xl overflow-hidden transition-all duration-200 hover:shadow-xl hover:-translate-y-1 cursor-pointer bg-gradient-to-br from-sky-50 to-blue-50">
+                <div className="h-2 bg-gradient-to-r from-sky-500 to-blue-500"></div>
+                <CardHeader>
+                  <div className="flex items-center space-x-4">
+                    <div className="w-16 h-16 flex items-center justify-center rounded-full bg-sky-100 text-sky-600">
+                      <ClipboardList className="h-8 w-8" />
+                    </div>
+                    <div>
+                      <CardTitle className="text-xl">Toplu Yoklama Özeti</CardTitle>
+                      <CardDescription className="mt-1">
+                        Tüm grupların katılım oranlarını tek ekranda görün
+                      </CardDescription>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex items-center text-sm font-medium text-gray-600">
+                    Özete Git
+                    <ArrowRight className="ml-2 h-4 w-4" />
+                  </div>
+                </CardContent>
+              </Card>
+            </Link>
+          )}
+
+          {/* Raporlar — İnsan Kaynağı'ndan buraya taşındı */}
+          {canManage && (
+            <Link href="/dashboard/part3/reports" className="block">
+              <Card className="border-0 shadow-lg rounded-xl overflow-hidden transition-all duration-200 hover:shadow-xl hover:-translate-y-1 cursor-pointer bg-gradient-to-br from-rose-50 to-pink-50">
+                <div className="h-2 bg-gradient-to-r from-rose-500 to-pink-500"></div>
+                <CardHeader>
+                  <div className="flex items-center space-x-4">
+                    <div className="w-16 h-16 flex items-center justify-center rounded-full bg-rose-100 text-rose-600">
+                      <FileText className="h-8 w-8" />
+                    </div>
+                    <div>
+                      <CardTitle className="text-xl">Raporlar</CardTitle>
+                      <CardDescription className="mt-1">
+                        Katılım, etkinlik ve müfredat takibi raporları
+                      </CardDescription>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex items-center text-sm font-medium text-gray-600">
+                    Raporlara Git
                     <ArrowRight className="ml-2 h-4 w-4" />
                   </div>
                 </CardContent>

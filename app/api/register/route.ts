@@ -1,20 +1,50 @@
 import { NextRequest, NextResponse } from 'next/server';
-import prisma from '@/lib/prisma';
+import prisma, { prismaUnscoped } from '@/lib/prisma';
+import { runAsOrg } from '@/lib/tenant-context';
+import { normalizeOrgCode } from '@/lib/constants/tenant';
 import bcrypt from 'bcryptjs';
 
+// HERKESE AÇIK uç nokta: kayıt talebi oturum açmadan gönderilir. Çok kurumlu
+// yapıda talebin hangi kuruma gideceği belirsiz olamaz, bu yüzden kurum kodu
+// zorunludur ve kalan işlemler o kurum adına çalıştırılır.
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { username, email, password, firstName, lastName, requestedRole } = body;
+    const { orgCode, username, email, password, firstName, lastName, requestedRole } = body;
 
     // Validate required fields
-    if (!username || !email || !password || !firstName || !lastName || !requestedRole) {
+    if (!orgCode || !username || !email || !password || !firstName || !lastName || !requestedRole) {
       return NextResponse.json(
-        { error: 'All fields are required' },
+        { error: 'Kurum kodu dahil tüm alanlar zorunludur' },
         { status: 400 }
       );
     }
 
+    const org = await prismaUnscoped.organization.findUnique({
+      where: { code: normalizeOrgCode(orgCode) },
+      select: { id: true, isActive: true },
+    });
+
+    if (!org || !org.isActive) {
+      return NextResponse.json({ error: 'Geçersiz kurum kodu' }, { status: 404 });
+    }
+
+    return await runAsOrg(org.id, () => handleRegistration({
+      username, email, password, firstName, lastName, requestedRole,
+    }));
+  } catch (error: any) {
+    console.error('Registration request error:', error);
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    );
+  }
+}
+
+async function handleRegistration({
+  username, email, password, firstName, lastName, requestedRole,
+}: Record<string, any>) {
+  {
     // Check if username or email already exists in users or registration requests
     const existingUser = await prisma.user.findFirst({
       where: {
@@ -67,17 +97,11 @@ export async function POST(request: NextRequest) {
     });
 
     return NextResponse.json(
-      { 
+      {
         message: 'Registration request submitted successfully. Please wait for admin approval.',
-        requestId: registrationRequest.id 
+        requestId: registrationRequest.id
       },
       { status: 201 }
     );
-  } catch (error: any) {
-    console.error('Registration request error:', error);
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
   }
-} 
+}

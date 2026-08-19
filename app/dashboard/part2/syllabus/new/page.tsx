@@ -101,7 +101,7 @@ export default function NewSyllabusPage() {
                     id="title"
                     value={formData.title}
                     onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                    placeholder="Örn: Karakter Eğitimi Müfredatı - Ocak 2025"
+                    placeholder="Örn: Değerler Halkası Müfredatı - Ocak 2025"
                     required
                   />
                 </div>

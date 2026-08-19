@@ -4,6 +4,8 @@ import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/app/api/auth/[...nextauth]/auth.config';
 import prisma from '@/lib/prisma';
 import { UserRole } from '@prisma/client';
+import { getActivePeriod, periodStudentWhere } from '@/lib/periods';
+import { requireApiPartLicense } from '@/app/lib/permissions.server';
 
 /**
  * Rehber (tutor) weekly participation overview for the İnsan Kaynağı module.
@@ -14,10 +16,22 @@ import { UserRole } from '@prisma/client';
  * i.e. the average share of the group that shows up per meeting. Rehber names
  * are then colour-coded: >=60% green, 40-60% yellow, <40% red.
  *
- * Fixes the old "Toplu Yoklama Özeti" that showed 0% for everyone because it
- * only looked at the current calendar week and depended on period membership.
+ * EVERYTHING here is scoped to the ACTIVE PERIOD:
+ *   - rehberler : only those marked ACTIVE in Değerler Halkası Grupları (User.tutorStatus)
+ *   - students  : only those enrolled in the active period (PeriodStudent)
+ *   - sessions  : only those held inside the active period's date range
+ * Without this scoping the screen mixed old periods' sessions with the new
+ * period's group sizes, which produced meaningless rates, and it listed
+ * rehberler who are no longer running a group.
+ *
+ * NOTE: AttendanceSession has no periodId column, so sessions are bounded by
+ * `sessionDate` against the period's start/end dates.
  */
 export async function GET() {
+    // Kurum paketi kapısı — İnsan Kaynağı (part 3)
+    const licenseGate = await requireApiPartLicense(3);
+    if (licenseGate.errorResponse) return licenseGate.errorResponse;
+
     try {
         const session = await getServerSession(authOptions);
         if (!session?.user) {
@@ -28,11 +42,46 @@ export async function GET() {
             return NextResponse.json({ error: 'Forbidden: Admin access required' }, { status: 403 });
         }
 
+        const activePeriod = await getActivePeriod();
+        if (!activePeriod) {
+            return NextResponse.json({
+                success: true,
+                tutors: [],
+                period: null,
+                message: 'Aktif dönem bulunamadı. Dönem Yönetimi\'nden bir dönemi aktif hale getirin.',
+            });
+        }
+
+        // Sessions belonging to the active period. The period may still be open
+        // (endDate null), in which case there is no upper bound.
+        //
+        // endDate is stored at midnight, so comparing `sessionDate <= endDate`
+        // would drop every session held during the final day. Push the bound to
+        // the end of that day instead.
+        let sessionEnd: Date | null = null;
+        if (activePeriod.endDate) {
+            sessionEnd = new Date(activePeriod.endDate);
+            sessionEnd.setHours(23, 59, 59, 999);
+        }
+
+        const sessionDateFilter = {
+            sessionDate: {
+                gte: activePeriod.startDate,
+                ...(sessionEnd ? { lte: sessionEnd } : {}),
+            },
+        };
+
         // Only real rehberler (TUTOR). Assistants/leaders are excluded on purpose.
+        // Only those the admin marked ACTIVE for this period are listed —
+        // STANDBY / PASSIVE / LEAVING rehberler are not running a group now.
         const tutors = await prisma.user.findMany({
             where: {
                 roles: { has: UserRole.TUTOR },
                 deletedAt: null,
+                isActive: true,
+                // tutorStatus is null for rehberler created before the HR module;
+                // those count as ACTIVE (same rule as the Değerler Halkası Grupları screen).
+                OR: [{ tutorStatus: 'ACTIVE' }, { tutorStatus: null }],
             },
             select: {
                 id: true,
@@ -41,12 +90,17 @@ export async function GET() {
                 username: true,
                 isActive: true,
                 students: {
-                    // Use the roles[] array (source of truth across the app), not the
-                    // legacy singular `role`, so no student is silently dropped.
-                    where: { roles: { has: UserRole.STUDENT }, isActive: true, deletedAt: null },
+                    // Students enrolled in the ACTIVE PERIOD only. `periodStudentWhere`
+                    // is the shared helper used everywhere else for period membership.
+                    where: {
+                        roles: { has: UserRole.STUDENT },
+                        isActive: true,
+                        ...periodStudentWhere(activePeriod.id),
+                    },
                     select: { id: true, firstName: true, lastName: true, username: true },
                 },
                 createdSessions: {
+                    where: sessionDateFilter,
                     select: {
                         id: true,
                         title: true,
@@ -60,6 +114,7 @@ export async function GET() {
                 asistans: {
                     select: {
                         createdSessions: {
+                            where: sessionDateFilter,
                             select: {
                                 id: true,
                                 attendances: { select: { studentId: true } },
@@ -77,7 +132,15 @@ export async function GET() {
                 ...tutor.asistans.flatMap((a) => a.createdSessions),
             ];
             const totalSessions = sessions.length;
-            const totalAttendances = sessions.reduce((sum, s) => sum + s.attendances.length, 0);
+
+            // Only count attendances from students who are in the group THIS period.
+            // A student who left the period is out of the denominator (groupSize),
+            // so leaving them in the numerator would push the rate above 100%.
+            const groupStudentIds = new Set(tutor.students.map((s) => s.id));
+            const totalAttendances = sessions.reduce(
+                (sum, s) => sum + s.attendances.filter((a) => groupStudentIds.has(a.studentId)).length,
+                0
+            );
 
             const denominator = totalSessions * groupSize;
             const participationRate = denominator > 0 ? Math.round((totalAttendances / denominator) * 100) : 0;
@@ -116,7 +179,16 @@ export async function GET() {
             return a.participationRate - b.participationRate;
         });
 
-        return NextResponse.json({ success: true, tutors: result });
+        return NextResponse.json({
+            success: true,
+            tutors: result,
+            period: {
+                id: activePeriod.id,
+                name: activePeriod.name,
+                startDate: activePeriod.startDate,
+                endDate: activePeriod.endDate,
+            },
+        });
     } catch (error) {
         console.error('Error fetching tutor participation:', error);
         return NextResponse.json({ error: 'Failed to fetch tutor participation' }, { status: 500 });

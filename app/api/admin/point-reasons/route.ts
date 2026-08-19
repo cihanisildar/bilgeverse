@@ -102,7 +102,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if reason with same name already exists
-    const existingReason = await prisma.pointReason.findUnique({
+    const existingReason = await prisma.pointReason.findFirst({
       where: { name: name.trim() },
     });
 

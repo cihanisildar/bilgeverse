@@ -2,14 +2,38 @@
 
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/app/api/auth/[...nextauth]/auth.config';
+import { isPartLicensed, requirePartLicense } from '@/app/lib/permissions.server';
 import prisma from '@/lib/prisma';
 import { UserRole, CheckInMethod, AttendanceSessionStatus, TransactionType } from '@prisma/client';
 import { requireActivePeriod, getActivePeriod, periodStudentWhere } from '@/lib/periods';
 import crypto from 'crypto';
 
+/**
+ * Kurumun Değerler Halkası paketi (part 2) + oturum.
+ *
+ * Paket yoksa null döner; çağıran taraftaki mevcut oturum/rol kontrolleri
+ * isteği zaten reddeder. Sayfa katmanı ayrıca requireAuth({ partId: 2 })
+ * ile kapılı — buradaki kapı, server action'ın doğrudan çağrılması hâlini kapatır.
+ */
+const LICENSED_PART = 2;
+
+async function getLicensedSession() {
+    const session = await getServerSession(authOptions);
+    if (!session?.user) return null;
+    if (!(await isPartLicensed(session, LICENSED_PART))) return null;
+    return session;
+}
+
+/** Oturuma bakmayan okuma uçları için yalnız paket kontrolü. */
+async function requireLicense() {
+    const gate = await requirePartLicense(LICENSED_PART);
+    return { ok: !gate.error, error: gate.error };
+}
+
+
 export async function getAttendanceSessions() {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await getLicensedSession();
 
     if (!session?.user) {
       return { error: 'Yetkisiz erişim', data: null };
@@ -91,7 +115,7 @@ export async function getAttendanceSessions() {
 
 export async function getAttendanceSession(sessionId: string) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await getLicensedSession();
 
     if (!session?.user) {
       return { error: 'Yetkisiz erişim', data: null };
@@ -159,7 +183,7 @@ export async function createAttendanceSession(data: {
   generateQR?: boolean;
 }) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await getLicensedSession();
     const userNode = session?.user as any;
     const userRoles = userNode?.roles || [userNode?.role].filter(Boolean) as string[];
     const isAdmin = userRoles.includes('ADMIN');
@@ -231,7 +255,7 @@ export async function updateAttendanceSession(sessionId: string, data: {
   status?: AttendanceSessionStatus;
 }) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await getLicensedSession();
 
     const userNode = session?.user as any;
     const userRoles = userNode?.roles || [userNode?.role].filter(Boolean) as UserRole[];
@@ -299,7 +323,7 @@ export async function updateAttendanceSession(sessionId: string, data: {
 
 export async function generateQRCodeForSession(sessionId: string) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await getLicensedSession();
 
     const userNode = session?.user as any;
     const userRoles = userNode?.roles || [userNode?.role].filter(Boolean) as UserRole[];
@@ -351,7 +375,7 @@ export async function generateQRCodeForSession(sessionId: string) {
 
 export async function checkInToSession(sessionId: string) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await getLicensedSession();
 
     if (!session?.user) {
       return { error: 'Yetkisiz erişim', data: null };
@@ -455,7 +479,7 @@ export async function checkInToSession(sessionId: string) {
 
 export async function manualCheckInToSession(sessionId: string, studentId: string, notes?: string) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await getLicensedSession();
     const userNode = session?.user as any;
     const userRoles = userNode?.roles || [userNode?.role].filter(Boolean) as UserRole[];
     const isTutor = userRoles.includes(UserRole.TUTOR);
@@ -592,7 +616,7 @@ export async function manualCheckInToSession(sessionId: string, studentId: strin
 // Remove a student's attendance from a session and refund their points
 export async function removeAttendanceFromSession(sessionId: string, studentId: string) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await getLicensedSession();
     const userNode = session?.user as any;
     const userRoles = userNode?.roles || [userNode?.role].filter(Boolean) as UserRole[];
     const isTutor = userRoles.includes(UserRole.TUTOR);
@@ -711,7 +735,7 @@ export async function removeAttendanceFromSession(sessionId: string, studentId: 
 
 export async function deleteAttendanceSession(sessionId: string) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await getLicensedSession();
 
     const userNode = session?.user as any;
     const userRoles = userNode?.roles || [userNode?.role].filter(Boolean) as UserRole[];
@@ -737,7 +761,7 @@ export async function deleteAttendanceSession(sessionId: string) {
 // Get students for manual attendance based on tutor's group
 export async function getTutorStudents() {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await getLicensedSession();
 
     const userNode = session?.user as any;
     const userRoles = userNode?.roles || [userNode?.role].filter(Boolean) as UserRole[];
@@ -835,7 +859,7 @@ export async function getTutorStudents() {
  */
 export async function getStudentsForTutor(tutorId: string) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await getLicensedSession();
     const roles = (session?.user as any)?.roles || [(session?.user as any)?.role].filter(Boolean);
     if (!roles.includes(UserRole.ADMIN) && !roles.includes(UserRole.BOARD_MEMBER)) {
       return { error: 'Yetkisiz erişim', data: null };
@@ -868,7 +892,7 @@ export async function adminTakeAttendanceForTutor(data: {
   presentStudentIds: string[];
 }) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await getLicensedSession();
     const roles = (session?.user as any)?.roles || [(session?.user as any)?.role].filter(Boolean);
     if (!roles.includes(UserRole.ADMIN) && !roles.includes(UserRole.BOARD_MEMBER)) {
       return { error: 'Yetkisiz erişim', data: null };

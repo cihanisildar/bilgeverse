@@ -4,9 +4,14 @@ import { requireActivePeriod } from "@/lib/periods";
 import { getServerSession } from 'next-auth';
 import { UserRole } from '@prisma/client';
 import { authOptions } from '../../auth/[...nextauth]/auth.config';
+import { requireApiPartLicense } from '@/app/lib/permissions.server';
 
 // GET - Fetch all weekly reports for admin review
 export async function GET(request: NextRequest) {
+    // Kurum paketi kapısı — İnsan Kaynağı (part 3)
+    const licenseGate = await requireApiPartLicense(3);
+    if (licenseGate.errorResponse) return licenseGate.errorResponse;
+
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user) {
@@ -144,6 +149,10 @@ export async function GET(request: NextRequest) {
 
 // POST - Bulk review reports
 export async function POST(request: NextRequest) {
+    // Kurum paketi kapısı — İnsan Kaynağı (part 3)
+    const licenseGate = await requireApiPartLicense(3);
+    if (licenseGate.errorResponse) return licenseGate.errorResponse;
+
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user) {

@@ -2,10 +2,34 @@
 
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/app/api/auth/[...nextauth]/auth.config';
+import { isPartLicensed, requirePartLicense } from '@/app/lib/permissions.server';
 import prisma from '@/lib/prisma';
 import { UserRole } from '@prisma/client';
 import { startOfWeek, endOfWeek } from 'date-fns';
 import { getActivePeriod, periodStudentWhere } from '@/lib/periods';
+
+/**
+ * Kurumun İnsan Kaynağı raporları paketi (part 3) + oturum.
+ *
+ * Paket yoksa null döner; çağıran taraftaki mevcut oturum/rol kontrolleri
+ * isteği zaten reddeder. Sayfa katmanı ayrıca requireAuth({ partId: 3 })
+ * ile kapılı — buradaki kapı, server action'ın doğrudan çağrılması hâlini kapatır.
+ */
+const LICENSED_PART = 3;
+
+async function getLicensedSession() {
+    const session = await getServerSession(authOptions);
+    if (!session?.user) return null;
+    if (!(await isPartLicensed(session, LICENSED_PART))) return null;
+    return session;
+}
+
+/** Oturuma bakmayan okuma uçları için yalnız paket kontrolü. */
+async function requireLicense() {
+    const gate = await requirePartLicense(LICENSED_PART);
+    return { ok: !gate.error, error: gate.error };
+}
+
 import {
     WeeklyParticipationReport,
     SyllabusTrackingReport,
@@ -18,7 +42,7 @@ import {
 
 export async function getWeeklyParticipationReport(): Promise<BaseReportResponse<WeeklyParticipationReport>> {
     try {
-        const session = await getServerSession(authOptions);
+        const session = await getLicensedSession();
 
         const sessionUser = session?.user as any;
         const userRoles = sessionUser?.roles || [sessionUser?.role].filter(Boolean) as UserRole[];
@@ -193,7 +217,7 @@ export async function getWeeklyParticipationReport(): Promise<BaseReportResponse
 
 export async function getSyllabusTrackingReport(): Promise<BaseReportResponse<SyllabusTrackingReport>> {
     try {
-        const session = await getServerSession(authOptions);
+        const session = await getLicensedSession();
 
         const sessionUser = session?.user as any;
         const userRoles = sessionUser?.roles || [sessionUser?.role].filter(Boolean) as UserRole[];
@@ -362,7 +386,7 @@ export async function getSyllabusTrackingReport(): Promise<BaseReportResponse<Sy
 
 export async function getAttendanceAlertsReport(): Promise<BaseReportResponse<AttendanceAlertsReport>> {
     try {
-        const session = await getServerSession(authOptions);
+        const session = await getLicensedSession();
 
         const sessionUser = session?.user as any;
         const userRoles = sessionUser?.roles || [sessionUser?.role].filter(Boolean) as UserRole[];
@@ -514,7 +538,7 @@ export async function getAttendanceAlertsReport(): Promise<BaseReportResponse<At
 
 export async function getEventsOverviewReport(): Promise<BaseReportResponse<EventsOverviewReport>> {
     try {
-        const session = await getServerSession(authOptions);
+        const session = await getLicensedSession();
 
         const sessionUser = session?.user as any;
         const userRoles = sessionUser?.roles || [sessionUser?.role].filter(Boolean) as UserRole[];

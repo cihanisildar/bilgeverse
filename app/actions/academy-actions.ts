@@ -50,7 +50,7 @@ export async function createAcademyLesson(data: {
     startDate?: string | null;
     capacity?: number | null;
 }): Promise<ActionResult<AcademyLesson>> {
-    const { error } = await requireActionAuth([UserRole.ADMIN, UserRole.BOARD_MEMBER]);
+    const { error } = await requireActionAuth([UserRole.ADMIN, UserRole.BOARD_MEMBER], { partId: 11 });
     if (error) return { error, data: null };
 
     try {
@@ -81,7 +81,7 @@ export async function updateAcademyLesson(id: string, data: {
     startDate?: string | null;
     capacity?: number | null;
 }): Promise<ActionResult<AcademyLesson>> {
-    const { error } = await requireActionAuth([UserRole.ADMIN, UserRole.BOARD_MEMBER]);
+    const { error } = await requireActionAuth([UserRole.ADMIN, UserRole.BOARD_MEMBER], { partId: 11 });
     if (error) return { error, data: null };
 
     try {
@@ -106,7 +106,7 @@ export async function updateAcademyLesson(id: string, data: {
  * Deletes an Academy Lesson.
  */
 export async function deleteAcademyLesson(id: string): Promise<ActionResult<{ success: boolean }>> {
-    const { error } = await requireActionAuth([UserRole.ADMIN, UserRole.BOARD_MEMBER]);
+    const { error } = await requireActionAuth([UserRole.ADMIN, UserRole.BOARD_MEMBER], { partId: 11 });
     if (error) return { error, data: null };
 
     try {
@@ -122,7 +122,7 @@ export async function deleteAcademyLesson(id: string): Promise<ActionResult<{ su
  * Assigns a tutor or assistant to a lesson.
  */
 export async function assignToAcademyLesson(lessonId: string, userId: string, role: UserRole): Promise<ActionResult> {
-    const { error } = await requireActionAuth([UserRole.ADMIN, UserRole.BOARD_MEMBER]);
+    const { error } = await requireActionAuth([UserRole.ADMIN, UserRole.BOARD_MEMBER], { partId: 11 });
     if (error) return { error, data: null };
 
     try {
@@ -142,7 +142,7 @@ export async function assignToAcademyLesson(lessonId: string, userId: string, ro
  * Removes assignment
  */
 export async function removeAssignmentFromAcademyLesson(lessonId: string, userId: string): Promise<ActionResult<{ success: boolean }>> {
-    const { error } = await requireActionAuth([UserRole.ADMIN, UserRole.BOARD_MEMBER]);
+    const { error } = await requireActionAuth([UserRole.ADMIN, UserRole.BOARD_MEMBER], { partId: 11 });
     if (error) return { error, data: null };
 
     try {
@@ -160,7 +160,7 @@ export async function removeAssignmentFromAcademyLesson(lessonId: string, userId
  * Student enrollment
  */
 export async function enrollStudentInAcademyLesson(lessonId: string, studentId: string): Promise<ActionResult> {
-    const { error } = await requireActionAuth([UserRole.ADMIN, UserRole.BOARD_MEMBER, UserRole.TUTOR, UserRole.ASISTAN]);
+    const { error } = await requireActionAuth([UserRole.ADMIN, UserRole.BOARD_MEMBER, UserRole.TUTOR, UserRole.ASISTAN], { partId: 11 });
     if (error) return { error, data: null };
 
     try {
@@ -187,7 +187,7 @@ export async function enrollStudentInAcademyLesson(lessonId: string, studentId: 
  * Student unenrollment
  */
 export async function unenrollStudentFromAcademyLesson(lessonId: string, studentId: string): Promise<ActionResult<{ success: boolean }>> {
-    const { error } = await requireActionAuth([UserRole.ADMIN, UserRole.BOARD_MEMBER, UserRole.TUTOR, UserRole.ASISTAN]);
+    const { error } = await requireActionAuth([UserRole.ADMIN, UserRole.BOARD_MEMBER, UserRole.TUTOR, UserRole.ASISTAN], { partId: 11 });
     if (error) return { error, data: null };
 
     try {
@@ -209,7 +209,7 @@ export async function updateAcademySyllabus(lessonId: string, items: {
     description?: string;
     orderIndex: number;
 }[]): Promise<ActionResult<{ success: boolean }>> {
-    const { error } = await requireActionAuth([UserRole.ADMIN, UserRole.BOARD_MEMBER, UserRole.TUTOR, UserRole.ASISTAN]);
+    const { error } = await requireActionAuth([UserRole.ADMIN, UserRole.BOARD_MEMBER, UserRole.TUTOR, UserRole.ASISTAN], { partId: 11 });
     if (error) return { error, data: null };
 
     try {
@@ -253,7 +253,7 @@ export async function createAcademySession(data: {
     startTime?: string;
     endTime?: string;
 }): Promise<ActionResult> {
-    const { error } = await requireActionAuth([UserRole.ADMIN, UserRole.BOARD_MEMBER, UserRole.TUTOR, UserRole.ASISTAN]);
+    const { error } = await requireActionAuth([UserRole.ADMIN, UserRole.BOARD_MEMBER, UserRole.TUTOR, UserRole.ASISTAN], { partId: 11 });
     if (error) return { error, data: null };
 
     try {
@@ -276,7 +276,7 @@ export async function recordAcademyAttendance(sessionId: string, attendances: {
     studentId: string;
     status: boolean;
 }[]): Promise<ActionResult<{ success: boolean }>> {
-    const { error } = await requireActionAuth([UserRole.ADMIN, UserRole.BOARD_MEMBER, UserRole.TUTOR, UserRole.ASISTAN]);
+    const { error } = await requireActionAuth([UserRole.ADMIN, UserRole.BOARD_MEMBER, UserRole.TUTOR, UserRole.ASISTAN], { partId: 11 });
     if (error) return { error, data: null };
 
     try {
@@ -373,7 +373,7 @@ export async function createAcademyMaterial(data: {
     url: string;
     fileKey?: string;
 }): Promise<ActionResult> {
-    const { session, error } = await requireActionAuth(MANAGE_ROLES);
+    const { session, error } = await requireActionAuth(MANAGE_ROLES, { partId: 11 });
     if (error || !session) return { error: error || 'Yetkisiz', data: null };
 
     try {
@@ -396,7 +396,7 @@ export async function createAcademyMaterial(data: {
 }
 
 export async function deleteAcademyMaterial(id: string): Promise<ActionResult<{ success: boolean }>> {
-    const { error } = await requireActionAuth(MANAGE_ROLES);
+    const { error } = await requireActionAuth(MANAGE_ROLES, { partId: 11 });
     if (error) return { error, data: null };
 
     try {
@@ -429,7 +429,7 @@ export async function createAcademyStudentNote(data: {
     type: 'NOTE' | 'EVALUATION' | 'OBSERVATION';
     content: string;
 }): Promise<ActionResult> {
-    const { session, error } = await requireActionAuth(MANAGE_ROLES);
+    const { session, error } = await requireActionAuth(MANAGE_ROLES, { partId: 11 });
     if (error || !session) return { error: error || 'Yetkisiz', data: null };
 
     try {
@@ -453,7 +453,7 @@ export async function updateAcademyStudentNote(id: string, data: {
     type?: 'NOTE' | 'EVALUATION' | 'OBSERVATION';
     content?: string;
 }): Promise<ActionResult> {
-    const { error } = await requireActionAuth(MANAGE_ROLES);
+    const { error } = await requireActionAuth(MANAGE_ROLES, { partId: 11 });
     if (error) return { error, data: null };
 
     try {
@@ -466,7 +466,7 @@ export async function updateAcademyStudentNote(id: string, data: {
 }
 
 export async function deleteAcademyStudentNote(id: string): Promise<ActionResult<{ success: boolean }>> {
-    const { error } = await requireActionAuth(MANAGE_ROLES);
+    const { error } = await requireActionAuth(MANAGE_ROLES, { partId: 11 });
     if (error) return { error, data: null };
 
     try {
@@ -489,7 +489,7 @@ export async function createAcademyTask(data: {
     points: number;
     dueDate?: string | null;
 }): Promise<ActionResult> {
-    const { session, error } = await requireActionAuth(MANAGE_ROLES);
+    const { session, error } = await requireActionAuth(MANAGE_ROLES, { partId: 11 });
     if (error || !session) return { error: error || 'Yetkisiz', data: null };
 
     try {
@@ -516,7 +516,7 @@ export async function updateAcademyTask(id: string, data: {
     points?: number;
     dueDate?: string | null;
 }): Promise<ActionResult> {
-    const { error } = await requireActionAuth(MANAGE_ROLES);
+    const { error } = await requireActionAuth(MANAGE_ROLES, { partId: 11 });
     if (error) return { error, data: null };
 
     try {
@@ -532,7 +532,7 @@ export async function updateAcademyTask(id: string, data: {
 }
 
 export async function deleteAcademyTask(id: string): Promise<ActionResult<{ success: boolean }>> {
-    const { error } = await requireActionAuth(MANAGE_ROLES);
+    const { error } = await requireActionAuth(MANAGE_ROLES, { partId: 11 });
     if (error) return { error, data: null };
 
     try {
@@ -549,7 +549,7 @@ export async function deleteAcademyTask(id: string): Promise<ActionResult<{ succ
  * through the standard period-aware PointsTransaction system.
  */
 export async function completeAcademyTask(taskId: string, studentId: string): Promise<ActionResult> {
-    const { session, error } = await requireActionAuth(MANAGE_ROLES);
+    const { session, error } = await requireActionAuth(MANAGE_ROLES, { partId: 11 });
     if (error || !session) return { error: error || 'Yetkisiz', data: null };
 
     try {
@@ -603,7 +603,7 @@ export async function completeAcademyTask(taskId: string, studentId: string): Pr
  * the awarded points transaction.
  */
 export async function uncompleteAcademyTask(taskId: string, studentId: string): Promise<ActionResult<{ success: boolean }>> {
-    const { error } = await requireActionAuth(MANAGE_ROLES);
+    const { error } = await requireActionAuth(MANAGE_ROLES, { partId: 11 });
     if (error) return { error, data: null };
 
     try {
@@ -641,7 +641,7 @@ export async function uncompleteAcademyTask(taskId: string, studentId: string): 
  * per-student attendance rate, absences, completed tasks, and Bilge Para earned.
  */
 export async function getAcademyLessonReport(lessonId: string): Promise<ActionResult> {
-    const { error } = await requireActionAuth(MANAGE_ROLES);
+    const { error } = await requireActionAuth(MANAGE_ROLES, { partId: 11 });
     if (error) return { error, data: null };
 
     try {

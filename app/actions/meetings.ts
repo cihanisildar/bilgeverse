@@ -2,14 +2,38 @@
 
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/app/api/auth/[...nextauth]/auth.config';
+import { isPartLicensed, requirePartLicense } from '@/app/lib/permissions.server';
 import prisma from '@/lib/prisma';
 import { createMeetingSchema, updateMeetingSchema } from '@/lib/validations/meetings';
 import { UserRole } from '@prisma/client';
 import { randomBytes } from 'crypto';
 
+/**
+ * Kurumun Yönetim Kurulu paketi (part 1) + oturum.
+ *
+ * Paket yoksa null döner; çağıran taraftaki mevcut oturum/rol kontrolleri
+ * isteği zaten reddeder. Sayfa katmanı ayrıca requireAuth({ partId: 1 })
+ * ile kapılı — buradaki kapı, server action'ın doğrudan çağrılması hâlini kapatır.
+ */
+const LICENSED_PART = 1;
+
+async function getLicensedSession() {
+    const session = await getServerSession(authOptions);
+    if (!session?.user) return null;
+    if (!(await isPartLicensed(session, LICENSED_PART))) return null;
+    return session;
+}
+
+/** Oturuma bakmayan okuma uçları için yalnız paket kontrolü. */
+async function requireLicense() {
+    const gate = await requirePartLicense(LICENSED_PART);
+    return { ok: !gate.error, error: gate.error };
+}
+
+
 export async function getMeetings() {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await getLicensedSession();
 
     if (!session?.user) {
       return { error: 'Yetkisiz erişim', data: null };
@@ -71,7 +95,7 @@ export async function getMeetings() {
 
 export async function getUserMeetings() {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await getLicensedSession();
 
     if (!session?.user) {
       return { error: 'Yetkisiz erişim', data: null };
@@ -144,7 +168,7 @@ export async function getUserMeetings() {
 
 export async function getMeetingById(id: string) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await getLicensedSession();
 
     if (!session?.user) {
       return { error: 'Yetkisiz erişim', data: null };
@@ -222,7 +246,7 @@ export async function getMeetingById(id: string) {
 
 export async function createMeeting(data: unknown) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await getLicensedSession();
 
     const sessionUser = session?.user as any;
     const userRoles = sessionUser?.roles || [sessionUser?.role].filter(Boolean) as UserRole[];
@@ -259,10 +283,13 @@ export async function createMeeting(data: unknown) {
         location: validated.location || '',
         createdById: session.user.id,
         // Auto-add board members and admin users as attendees
+        // organizationId ELLE veriliyor: tenant extension yalnız üst seviye
+        // args'ı görür, iç içe ilişki yazmalarına kurum ekleyemez.
         attendees: {
           create: allAttendeeIds.map((userId) => ({
             userId: userId,
             checkInMethod: 'MANUAL',
+            organizationId: session.user.organizationId,
           })),
         },
       },
@@ -315,7 +342,7 @@ export async function createMeeting(data: unknown) {
 
 export async function updateMeeting(id: string, data: unknown) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await getLicensedSession();
 
     const sessionUser = session?.user as any;
     const userRoles = sessionUser?.roles || [sessionUser?.role].filter(Boolean) as UserRole[];
@@ -388,7 +415,7 @@ export async function updateMeeting(id: string, data: unknown) {
 
 export async function deleteMeeting(id: string) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await getLicensedSession();
 
     const sessionUser = session?.user as any;
     const userRoles = sessionUser?.roles || [sessionUser?.role].filter(Boolean) as UserRole[];
@@ -435,7 +462,7 @@ export async function deleteMeeting(id: string) {
 
 export async function generateQRCode(meetingId: string) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await getLicensedSession();
 
     const sessionUser = session?.user as any;
     const userRoles = sessionUser?.roles || [sessionUser?.role].filter(Boolean) as UserRole[];

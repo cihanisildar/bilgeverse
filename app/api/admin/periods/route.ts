@@ -97,7 +97,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if period name already exists
-    const existingPeriod = await prisma.period.findUnique({
+    const existingPeriod = await prisma.period.findFirst({
       where: { name }
     });
 

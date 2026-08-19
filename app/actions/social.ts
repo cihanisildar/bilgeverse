@@ -3,17 +3,41 @@
 import prisma from '@/lib/prisma';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/app/api/auth/[...nextauth]/auth.config';
+import { isPartLicensed, requirePartLicense } from '@/app/lib/permissions.server';
 import { UserRole, PostStatus, SocialPlatform, ContentIdeaStatus, SocialEventType } from '@prisma/client';
 import { SocialPost, ContentIngredient, ContentIdea, SocialEvent, UpcomingReminder, SocialReport } from '@/types/social';
 import { getUpcomingFromSpecialDays } from '@/app/lib/social';
 import logger from '@/lib/logger';
 import { revalidatePath } from 'next/cache';
 
+/**
+ * Kurumun Sosyal Medya paketi (part 6) + oturum.
+ *
+ * Paket yoksa null döner; çağıran taraftaki mevcut oturum/rol kontrolleri
+ * isteği zaten reddeder. Sayfa katmanı ayrıca requireAuth({ partId: 6 })
+ * ile kapılı — buradaki kapı, server action'ın doğrudan çağrılması hâlini kapatır.
+ */
+const LICENSED_PART = 6;
+
+async function getLicensedSession() {
+    const session = await getServerSession(authOptions);
+    if (!session?.user) return null;
+    if (!(await isPartLicensed(session, LICENSED_PART))) return null;
+    return session;
+}
+
+/** Oturuma bakmayan okuma uçları için yalnız paket kontrolü. */
+async function requireLicense() {
+    const gate = await requirePartLicense(LICENSED_PART);
+    return { ok: !gate.error, error: gate.error };
+}
+
+
 // --- Social Posts ---
 
 export async function getSocialPosts(filters?: { platform?: SocialPlatform; status?: PostStatus }) {
     try {
-        const session = await getServerSession(authOptions);
+        const session = await getLicensedSession();
         if (!session?.user) return { error: 'Unauthorized' };
 
         const posts = await prisma.socialPost.findMany({
@@ -45,7 +69,7 @@ export async function getSocialPosts(filters?: { platform?: SocialPlatform; stat
 
 export async function createSocialPost(data: Partial<SocialPost>) {
     try {
-        const session = await getServerSession(authOptions);
+        const session = await getLicensedSession();
         if (!session?.user) return { error: 'Unauthorized' };
 
         const post = await prisma.socialPost.create({
@@ -77,6 +101,7 @@ export async function createSocialPost(data: Partial<SocialPost>) {
         });
 
         revalidatePath('/dashboard/part6');
+        revalidatePath('/dashboard/part7/social');
         return { data: post as unknown as SocialPost, message: 'Gönderi başarıyla oluşturuldu' };
     } catch (error: any) {
         logger.error('Error creating social post:', error);
@@ -86,7 +111,7 @@ export async function createSocialPost(data: Partial<SocialPost>) {
 
 export async function updateSocialPost(id: string, data: Partial<SocialPost>) {
     try {
-        const session = await getServerSession(authOptions);
+        const session = await getLicensedSession();
         if (!session?.user) return { error: 'Unauthorized' };
 
         const existingPost = await prisma.socialPost.findUnique({ where: { id } });
@@ -129,6 +154,7 @@ export async function updateSocialPost(id: string, data: Partial<SocialPost>) {
         });
 
         revalidatePath('/dashboard/part6');
+        revalidatePath('/dashboard/part7/social');
         return { data: updatedPost as unknown as SocialPost, message: 'Gönderi başarıyla güncellendi' };
     } catch (error: any) {
         logger.error('Error updating social post:', error);
@@ -138,7 +164,7 @@ export async function updateSocialPost(id: string, data: Partial<SocialPost>) {
 
 export async function deleteSocialPost(id: string) {
     try {
-        const session = await getServerSession(authOptions);
+        const session = await getLicensedSession();
         if (!session?.user) return { error: 'Unauthorized' };
 
         const existingPost = await prisma.socialPost.findUnique({ where: { id } });
@@ -155,6 +181,7 @@ export async function deleteSocialPost(id: string) {
         await prisma.socialPost.delete({ where: { id } });
 
         revalidatePath('/dashboard/part6');
+        revalidatePath('/dashboard/part7/social');
         return { message: 'Gönderi başarıyla silindi' };
     } catch (error: any) {
         logger.error('Error deleting social post:', error);
@@ -166,7 +193,7 @@ export async function deleteSocialPost(id: string) {
 
 export async function getSocialIngredients() {
     try {
-        const session = await getServerSession(authOptions);
+        const session = await getLicensedSession();
         if (!session?.user) return { error: 'Unauthorized' };
 
         const ingredients = await prisma.contentIngredient.findMany({
@@ -194,7 +221,7 @@ export async function getSocialIngredients() {
 
 export async function createSocialIngredient(data: Partial<ContentIngredient>) {
     try {
-        const session = await getServerSession(authOptions);
+        const session = await getLicensedSession();
         if (!session?.user) return { error: 'Unauthorized' };
 
         const ingredient = await prisma.contentIngredient.create({
@@ -217,6 +244,7 @@ export async function createSocialIngredient(data: Partial<ContentIngredient>) {
         });
 
         revalidatePath('/dashboard/part6');
+        revalidatePath('/dashboard/part7/social');
         return { data: ingredient as unknown as ContentIngredient, message: 'Bileşen başarıyla oluşturuldu' };
     } catch (error: any) {
         logger.error('Error creating ingredient:', error);
@@ -226,7 +254,7 @@ export async function createSocialIngredient(data: Partial<ContentIngredient>) {
 
 export async function updateSocialIngredient(id: string, data: Partial<ContentIngredient>) {
     try {
-        const session = await getServerSession(authOptions);
+        const session = await getLicensedSession();
         if (!session?.user) return { error: 'Unauthorized' };
 
         const existingIngredient = await prisma.contentIngredient.findUnique({ where: { id } });
@@ -260,6 +288,7 @@ export async function updateSocialIngredient(id: string, data: Partial<ContentIn
         });
 
         revalidatePath('/dashboard/part6');
+        revalidatePath('/dashboard/part7/social');
         return { data: updatedIngredient as unknown as ContentIngredient, message: 'Bileşen başarıyla güncellendi' };
     } catch (error: any) {
         logger.error('Error updating ingredient:', error);
@@ -269,7 +298,7 @@ export async function updateSocialIngredient(id: string, data: Partial<ContentIn
 
 export async function deleteSocialIngredient(id: string) {
     try {
-        const session = await getServerSession(authOptions);
+        const session = await getLicensedSession();
         if (!session?.user) return { error: 'Unauthorized' };
 
         const existingIngredient = await prisma.contentIngredient.findUnique({ where: { id } });
@@ -286,6 +315,7 @@ export async function deleteSocialIngredient(id: string) {
         await prisma.contentIngredient.delete({ where: { id } });
 
         revalidatePath('/dashboard/part6');
+        revalidatePath('/dashboard/part7/social');
         return { message: 'Bileşen başarıyla silindi' };
     } catch (error: any) {
         logger.error('Error deleting ingredient:', error);
@@ -310,7 +340,7 @@ const creatorSelect = {
 
 export async function getContentIdeas() {
     try {
-        const session = await getServerSession(authOptions);
+        const session = await getLicensedSession();
         if (!session?.user) return { error: 'Unauthorized' };
 
         const ideas = await prisma.contentIdea.findMany({
@@ -327,7 +357,7 @@ export async function getContentIdeas() {
 
 export async function createContentIdea(data: Partial<ContentIdea>) {
     try {
-        const session = await getServerSession(authOptions);
+        const session = await getLicensedSession();
         if (!session?.user) return { error: 'Unauthorized' };
 
         const idea = await prisma.contentIdea.create({
@@ -344,6 +374,7 @@ export async function createContentIdea(data: Partial<ContentIdea>) {
         });
 
         revalidatePath('/dashboard/part6');
+        revalidatePath('/dashboard/part7/social');
         return { data: idea as unknown as ContentIdea, message: 'Fikir başarıyla eklendi' };
     } catch (error: any) {
         logger.error('Error creating content idea:', error);
@@ -353,7 +384,7 @@ export async function createContentIdea(data: Partial<ContentIdea>) {
 
 export async function updateContentIdea(id: string, data: Partial<ContentIdea>) {
     try {
-        const session = await getServerSession(authOptions);
+        const session = await getLicensedSession();
         if (!session?.user) return { error: 'Unauthorized' };
 
         const existing = await prisma.contentIdea.findUnique({ where: { id } });
@@ -374,6 +405,7 @@ export async function updateContentIdea(id: string, data: Partial<ContentIdea>) 
         });
 
         revalidatePath('/dashboard/part6');
+        revalidatePath('/dashboard/part7/social');
         return { data: idea as unknown as ContentIdea, message: 'Fikir güncellendi' };
     } catch (error: any) {
         logger.error('Error updating content idea:', error);
@@ -383,7 +415,7 @@ export async function updateContentIdea(id: string, data: Partial<ContentIdea>) 
 
 export async function deleteContentIdea(id: string) {
     try {
-        const session = await getServerSession(authOptions);
+        const session = await getLicensedSession();
         if (!session?.user) return { error: 'Unauthorized' };
 
         const existing = await prisma.contentIdea.findUnique({ where: { id } });
@@ -393,6 +425,7 @@ export async function deleteContentIdea(id: string) {
         await prisma.contentIdea.delete({ where: { id } });
 
         revalidatePath('/dashboard/part6');
+        revalidatePath('/dashboard/part7/social');
         return { message: 'Fikir silindi' };
     } catch (error: any) {
         logger.error('Error deleting content idea:', error);
@@ -402,7 +435,7 @@ export async function deleteContentIdea(id: string) {
 
 export async function convertIdeaToPost(id: string) {
     try {
-        const session = await getServerSession(authOptions);
+        const session = await getLicensedSession();
         if (!session?.user) return { error: 'Unauthorized' };
 
         const idea = await prisma.contentIdea.findUnique({ where: { id } });
@@ -428,6 +461,7 @@ export async function convertIdeaToPost(id: string) {
         });
 
         revalidatePath('/dashboard/part6');
+        revalidatePath('/dashboard/part7/social');
         return { data: post as unknown as SocialPost, message: 'Fikir taslak gönderiye dönüştürüldü' };
     } catch (error: any) {
         logger.error('Error converting idea to post:', error);
@@ -439,7 +473,7 @@ export async function convertIdeaToPost(id: string) {
 
 export async function getSocialEvents() {
     try {
-        const session = await getServerSession(authOptions);
+        const session = await getLicensedSession();
         if (!session?.user) return { error: 'Unauthorized' };
 
         const events = await prisma.socialEvent.findMany({
@@ -456,7 +490,7 @@ export async function getSocialEvents() {
 
 export async function createSocialEvent(data: Partial<SocialEvent>) {
     try {
-        const session = await getServerSession(authOptions);
+        const session = await getLicensedSession();
         if (!session?.user) return { error: 'Unauthorized' };
 
         const event = await prisma.socialEvent.create({
@@ -473,6 +507,7 @@ export async function createSocialEvent(data: Partial<SocialEvent>) {
         });
 
         revalidatePath('/dashboard/part6');
+        revalidatePath('/dashboard/part7/social');
         return { data: event as unknown as SocialEvent, message: 'Etkinlik eklendi' };
     } catch (error: any) {
         logger.error('Error creating social event:', error);
@@ -482,7 +517,7 @@ export async function createSocialEvent(data: Partial<SocialEvent>) {
 
 export async function updateSocialEvent(id: string, data: Partial<SocialEvent>) {
     try {
-        const session = await getServerSession(authOptions);
+        const session = await getLicensedSession();
         if (!session?.user) return { error: 'Unauthorized' };
 
         const existing = await prisma.socialEvent.findUnique({ where: { id } });
@@ -503,6 +538,7 @@ export async function updateSocialEvent(id: string, data: Partial<SocialEvent>) 
         });
 
         revalidatePath('/dashboard/part6');
+        revalidatePath('/dashboard/part7/social');
         return { data: event as unknown as SocialEvent, message: 'Etkinlik güncellendi' };
     } catch (error: any) {
         logger.error('Error updating social event:', error);
@@ -512,7 +548,7 @@ export async function updateSocialEvent(id: string, data: Partial<SocialEvent>) 
 
 export async function deleteSocialEvent(id: string) {
     try {
-        const session = await getServerSession(authOptions);
+        const session = await getLicensedSession();
         if (!session?.user) return { error: 'Unauthorized' };
 
         const existing = await prisma.socialEvent.findUnique({ where: { id } });
@@ -522,6 +558,7 @@ export async function deleteSocialEvent(id: string) {
         await prisma.socialEvent.delete({ where: { id } });
 
         revalidatePath('/dashboard/part6');
+        revalidatePath('/dashboard/part7/social');
         return { message: 'Etkinlik silindi' };
     } catch (error: any) {
         logger.error('Error deleting social event:', error);
@@ -533,7 +570,7 @@ export async function deleteSocialEvent(id: string) {
 
 export async function getUpcomingReminders(days: number = 30) {
     try {
-        const session = await getServerSession(authOptions);
+        const session = await getLicensedSession();
         if (!session?.user) return { error: 'Unauthorized' };
 
         const now = new Date();
@@ -595,7 +632,7 @@ export async function getUpcomingReminders(days: number = 30) {
 
 export async function getSocialReport(year: number, month: number) {
     try {
-        const session = await getServerSession(authOptions);
+        const session = await getLicensedSession();
         if (!session?.user) return { error: 'Unauthorized' };
 
         const start = new Date(year, month - 1, 1);

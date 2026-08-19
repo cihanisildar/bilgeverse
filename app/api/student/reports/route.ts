@@ -249,8 +249,11 @@ function cleanTransactionReason(reason: string | null, points: number): string {
   const lowerReason = reason.toLowerCase();
 
   // Handle specific activity types
-  if (lowerReason.includes('karakter') && lowerReason.includes('eğitimi')) {
-    return 'Sohbet (Karakter Eğitimi)';
+  // Eski kayıtlarda sebep metni "Karakter Eğitimi" olarak yazılmış ve bu
+  // metinler veritabanında duruyor; iki yazım da aynı kovaya düşürülür.
+  if ((lowerReason.includes('karakter') && lowerReason.includes('eğitimi')) ||
+    lowerReason.includes('değerler halkası')) {
+    return 'Sohbet (Değerler Halkası)';
   }
 
   if (lowerReason.includes('atölye') && lowerReason.includes('faaliyeti')) {
@@ -281,7 +284,7 @@ function cleanTransactionReason(reason: string | null, points: number): string {
 // Helper function to categorize experience by activity type
 function categorizeExperienceByActivity(transactions: any[]) {
   const categories: { [key: string]: { total: number; count: number; transactions: any[] } } = {
-    'Sohbet (Karakter Eğitimi)': { total: 0, count: 0, transactions: [] },
+    'Sohbet (Değerler Halkası)': { total: 0, count: 0, transactions: [] },
     'Atölye Faaliyetleri': { total: 0, count: 0, transactions: [] },
     'Kitap Okuma': { total: 0, count: 0, transactions: [] },
     'Diğer Aktiviteler': { total: 0, count: 0, transactions: [] }

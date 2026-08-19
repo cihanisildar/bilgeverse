@@ -2,6 +2,7 @@
 
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/app/api/auth/[...nextauth]/auth.config';
+import { isPartLicensed, requirePartLicense } from '@/app/lib/permissions.server';
 import prisma from '@/lib/prisma';
 import {
     AthleteMetricType,
@@ -15,8 +16,33 @@ import bcrypt from 'bcryptjs';
 import { hasRole } from '@/app/lib/auth-utils';
 import { AGE_GROUPS } from '@/app/lib/sports';
 
+/**
+ * Kurumun Bilge Spor Kulübü paketi (part 9) + oturum.
+ *
+ * Paket yoksa null döner; çağıran taraftaki mevcut oturum/rol kontrolleri
+ * isteği zaten reddeder. Sayfa katmanı ayrıca requireAuth({ partId: 9 })
+ * ile kapılı — buradaki kapı, server action'ın doğrudan çağrılması hâlini kapatır.
+ */
+const LICENSED_PART = 9;
+
+async function getLicensedSession() {
+    const session = await getServerSession(authOptions);
+    if (!session?.user) return null;
+    if (!(await isPartLicensed(session, LICENSED_PART))) return null;
+    return session;
+}
+
+/** Oturuma bakmayan okuma uçları için yalnız paket kontrolü. */
+async function requireLicense() {
+    const gate = await requirePartLicense(LICENSED_PART);
+    return { ok: !gate.error, error: gate.error };
+}
+
+
 // Sport Branch Actions
 export async function getSportBranches() {
+    const lic = await requireLicense();
+    if (!lic.ok) return { error: lic.error, data: null };
     try {
         const branches = await prisma.sportBranch.findMany({
             where: { isActive: true },
@@ -36,7 +62,7 @@ export async function getSportBranches() {
 
 export async function upsertSportBranch(data: { id?: string; name: string; description?: string }) {
     try {
-        const session = await getServerSession(authOptions);
+        const session = await getLicensedSession();
         if (!hasRole(session, [UserRole.ADMIN])) {
             return { error: 'Yetkisiz erişim', data: null };
         }
@@ -51,6 +77,7 @@ export async function upsertSportBranch(data: { id?: string; name: string; descr
             });
 
         revalidatePath('/dashboard/part9');
+        revalidatePath('/dashboard/part7/sports');
         return { error: null, data: branch };
     } catch (error) {
         console.error('Error upserting sport branch:', error);
@@ -60,7 +87,7 @@ export async function upsertSportBranch(data: { id?: string; name: string; descr
 
 export async function deleteSportBranch(id: string) {
     try {
-        const session = await getServerSession(authOptions);
+        const session = await getLicensedSession();
         if (!hasRole(session, [UserRole.ADMIN])) {
             return { error: 'Yetkisiz erişim', data: null };
         }
@@ -70,6 +97,7 @@ export async function deleteSportBranch(id: string) {
         });
 
         revalidatePath('/dashboard/part9');
+        revalidatePath('/dashboard/part7/sports');
         return { error: null, data: { success: true } };
     } catch (error) {
         console.error('Error deleting sport branch:', error);
@@ -79,6 +107,8 @@ export async function deleteSportBranch(id: string) {
 
 // Athlete Actions
 export async function getAthletes(branchId?: string) {
+    const lic = await requireLicense();
+    if (!lic.ok) return { error: lic.error, data: null };
     try {
         const athletes = await prisma.athleteProfile.findMany({
             where: branchId ? { branches: { some: { id: branchId } } } : undefined,
@@ -118,7 +148,7 @@ export async function upsertAthleteProfile(data: {
     footballSchool?: boolean;
 }) {
     try {
-        const session = await getServerSession(authOptions);
+        const session = await getLicensedSession();
         if (!hasRole(session, [UserRole.ADMIN, UserRole.TUTOR, UserRole.ASISTAN])) {
             return { error: 'Yetkisiz erişim', data: null };
         }
@@ -173,6 +203,7 @@ export async function upsertAthleteProfile(data: {
         });
 
         revalidatePath('/dashboard/part9');
+        revalidatePath('/dashboard/part7/sports');
         return { error: null, data: profile };
     } catch (error) {
         console.error('Error upserting athlete profile:', error);
@@ -182,6 +213,8 @@ export async function upsertAthleteProfile(data: {
 
 // Training Actions
 export async function getTrainings(params: { branchId?: string; startDate?: Date; endDate?: Date }) {
+    const lic = await requireLicense();
+    if (!lic.ok) return { error: lic.error, data: null };
     try {
         const trainings = await prisma.athleteTraining.findMany({
             where: {
@@ -221,7 +254,7 @@ export async function createTraining(data: {
     coachId?: string | null;
 }) {
     try {
-        const session = await getServerSession(authOptions);
+        const session = await getLicensedSession();
         if (!hasRole(session, [UserRole.ADMIN, UserRole.TUTOR, UserRole.ASISTAN])) {
             return { error: 'Yetkisiz erişim', data: null };
         }
@@ -231,6 +264,7 @@ export async function createTraining(data: {
         });
 
         revalidatePath('/dashboard/part9');
+        revalidatePath('/dashboard/part7/sports');
         return { error: null, data: training };
     } catch (error) {
         console.error('Error creating training:', error);
@@ -240,7 +274,7 @@ export async function createTraining(data: {
 
 export async function deleteTraining(id: string) {
     try {
-        const session = await getServerSession(authOptions);
+        const session = await getLicensedSession();
         if (!hasRole(session, [UserRole.ADMIN, UserRole.TUTOR, UserRole.ASISTAN])) {
             return { error: 'Yetkisiz erişim', data: null };
         }
@@ -249,6 +283,7 @@ export async function deleteTraining(id: string) {
         await prisma.athleteTraining.delete({ where: { id } });
 
         revalidatePath('/dashboard/part9');
+        revalidatePath('/dashboard/part7/sports');
         return { error: null, data: { id } };
     } catch (error) {
         console.error('Error deleting training:', error);
@@ -258,6 +293,8 @@ export async function deleteTraining(id: string) {
 
 // Attendance and Performance Actions
 export async function getTrainingDetails(trainingId: string) {
+    const lic = await requireLicense();
+    if (!lic.ok) return { error: lic.error, data: null };
     try {
         const training = await prisma.athleteTraining.findUnique({
             where: { id: trainingId },
@@ -286,7 +323,7 @@ export async function getTrainingDetails(trainingId: string) {
 
 export async function recordAttendance(trainingId: string, attendances: { athleteId: string; status: AttendanceStatus }[]) {
     try {
-        const session = await getServerSession(authOptions);
+        const session = await getLicensedSession();
         if (!hasRole(session, [UserRole.ADMIN, UserRole.TUTOR, UserRole.ASISTAN])) {
             return { error: 'Yetkisiz erişim', data: null };
         }
@@ -302,6 +339,7 @@ export async function recordAttendance(trainingId: string, attendances: { athlet
         await prisma.$transaction(operations);
 
         revalidatePath('/dashboard/part9');
+        revalidatePath('/dashboard/part7/sports');
         return { error: null, data: { success: true } };
     } catch (error) {
         console.error('Error recording attendance:', error);
@@ -316,7 +354,7 @@ export async function recordPerformance(trainingId: string, performances: {
     notes?: string;
 }[]) {
     try {
-        const session = await getServerSession(authOptions);
+        const session = await getLicensedSession();
         if (!hasRole(session, [UserRole.ADMIN, UserRole.TUTOR, UserRole.ASISTAN])) {
             return { error: 'Yetkisiz erişim', data: null };
         }
@@ -341,6 +379,7 @@ export async function recordPerformance(trainingId: string, performances: {
         });
 
         revalidatePath('/dashboard/part9');
+        revalidatePath('/dashboard/part7/sports');
         return { error: null, data: { success: true } };
     } catch (error) {
         console.error('Error recording performance:', error);
@@ -349,6 +388,8 @@ export async function recordPerformance(trainingId: string, performances: {
 }
 
 export async function getAthleteStats(athleteId: string) {
+    const lic = await requireLicense();
+    if (!lic.ok) return { error: lic.error, data: null };
     try {
         const performances = await prisma.athletePerformance.findMany({
             where: { athleteId },
@@ -378,6 +419,8 @@ export async function getAthleteStats(athleteId: string) {
 }
 
 export async function searchStudents(query: string) {
+    const lic = await requireLicense();
+    if (!lic.ok) return { error: lic.error, data: null };
     try {
         const students = await prisma.user.findMany({
             where: {
@@ -426,12 +469,14 @@ export async function registerNewAthlete(data: {
     footballSchool?: boolean;
 }) {
     try {
-        const session = await getServerSession(authOptions);
+        const session = await getLicensedSession();
         if (!hasRole(session, [UserRole.ADMIN, UserRole.TUTOR])) {
             return { error: 'Yeni kullanıcı kaydı için yetkiniz yok', data: null };
         }
 
-        const existingUser = await prisma.user.findUnique({
+        // Kullanıcı adı artık yalnızca kurum içinde benzersiz; findFirst kullanılır
+        // (tenant extension sorguya organizationId ekler).
+        const existingUser = await prisma.user.findFirst({
             where: { username: data.username.toLowerCase() }
         });
 
@@ -480,6 +525,7 @@ export async function registerNewAthlete(data: {
         });
 
         revalidatePath('/dashboard/part9');
+        revalidatePath('/dashboard/part7/sports');
         return { error: null, data: result };
     } catch (error) {
         console.error('Error registering new athlete:', error);
@@ -488,7 +534,7 @@ export async function registerNewAthlete(data: {
 }
 export async function deleteAthleteProfile(userId: string) {
     try {
-        const session = await getServerSession(authOptions);
+        const session = await getLicensedSession();
         if (!hasRole(session, [UserRole.ADMIN, UserRole.TUTOR])) {
             return { error: 'Sporcu profilini silmek için yetkiniz yok', data: null };
         }
@@ -517,6 +563,7 @@ export async function deleteAthleteProfile(userId: string) {
         });
 
         revalidatePath('/dashboard/part9');
+        revalidatePath('/dashboard/part7/sports');
         return { error: null, data: { success: true } };
     } catch (error) {
         console.error('Error deleting athlete profile:', error);
@@ -526,6 +573,8 @@ export async function deleteAthleteProfile(userId: string) {
 
 /** Coaches / staff who can be assigned as responsible for a training or match. */
 export async function getCoaches() {
+    const lic = await requireLicense();
+    if (!lic.ok) return { error: lic.error, data: null };
     try {
         const coaches = await prisma.user.findMany({
             where: {
@@ -554,7 +603,7 @@ export async function getCoaches() {
  */
 export async function promoteAthleteAgeGroups() {
     try {
-        const session = await getServerSession(authOptions);
+        const session = await getLicensedSession();
         if (!hasRole(session, [UserRole.ADMIN, UserRole.TUTOR])) {
             return { error: 'Terfi işlemi için yetkiniz yok', data: null };
         }
@@ -572,6 +621,7 @@ export async function promoteAthleteAgeGroups() {
         }
 
         revalidatePath('/dashboard/part9');
+        revalidatePath('/dashboard/part7/sports');
         return { error: null, data: { promoted } };
     } catch (error) {
         console.error('Error promoting athlete age groups:', error);
@@ -582,7 +632,7 @@ export async function promoteAthleteAgeGroups() {
 /** Set a single athlete's age group (manual, per-athlete change). */
 export async function setAthleteAgeGroup(userId: string, ageGroup: string | null) {
     try {
-        const session = await getServerSession(authOptions);
+        const session = await getLicensedSession();
         if (!hasRole(session, [UserRole.ADMIN, UserRole.TUTOR, UserRole.ASISTAN])) {
             return { error: 'Yetkisiz erişim', data: null };
         }
@@ -591,6 +641,7 @@ export async function setAthleteAgeGroup(userId: string, ageGroup: string | null
             data: { ageGroup },
         });
         revalidatePath('/dashboard/part9');
+        revalidatePath('/dashboard/part7/sports');
         return { error: null, data: { success: true } };
     } catch (error) {
         console.error('Error setting athlete age group:', error);
@@ -604,7 +655,7 @@ export async function setAthleteAgeGroup(userId: string, ageGroup: string | null
  */
 export async function getMyAthleteOverview() {
     try {
-        const session = await getServerSession(authOptions);
+        const session = await getLicensedSession();
         if (!session?.user?.id) {
             return { error: 'Oturum bulunamadı', data: null };
         }

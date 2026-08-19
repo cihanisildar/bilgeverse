@@ -113,7 +113,11 @@ export default function DashboardPage() {
   const allowedPartIds = getAllowedParts(roles);
   // Per-user grants (e.g. admin allows specific users into Sosyal Medya)
   const extraPartIds = user.allowedParts ?? [];
-  const visibleParts = PARTS.filter(part => allowedPartIds.includes(part.id) || extraPartIds.includes(part.id) || (part.id === 1 && isBoardMember))
+  // Kurumun lisansladığı modüller. Bu filtre en dışta: paketi olmayan bir
+  // modül hiç kimseye görünmez. (Sunucu tarafındaki asıl kapı isAuthorized.)
+  const licensedPartIds = user.orgParts ?? [];
+  const visibleParts = PARTS.filter(part => licensedPartIds.includes(part.id))
+    .filter(part => allowedPartIds.includes(part.id) || extraPartIds.includes(part.id) || (part.id === 1 && isBoardMember))
     .filter(part => !(isStudent && !isAdmin && (part.id === 4 || part.id === 11)))
     .filter(part => part.id !== 11 || isInAcademy || isAdmin || isBoardMember);
 

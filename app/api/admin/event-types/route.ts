@@ -77,7 +77,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if event type already exists
-    const existingEventType = await prisma.eventType.findUnique({
+    const existingEventType = await prisma.eventType.findFirst({
       where: { name: data.name.trim() }
     });
 
