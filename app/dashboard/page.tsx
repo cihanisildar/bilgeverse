@@ -17,7 +17,15 @@ interface SubPage {
   path: string;
 }
 
-function getSubPages(partId: number, roles: string[]): SubPage[] {
+/**
+ * Bölüm kartının altındaki kısayollar.
+ *
+ * `licensedParts` gerekiyor çünkü bazı kısayollar part7 adresinde dursa da
+ * başka bir modülün içeriğine açılıyor (ör. Atölyeler → part4). Kurumun o
+ * paketi yoksa kısayol hiç basılmamalı; yoksa link görünür, tıklayınca
+ * sunucudaki requireAuth kapısına çarpıp "erişim yok" ekranı verir.
+ */
+function getSubPages(partId: number, roles: string[], licensedParts: number[]): SubPage[] {
   const isAdmin = roles.includes('ADMIN');
   const isTutor = roles.includes('TUTOR') || roles.includes('ASISTAN');
   const isStudent = roles.includes('STUDENT');
@@ -31,7 +39,7 @@ function getSubPages(partId: number, roles: string[]): SubPage[] {
       ];
     case 2:
       return [
-        { label: 'Gruplar', path: '/dashboard/part2' },
+        { label: 'Gruplar', path: '/dashboard/part2/character-groups' },
         { label: 'Sosyometrik Analiz', path: '/dashboard/part2/sociometric' },
         { label: 'Buluşma İçeriği', path: '/dashboard/part2/syllabus' },
       ];
@@ -49,14 +57,20 @@ function getSubPages(partId: number, roles: string[]): SubPage[] {
       if (isTutor) return [
         { label: 'Rehber Paneli', path: '/dashboard/part7/tutor' },
         { label: 'Grubum', path: '/dashboard/part7/tutor/students' },
-        { label: 'Yoklama Al', path: '/dashboard/part7/tutor/attendance' },
+        // Yoklama, Değerler Halkası (part2) içeriği.
+        ...(licensedParts.includes(2)
+          ? [{ label: 'Yoklama Al', path: '/dashboard/part7/tutor/attendance' }]
+          : []),
         { label: 'Bilge Para Ver', path: '/dashboard/part7/tutor/points' },
       ];
       if (isStudent) return [
         { label: 'Öğrenci Paneli', path: '/dashboard/part7/student' },
         { label: 'Liderlik Tablosu', path: '/dashboard/part7/student/leaderboard' },
         { label: 'Mağaza', path: '/dashboard/part7/student/store' },
-        { label: 'Atölyeler', path: '/dashboard/part7/student/workshops' },
+        // Atölyeler part4 içeriği; kurumda Beceri Atölyeleri paketi yoksa gösterilmez.
+        ...(licensedParts.includes(4)
+          ? [{ label: 'Atölyeler', path: '/dashboard/part7/student/workshops' }]
+          : []),
       ];
       return [];
     case 11:
@@ -179,7 +193,7 @@ export default function DashboardPage() {
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {visibleParts.map((part) => {
-            const subPages = getSubPages(part.id, roles as string[]);
+            const subPages = getSubPages(part.id, roles as string[], licensedPartIds);
             const destination = getPartDestination(part.id, part.path);
 
             return (

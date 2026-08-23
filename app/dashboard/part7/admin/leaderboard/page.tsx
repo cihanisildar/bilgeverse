@@ -179,7 +179,7 @@ export default function AdminLeaderboardPage() {
 
     // Create CSV content with Turkish headers - using semicolon as delimiter for better Excel compatibility
     const csvData = [
-      ['Sıra', 'Kullanıcı Adı', 'Ad Soyad', 'Deneyim Puanı', 'Öğretmen'],
+      ['Sıra', 'Kullanıcı Adı', 'Ad Soyad', 'Deneyim Puanı', 'Rehber'],
       ...filteredLeaderboard.map(entry => [
         entry.rank.toString(),
         entry.username,
@@ -311,7 +311,7 @@ export default function AdminLeaderboardPage() {
                       Öğrenci
                     </th>
                     <th scope="col" className="hidden md:table-cell px-3 py-2 sm:px-6 sm:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Öğretmen
+                      Rehber
                     </th>
                     <th scope="col" className="px-3 py-2 sm:px-6 sm:py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Deneyim
@@ -403,13 +403,13 @@ export default function AdminLeaderboardPage() {
               </div>
 
               <div className="w-full">
-                <label className="text-sm font-medium mb-1 block text-gray-700">Öğretmen Filtresi</label>
+                <label className="text-sm font-medium mb-1 block text-gray-700">Rehber Filtresi</label>
                 <Select defaultValue="all" onValueChange={setSelectedTutor}>
                   <SelectTrigger>
-                    <SelectValue placeholder="Tüm Öğretmenler" />
+                    <SelectValue placeholder="Tüm Rehberler" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">Tüm Öğretmenler</SelectItem>
+                    <SelectItem value="all">Tüm Rehberler</SelectItem>
                     {tutors.map(tutor => (
                       <SelectItem key={tutor.id} value={tutor.id}>
                         {getDisplayName(tutor)}
@@ -840,9 +840,9 @@ export default function AdminLeaderboardPage() {
               <CardHeader>
                 <CardTitle className="text-lg font-medium flex items-center gap-2">
                   <User className="h-5 w-5 text-blue-500" />
-                  Öğretmen İstatistikleri
+                  Rehber İstatistikleri
                 </CardTitle>
-                <CardDescription>Öğretmenlere göre öğrenci dağılımı ve ortalama deneyim</CardDescription>
+                <CardDescription>Rehberlere göre öğrenci dağılımı ve ortalama deneyim</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
@@ -890,7 +890,7 @@ export default function AdminLeaderboardPage() {
                         Öğrenci
                       </th>
                       <th scope="col" className="hidden md:table-cell px-3 py-2 sm:px-4 sm:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Öğretmen
+                        Rehber
                       </th>
                       <th scope="col" className="px-3 py-2 sm:px-4 sm:py-3 text-xs font-medium text-gray-500 uppercase tracking-wider w-20 sm:w-24 text-right">
                         <button
@@ -953,7 +953,7 @@ export default function AdminLeaderboardPage() {
                                   className="mt-0.5 sm:mt-1"
                                 />
                                 <span className="text-xs text-gray-500 md:hidden truncate">
-                                  {entry.tutor && `Öğretmen: ${entry.tutor.firstName || entry.tutor.username}`}
+                                  {entry.tutor && `Rehber: ${entry.tutor.firstName || entry.tutor.username}`}
                                 </span>
                               </div>
                             </div>

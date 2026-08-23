@@ -6,7 +6,10 @@ import { getSyllabi } from '@/app/actions/syllabus';
 import SyllabusList from '@/app/dashboard/part2/syllabus/SyllabusList';
 
 export default async function TutorSyllabusPage() {
+  // Müfredat (Buluşma İçeriği) Değerler Halkası'na (part2) ait; sayfa
+  // Bilgeverse adresinde dursa da paket kapısı part2 ile kurulur.
   const session = await requireAuth({
+    partId: 2,
     roles: ['ADMIN', 'TUTOR', 'ASISTAN'],
     redirectTo: '/dashboard/part7/student',
   });
@@ -41,7 +44,7 @@ export default async function TutorSyllabusPage() {
             </div>
             <p className="text-gray-600 ml-14">
               {isAdmin
-                ? 'Global müfredat oluşturun ve tüm öğretmenlerle paylaşın'
+                ? 'Global müfredat oluşturun ve tüm rehberlerle paylaşın'
                 : 'Buluşma içeriklerini görüntüleyin ve sınıfınız için ilerleme kaydedin'}
             </p>
           </div>

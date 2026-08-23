@@ -17,7 +17,7 @@ import { requireApiPartLicense } from '@/app/lib/permissions.server';
  * are then colour-coded: >=60% green, 40-60% yellow, <40% red.
  *
  * EVERYTHING here is scoped to the ACTIVE PERIOD:
- *   - rehberler : only those marked ACTIVE in Değerler Halkası Grupları (User.tutorStatus)
+ *   - rehberler : only those marked ACTIVE on the Gruplar screen (User.tutorStatus)
  *   - students  : only those enrolled in the active period (PeriodStudent)
  *   - sessions  : only those held inside the active period's date range
  * Without this scoping the screen mixed old periods' sessions with the new
@@ -28,8 +28,8 @@ import { requireApiPartLicense } from '@/app/lib/permissions.server';
  * `sessionDate` against the period's start/end dates.
  */
 export async function GET() {
-    // Kurum paketi kapısı — İnsan Kaynağı (part 3)
-    const licenseGate = await requireApiPartLicense(3);
+    // Kurum paketi kapısı — Değerler Halkası (part 2)
+    const licenseGate = await requireApiPartLicense(2);
     if (licenseGate.errorResponse) return licenseGate.errorResponse;
 
     try {
@@ -80,7 +80,7 @@ export async function GET() {
                 deletedAt: null,
                 isActive: true,
                 // tutorStatus is null for rehberler created before the HR module;
-                // those count as ACTIVE (same rule as the Değerler Halkası Grupları screen).
+                // those count as ACTIVE (same rule as the Gruplar screen).
                 OR: [{ tutorStatus: 'ACTIVE' }, { tutorStatus: null }],
             },
             select: {

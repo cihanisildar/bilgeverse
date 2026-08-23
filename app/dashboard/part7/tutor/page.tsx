@@ -179,11 +179,19 @@ function RecentTransactions() {
   );
 }
 
+/**
+ * Rehber panelindeki kısayollar.
+ *
+ * `requiresPart` verilen kartlar Bilgeverse adresinde dursa da başka bir
+ * modülün içeriğine açılıyor; kurumda o paket yoksa kart basılmaz. Sayfaların
+ * kendi kapıları da (segment layout / requireAuth) aynı part'ı arıyor.
+ */
 const quickActions = [
   {
     label: "Yoklamalar",
     description: "Yoklama al ve katılımı izle",
     href: "/dashboard/part7/tutor/attendance",
+    requiresPart: 2,
     icon: ClipboardCheck,
     gradient: "from-blue-500 to-cyan-500",
     bg: "from-blue-50 to-cyan-50",
@@ -223,6 +231,7 @@ const quickActions = [
     label: "Etkinlik Yönetimi",
     description: "Etkinlikleri görüntüle ve oluştur",
     href: "/dashboard/part7/tutor/events",
+    requiresPart: 2,
     icon: Calendar,
     gradient: "from-orange-500 to-amber-500",
     bg: "from-orange-50 to-amber-50",
@@ -236,6 +245,7 @@ const quickActions = [
     label: "Müfredat",
     description: "Buluşma içeriklerini yönet",
     href: "/dashboard/part7/tutor/syllabus",
+    requiresPart: 2,
     icon: BookOpen,
     gradient: "from-pink-500 to-rose-500",
     bg: "from-pink-50 to-rose-50",
@@ -263,6 +273,12 @@ const quickActions = [
 export default function TutorDashboard() {
   const { user } = useAuth();
 
+  // Kurumun paketi olmayan modüle açılan kısayol hiç gösterilmez.
+  const orgParts = user?.orgParts ?? [];
+  const visibleActions = quickActions.filter(
+    (a) => a.requiresPart === undefined || orgParts.includes(a.requiresPart)
+  );
+
   const greeting = () => {
     const hour = new Date().getHours();
     if (hour < 12) return "Günaydın";
@@ -285,7 +301,7 @@ export default function TutorDashboard() {
 
         {/* Quick Action Cards */}
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mb-10">
-          {quickActions.map((action) => {
+          {visibleActions.map((action) => {
             const Icon = action.icon;
             return (
               <Link

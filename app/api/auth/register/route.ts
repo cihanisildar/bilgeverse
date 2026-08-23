@@ -144,8 +144,8 @@ export async function POST(request: NextRequest) {
               : `${tutor.username} Sınıfı`;
 
             const classroomDescription = tutor.firstName && tutor.lastName
-              ? `${tutor.firstName} ${tutor.lastName} öğretmeninin sınıfı`
-              : `${tutor.username} öğretmeninin sınıfı`;
+              ? `${tutor.firstName} ${tutor.lastName} rehberinin sınıfı`
+              : `${tutor.username} rehberinin sınıfı`;
 
             const newClassroom = await tx.classroom.create({
               data: {
@@ -191,8 +191,8 @@ export async function POST(request: NextRequest) {
           : `${username} Sınıfı`;
           
         const classroomDescription = firstName && lastName
-          ? `${firstName} ${lastName} ${role === UserRole.TUTOR ? 'öğretmeninin' : 'asistanının'} sınıfı`
-          : `${username} ${role === UserRole.TUTOR ? 'öğretmeninin' : 'asistanının'} sınıfı`;
+          ? `${firstName} ${lastName} ${role === UserRole.TUTOR ? 'rehberinin' : 'liderinin'} sınıfı`
+          : `${username} ${role === UserRole.TUTOR ? 'rehberinin' : 'liderinin'} sınıfı`;
 
         await tx.classroom.create({
           data: {

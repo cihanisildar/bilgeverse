@@ -691,7 +691,7 @@ export default function AdminUsersPage() {
                 return r.some(v => v?.toLowerCase() === 'tutor' || v?.toLowerCase() === 'asistan');
               })() && (
                   <div className="bg-red-50 border-l-4 border-red-400 p-4 rounded-r-lg">
-                    <h4 className="font-semibold text-red-800 mb-2">🎓 Öğretmen/Asistan Silme - Özel Durumlar:</h4>
+                    <h4 className="font-semibold text-red-800 mb-2">🎓 Rehber/Lider Silme - Özel Durumlar:</h4>
                     <ul className="list-disc pl-5 space-y-2 text-sm text-red-700">
                       <li><strong>Öğrenciler yetim kalacak:</strong> Bu kişinin tüm öğrencileri danışmansız kalacak ve manuel olarak yeni bir danışmana atanmaları gerekecek</li>
                       <li><strong>Sınıf tamamen silinecek:</strong> Bu kişinin sınıfı sistemden kalıcı olarak kaldırılacak</li>

@@ -1,5 +1,5 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { ArrowLeft, FileText, UserCheck, BarChart3, ArrowRight, GraduationCap, HandCoins, UserSearch, BookOpen, ClipboardCheck } from 'lucide-react';
+import { ArrowLeft, FileText, UserCheck, ArrowRight, GraduationCap, HandCoins, UserSearch, BookOpen, ClipboardCheck } from 'lucide-react';
 import { PARTS } from '@/app/lib/parts';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
@@ -45,9 +45,9 @@ export default async function Part3Page() {
                     <UserCheck className="h-8 w-8" />
                   </div>
                   <div>
-                    <CardTitle className="text-xl">Öğretmen Terfileri</CardTitle>
+                    <CardTitle className="text-xl">Terfiler</CardTitle>
                     <CardDescription className="mt-1">
-                      Öğrenci ve asistanları öğretmen olarak terfi ettirin
+                      Rehber, Lider ve Yönetim Kurulu Üyeliği terfilerini yönetin
                     </CardDescription>
                   </div>
                 </div>
@@ -61,60 +61,9 @@ export default async function Part3Page() {
             </Card>
           </Link>
 
-          {/* NOT: "Değerler Halkası Grupları" kartı buradan kaldırıldı — sayfa
-              part2'ye (Değerler Halkası) taşındı ve oradan erişiliyor. */}
-
-          {/* Toplu Yoklama / Rehber Katılımı Card */}
-          <Link href="/dashboard/part3/tutor-participation" className="block">
-            <Card className="border-0 shadow-lg rounded-xl overflow-hidden transition-all duration-200 hover:shadow-xl hover:-translate-y-1 cursor-pointer bg-gradient-to-br from-emerald-50 to-green-50">
-              <div className="h-2 bg-gradient-to-r from-emerald-500 to-green-500"></div>
-              <CardHeader>
-                <div className="flex items-center space-x-4">
-                  <div className="w-16 h-16 flex items-center justify-center rounded-full bg-emerald-100 text-emerald-600">
-                    <ClipboardCheck className="h-8 w-8" />
-                  </div>
-                  <div>
-                    <CardTitle className="text-xl">Toplu Yoklama Özeti</CardTitle>
-                    <CardDescription className="mt-1">
-                      Rehberlerin grup haftalık katılım performansı (renk kodlu)
-                    </CardDescription>
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="flex items-center text-sm font-medium text-gray-600">
-                  Yoklama Özetine Git
-                  <ArrowRight className="ml-2 h-4 w-4" />
-                </div>
-              </CardContent>
-            </Card>
-          </Link>
-
-          {/* Reports Dashboard Card */}
-          <Link href="/dashboard/part3/reports" className="block">
-            <Card className="border-0 shadow-lg rounded-xl overflow-hidden transition-all duration-200 hover:shadow-xl hover:-translate-y-1 cursor-pointer bg-gradient-to-br from-cyan-50 to-teal-50">
-              <div className="h-2 bg-gradient-to-r from-cyan-500 to-teal-500"></div>
-              <CardHeader>
-                <div className="flex items-center space-x-4">
-                  <div className="w-16 h-16 flex items-center justify-center rounded-full bg-cyan-100 text-cyan-600">
-                    <BarChart3 className="h-8 w-8" />
-                  </div>
-                  <div>
-                    <CardTitle className="text-xl">Raporlar</CardTitle>
-                    <CardDescription className="mt-1">
-                      Öğretmen ve sınıf performans raporları
-                    </CardDescription>
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="flex items-center text-sm font-medium text-gray-600">
-                  Raporlara Git
-                  <ArrowRight className="ml-2 h-4 w-4" />
-                </div>
-              </CardContent>
-            </Card>
-          </Link>
+          {/* NOT: "Gruplar", "Toplu Yoklama Özeti" ve
+              "Raporlar" kartları buradan kaldırıldı — bu sayfalar part2ye
+              (Değerler Halkası) taşındı ve oradan erişiliyor. */}
 
           {/* Graduated Students Card */}
           <Link href="/dashboard/part3/graduates" className="block">

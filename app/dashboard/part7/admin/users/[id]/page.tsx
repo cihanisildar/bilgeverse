@@ -129,13 +129,13 @@ export default function EditUserPage() {
         const response = await fetch("/api/admin/tutors");
 
         if (!response.ok) {
-          throw new Error("Öğretmenler alınamadı");
+          throw new Error("Rehberler alınamadı");
         }
 
         const data = await response.json();
         setTutors(data.tutors);
       } catch (err) {
-        console.error("Öğretmenleri alırken hata:", err);
+        console.error("Rehberleri alırken hata:", err);
       }
     };
 
@@ -211,7 +211,7 @@ export default function EditUserPage() {
     }
 
     if (formData.roles.includes(UserRole.STUDENT) && !formData.tutorId) {
-      errors.tutorId = "Öğrenci için öğretmen atanması gereklidir";
+      errors.tutorId = "Öğrenci için rehber atanması gereklidir";
       isValid = false;
     }
 
@@ -446,7 +446,7 @@ export default function EditUserPage() {
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 bg-gray-50 p-4 rounded-xl border border-gray-100">
                 {[
                   { id: UserRole.ADMIN, label: "Yönetici" },
-                  { id: UserRole.TUTOR, label: "Öğretmen" },
+                  { id: UserRole.TUTOR, label: "Rehber" },
                   { id: UserRole.ASISTAN, label: "Lider" },
                   { id: UserRole.STUDENT, label: "Öğrenci" },
                   { id: (UserRole as any).ATHLETE, label: "Sporcu" },
@@ -482,7 +482,7 @@ export default function EditUserPage() {
                   htmlFor="tutorId"
                   className="block text-sm font-medium text-gray-700"
                 >
-                  Öğretmen
+                  Rehber
                 </label>
                 <select
                   id="tutorId"
@@ -494,7 +494,7 @@ export default function EditUserPage() {
                     : "border-gray-300"
                     } rounded-lg shadow-sm py-2 px-3 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm transition-all appearance-none bg-white`}
                 >
-                  <option value="">Öğretmen Seçin</option>
+                  <option value="">Rehber Seçin</option>
                   {tutors.map((tutor) => (
                     <option key={tutor.id} value={tutor.id}>
                       {tutor.firstName && tutor.lastName
@@ -607,7 +607,7 @@ export default function EditUserPage() {
               {((user.roles && user.roles.includes(UserRole.STUDENT)) || user.role === UserRole.STUDENT) && user.tutorId && (
                 <div className="bg-gray-50 rounded-lg p-4 sm:col-span-2">
                   <dt className="text-sm font-medium text-gray-500">
-                    Mevcut Öğretmen
+                    Mevcut Rehber
                   </dt>
                   <dd className="mt-1 text-lg font-semibold text-gray-900">
                     {getTutorDisplayName(user.tutorId) || "Atanmamış"}

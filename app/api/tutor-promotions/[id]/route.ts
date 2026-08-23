@@ -123,15 +123,30 @@ export async function PATCH(
             let updatedPromotion;
 
             if (status === TutorPromotionStatus.APPROVED) {
-                // Update user role
+                // Update user role.
+                // `roles` dizisi de güncelleniyor: uygulama yetkiyi çoğunlukla
+                // oradan okuyor, yalnız `role` yazılınca kullanıcı terfi etmiş
+                // görünüp yeni bölümlerine giremiyordu.
+                const existingRoles = (promotion.user.roles ?? []) as UserRole[];
                 await tx.user.update({
                     where: { id: promotion.userId },
                     data: {
                         role: promotion.requestedRole,
+                        roles: { set: Array.from(new Set([...existingRoles, promotion.requestedRole])) },
                         statusChangedAt: new Date(),
                         statusChangedBy: session.user.id,
                     },
                 });
+
+                // Yönetim Kurulu listesi BoardMember tablosundan okunuyor;
+                // kayıt açılmazsa kişi rolü aldığı hâlde kurulda görünmüyor.
+                if (promotion.requestedRole === UserRole.BOARD_MEMBER) {
+                    await tx.boardMember.upsert({
+                        where: { userId: promotion.userId },
+                        create: { userId: promotion.userId, title: 'Üye', isActive: true },
+                        update: { isActive: true },
+                    });
+                }
 
                 // Update promotion status
                 updatedPromotion = await tx.tutorPromotion.update({

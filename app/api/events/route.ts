@@ -4,10 +4,15 @@ import { EventStatus, EventScope, UserRole, PeriodStatus } from '@prisma/client'
 import { getServerSession } from 'next-auth';
 import { authOptions } from '../auth/[...nextauth]/auth.config';
 import { getActivePeriod } from '@/lib/periods';
+import { requireApiPartLicense } from '@/app/lib/permissions.server';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET(request: NextRequest) {
+  // Kurum paketi kapısı — Etkinlikler Değerler Halkası'na (part 2) ait
+  const licenseGate = await requireApiPartLicense(2);
+  if (licenseGate.errorResponse) return licenseGate.errorResponse;
+
   try {
     const session = await getServerSession(authOptions);
 
@@ -85,6 +90,10 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
+  // Kurum paketi kapısı — Etkinlikler Değerler Halkası'na (part 2) ait
+  const licenseGate = await requireApiPartLicense(2);
+  if (licenseGate.errorResponse) return licenseGate.errorResponse;
+
   try {
     console.log('Starting event creation...');
     

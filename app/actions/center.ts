@@ -7,7 +7,7 @@ import { UserRole } from '@prisma/client';
 import { hasRole } from '@/app/lib/auth-utils';
 import { requirePartLicense } from '@/app/lib/permissions.server';
 import { revalidatePath } from 'next/cache';
-import { isRepeatKind, nextDueDate, isDueForReminder } from '@/app/lib/recurring';
+import { isRepeatKind, nextDueDate, isDueForReminder, normalizeRepeatEvery, normalizeRepeatUnit } from '@/app/lib/recurring';
 
 const MANAGE_ROLES = [UserRole.ADMIN, UserRole.BOARD_MEMBER];
 
@@ -144,7 +144,7 @@ export async function getRecurringTasks() {
     }
 }
 
-export async function upsertRecurringTask(data: { id?: string; title: string; dueDate: string; notes?: string | null; isDone?: boolean; repeat?: string; leadDays?: number }) {
+export async function upsertRecurringTask(data: { id?: string; title: string; dueDate: string; notes?: string | null; isDone?: boolean; repeat?: string; repeatEvery?: number; repeatUnit?: string; leadDays?: number }) {
     const auth = await requireManager();
     if (!auth.ok) return { error: auth.error, data: null };
     try {
@@ -153,12 +153,19 @@ export async function upsertRecurringTask(data: { id?: string; title: string; du
         const repeat = isRepeatKind(data.repeat) ? data.repeat : 'NONE';
         // 0 gün = "tam gününde hatırlat"; üst sınır bir yılı aşmasın.
         const leadDays = Math.min(Math.max(Math.trunc(Number(data.leadDays ?? 7)) || 0, 0), 365);
+        // Özel aralık yalnız CUSTOM'da anlamlı; diğerlerinde varsayılana çekilir
+        // ki seçenek değiştirildiğinde eski değer kayıtta asılı kalmasın.
+        const isCustom = repeat === 'CUSTOM';
+        const repeatEvery = isCustom ? normalizeRepeatEvery(data.repeatEvery) : 1;
+        const repeatUnit = isCustom ? normalizeRepeatUnit(data.repeatUnit) : 'MONTH';
         const payload = {
             title: data.title.trim(),
             dueDate: new Date(data.dueDate),
             notes: data.notes?.trim() || null,
             isDone: data.isDone ?? false,
             repeat,
+            repeatEvery,
+            repeatUnit,
             leadDays,
         };
         const record = data.id
@@ -195,7 +202,7 @@ export async function completeRecurringTask(id: string, done = true) {
             return { error: null, data: serialize(reopened) };
         }
 
-        const next = nextDueDate(task.dueDate, task.repeat);
+        const next = nextDueDate(task.dueDate, task.repeat, { every: task.repeatEvery, unit: task.repeatUnit });
         const record = await prisma.recurringTask.update({
             where: { id },
             data: next

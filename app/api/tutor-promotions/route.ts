@@ -4,6 +4,7 @@ import { UserRole, TutorPromotionStatus } from '@prisma/client';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/app/api/auth/[...nextauth]/auth.config';
 import { requireApiPartLicense } from '@/app/lib/permissions.server';
+import { isPromotionTarget } from '@/app/lib/promotion-roles';
 
 export const dynamic = 'force-dynamic';
 
@@ -108,6 +109,15 @@ export async function POST(request: NextRequest) {
         if (!userId || !requestedRole) {
             return NextResponse.json(
                 { error: 'userId and requestedRole are required' },
+                { status: 400 }
+            );
+        }
+
+        // Hedef rol yalnız terfi ile verilebilen roller olabilir (Rehber, Lider,
+        // Yönetim Kurulu Üyesi). Doğrulama olmadan buradan ADMIN de yazılabiliyordu.
+        if (!isPromotionTarget(requestedRole)) {
+            return NextResponse.json(
+                { error: 'Invalid requested role' },
                 { status: 400 }
             );
         }

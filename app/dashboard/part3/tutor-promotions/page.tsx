@@ -1,17 +1,24 @@
 'use client';
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { ArrowLeft, UserPlus, Calendar, CheckCircle, XCircle, Clock } from 'lucide-react';
+import { ArrowLeft, UserPlus, Calendar, CheckCircle, XCircle, Clock, Trash2, ArrowRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import Link from 'next/link';
-import { useTutorPromotions } from '@/app/hooks/use-tutor-promotions';
-import { useRouter } from 'next/navigation';
+import { useState } from 'react';
+import { useTutorPromotions, useDeletePromotion } from '@/app/hooks/use-tutor-promotions';
+import { useAuth } from '@/app/contexts/AuthContext';
 import Loading from '@/app/components/Loading';
 import { TutorPromotion } from '@/app/types/tutor-promotions';
+import { roleLabel, rolesLabel } from '@/app/lib/promotion-roles';
 
 export default function TutorPromotionsPage() {
-    const router = useRouter();
     const { data: promotions, isLoading, error } = useTutorPromotions();
+    const { isAdmin } = useAuth();
+    const deleteMutation = useDeletePromotion();
+    // Yanlış/deneme kayıtları temizlenebilsin diye silme; onay kutusu
+    // ConfirmDialog ile, uygulamanın geri kalanıyla aynı biçimde.
+    const [toDelete, setToDelete] = useState<TutorPromotion | null>(null);
 
     if (isLoading) {
         return <Loading fullScreen />;
@@ -72,10 +79,10 @@ export default function TutorPromotionsPage() {
                         <div>
                             <h1 className="text-3xl font-bold text-gray-800 mb-2">
                                 <span className="bg-clip-text text-transparent bg-gradient-to-r from-green-600 to-emerald-600">
-                                    Öğretmen Terfi Sistemi
+                                    Terfi Sistemi
                                 </span>
                             </h1>
-                            <p className="text-gray-600">Öğrenci ve asistanların öğretmen olma taleplerini yönetin</p>
+                            <p className="text-gray-600">Rehber, Lider ve Yönetim Kurulu Üyeliği terfi taleplerini yönetin</p>
                         </div>
                         <Link href="/dashboard/part3/tutor-promotions/new">
                             <Button className="bg-gradient-to-r from-green-600 to-emerald-600 text-white hover:from-green-700 hover:to-emerald-700 shadow-lg shadow-green-500/50 transition-all duration-200 hover:shadow-xl hover:shadow-green-500/60">
@@ -161,7 +168,25 @@ export default function TutorPromotionsPage() {
                                                     @{promotion.user.username}
                                                 </CardDescription>
                                             </div>
-                                            {getStatusBadge(promotion.status)}
+                                            <div className="flex items-center gap-1 flex-shrink-0">
+                                                {getStatusBadge(promotion.status)}
+                                                {isAdmin && (
+                                                    <button
+                                                        type="button"
+                                                        title="Terfi talebini sil"
+                                                        aria-label="Terfi talebini sil"
+                                                        onClick={(e) => {
+                                                            // Kart bir Link; tıklama detay sayfasına gitmesin.
+                                                            e.preventDefault();
+                                                            e.stopPropagation();
+                                                            setToDelete(promotion);
+                                                        }}
+                                                        className="p-1.5 rounded-lg text-gray-300 hover:text-red-600 hover:bg-red-50 transition-colors"
+                                                    >
+                                                        <Trash2 className="h-4 w-4" />
+                                                    </button>
+                                                )}
+                                            </div>
                                         </div>
                                     </CardHeader>
                                     <CardContent className="pt-0 space-y-3">
@@ -173,12 +198,20 @@ export default function TutorPromotionsPage() {
                                                 {new Date(promotion.createdAt).toLocaleDateString('tr-TR')}
                                             </span>
                                         </div>
+                                        <div className="flex items-center gap-2 text-sm bg-emerald-50 rounded-lg p-2.5">
+                                            <div className="flex items-center justify-center w-8 h-8 rounded-md bg-emerald-100 text-emerald-600 flex-shrink-0">
+                                                <ArrowRight className="h-4 w-4" />
+                                            </div>
+                                            <span className="text-gray-600">
+                                                Hedef Rol: <span className="font-medium text-emerald-700">{roleLabel(promotion.requestedRole)}</span>
+                                            </span>
+                                        </div>
                                         <div className="pt-3 border-t border-gray-100">
                                             <p className="text-xs text-gray-500">
                                                 Talep Eden: {promotion.createdBy.firstName} {promotion.createdBy.lastName}
                                             </p>
                                             <p className="text-xs text-gray-500 mt-1">
-                                                Mevcut Rol: {promotion.user.role === 'STUDENT' ? 'Öğrenci' : 'Asistan'}
+                                                Mevcut Rol: {rolesLabel(promotion.user.roles, promotion.user.role)}
                                             </p>
                                         </div>
                                     </CardContent>
@@ -188,6 +221,25 @@ export default function TutorPromotionsPage() {
                     </div>
                 )}
             </div>
+
+            <ConfirmDialog
+                open={!!toDelete}
+                onOpenChange={(o) => !o && setToDelete(null)}
+                onConfirm={() =>
+                    toDelete &&
+                    deleteMutation.mutate(toDelete.id, { onSuccess: () => setToDelete(null) })
+                }
+                title="Terfi talebi silinsin mi?"
+                description={
+                    toDelete
+                        ? `"${toDelete.user.firstName} ${toDelete.user.lastName}" için oluşturulan terfi talebi kaydı silinecek.` +
+                          (toDelete.status === 'APPROVED'
+                              ? ' Bu talep onaylanmış: kayıt silinse de kullanıcının rolü geri alınmaz, rolü değiştirmek için Kullanıcı Yönetimi ekranını kullanın.'
+                              : '')
+                        : ''
+                }
+                loading={deleteMutation.isPending}
+            />
         </div>
     );
 }

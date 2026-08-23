@@ -6,7 +6,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import Link from 'next/link';
 import { Button } from "../../../components/ui/button";
 import { Avatar, AvatarFallback } from "../../../components/ui/avatar";
-import { LogOut, LayoutDashboard, Users, FileText, ShoppingBag, PieChart, GraduationCap, Trophy, ShoppingCart, ClipboardList, School, Award, TrendingUp, Menu, Bell, Clock, Grid3x3, Settings, Building2, Dumbbell, Share2 } from "lucide-react";
+import { LogOut, LayoutDashboard, Users, FileText, ShoppingBag, PieChart, GraduationCap, Trophy, ShoppingCart, ClipboardList, School, Award, TrendingUp, Menu, Bell, Clock, Grid3x3, Settings, Building2 } from "lucide-react";
 import { UserRole } from '@prisma/client';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "../../../components/ui/sheet";
 
@@ -19,18 +19,11 @@ interface NavLink {
   isSectionHeader?: boolean;
 }
 
-// Bilgeverse'in kendi paketinde olmayan, ama Bilgeverse'in İÇİNDE açılan
-// modüller (Spor Kulübü ve Sosyal Medya). Menüde görünmeleri iki koşula bağlı:
-//   1) kurum o paketi satın almış olmalı        (user.orgParts)
-//   2) yöneticiyse rolü yeter; öğrenciye ise modül tek tek verilmiş olmalı
-//      (user.allowedParts — Kullanıcı Yönetimi → "Ek modül erişimi")
-// Paketi olmayan kurumda başlık hiç oluşmaz. Sunucu tarafındaki requireAuth
-// kapısı zaten aynı sırayla karar veriyor; burası sadece menü tarafı.
-
-// Bu iki modül sol menüde TEK satırdır. Alt bölümleri (Sporcular, Antrenman,
-// İçerikler, Takvim...) sayfanın kendi içindeki menüden gezilir
-// (SportsShell / SocialShell). Eskiden 16 + 8 başlık doğrudan buraya
-// açılıyordu ve sol menü bu iki modülle doluyordu.
+// Bilge Spor Kulübü (part9) ve Sosyal Medya (part6) Bilgeverse'in İÇİNDEN
+// kaldırıldı: her ikisi de Paket 3'e ait, Bilgeverse ise Paket 1. Yalnızca
+// Paket 1 alan kurumun bu modülleri hiçbir biçimde görmemesi gerekiyor.
+// Modüllere artık kendi bölümlerinden erişiliyor (/dashboard/part9,
+// /dashboard/part6); ana bölüm ızgarası zaten kurumun paketine göre süzülüyor.
 
 export default function Part7Shell({
   children,
@@ -47,8 +40,6 @@ export default function Part7Shell({
   // Function to check if a link is active - fix the issue with exact comparison
   const isActive = (path: string) => {
     // For root paths like /dashboard/part7/admin, /dashboard/part7/tutor, /dashboard/part7/student, only match exactly
-    // Spor/Sosyal artık tek satır: alt sayfadayken de vurgulu kalması için
-    // startsWith'e düşerler (tam eşleşme listesinde YOKLAR).
     if (path === '/dashboard/part7/admin' || path === '/dashboard/part7/tutor' || path === '/dashboard/part7/student') {
       return pathname === path;
     }
@@ -68,32 +59,6 @@ export default function Part7Shell({
    */
   const orgHas = (partId: number) => (user?.orgParts ?? []).includes(partId);
 
-  // --- Bilge Spor Kulübü bölümü ---
-  // Menüde görünmesi kurumun part9 paketine bağlı (orgParts). Yönetici için bu
-  // yeterli; öğrenci için ayrıca modülün ona tek tek verilmiş olması gerekir
-  // (allowedParts) ya da sporcu rolü taşıması. Sunucu kapısı (requireAuth
-  // partId 9) zaten aynı sırayla karar veriyor, burası sadece menü tarafı.
-  const effectiveRoles = user?.roles && user.roles.length > 0 ? user.roles : user?.role ? [user.role] : [];
-  const isSportsManager = effectiveRoles.some((r) =>
-    ([UserRole.ADMIN, UserRole.TUTOR, UserRole.ASISTAN, UserRole.BOARD_MEMBER] as UserRole[]).includes(r as UserRole)
-  );
-  // Sporcu, yönetim özetini değil kendi panelini görür; giriş noktası da o.
-  const sportsSection: NavLink[] = orgHas(9)
-    ? [{
-      href: isSportsManager ? '/dashboard/part7/sports' : '/dashboard/part7/sports/me',
-      label: 'Bilge Spor Kulübü',
-      icon: <Dumbbell className="h-5 w-5" />,
-    }]
-    : [];
-  const studentSeesSports = sportsSection.length > 0 &&
-    ((user?.allowedParts ?? []).includes(9) || effectiveRoles.includes((UserRole as any).ATHLETE));
-
-  // --- Sosyal Medya bölümü --- (aynı kural, rol ayrımı yok)
-  const socialSection: NavLink[] = orgHas(6)
-    ? [{ href: '/dashboard/part7/social', label: 'Sosyal Medya', icon: <Share2 className="h-5 w-5" /> }]
-    : [];
-  const studentSeesSocial = socialSection.length > 0 && (user?.allowedParts ?? []).includes(6);
-
   // Akademi (part11) de Bilgeverse içinde açılıyor (part7/{tutor,student}/academy).
   // Rehber tarafında iki koşul birden aranır: kurumun paketi VE rehberin akademiye
   // atanmış olması. Atamayı kurumun admini yapıyor, o yüzden atanmamış rehberin
@@ -104,7 +69,7 @@ export default function Part7Shell({
 
   // Define navigation links based on role with Lucide icons
   // Bilgeverse (Paket 1) — yalnızca bu pakete ait başlıklar.
-  // "Değerler Halkası Grupları", "İnsan Kaynağı" ve "Gençlik Merkezi" bölümleri
+  // "Değerler Halkası", "İnsan Kaynağı" ve "Gençlik Merkezi" bölümleri
   // buradan kaldırıldı; ilgili sayfalara artık kendi modüllerinden erişiliyor
   // (Etkinlikler → part2, Haftalık Raporlar + İK modülleri → part3,
   //  merkez modülleri → part10).
@@ -124,9 +89,6 @@ export default function Part7Shell({
     { href: '/dashboard/part7/admin/announcements', label: 'Duyuru Panosu', icon: <Bell className="h-5 w-5" /> },
     { href: '/dashboard/part7/admin/wishes', label: 'İstek ve Dilek Kutusu', icon: <ClipboardList className="h-5 w-5" /> },
 
-    ...(sportsSection.length > 0 || socialSection.length > 0 ? [{ isSeparator: true } as NavLink] : []),
-    ...sportsSection,
-    ...socialSection,
   ];
 
   const tutorLinks: NavLink[] = [
@@ -141,8 +103,6 @@ export default function Part7Shell({
     { href: '/dashboard/part7/tutor/store', label: 'Öğrenci Mağazası', icon: <ShoppingCart className="h-5 w-5" /> },
     ...(hasBoardMember && orgHas(1) ? [{ href: '/dashboard/part1', label: 'Yönetim Kurulu', icon: <Building2 className="h-5 w-5" /> } as NavLink] : []),
 
-    ...(sportsSection.length > 0 ? [{ isSeparator: true } as NavLink, ...sportsSection] : []),
-
     // Ayarlar her zaman en altta kalsın
     { isSeparator: true },
     { href: '/dashboard/part7/tutor/settings', label: 'Ayarlar', icon: <Settings className="h-5 w-5" /> },
@@ -154,8 +114,6 @@ export default function Part7Shell({
     { href: '/dashboard/part7/student/store', label: 'Mağaza', icon: <ShoppingCart className="h-5 w-5" /> },
     ...(orgHas(4) ? [{ href: '/dashboard/part7/student/workshops', label: 'Atölyeler', icon: <Grid3x3 className="h-5 w-5" /> } as NavLink] : []),
     ...(orgHas(11) ? [{ href: '/dashboard/part7/student/academy', label: 'Akademi', icon: <GraduationCap className="h-5 w-5" /> } as NavLink] : []),
-    ...(studentSeesSports ? [{ isSeparator: true } as NavLink, ...sportsSection] : []),
-    ...(studentSeesSocial ? [{ isSeparator: true } as NavLink, ...socialSection] : []),
     { isSeparator: true },
     { href: '/dashboard/part7/student/tips', label: 'Nasıl Bilge Para Kazanırım', icon: <TrendingUp className="h-5 w-5" /> },
   ];

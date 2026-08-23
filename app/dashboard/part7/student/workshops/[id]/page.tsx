@@ -180,7 +180,7 @@ export default async function StudentWorkshopDetailsPage({ params }: { params: {
                                                     {assignment.role === 'ADMIN' ? 'Admin' :
                                                         assignment.role === 'BOARD_MEMBER' ? 'Kurul Üyesi' :
                                                             assignment.role === 'TUTOR' ? 'Rehber' :
-                                                                assignment.role === 'ASISTAN' ? 'Asistan' : assignment.role}
+                                                                assignment.role === 'ASISTAN' ? 'Lider' : assignment.role}
                                                 </Badge>
                                             </div>
                                         </div>

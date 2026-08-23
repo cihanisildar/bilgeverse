@@ -122,7 +122,7 @@ export default function SyllabusList({ syllabi, isAdmin }: { syllabi: Syllabus[]
             </h3>
             <p className="text-sm text-gray-500 mb-6 max-w-md mx-auto">
               {isAdmin
-                ? 'Öğretmenler için global bir müfredat oluşturun'
+                ? 'Rehberler için global bir müfredat oluşturun'
                 : 'Yönetici henüz müfredat oluşturmamış. Müfredat oluşturulduğunda burada görünecek.'}
             </p>
             {isAdmin && (

@@ -298,7 +298,7 @@ function RegistrationRequestsContent() {
                         <p className="text-xs sm:text-sm font-medium text-gray-500">İstenilen Rol</p>
                         <p className="mt-1 text-sm sm:text-base font-medium">
                           {request.requestedRole === UserRole.STUDENT ? 'Öğrenci' :
-                            request.requestedRole === UserRole.TUTOR ? 'Öğretmen' :
+                            request.requestedRole === UserRole.TUTOR ? 'Rehber' :
                               request.requestedRole === (UserRole as any).ATHLETE ? 'Sporcu' :
                                 request.requestedRole === UserRole.ADMIN ? 'Yönetici' : request.requestedRole}
                         </p>

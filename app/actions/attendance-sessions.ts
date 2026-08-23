@@ -487,7 +487,7 @@ export async function manualCheckInToSession(sessionId: string, studentId: strin
     const isAdmin = userRoles.includes(UserRole.ADMIN);
 
     if (!session?.user || (!isAdmin && !isTutor && !isAsistan)) {
-      return { error: 'Yetkisiz erişim: Sadece öğretmenler, asistanlar ve yöneticiler manuel giriş yapabilir', data: null };
+      return { error: 'Yetkisiz erişim: Sadece rehberler, liderler ve yöneticiler manuel giriş yapabilir', data: null };
     }
 
     // Validate that tutors/assistants can only check in their own students
@@ -506,7 +506,7 @@ export async function manualCheckInToSession(sessionId: string, studentId: strin
     } else if (isAsistan && !isAdmin && !isTutor) {
       // Check if the student belongs to the assistant's tutor
       if (!userNode.assistedTutorId) {
-        return { error: 'Size atanmış bir öğretmen bulunamadı', data: null };
+        return { error: 'Size atanmış bir rehber bulunamadı', data: null };
       }
 
       const student = await prisma.user.findFirst({
@@ -624,7 +624,7 @@ export async function removeAttendanceFromSession(sessionId: string, studentId: 
     const isAdmin = userRoles.includes(UserRole.ADMIN);
 
     if (!session?.user || (!isAdmin && !isTutor && !isAsistan)) {
-      return { error: 'Yetkisiz erişim: Sadece öğretmenler, asistanlar ve yöneticiler yoklama geri alabilir', data: null };
+      return { error: 'Yetkisiz erişim: Sadece rehberler, liderler ve yöneticiler yoklama geri alabilir', data: null };
     }
 
     // Validate that tutors/assistants can only remove attendance for their own students
@@ -642,7 +642,7 @@ export async function removeAttendanceFromSession(sessionId: string, studentId: 
       }
     } else if (isAsistan && !isAdmin && !isTutor) {
       if (!userNode.assistedTutorId) {
-        return { error: 'Size atanmış bir öğretmen bulunamadı', data: null };
+        return { error: 'Size atanmış bir rehber bulunamadı', data: null };
       }
 
       const student = await prisma.user.findFirst({

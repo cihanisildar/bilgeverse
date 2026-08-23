@@ -669,7 +669,7 @@ export default function PeriodsPage() {
                   </div>
                   <p className="text-xs text-gray-500 mb-3">
                     Tüm öğrenciler varsayılan olarak seçilidir. Bu döneme almak <span className="font-medium">istemediklerinizin</span> işaretini kaldırın.
-                    Rehber, asistan ve diğer roller otomatik olarak her döneme dahildir.
+                    Rehber, lider ve diğer roller otomatik olarak her döneme dahildir.
                   </p>
 
                   <div className="flex flex-col sm:flex-row gap-2 mb-3">

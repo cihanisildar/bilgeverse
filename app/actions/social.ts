@@ -101,7 +101,6 @@ export async function createSocialPost(data: Partial<SocialPost>) {
         });
 
         revalidatePath('/dashboard/part6');
-        revalidatePath('/dashboard/part7/social');
         return { data: post as unknown as SocialPost, message: 'Gönderi başarıyla oluşturuldu' };
     } catch (error: any) {
         logger.error('Error creating social post:', error);
@@ -154,7 +153,6 @@ export async function updateSocialPost(id: string, data: Partial<SocialPost>) {
         });
 
         revalidatePath('/dashboard/part6');
-        revalidatePath('/dashboard/part7/social');
         return { data: updatedPost as unknown as SocialPost, message: 'Gönderi başarıyla güncellendi' };
     } catch (error: any) {
         logger.error('Error updating social post:', error);
@@ -181,7 +179,6 @@ export async function deleteSocialPost(id: string) {
         await prisma.socialPost.delete({ where: { id } });
 
         revalidatePath('/dashboard/part6');
-        revalidatePath('/dashboard/part7/social');
         return { message: 'Gönderi başarıyla silindi' };
     } catch (error: any) {
         logger.error('Error deleting social post:', error);
@@ -244,7 +241,6 @@ export async function createSocialIngredient(data: Partial<ContentIngredient>) {
         });
 
         revalidatePath('/dashboard/part6');
-        revalidatePath('/dashboard/part7/social');
         return { data: ingredient as unknown as ContentIngredient, message: 'Bileşen başarıyla oluşturuldu' };
     } catch (error: any) {
         logger.error('Error creating ingredient:', error);
@@ -288,7 +284,6 @@ export async function updateSocialIngredient(id: string, data: Partial<ContentIn
         });
 
         revalidatePath('/dashboard/part6');
-        revalidatePath('/dashboard/part7/social');
         return { data: updatedIngredient as unknown as ContentIngredient, message: 'Bileşen başarıyla güncellendi' };
     } catch (error: any) {
         logger.error('Error updating ingredient:', error);
@@ -315,7 +310,6 @@ export async function deleteSocialIngredient(id: string) {
         await prisma.contentIngredient.delete({ where: { id } });
 
         revalidatePath('/dashboard/part6');
-        revalidatePath('/dashboard/part7/social');
         return { message: 'Bileşen başarıyla silindi' };
     } catch (error: any) {
         logger.error('Error deleting ingredient:', error);
@@ -374,7 +368,6 @@ export async function createContentIdea(data: Partial<ContentIdea>) {
         });
 
         revalidatePath('/dashboard/part6');
-        revalidatePath('/dashboard/part7/social');
         return { data: idea as unknown as ContentIdea, message: 'Fikir başarıyla eklendi' };
     } catch (error: any) {
         logger.error('Error creating content idea:', error);
@@ -405,7 +398,6 @@ export async function updateContentIdea(id: string, data: Partial<ContentIdea>) 
         });
 
         revalidatePath('/dashboard/part6');
-        revalidatePath('/dashboard/part7/social');
         return { data: idea as unknown as ContentIdea, message: 'Fikir güncellendi' };
     } catch (error: any) {
         logger.error('Error updating content idea:', error);
@@ -425,7 +417,6 @@ export async function deleteContentIdea(id: string) {
         await prisma.contentIdea.delete({ where: { id } });
 
         revalidatePath('/dashboard/part6');
-        revalidatePath('/dashboard/part7/social');
         return { message: 'Fikir silindi' };
     } catch (error: any) {
         logger.error('Error deleting content idea:', error);
@@ -461,7 +452,6 @@ export async function convertIdeaToPost(id: string) {
         });
 
         revalidatePath('/dashboard/part6');
-        revalidatePath('/dashboard/part7/social');
         return { data: post as unknown as SocialPost, message: 'Fikir taslak gönderiye dönüştürüldü' };
     } catch (error: any) {
         logger.error('Error converting idea to post:', error);
@@ -507,7 +497,6 @@ export async function createSocialEvent(data: Partial<SocialEvent>) {
         });
 
         revalidatePath('/dashboard/part6');
-        revalidatePath('/dashboard/part7/social');
         return { data: event as unknown as SocialEvent, message: 'Etkinlik eklendi' };
     } catch (error: any) {
         logger.error('Error creating social event:', error);
@@ -538,7 +527,6 @@ export async function updateSocialEvent(id: string, data: Partial<SocialEvent>) 
         });
 
         revalidatePath('/dashboard/part6');
-        revalidatePath('/dashboard/part7/social');
         return { data: event as unknown as SocialEvent, message: 'Etkinlik güncellendi' };
     } catch (error: any) {
         logger.error('Error updating social event:', error);
@@ -558,7 +546,6 @@ export async function deleteSocialEvent(id: string) {
         await prisma.socialEvent.delete({ where: { id } });
 
         revalidatePath('/dashboard/part6');
-        revalidatePath('/dashboard/part7/social');
         return { message: 'Etkinlik silindi' };
     } catch (error: any) {
         logger.error('Error deleting social event:', error);

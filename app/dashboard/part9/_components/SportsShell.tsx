@@ -45,6 +45,8 @@ const NAV_ITEMS: NavItem[] = [
     { label: 'Performans', icon: LineChart, path: '/performance', managerOnly: true },
     { label: 'Turnuvalar', icon: Trophy, path: '/tournaments' },
     { label: 'Disiplin', icon: Gavel, path: '/discipline', managerOnly: true },
+    // Sporcu tarafı: kendi kayıtları + yönetmelik (salt okunur, ayrı sayfa).
+    { label: 'Disiplin', icon: Gavel, path: '/my-discipline', athleteOnly: true },
     { label: 'Ekipman', icon: Package, path: '/equipment', managerOnly: true },
     { label: 'Futbol Okulu', icon: CircleDollarSign, path: '/football-school', managerOnly: true },
     { label: 'Maliye', icon: Wallet, path: '/finance', managerOnly: true },
@@ -57,10 +59,9 @@ const NAV_ITEMS: NavItem[] = [
 /**
  * Spor Kulübü'nün sayfa İÇİ menüsü.
  *
- * `basePath` ile iki yerden kullanılır: kendi modülünde (/dashboard/part9) ve
- * Bilgeverse içindeki ikinci girişinde (/dashboard/part7/sports). Bilgeverse
- * tarafında sol ana menüde modül TEK satır olarak durur — bölümler arasında
- * gezinme buradan yapılır, ana menü 16 başlıkla dolmaz.
+ * Modülün Bilgeverse (part7) içindeki ikinci girişi kaldırıldı — Spor Kulübü
+ * Paket 3'e ait, Bilgeverse Paket 1. `basePath` yine de parametre: kabuk tek
+ * yerden (/dashboard/part9) kullanılıyor ama linkler sabit yazılmasın diye.
  */
 export default function SportsShell({
     children,

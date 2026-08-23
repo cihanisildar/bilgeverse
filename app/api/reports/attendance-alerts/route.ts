@@ -9,8 +9,8 @@ import { requireApiPartLicense } from '@/app/lib/permissions.server';
 export const dynamic = 'force-dynamic';
 
 export async function GET(request: NextRequest) {
-    // Kurum paketi kapısı — İnsan Kaynağı (part 3)
-    const licenseGate = await requireApiPartLicense(3);
+    // Kurum paketi kapısı — Değerler Halkası (part 2)
+    const licenseGate = await requireApiPartLicense(2);
     if (licenseGate.errorResponse) return licenseGate.errorResponse;
 
     try {

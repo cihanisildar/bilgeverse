@@ -61,7 +61,7 @@ async function ReminderStrip() {
     const res = await getRecurringReminders();
     // serialize() JSON turu attığı için tarihler runtime'da string; statik tip
     // hâlâ Date olduğundan unknown üzerinden çevriliyor.
-    const items = (res.data ?? []) as unknown as { id: string; title: string; dueDate: string; repeat: string }[];
+    const items = (res.data ?? []) as unknown as { id: string; title: string; dueDate: string; repeat: string; repeatEvery: number; repeatUnit: string }[];
     if (items.length === 0) return null;
 
     return (
@@ -77,7 +77,7 @@ async function ReminderStrip() {
                         <li key={t.id} className="flex items-center justify-between gap-3 text-sm flex-wrap">
                             <span className="text-gray-800">
                                 <span className="font-medium">{t.title}</span>
-                                <span className="text-gray-500"> — {format(new Date(t.dueDate), 'd MMMM yyyy', { locale: tr })} · {repeatShortLabel(t.repeat)}</span>
+                                <span className="text-gray-500"> — {format(new Date(t.dueDate), 'd MMMM yyyy', { locale: tr })} · {repeatShortLabel(t.repeat, { every: t.repeatEvery, unit: t.repeatUnit })}</span>
                             </span>
                             <Badge className={days < 0 ? 'bg-red-600 text-white' : 'bg-rose-100 text-rose-700 border-rose-200'}>
                                 {days < 0 ? `${Math.abs(days)} gün gecikti` : days === 0 ? 'Bugün' : `${days} gün kaldı`}

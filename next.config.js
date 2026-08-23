@@ -37,6 +37,45 @@ module.exports = {
     return config;
   },
   
+  // Eski İnsan Kaynağı (part3) adresleri — "Raporlar" ve "Toplu Yoklama Özeti"
+  // Değerler Halkası'na (part2) taşındı. Kayıtlı/paylaşılmış linkler kırılmasın.
+  async redirects() {
+    return [
+      {
+        source: '/dashboard/part3/reports/:path*',
+        destination: '/dashboard/part2/reports/:path*',
+        permanent: true,
+      },
+      {
+        source: '/dashboard/part3/tutor-participation',
+        destination: '/dashboard/part2/tutor-participation',
+        permanent: true,
+      },
+      // Bilge Spor Kulübü ve Sosyal Medya, Bilgeverse'in (Paket 1) içinden
+      // kaldırıldı; her ikisi de Paket 3'e ait ve kendi bölümlerinden açılıyor.
+      {
+        source: '/dashboard/part7/sports/:path*',
+        destination: '/dashboard/part9/:path*',
+        permanent: true,
+      },
+      {
+        source: '/dashboard/part7/sports',
+        destination: '/dashboard/part9',
+        permanent: true,
+      },
+      {
+        source: '/dashboard/part7/social/:path*',
+        destination: '/dashboard/part6/:path*',
+        permanent: true,
+      },
+      {
+        source: '/dashboard/part7/social',
+        destination: '/dashboard/part6',
+        permanent: true,
+      },
+    ];
+  },
+
   // Enable compression and performance optimizations
   compress: true,
   poweredByHeader: false,

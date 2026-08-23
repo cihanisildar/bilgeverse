@@ -161,7 +161,7 @@ Etkinliğe katılmak için lütfen aşağıdaki bağlantıyı kullanın:
 [ETKINLIK_BAGLANTISI]
 
 Saygılarımızla,
-Öğretmen Takip Sistemi`
+Rehber Takip Sistemi`
           );
         }
         

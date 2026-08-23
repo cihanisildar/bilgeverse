@@ -2,10 +2,15 @@ import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '../auth/[...nextauth]/auth.config';
+import { requireApiPartLicense } from '@/app/lib/permissions.server';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET(request: NextRequest) {
+    // Kurum paketi kapısı — Etkinlik türleri Etkinlikler'e (part 2) ait
+    const licenseGate = await requireApiPartLicense(2);
+    if (licenseGate.errorResponse) return licenseGate.errorResponse;
+
   try {
     const session = await getServerSession(authOptions);
 

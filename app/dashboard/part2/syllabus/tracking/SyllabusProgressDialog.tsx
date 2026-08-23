@@ -134,7 +134,7 @@ export default function SyllabusProgressDialog({ classroomId, classroomName, syl
                                                             <div className="bg-white/60 p-3 rounded-lg border border-gray-100">
                                                                 <div className="flex items-center gap-1.5 text-xs font-bold text-gray-400 uppercase tracking-wider mb-1.5">
                                                                     <MessageSquare className="h-3 w-3" />
-                                                                    Öğretmen Notu
+                                                                    Rehber Notu
                                                                 </div>
                                                                 <p className="text-sm text-gray-700 italic leading-relaxed">
                                                                     "{lesson.notes}"

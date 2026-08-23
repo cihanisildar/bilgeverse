@@ -185,8 +185,8 @@ export async function PUT(
               : `${tutor.username} Sınıfı`;
 
             const classroomDescription = tutor.firstName && tutor.lastName
-              ? `${tutor.firstName} ${tutor.lastName} öğretmeninin sınıfı`
-              : `${tutor.username} öğretmeninin sınıfı`;
+              ? `${tutor.firstName} ${tutor.lastName} rehberinin sınıfı`
+              : `${tutor.username} rehberinin sınıfı`;
 
             const newClassroom = await tx.classroom.create({
               data: {
@@ -299,7 +299,7 @@ export async function PATCH(
       );
     }
 
-    // Keep the Değerler Halkası Grupları rehber status (User.tutorStatus) in sync with the
+    // Keep the Gruplar screen's rehber status (User.tutorStatus) in sync with the
     // account's active/passive flag, so the two never contradict each other:
     //  - deactivating here marks the rehber PASSIVE there
     //  - reactivating a PASSIVE rehber restores them to ACTIVE (STANDBY/LEAVING kept)

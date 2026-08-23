@@ -16,6 +16,7 @@ export interface TutorPromotion {
         lastName: string | null;
         email: string | null;
         role: UserRole;
+        roles?: UserRole[];
         phone?: string | null;
     };
     createdBy: {
@@ -40,4 +41,6 @@ export interface EligibleUser {
     email: string | null;
     phone: string | null;
     role: UserRole;
+    /** Hedef role göre süzmek için: kullanıcı zaten o role sahipse listelenmez. */
+    roles: UserRole[];
 }

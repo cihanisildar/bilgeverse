@@ -3,11 +3,14 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { ArrowLeft, User, Calendar, CheckCircle, XCircle, Clock, Save } from 'lucide-react';
+import { ArrowLeft, User, Calendar, CheckCircle, XCircle, Clock, Save, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { useQuery } from '@tanstack/react-query';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import {
@@ -20,8 +23,10 @@ import {
     AlertDialogHeader,
     AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { useTutorPromotion, useUpdatePromotion } from '@/app/hooks/use-tutor-promotions';
+import { useTutorPromotion, useUpdatePromotion, useDeletePromotion } from '@/app/hooks/use-tutor-promotions';
 import Loading from '@/app/components/Loading';
+import { useAuth } from '@/app/contexts/AuthContext';
+import { roleLabel, rolesLabel } from '@/app/lib/promotion-roles';
 
 export default function TutorPromotionDetailPage({ params }: { params: { id: string } }) {
     const { data: promotion, isLoading, error } = useTutorPromotion(params.id);
@@ -51,11 +56,34 @@ function PromotionDetailContent({ promotion }: { promotion: any }) {
     const router = useRouter();
     const { toast } = useToast();
     const updatePromotion = useUpdatePromotion();
+    const deletePromotion = useDeletePromotion();
+    // Silme yalnız admin'de; sunucu tarafı da aynı kuralı uyguluyor.
+    const { isAdmin } = useAuth();
+    const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
     const [notes, setNotes] = useState(promotion.notes || '');
     const [rejectionReason, setRejectionReason] = useState('');
     const [showApproveDialog, setShowApproveDialog] = useState(false);
     const [showRejectDialog, setShowRejectDialog] = useState(false);
+
+    // Hedef role göre onay anında istenen ek bilgiler:
+    //   Lider (ASISTAN)      → hangi rehbere yardım edecek
+    //   Yönetim Kurulu Üyesi → kuruldaki görev/unvan (boş bırakılırsa "Üye")
+    const targetIsAsistan = promotion.requestedRole === 'ASISTAN';
+    const targetIsBoard = promotion.requestedRole === 'BOARD_MEMBER';
+    const [assistedTutorId, setAssistedTutorId] = useState('');
+    const [boardTitle, setBoardTitle] = useState('');
+
+    const { data: tutors = [] } = useQuery({
+        queryKey: ['promotion-tutors'],
+        queryFn: async () => {
+            const res = await fetch('/api/admin/tutors', { credentials: 'include' });
+            if (!res.ok) throw new Error('Rehberler yüklenemedi');
+            const data = await res.json();
+            return (data.tutors || []) as { id: string; username: string; firstName?: string | null; lastName?: string | null }[];
+        },
+        enabled: targetIsAsistan,
+    });
 
     const handleUpdateNotes = async () => {
         updatePromotion.mutate(
@@ -72,9 +100,28 @@ function PromotionDetailContent({ promotion }: { promotion: any }) {
     };
 
     const confirmApprove = async () => {
+        // Lider terfisinde rehber bağlantısı zorunlu; sunucu da reddediyor ama
+        // kullanıcıya diyalog kapanmadan söylemek daha anlaşılır.
+        if (targetIsAsistan && !assistedTutorId) {
+            toast({
+                title: 'Uyarı',
+                description: 'Lider terfisinde yardım edeceği rehberi seçin',
+                variant: 'destructive',
+            });
+            return;
+        }
+
         setShowApproveDialog(false);
         updatePromotion.mutate(
-            { id: promotion.id, data: { status: 'APPROVED', notes } },
+            {
+                id: promotion.id,
+                data: {
+                    status: 'APPROVED',
+                    notes,
+                    ...(targetIsAsistan ? { assistedTutorId } : {}),
+                    ...(targetIsBoard && boardTitle.trim() ? { boardTitle: boardTitle.trim() } : {}),
+                },
+            },
             {
                 onSuccess: () => {
                     toast({
@@ -151,7 +198,21 @@ function PromotionDetailContent({ promotion }: { promotion: any }) {
                                 </h1>
                                 <p className="text-gray-600">Terfi talebini inceleyin ve karar verin</p>
                             </div>
-                            {getStatusBadge()}
+                            <div className="flex items-center gap-2">
+                                {getStatusBadge()}
+                                {/* Yanlış girilen kayıt buradan da silinebilsin */}
+                                {isAdmin && (
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        className="text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700"
+                                        onClick={() => setShowDeleteDialog(true)}
+                                    >
+                                        <Trash2 className="h-4 w-4 mr-2" />
+                                        Sil
+                                    </Button>
+                                )}
+                            </div>
                         </div>
                     </div>
 
@@ -180,11 +241,11 @@ function PromotionDetailContent({ promotion }: { promotion: any }) {
                                     </div>
                                     <div>
                                         <p className="text-sm text-gray-500">Mevcut Rol</p>
-                                        <p className="font-medium">{promotion.user.role === 'STUDENT' ? 'Öğrenci' : 'Asistan'}</p>
+                                        <p className="font-medium">{rolesLabel(promotion.user.roles, promotion.user.role)}</p>
                                     </div>
                                     <div>
                                         <p className="text-sm text-gray-500">Hedef Rol</p>
-                                        <p className="font-medium text-green-600">Öğretmen</p>
+                                        <p className="font-medium text-green-600">{roleLabel(promotion.requestedRole)}</p>
                                     </div>
                                     {promotion.user.phone && (
                                         <div>
@@ -316,12 +377,50 @@ function PromotionDetailContent({ promotion }: { promotion: any }) {
                     <AlertDialogHeader>
                         <AlertDialogTitle>Terfiyi Onaylıyor musunuz?</AlertDialogTitle>
                         <AlertDialogDescription>
-                            Bu terfiyi onaylamak istediğinizden emin misiniz? Kullanıcının rolü öğretmen olarak güncellenecektir.
+                            Kullanıcının rolü <span className="font-medium text-gray-800">{roleLabel(promotion.requestedRole)}</span> olarak güncellenecek.
+                            {targetIsBoard && ' Kişi ayrıca Yönetim Kurulu üye listesine eklenecek.'}
                         </AlertDialogDescription>
                     </AlertDialogHeader>
+
+                    {targetIsAsistan && (
+                        <div className="space-y-2">
+                            <Label>Yardım edeceği rehber *</Label>
+                            <Select value={assistedTutorId} onValueChange={setAssistedTutorId}>
+                                <SelectTrigger><SelectValue placeholder="Rehber seçin" /></SelectTrigger>
+                                <SelectContent>
+                                    {tutors.map((t) => (
+                                        <SelectItem key={t.id} value={t.id}>
+                                            {t.firstName || t.lastName ? `${t.firstName ?? ''} ${t.lastName ?? ''}`.trim() : t.username}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                            <p className="text-xs text-gray-500">
+                                Lider, bağlı olduğu rehberin grubu üzerinden yoklama ve müfredat işlemlerini görür.
+                            </p>
+                        </div>
+                    )}
+
+                    {targetIsBoard && (
+                        <div className="space-y-2">
+                            <Label>Kuruldaki görevi</Label>
+                            <Input
+                                value={boardTitle}
+                                onChange={(e) => setBoardTitle(e.target.value)}
+                                placeholder="Örn: Başkan Yardımcısı — boş bırakılırsa &quot;Üye&quot; olarak kaydedilir"
+                            />
+                        </div>
+                    )}
+
                     <AlertDialogFooter>
                         <AlertDialogCancel>İptal</AlertDialogCancel>
-                        <AlertDialogAction onClick={confirmApprove} className="bg-green-600 hover:bg-green-700 text-white">
+                        {/* AlertDialogAction tıklanınca diyaloğu kapatıyor; zorunlu alan
+                            eksikken erken dönmek yetmez, buton doğrudan kapalı tutuluyor. */}
+                        <AlertDialogAction
+                            onClick={confirmApprove}
+                            disabled={targetIsAsistan && !assistedTutorId}
+                            className="bg-green-600 hover:bg-green-700 text-white disabled:opacity-50"
+                        >
                             Tamam
                         </AlertDialogAction>
                     </AlertDialogFooter>
@@ -341,6 +440,34 @@ function PromotionDetailContent({ promotion }: { promotion: any }) {
                         <AlertDialogCancel>İptal</AlertDialogCancel>
                         <AlertDialogAction onClick={confirmReject} className="bg-red-600 hover:bg-red-700 text-white">
                             Reddet
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
+
+            {/* Delete Confirmation Dialog */}
+            <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Terfi talebi silinsin mi?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            {promotion.user.firstName} {promotion.user.lastName} için oluşturulan terfi talebi kaydı silinecek.
+                            {promotion.status === 'APPROVED' && ' Bu talep onaylanmış: kayıt silinse de kullanıcının rolü geri alınmaz, rolü değiştirmek için Kullanıcı Yönetimi ekranını kullanın.'}
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel>Vazgeç</AlertDialogCancel>
+                        <AlertDialogAction
+                            onClick={() =>
+                                deletePromotion.mutate(promotion.id, {
+                                    onSuccess: (result) => {
+                                        if (!result.error) router.push('/dashboard/part3/tutor-promotions');
+                                    },
+                                })
+                            }
+                            className="bg-red-600 hover:bg-red-700 text-white"
+                        >
+                            Evet, Sil
                         </AlertDialogAction>
                     </AlertDialogFooter>
                 </AlertDialogContent>

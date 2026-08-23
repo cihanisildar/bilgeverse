@@ -189,7 +189,7 @@ Etkinliğe katılmak için lütfen aşağıdaki bağlantıyı kullanın:
 ${window.location.origin}/events/${formattedEvent.id}/join
 
 Saygılarımızla,
-Öğretmen Takip Sistemi`
+Rehber Takip Sistemi`
           );
         }
       } catch (error) {

@@ -77,7 +77,6 @@ export async function upsertSportBranch(data: { id?: string; name: string; descr
             });
 
         revalidatePath('/dashboard/part9');
-        revalidatePath('/dashboard/part7/sports');
         return { error: null, data: branch };
     } catch (error) {
         console.error('Error upserting sport branch:', error);
@@ -97,7 +96,6 @@ export async function deleteSportBranch(id: string) {
         });
 
         revalidatePath('/dashboard/part9');
-        revalidatePath('/dashboard/part7/sports');
         return { error: null, data: { success: true } };
     } catch (error) {
         console.error('Error deleting sport branch:', error);
@@ -203,7 +201,6 @@ export async function upsertAthleteProfile(data: {
         });
 
         revalidatePath('/dashboard/part9');
-        revalidatePath('/dashboard/part7/sports');
         return { error: null, data: profile };
     } catch (error) {
         console.error('Error upserting athlete profile:', error);
@@ -264,7 +261,6 @@ export async function createTraining(data: {
         });
 
         revalidatePath('/dashboard/part9');
-        revalidatePath('/dashboard/part7/sports');
         return { error: null, data: training };
     } catch (error) {
         console.error('Error creating training:', error);
@@ -283,7 +279,6 @@ export async function deleteTraining(id: string) {
         await prisma.athleteTraining.delete({ where: { id } });
 
         revalidatePath('/dashboard/part9');
-        revalidatePath('/dashboard/part7/sports');
         return { error: null, data: { id } };
     } catch (error) {
         console.error('Error deleting training:', error);
@@ -339,7 +334,6 @@ export async function recordAttendance(trainingId: string, attendances: { athlet
         await prisma.$transaction(operations);
 
         revalidatePath('/dashboard/part9');
-        revalidatePath('/dashboard/part7/sports');
         return { error: null, data: { success: true } };
     } catch (error) {
         console.error('Error recording attendance:', error);
@@ -379,7 +373,6 @@ export async function recordPerformance(trainingId: string, performances: {
         });
 
         revalidatePath('/dashboard/part9');
-        revalidatePath('/dashboard/part7/sports');
         return { error: null, data: { success: true } };
     } catch (error) {
         console.error('Error recording performance:', error);
@@ -525,7 +518,6 @@ export async function registerNewAthlete(data: {
         });
 
         revalidatePath('/dashboard/part9');
-        revalidatePath('/dashboard/part7/sports');
         return { error: null, data: result };
     } catch (error) {
         console.error('Error registering new athlete:', error);
@@ -563,7 +555,6 @@ export async function deleteAthleteProfile(userId: string) {
         });
 
         revalidatePath('/dashboard/part9');
-        revalidatePath('/dashboard/part7/sports');
         return { error: null, data: { success: true } };
     } catch (error) {
         console.error('Error deleting athlete profile:', error);
@@ -621,7 +612,6 @@ export async function promoteAthleteAgeGroups() {
         }
 
         revalidatePath('/dashboard/part9');
-        revalidatePath('/dashboard/part7/sports');
         return { error: null, data: { promoted } };
     } catch (error) {
         console.error('Error promoting athlete age groups:', error);
@@ -641,7 +631,6 @@ export async function setAthleteAgeGroup(userId: string, ageGroup: string | null
             data: { ageGroup },
         });
         revalidatePath('/dashboard/part9');
-        revalidatePath('/dashboard/part7/sports');
         return { error: null, data: { success: true } };
     } catch (error) {
         console.error('Error setting athlete age group:', error);
@@ -721,5 +710,51 @@ export async function getMyAthleteOverview() {
     } catch (error) {
         console.error('Error fetching athlete overview:', error);
         return { error: 'Panel yüklenirken bir hata oluştu', data: null };
+    }
+}
+
+/**
+ * Sporcunun KENDİ disiplin bilgisi (salt okunur).
+ *
+ * Yönetim tarafındaki `getDisciplineRecords` tüm kulübü döndürüyor ve artık
+ * yalnız yöneticilere açık; sporcu kendi kayıtlarını buradan görür. Yönetmelik
+ * (DisciplineRule) herkese açık bilgi — sporcu hangi ihlalin hangi cezaya
+ * karşılık geldiğini görebilsin diye kayıtlarla birlikte dönüyor.
+ */
+export async function getMyDisciplineOverview() {
+    try {
+        const session = await getLicensedSession();
+        if (!session?.user?.id) {
+            return { error: 'Oturum bulunamadı', data: null };
+        }
+
+        const profile = await prisma.athleteProfile.findUnique({
+            where: { userId: session.user.id },
+            select: { id: true },
+        });
+
+        if (!profile) {
+            return { error: 'Sporcu profili bulunamadı', data: null };
+        }
+
+        const [records, rules] = await Promise.all([
+            prisma.disciplineRecord.findMany({
+                where: { athleteId: profile.id },
+                include: { rule: { select: { code: true, offense: true, penalty: true } } },
+                orderBy: { date: 'desc' },
+            }),
+            prisma.disciplineRule.findMany({
+                where: { isActive: true },
+                orderBy: { order: 'asc' },
+            }),
+        ]);
+
+        return {
+            error: null,
+            data: JSON.parse(JSON.stringify({ records, rules })),
+        };
+    } catch (error) {
+        console.error('Error fetching athlete discipline overview:', error);
+        return { error: 'Disiplin bilgileri yüklenirken bir hata oluştu', data: null };
     }
 }

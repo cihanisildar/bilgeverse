@@ -31,7 +31,7 @@ export default function TrackingControls() {
         <div className="relative w-full max-w-sm">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
             <Input
-                placeholder="Sınıf veya öğretmen ara..."
+                placeholder="Sınıf veya rehber ara..."
                 className="pl-10 bg-white/80 backdrop-blur-sm border-cyan-100 focus:ring-cyan-500 rounded-lg shadow-sm"
                 value={searchValue}
                 onChange={(e) => setSearchValue(e.target.value)}

@@ -64,7 +64,7 @@ export default function AnnouncementsPage() {
             <h1 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-teal-600 to-emerald-600">
               Duyuru Panosu
             </h1>
-            <p className="text-gray-500 text-sm mt-1">Öğretmenlerinizin duyurularını takip edin</p>
+            <p className="text-gray-500 text-sm mt-1">Rehberlerinizin duyurularını takip edin</p>
           </div>
         </div>
 

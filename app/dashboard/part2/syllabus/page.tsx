@@ -39,7 +39,7 @@ export default async function SyllabusPage() {
             </h1>
             <p className="text-gray-600">
               {isAdmin
-                ? 'Global müfredat oluşturun ve tüm öğretmenlerle paylaşın'
+                ? 'Global müfredat oluşturun ve tüm rehberlerle paylaşın'
                 : 'Müfredatları görüntüleyin ve sınıfınız için ilerleme kaydedin'}
             </p>
           </div>
@@ -48,7 +48,7 @@ export default async function SyllabusPage() {
               <Link href="/dashboard/part2/syllabus/tracking">
                 <Button className="bg-white hover:bg-gray-50 text-cyan-700 border border-cyan-200">
                   <BookOpen className="h-4 w-4 mr-2" />
-                  Öğretmen İlerleme Takibi
+                  Rehber İlerleme Takibi
                 </Button>
               </Link>
             )}

@@ -79,7 +79,7 @@ export default function TutorDetailPage() {
         return (
             <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-50 via-white to-pink-50">
                 <div className="text-center">
-                    <p className="text-gray-600 mb-4">Öğretmen bulunamadı</p>
+                    <p className="text-gray-600 mb-4">Rehber bulunamadı</p>
                     <Link href="/dashboard/part2/overview">
                         <Button>Geri Dön</Button>
                     </Link>

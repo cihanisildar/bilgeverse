@@ -9,13 +9,13 @@ import { startOfWeek, endOfWeek } from 'date-fns';
 import { getActivePeriod, periodStudentWhere } from '@/lib/periods';
 
 /**
- * Kurumun İnsan Kaynağı raporları paketi (part 3) + oturum.
+ * Kurumun Değerler Halkası raporları paketi (part 2) + oturum.
  *
  * Paket yoksa null döner; çağıran taraftaki mevcut oturum/rol kontrolleri
- * isteği zaten reddeder. Sayfa katmanı ayrıca requireAuth({ partId: 3 })
+ * isteği zaten reddeder. Sayfa katmanı ayrıca requireAuth({ partId: 2 })
  * ile kapılı — buradaki kapı, server action'ın doğrudan çağrılması hâlini kapatır.
  */
-const LICENSED_PART = 3;
+const LICENSED_PART = 2;
 
 async function getLicensedSession() {
     const session = await getServerSession(authOptions);

@@ -2,11 +2,16 @@ import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '../../../auth/[...nextauth]/auth.config';
+import { requireApiPartLicense } from '@/app/lib/permissions.server';
 
 export async function GET(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
+  // Kurum paketi kapısı — Etkinlikler Değerler Halkası'na (part 2) ait
+  const licenseGate = await requireApiPartLicense(2);
+  if (licenseGate.errorResponse) return licenseGate.errorResponse;
+
   try {
     const session = await getServerSession(authOptions);
     

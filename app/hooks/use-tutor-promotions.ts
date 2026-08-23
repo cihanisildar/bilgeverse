@@ -7,10 +7,12 @@ import {
     getEligibleUsers,
     createTutorPromotion,
     updateTutorPromotion,
+    deleteTutorPromotion,
     CreateTutorPromotionInput,
     UpdateTutorPromotionInput,
 } from '@/app/actions/tutor-promotions';
 import { useToast } from '@/hooks/use-toast';
+import { toast as hotToast } from 'react-hot-toast';
 
 import { TutorPromotion, EligibleUser } from '@/app/types/tutor-promotions';
 
@@ -117,5 +119,23 @@ export function useUpdatePromotion() {
                 variant: 'destructive',
             });
         },
+    });
+}
+
+export function useDeletePromotion() {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: (id: string) => deleteTutorPromotion(id),
+        onSuccess: (result) => {
+            if (result.error) {
+                hotToast.error(result.error);
+                return;
+            }
+            queryClient.invalidateQueries({ queryKey: ['tutor-promotions'] });
+            hotToast.success('Terfi talebi silindi');
+        },
+        onError: (error: Error) =>
+            hotToast.error(error.message || 'Terfi talebi silinirken bir hata oluştu'),
     });
 }

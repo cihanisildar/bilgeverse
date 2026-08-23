@@ -33,7 +33,7 @@ export const PACKAGES: PackageDef[] = [
     id: 2,
     name: 'Değerler Halkası',
     label: 'Paket 2 — Değerler Halkası',
-    description: 'Değerler Halkası grupları, beceri atölyeleri ve akademi',
+    description: 'Değerler Halkası, beceri atölyeleri ve akademi',
     parts: [2, 4, 11],
   },
   {

@@ -25,8 +25,8 @@ export const PARTS: Part[] = [
   },
   {
     id: 2,
-    name: 'Değerler Halkası Grupları',
-    description: 'Değerler Halkası gruplarını yönetin ve takip edin',
+    name: 'Değerler Halkası',
+    description: 'Değerler Halkası buluşmalarını, yoklamalarını ve içeriklerini yönetin',
     path: '/dashboard/part2',
     icon: <Grid3x3 className="h-8 w-8" />,
     color: 'from-blue-500 to-cyan-500',

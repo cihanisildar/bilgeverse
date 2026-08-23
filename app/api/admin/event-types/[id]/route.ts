@@ -3,6 +3,7 @@ import prisma from '@/lib/prisma';
 import { getServerSession } from 'next-auth';
 import { UserRole } from '@prisma/client';
 import { authOptions } from '../../../auth/[...nextauth]/auth.config';
+import { requireApiPartLicense } from '@/app/lib/permissions.server';
 
 export const dynamic = 'force-dynamic';
 
@@ -10,6 +11,10 @@ export async function PUT(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
+    // Kurum paketi kapısı — Etkinlik türleri Etkinlikler'e (part 2) ait
+    const licenseGate = await requireApiPartLicense(2);
+    if (licenseGate.errorResponse) return licenseGate.errorResponse;
+
   try {
     const session = await getServerSession(authOptions);
 
@@ -100,6 +105,10 @@ export async function DELETE(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
+    // Kurum paketi kapısı — Etkinlik türleri Etkinlikler'e (part 2) ait
+    const licenseGate = await requireApiPartLicense(2);
+    if (licenseGate.errorResponse) return licenseGate.errorResponse;
+
   try {
     const session = await getServerSession(authOptions);
 

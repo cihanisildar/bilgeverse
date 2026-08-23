@@ -98,7 +98,6 @@ export async function createEvaluation(data: {
         });
 
         revalidatePath('/dashboard/part9');
-        revalidatePath('/dashboard/part7/sports');
         return { error: null, data: evaluation };
     } catch (error) {
         console.error('Error creating evaluation:', error);
@@ -112,7 +111,6 @@ export async function deleteEvaluation(id: string) {
         if (!hasRole(session, MANAGE_ROLES)) return unauthorized();
         await prisma.athleteEvaluation.delete({ where: { id } });
         revalidatePath('/dashboard/part9');
-        revalidatePath('/dashboard/part7/sports');
         return { error: null, data: { success: true } };
     } catch (error) {
         console.error('Error deleting evaluation:', error);
@@ -172,7 +170,6 @@ export async function upsertDisciplineRule(data: {
             });
 
         revalidatePath('/dashboard/part9');
-        revalidatePath('/dashboard/part7/sports');
         return { error: null, data: rule };
     } catch (error) {
         console.error('Error upserting discipline rule:', error);
@@ -186,7 +183,6 @@ export async function deleteDisciplineRule(id: string) {
         if (!hasRole(session, MANAGE_ROLES)) return unauthorized();
         await prisma.disciplineRule.delete({ where: { id } });
         revalidatePath('/dashboard/part9');
-        revalidatePath('/dashboard/part7/sports');
         return { error: null, data: { success: true } };
     } catch (error) {
         console.error('Error deleting discipline rule:', error);
@@ -194,9 +190,16 @@ export async function deleteDisciplineRule(id: string) {
     }
 }
 
+/**
+ * TÜM sporcuların disiplin kayıtları — yalnız yönetim ekranı için.
+ *
+ * Rol kontrolü şart: sporcunun kendi paneli de bu modülde ve kayıtlar kişisel
+ * veri; sporcu buradan kulübün tamamını görmemeli. Sporcunun kendi kayıtları
+ * için `getMyDisciplineRecords` (athlete-actions) kullanılır.
+ */
 export async function getDisciplineRecords(athleteId?: string) {
-    const lic = await requireLicense();
-    if (!lic.ok) return { error: lic.error, data: null };
+    const session = await getLicensedSession();
+    if (!hasRole(session, MANAGE_ROLES)) return unauthorized();
     try {
         const records = await prisma.disciplineRecord.findMany({
             where: athleteId ? { athleteId } : undefined,
@@ -238,7 +241,6 @@ export async function createDisciplineRecord(data: {
         });
 
         revalidatePath('/dashboard/part9');
-        revalidatePath('/dashboard/part7/sports');
         return { error: null, data: record };
     } catch (error) {
         console.error('Error creating discipline record:', error);
@@ -252,7 +254,6 @@ export async function deleteDisciplineRecord(id: string) {
         if (!hasRole(session, MANAGE_ROLES)) return unauthorized();
         await prisma.disciplineRecord.delete({ where: { id } });
         revalidatePath('/dashboard/part9');
-        revalidatePath('/dashboard/part7/sports');
         return { error: null, data: { success: true } };
     } catch (error) {
         console.error('Error deleting discipline record:', error);
@@ -311,7 +312,6 @@ export async function upsertTournament(data: {
             : await prisma.tournament.create({ data: { ...payload, createdById: session!.user.id } });
 
         revalidatePath('/dashboard/part9');
-        revalidatePath('/dashboard/part7/sports');
         return { error: null, data: tournament };
     } catch (error) {
         console.error('Error upserting tournament:', error);
@@ -325,7 +325,6 @@ export async function deleteTournament(id: string) {
         if (!hasRole(session, MANAGE_ROLES)) return unauthorized();
         await prisma.tournament.delete({ where: { id } });
         revalidatePath('/dashboard/part9');
-        revalidatePath('/dashboard/part7/sports');
         return { error: null, data: { success: true } };
     } catch (error) {
         console.error('Error deleting tournament:', error);
@@ -397,7 +396,6 @@ export async function upsertMatch(data: {
             : await prisma.sportMatch.create({ data: { ...payload, createdById: session!.user.id } });
 
         revalidatePath('/dashboard/part9');
-        revalidatePath('/dashboard/part7/sports');
         return { error: null, data: match };
     } catch (error) {
         console.error('Error upserting match:', error);
@@ -411,7 +409,6 @@ export async function deleteMatch(id: string) {
         if (!hasRole(session, MANAGE_ROLES)) return unauthorized();
         await prisma.sportMatch.delete({ where: { id } });
         revalidatePath('/dashboard/part9');
-        revalidatePath('/dashboard/part7/sports');
         return { error: null, data: { success: true } };
     } catch (error) {
         console.error('Error deleting match:', error);
@@ -466,7 +463,6 @@ export async function saveMatchRoster(
         ]);
 
         revalidatePath('/dashboard/part9');
-        revalidatePath('/dashboard/part7/sports');
         return { error: null, data: { success: true } };
     } catch (error) {
         console.error('Error saving match roster:', error);
@@ -590,7 +586,6 @@ export async function upsertEquipment(data: {
             : await prisma.equipment.create({ data: payload });
 
         revalidatePath('/dashboard/part9');
-        revalidatePath('/dashboard/part7/sports');
         return { error: null, data: item };
     } catch (error) {
         console.error('Error upserting equipment:', error);
@@ -604,7 +599,6 @@ export async function deleteEquipment(id: string) {
         if (!hasRole(session, MANAGE_ROLES)) return unauthorized();
         await prisma.equipment.delete({ where: { id } });
         revalidatePath('/dashboard/part9');
-        revalidatePath('/dashboard/part7/sports');
         return { error: null, data: { success: true } };
     } catch (error) {
         console.error('Error deleting equipment:', error);
@@ -683,7 +677,6 @@ export async function generateMonthlyFees(data: { periodMonth: Date; amount: num
         }
 
         revalidatePath('/dashboard/part9');
-        revalidatePath('/dashboard/part7/sports');
         return { error: null, data: { created, total: athletes.length } };
     } catch (error) {
         console.error('Error generating monthly fees:', error);
@@ -738,7 +731,6 @@ export async function recordFeePayment(feeId: string, payment: { amount: number;
         });
 
         revalidatePath('/dashboard/part9');
-        revalidatePath('/dashboard/part7/sports');
         return { error: null, data: { id: result.id, amount: num(result.amount) } };
     } catch (error) {
         console.error('Error recording fee payment:', error);
@@ -796,7 +788,6 @@ export async function sendDuesReminder(feeId: string) {
         });
 
         revalidatePath('/dashboard/part9');
-        revalidatePath('/dashboard/part7/sports');
         return { error: null, data: { success: true } };
     } catch (error) {
         console.error('Error sending dues reminder:', error);
@@ -852,7 +843,6 @@ export async function createSportTransaction(data: {
             },
         });
         revalidatePath('/dashboard/part9');
-        revalidatePath('/dashboard/part7/sports');
         return { error: null, data: { ...tx, amount: num(tx.amount) } };
     } catch (error) {
         console.error('Error creating sport transaction:', error);
@@ -866,7 +856,6 @@ export async function deleteSportTransaction(id: string) {
         if (!hasRole(session, MANAGE_ROLES)) return unauthorized();
         await prisma.sportTransaction.delete({ where: { id } });
         revalidatePath('/dashboard/part9');
-        revalidatePath('/dashboard/part7/sports');
         return { error: null, data: { success: true } };
     } catch (error) {
         console.error('Error deleting sport transaction:', error);
@@ -947,7 +936,6 @@ export async function createSportAnnouncement(data: {
             },
         });
         revalidatePath('/dashboard/part9');
-        revalidatePath('/dashboard/part7/sports');
         return { error: null, data: announcement };
     } catch (error) {
         console.error('Error creating announcement:', error);
@@ -961,7 +949,6 @@ export async function deleteSportAnnouncement(id: string) {
         if (!hasRole(session, MANAGE_ROLES)) return unauthorized();
         await prisma.sportAnnouncement.delete({ where: { id } });
         revalidatePath('/dashboard/part9');
-        revalidatePath('/dashboard/part7/sports');
         return { error: null, data: { success: true } };
     } catch (error) {
         console.error('Error deleting announcement:', error);
@@ -1024,7 +1011,6 @@ export async function createSportFeedback(data: {
             },
         });
         revalidatePath('/dashboard/part9');
-        revalidatePath('/dashboard/part7/sports');
         return { error: null, data: feedback };
     } catch (error) {
         console.error('Error creating feedback:', error);
@@ -1058,7 +1044,6 @@ export async function respondSportFeedback(id: string, data: { response: string;
         }
 
         revalidatePath('/dashboard/part9');
-        revalidatePath('/dashboard/part7/sports');
         return { error: null, data: feedback };
     } catch (error) {
         console.error('Error responding to feedback:', error);
@@ -1072,7 +1057,6 @@ export async function updateFeedbackStatus(id: string, status: FeedbackStatus) {
         if (!hasRole(session, MANAGE_ROLES)) return unauthorized();
         const feedback = await prisma.sportFeedback.update({ where: { id }, data: { status } });
         revalidatePath('/dashboard/part9');
-        revalidatePath('/dashboard/part7/sports');
         return { error: null, data: feedback };
     } catch (error) {
         console.error('Error updating feedback status:', error);
@@ -1086,7 +1070,6 @@ export async function deleteSportFeedback(id: string) {
         if (!hasRole(session, MANAGE_ROLES)) return unauthorized();
         await prisma.sportFeedback.delete({ where: { id } });
         revalidatePath('/dashboard/part9');
-        revalidatePath('/dashboard/part7/sports');
         return { error: null, data: { success: true } };
     } catch (error) {
         console.error('Error deleting feedback:', error);

@@ -1,6 +1,14 @@
+'use client';
+
 import Link from 'next/link';
 import { User, Calendar, Trophy, ShoppingBag, UserPlus, Star, FileText, Heart } from "lucide-react";
+import { useAuth } from '@/app/contexts/AuthContext';
 
+/**
+ * `requiresPart` verilen kısayol, Bilgeverse adresinde dursa da başka bir
+ * modülün içeriğine açılıyor; kurumda o paket yoksa kart hiç basılmaz.
+ * Yoksa link görünür, tıklayınca paket kapısı "erişim engellendi" veriyordu.
+ */
 const quickAccessItems = [
   {
     href: "/dashboard/part7/admin/users",
@@ -15,6 +23,7 @@ const quickAccessItems = [
   },
   {
     href: "/dashboard/part7/admin/events",
+    requiresPart: 2,
     icon: Calendar,
     title: "Etkinlik Oluştur",
     description: "Yeni etkinlikler ekle ve planla",
@@ -93,9 +102,15 @@ const quickAccessItems = [
 ];
 
 export default function QuickAccessGrid() {
+  const { user } = useAuth();
+  const orgParts = user?.orgParts ?? [];
+  const visibleItems = quickAccessItems.filter(
+    (item) => item.requiresPart === undefined || orgParts.includes(item.requiresPart)
+  );
+
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-      {quickAccessItems.map((item) => {
+      {visibleItems.map((item) => {
         const IconComponent = item.icon;
         return (
           <Link key={item.href} href={item.href} className="group">

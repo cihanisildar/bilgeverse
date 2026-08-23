@@ -585,7 +585,7 @@ function RequestModal({
                 onChange={(e) => setRequestNote(e.target.value)}
                 className="w-full px-4 py-3 text-slate-800 bg-white/80 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 placeholder-slate-400 resize-none shadow-sm"
                 rows={3}
-                placeholder="Öğretmeninize iletmek istediğiniz özel bir mesaj..."
+                placeholder="Rehberinize iletmek istediğiniz özel bir mesaj..."
               />
             </div>
 

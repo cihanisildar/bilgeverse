@@ -178,7 +178,7 @@ export function WorkshopAssignments({
                                                 {user.role === 'ADMIN' ? 'Admin' :
                                                     user.role === 'BOARD_MEMBER' ? 'Kurul Üyesi' :
                                                         user.role === 'TUTOR' ? 'Rehber' :
-                                                            user.role === 'ASISTAN' ? 'Asistan' : user.role}
+                                                            user.role === 'ASISTAN' ? 'Lider' : user.role}
                                             </Badge>
                                         </div>
                                     </div>
@@ -217,7 +217,7 @@ export function WorkshopAssignments({
                                             {assignment.role === 'ADMIN' ? 'Admin' :
                                                 assignment.role === 'BOARD_MEMBER' ? 'Kurul Üyesi' :
                                                     assignment.role === 'TUTOR' ? 'Rehber' :
-                                                        assignment.role === 'ASISTAN' ? 'Asistan' : assignment.role}
+                                                        assignment.role === 'ASISTAN' ? 'Lider' : assignment.role}
                                         </Badge>
                                     </div>
                                 </div>

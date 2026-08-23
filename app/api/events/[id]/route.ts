@@ -3,12 +3,17 @@ import prisma from '@/lib/prisma';
 import { EventScope, EventStatus, EventType, UserRole } from '@prisma/client';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '../../auth/[...nextauth]/auth.config';
+import { requireApiPartLicense } from '@/app/lib/permissions.server';
 
 // Get a specific event by ID
 export async function GET(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
+  // Kurum paketi kapısı — Etkinlikler Değerler Halkası'na (part 2) ait
+  const licenseGate = await requireApiPartLicense(2);
+  if (licenseGate.errorResponse) return licenseGate.errorResponse;
+
   try {
     const session = await getServerSession(authOptions);
     
@@ -84,6 +89,10 @@ export async function PUT(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
+  // Kurum paketi kapısı — Etkinlikler Değerler Halkası'na (part 2) ait
+  const licenseGate = await requireApiPartLicense(2);
+  if (licenseGate.errorResponse) return licenseGate.errorResponse;
+
   try {
     console.log('PUT /api/events/[id] - Starting request');
     const session = await getServerSession(authOptions);
@@ -139,7 +148,7 @@ export async function PUT(
     const body = await request.json();
     console.log('Request body:', body);
     
-    const { title, description, startDateTime, location, type, capacity, points, tags, status, eventScope } = body;
+    const { title, description, startDateTime, location, type, eventTypeId, experience, capacity, points, tags, status, eventScope, createdForTutorId } = body;
 
     // Validate required fields
     if (!title || !description || !startDateTime) {
@@ -157,18 +166,41 @@ export async function PUT(
       );
     }
 
+    // Etkinlik türü: yeni istemciler `eventTypeId`, eski ekran `type` gönderiyor.
+    // `type` alanı eskiden YUZ_YUZE/ONLINE taşıyordu ve doğrudan eventTypeId'ye
+    // yazılınca foreign key hatası veriyordu; bu yüzden gelen değer gerçekten
+    // bir EventType kaydına karşılık gelmiyorsa tür değiştirilmez.
+    const requestedTypeId = eventTypeId || type;
+    let nextEventTypeId: string | undefined;
+    if (requestedTypeId && requestedTypeId !== existingEvent.eventTypeId) {
+      const requestedType = await prisma.eventType.findUnique({ where: { id: requestedTypeId } });
+      if (requestedType) nextEventTypeId = requestedType.id;
+    }
+
+    // Kapsam GROUP'a çekildiyse rehber bilgisi de güncellenmeli; GLOBAL'e
+    // çekildiyse eski rehber bağı temizlenmeli.
+    const nextScope = (eventScope as EventScope) || existingEvent.eventScope;
+    const tutorUpdate =
+      nextScope === EventScope.GLOBAL
+        ? { createdForTutorId: null }
+        : createdForTutorId
+          ? { createdForTutorId }
+          : {};
+
     // Prepare update data with proper type casting
     const updateData = {
       title: title.trim(),
       description: description.trim(),
       startDateTime: new Date(startDateTime),
       location: location?.trim() || 'Online',
-      ...(type && { eventTypeId: type }),
+      ...(nextEventTypeId && { eventTypeId: nextEventTypeId }),
       capacity: Number(capacity) || 20,
       points: Number(points) || 0,
+      ...(experience !== undefined && { experience: Number(experience) || 0 }),
       tags: Array.isArray(tags) ? tags : [],
       ...(status && { status: status as EventStatus }),
-      ...(eventScope && { eventScope: eventScope as EventScope })
+      ...(eventScope && { eventScope: eventScope as EventScope }),
+      ...tutorUpdate
     };
     
     console.log('Update data:', updateData);
@@ -225,6 +257,10 @@ export async function DELETE(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
+  // Kurum paketi kapısı — Etkinlikler Değerler Halkası'na (part 2) ait
+  const licenseGate = await requireApiPartLicense(2);
+  if (licenseGate.errorResponse) return licenseGate.errorResponse;
+
   try {
     const session = await getServerSession(authOptions);
     

@@ -16,7 +16,7 @@ import { AlarmClock, Plus, Pencil, Trash2, AlertTriangle, Repeat, Check, Undo2, 
 import { toast } from 'react-hot-toast';
 import { format } from 'date-fns';
 import { tr } from 'date-fns/locale';
-import { REPEAT_OPTIONS, repeatShortLabel, daysUntil, nextDueDate } from '@/app/lib/recurring';
+import { REPEAT_OPTIONS, REPEAT_UNITS, MAX_REPEAT_EVERY, repeatShortLabel, daysUntil, nextDueDate } from '@/app/lib/recurring';
 
 type Task = {
     id: string;
@@ -25,6 +25,8 @@ type Task = {
     notes: string | null;
     isDone: boolean;
     repeat: string;
+    repeatEvery: number;
+    repeatUnit: string;
     leadDays: number;
     lastDoneAt: string | null;
 };
@@ -35,6 +37,8 @@ const EMPTY = {
     dueDate: '',
     notes: '',
     repeat: 'MONTHLY',
+    repeatEvery: 1,
+    repeatUnit: 'MONTH',
     leadDays: 7,
 };
 
@@ -107,6 +111,8 @@ export default function RecurringTasksView() {
             dueDate: format(new Date(t.dueDate), 'yyyy-MM-dd'),
             notes: t.notes || '',
             repeat: t.repeat || 'NONE',
+            repeatEvery: t.repeatEvery ?? 1,
+            repeatUnit: t.repeatUnit || 'MONTH',
             leadDays: t.leadDays ?? 7,
         });
         setDialogOpen(true);
@@ -116,7 +122,9 @@ export default function RecurringTasksView() {
     const reminders = rows.filter((t) => !t.isDone && daysUntil(t.dueDate) <= (t.leadDays ?? 7));
 
     // Seçilen tekrar aralığının bir sonraki tarihi — kullanıcı kaydetmeden görsün.
-    const previewNext = form.dueDate ? nextDueDate(new Date(form.dueDate), form.repeat) : null;
+    const previewNext = form.dueDate
+        ? nextDueDate(new Date(form.dueDate), form.repeat, { every: form.repeatEvery, unit: form.repeatUnit })
+        : null;
 
     return (
         <>
@@ -193,7 +201,7 @@ export default function RecurringTasksView() {
                                         <div className="flex items-center gap-2 flex-wrap">
                                             <p className={`font-semibold ${t.isDone ? 'line-through text-gray-400' : urgent ? 'text-red-700' : 'text-gray-800'}`}>{t.title}</p>
                                             <Badge variant="outline" className="bg-white text-gray-600 border-gray-200">
-                                                <Repeat className="h-3 w-3 mr-1" />{repeatShortLabel(t.repeat)}
+                                                <Repeat className="h-3 w-3 mr-1" />{repeatShortLabel(t.repeat, { every: t.repeatEvery, unit: t.repeatUnit })}
                                             </Badge>
                                             {urgent && (
                                                 <Badge className="bg-red-100 text-red-700 border-red-200">
@@ -261,6 +269,34 @@ export default function RecurringTasksView() {
                                 />
                             </div>
                         </div>
+
+                        {/* Hazır aralıklar yetmeyince: "her N gün/hafta/ay/yıl" */}
+                        {form.repeat === 'CUSTOM' && (
+                            <div className="rounded-lg border border-rose-200 bg-rose-50/50 p-3 space-y-1">
+                                <Label>Özel Aralık *</Label>
+                                <div className="flex items-center gap-2">
+                                    <span className="text-sm text-gray-600">Her</span>
+                                    <Input
+                                        type="number"
+                                        min={1}
+                                        max={MAX_REPEAT_EVERY}
+                                        className="w-24 bg-white"
+                                        value={form.repeatEvery}
+                                        onChange={(e) => setForm({ ...form, repeatEvery: Number(e.target.value) })}
+                                    />
+                                    <Select value={form.repeatUnit} onValueChange={(v) => setForm({ ...form, repeatUnit: v })}>
+                                        <SelectTrigger className="w-36 bg-white"><SelectValue /></SelectTrigger>
+                                        <SelectContent>
+                                            {REPEAT_UNITS.map((u) => <SelectItem key={u.value} value={u.value}>{u.label}</SelectItem>)}
+                                        </SelectContent>
+                                    </Select>
+                                    <span className="text-sm text-gray-600">bir kez</span>
+                                </div>
+                                <p className="text-xs text-gray-500">
+                                    Örn: 4 ay, 2 ay, 45 gün — hazır seçeneklerden biri işinize uymuyorsa buradan kendiniz belirleyin.
+                                </p>
+                            </div>
+                        )}
 
                         <div className="space-y-1">
                             <Label>İlk Hedef Tarih *</Label>

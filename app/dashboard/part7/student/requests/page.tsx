@@ -432,7 +432,7 @@ export default function StudentRequests() {
                         </div>
                         <div>
                           <div className="font-semibold text-emerald-800 mb-1">Tebrikler! 🎉</div>
-                          <div className="text-emerald-700">Talebiniz onaylandı! Ürününüzü öğretmeninizden teslim alabilirsiniz.</div>
+                          <div className="text-emerald-700">Talebiniz onaylandı! Ürününüzü rehberinizden teslim alabilirsiniz.</div>
                         </div>
                       </div>
                     </div>
@@ -446,7 +446,7 @@ export default function StudentRequests() {
                         </div>
                         <div>
                           <div className="font-semibold text-amber-800 mb-1">İnceleme Aşamasında</div>
-                          <div className="text-amber-700">Talebiniz öğretmeninizin onayını bekliyor. Lütfen sabırla bekleyin.</div>
+                          <div className="text-amber-700">Talebiniz rehberinizin onayını bekliyor. Lütfen sabırla bekleyin.</div>
                         </div>
                       </div>
                     </div>
@@ -467,7 +467,7 @@ export default function StudentRequests() {
                   {user?.points || 0} Puan
                 </div>
                 <p className="text-white/80 text-sm">
-                  Puanlarınız, talebiniz öğretmeniniz tarafından onaylandığında otomatik olarak düşülür.
+                  Puanlarınız, talebiniz rehberiniz tarafından onaylandığında otomatik olarak düşülür.
                 </p>
               </div>
               <div className="flex-shrink-0">

@@ -2,7 +2,7 @@
 
 // Sporcunun kendi paneli. İki yerden render ediliyor:
 //   /dashboard/part9/me                 → Bilge Spor Kulübü kabuğu içinde
-//   /dashboard/part7/student/sports     → Bilgeverse kabuğu içinde
+//   (Bilgeverse içindeki ikinci girişi kaldırıldı — Spor Kulübü Paket 3'e ait)
 // Bu yüzden kendi başlık/çerçevesini kurmaz, sadece içeriği döndürür.
 
 import { useQuery } from '@tanstack/react-query';

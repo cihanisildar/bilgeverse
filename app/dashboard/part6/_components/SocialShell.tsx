@@ -26,9 +26,9 @@ const NAV_ITEMS: NavItem[] = [
 /**
  * Sosyal Medya'nın sayfa İÇİ menüsü.
  *
- * `basePath` ile iki yerden kullanılır: kendi modülünde (/dashboard/part6) ve
- * Bilgeverse içindeki ikinci girişinde (/dashboard/part7/social). Bilgeverse
- * sol menüsünde modül TEK satırdır; bölümler arasında gezinme buradan yapılır.
+ * Modülün Bilgeverse (part7) içindeki ikinci girişi kaldırıldı — Sosyal Medya
+ * Paket 3'e ait, Bilgeverse Paket 1. `basePath` yine de parametre: kabuk tek
+ * yerden (/dashboard/part6) kullanılıyor ama linkler sabit yazılmasın diye.
  */
 export default function SocialShell({
     children,

@@ -345,7 +345,7 @@ function ProfileContent() {
         <div className="bg-white rounded-xl shadow-md border border-gray-100 overflow-hidden">
           {/* Tutor Info */}
           <div className="p-4 sm:p-6 border-b border-gray-100">
-            <h2 className="text-lg sm:text-xl font-bold text-gray-800 mb-3 sm:mb-4">Öğretmen Bilgileri</h2>
+            <h2 className="text-lg sm:text-xl font-bold text-gray-800 mb-3 sm:mb-4">Rehber Bilgileri</h2>
             {profile.tutor ? (
               <div className="flex flex-col sm:flex-row items-center sm:items-start gap-3 sm:gap-4">
                 <div className="h-16 w-16 sm:h-20 sm:w-20 rounded-full bg-indigo-100 flex items-center justify-center text-xl sm:text-2xl font-bold text-indigo-600 flex-shrink-0">
@@ -360,7 +360,7 @@ function ProfileContent() {
                 </div>
               </div>
             ) : (
-              <p className="text-sm sm:text-base text-gray-500">Henüz bir öğretmen atanmamış.</p>
+              <p className="text-sm sm:text-base text-gray-500">Henüz bir rehber atanmamış.</p>
             )}
           </div>
 

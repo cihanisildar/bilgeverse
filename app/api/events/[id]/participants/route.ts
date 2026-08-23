@@ -3,12 +3,17 @@ import prisma from '@/lib/prisma';
 import { ParticipantStatus, UserRole } from '@prisma/client';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/app/api/auth/[...nextauth]/auth.config';
+import { requireApiPartLicense } from '@/app/lib/permissions.server';
 
 // Get all participants for an event
 export async function GET(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
+  // Kurum paketi kapısı — Etkinlikler Değerler Halkası'na (part 2) ait
+  const licenseGate = await requireApiPartLicense(2);
+  if (licenseGate.errorResponse) return licenseGate.errorResponse;
+
   try {
     const session = await getServerSession(authOptions);
     
@@ -34,8 +39,12 @@ export async function GET(
       );
     }
 
-    // Only allow tutor who created the event or participants of the event
+    // Only allow admins, tutors, the event's creator, or participants of the event.
+    // ADMIN eklendi: yönetici etkinliği düzenleyip silebiliyorken katılımcı
+    // listesini görememesi tutarsızdı (başka bir rehberin grup etkinliğinde
+    // 403 dönüyordu).
     if (
+      session.user.role !== UserRole.ADMIN &&
       session.user.role !== UserRole.TUTOR && 
       event.createdBy.id !== session.user.id &&
       !(await prisma.eventParticipant.findFirst({
@@ -96,6 +105,10 @@ export async function POST(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
+  // Kurum paketi kapısı — Etkinlikler Değerler Halkası'na (part 2) ait
+  const licenseGate = await requireApiPartLicense(2);
+  if (licenseGate.errorResponse) return licenseGate.errorResponse;
+
   try {
     const session = await getServerSession(authOptions);
     
@@ -211,6 +224,10 @@ export async function PATCH(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
+  // Kurum paketi kapısı — Etkinlikler Değerler Halkası'na (part 2) ait
+  const licenseGate = await requireApiPartLicense(2);
+  if (licenseGate.errorResponse) return licenseGate.errorResponse;
+
   try {
     const session = await getServerSession(authOptions);
     
@@ -341,6 +358,10 @@ export async function DELETE(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
+  // Kurum paketi kapısı — Etkinlikler Değerler Halkası'na (part 2) ait
+  const licenseGate = await requireApiPartLicense(2);
+  if (licenseGate.errorResponse) return licenseGate.errorResponse;
+
   try {
     const session = await getServerSession(authOptions);
     

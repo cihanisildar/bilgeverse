@@ -2333,10 +2333,15 @@ model RecurringTask {
   notes     String?
   isDone    Boolean  @default(false)
 
-  // Tekrar aralığı: NONE | WEEKLY | MONTHLY | QUARTERLY | YEARLY
+  // Tekrar aralığı: NONE | WEEKLY | MONTHLY | QUARTERLY | YEARLY | CUSTOM
   // Tekrarlı bir iş "yapıldı" işaretlendiğinde kapanmaz; dueDate bir sonraki
   // tekrara ilerler. Böylece aynı iş her seferinde yeniden kaydedilmez.
   repeat     String    @default("NONE")
+  // CUSTOM aralık: "her N <birim>de 1" (ör. 4 ayda 1, 45 günde 1).
+  // Hazır seçenekler her derneğe yetmediği için eklendi; repeat != CUSTOM ise
+  // bu iki alan yok sayılır.
+  repeatEvery Int      @default(1)
+  repeatUnit  String   @default("MONTH") // DAY | WEEK | MONTH | YEAR
   // Hedef tarihten kaç gün önce hatırlatılsın
   leadDays   Int       @default(7)
   // Son kez ne zaman yapıldı (tekrarlı işlerde geçmiş takibi için)

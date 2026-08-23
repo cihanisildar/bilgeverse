@@ -2,10 +2,10 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { useAuth } from '@/app/contexts/AuthContext';
 import {
     Users, UserCheck, Dumbbell, CalendarDays, Trophy, IdCard,
     HeartPulse, Wallet, MessageSquare, Megaphone, Share2, AlertTriangle, ArrowRight,
@@ -25,15 +25,14 @@ const STAT_CARDS = (d: SportsOverviewData) => [
 
 export default function SportsOverview() {
     const { data, isLoading: loading } = useSportsOverview();
-    const pathname = usePathname();
+    const { user } = useAuth();
 
-    // Bu bileşen iki kabuktan render ediliyor: kendi modülü (/dashboard/part9)
-    // ve Bilgeverse içindeki kopyası (/dashboard/part7/sports). Buradaki linkler
-    // sabit yazılırsa kullanıcı Bilgeverse'ten dışarı düşer; o yüzden bulunulan
-    // kabuğa göre türetiliyor.
-    const inBilgeverse = pathname?.startsWith('/dashboard/part7/sports') ?? false;
-    const base = inBilgeverse ? '/dashboard/part7/sports' : '/dashboard/part9';
-    const socialBase = inBilgeverse ? '/dashboard/part7/social' : '/dashboard/part6';
+    // Modülün Bilgeverse içindeki ikinci girişi kaldırıldı; tek kabuk kaldı.
+    const base = '/dashboard/part9';
+    const socialBase = '/dashboard/part6';
+    // Spor ve Sosyal Medya aynı pakette olsa da biri `excludedParts` ile geri
+    // alınmış olabilir; kurumda Sosyal Medya yoksa kart gösterilmez.
+    const hasSocial = (user?.orgParts ?? []).includes(6);
 
     if (loading) {
         return (
@@ -140,6 +139,7 @@ export default function SportsOverview() {
                     </CardContent>
                 </Card>
 
+                {hasSocial && (
                 <Card className="border-gray-100 shadow-sm bg-gradient-to-br from-pink-50 to-indigo-50">
                     <CardContent className="p-5 flex flex-col justify-between h-full">
                         <div>
@@ -158,6 +158,7 @@ export default function SportsOverview() {
                         </Link>
                     </CardContent>
                 </Card>
+                )}
             </div>
         </div>
     );

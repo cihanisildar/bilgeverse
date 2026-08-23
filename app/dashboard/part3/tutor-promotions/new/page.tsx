@@ -11,6 +11,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useEligibleUsers, useCreatePromotion } from '@/app/hooks/use-tutor-promotions';
 import Loading from '@/app/components/Loading';
+import { PROMOTION_TARGETS, rolesLabel } from '@/app/lib/promotion-roles';
+import { useMemo } from 'react';
 
 export default function NewPromotionPage() {
     const router = useRouter();
@@ -22,6 +24,19 @@ export default function NewPromotionPage() {
         requestedRole: 'TUTOR',
         notes: '',
     });
+
+    // Hedef role göre süzme: kişi zaten o role sahipse listede çıkmasın.
+    // (Sunucu tarafı da aynı kuralı uyguluyor.)
+    const selectableUsers = useMemo(
+        () =>
+            (users ?? []).filter((u) => {
+                const roles = u.roles?.length ? u.roles : [u.role].filter(Boolean);
+                return !roles.includes(formData.requestedRole as typeof u.role);
+            }),
+        [users, formData.requestedRole]
+    );
+
+    const selectedTarget = PROMOTION_TARGETS.find((t) => t.value === formData.requestedRole);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -66,7 +81,7 @@ export default function NewPromotionPage() {
                             Yeni Terfi Talebi
                         </span>
                     </h1>
-                    <p className="text-gray-600">Öğrenci veya asistanı öğretmen olmak için değerlendirin</p>
+                    <p className="text-gray-600">Bir kişiyi Rehber, Lider veya Yönetim Kurulu Üyesi olarak değerlendirin</p>
                 </div>
 
                 <Card className="border-0 shadow-lg rounded-2xl overflow-hidden">
@@ -80,6 +95,32 @@ export default function NewPromotionPage() {
                     <CardContent>
                         <form onSubmit={handleSubmit} className="space-y-6">
                             <div>
+                                <Label htmlFor="requestedRole">Hedef Rol *</Label>
+                                <Select
+                                    value={formData.requestedRole}
+                                    onValueChange={(value) =>
+                                        // Hedef rol değişince seçili kişi listeden düşmüş olabilir; seçim sıfırlanır.
+                                        setFormData({ ...formData, requestedRole: value, userId: '' })
+                                    }
+                                    required
+                                >
+                                    <SelectTrigger className="mt-2">
+                                        <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {PROMOTION_TARGETS.map((target) => (
+                                            <SelectItem key={target.value} value={target.value}>
+                                                {target.label}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                                {selectedTarget && (
+                                    <p className="text-sm text-gray-500 mt-2">{selectedTarget.description}</p>
+                                )}
+                            </div>
+
+                            <div>
                                 <Label htmlFor="userId">Kullanıcı *</Label>
                                 <Select
                                     value={formData.userId}
@@ -90,33 +131,17 @@ export default function NewPromotionPage() {
                                         <SelectValue placeholder="Bir kullanıcı seçin" />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        {!users || users.length === 0 ? (
+                                        {selectableUsers.length === 0 ? (
                                             <SelectItem value="none" disabled>
                                                 Uygun kullanıcı bulunamadı
                                             </SelectItem>
                                         ) : (
-                                            users.map((user) => (
+                                            selectableUsers.map((user) => (
                                                 <SelectItem key={user.id} value={user.id}>
-                                                    {user.firstName} {user.lastName} (@{user.username}) - {user.role === 'STUDENT' ? 'Öğrenci' : 'Asistan'}
+                                                    {user.firstName} {user.lastName} (@{user.username}) — {rolesLabel(user.roles, user.role)}
                                                 </SelectItem>
                                             ))
                                         )}
-                                    </SelectContent>
-                                </Select>
-                            </div>
-
-                            <div>
-                                <Label htmlFor="requestedRole">Hedef Rol *</Label>
-                                <Select
-                                    value={formData.requestedRole}
-                                    onValueChange={(value) => setFormData({ ...formData, requestedRole: value })}
-                                    required
-                                >
-                                    <SelectTrigger className="mt-2">
-                                        <SelectValue />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="TUTOR">Öğretmen (TUTOR)</SelectItem>
                                     </SelectContent>
                                 </Select>
                             </div>

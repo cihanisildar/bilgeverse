@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useMemo } from 'react';
 import { useSession } from 'next-auth/react';
+import { useAuth } from '@/app/contexts/AuthContext';
 import Link from 'next/link';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Users, Calendar, ShoppingBag, AlertCircle, ChevronRight, Home, User, UserPlus, BarChart2, Trophy, Star, FileText, Heart } from "lucide-react";
@@ -19,8 +20,8 @@ type Stats = {
 };
 
 // Memoized component for stats cards to prevent unnecessary re-renders
-const StatsCards = ({ stats }: { stats: Stats }) => {
-  const cards = useMemo(() => [
+const StatsCards = ({ stats, orgParts }: { stats: Stats; orgParts: number[] }) => {
+  const allCards = useMemo(() => [
     {
       id: 'users',
       title: 'Kullanıcılar',
@@ -36,7 +37,7 @@ const StatsCards = ({ stats }: { stats: Stats }) => {
       subtitle: (
         <div className="flex justify-between text-sm text-gray-500 bg-gray-50 p-3 rounded-lg">
           <div>Öğrenciler: <span className="font-semibold text-indigo-700">{stats.totalStudents}</span></div>
-          <div>Öğretmenler: <span className="font-semibold text-indigo-700">{stats.totalTutors}</span></div>
+          <div>Rehberler: <span className="font-semibold text-indigo-700">{stats.totalTutors}</span></div>
         </div>
       )
     },
@@ -78,6 +79,13 @@ const StatsCards = ({ stats }: { stats: Stats }) => {
     }
   ], [stats]);
 
+  // Etkinlikler Değerler Halkası'na (part2) ait; kurumun paketi yoksa kart
+  // gösterilmez — yoksa "Etkinlikleri Yönet" linki paket kapısına çarpıyordu.
+  const cards = useMemo(
+    () => allCards.filter((card) => card.id !== 'events' || orgParts.includes(2)),
+    [allCards, orgParts]
+  );
+
   return (
     <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
       {cards.map((card) => {
@@ -117,6 +125,8 @@ const StatsCards = ({ stats }: { stats: Stats }) => {
 
 export default function AdminDashboard() {
   const { data: session, status } = useSession();
+  const { user } = useAuth();
+  const orgParts = user?.orgParts ?? [];
   const [stats, setStats] = useState<Stats | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -253,7 +263,7 @@ export default function AdminDashboard() {
         <div className="space-y-8">
           <CurrentPeriod />
 
-          {stats && <StatsCards stats={stats} />}
+          {stats && <StatsCards stats={stats} orgParts={orgParts} />}
 
           {stats && stats.pendingRequests > 0 && (
             <Card className="border-0 shadow-lg rounded-xl overflow-hidden bg-gradient-to-r from-amber-50 to-orange-50">

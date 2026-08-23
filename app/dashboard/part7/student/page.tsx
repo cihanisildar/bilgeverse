@@ -235,11 +235,12 @@ function LoadingDashboard() {
 
 export default function StudentDashboard() {
   const { user: authUser, isStudent } = useAuth();
+  const seesEvents = (authUser?.orgParts ?? []).includes(2);
   const router = useRouter();
 
   const { data: userData, isLoading: userLoading } = useCurrentUser();
   const { data: leaderboardData, isLoading: leaderboardLoading } = useLeaderboard();
-  const { data: eventsData, isLoading: eventsLoading } = useEvents();
+  const { data: eventsData, isLoading: eventsLoading } = useEvents(seesEvents);
   const { data: pointsData, isLoading: pointsLoading } = usePoints();
   const { data: requestsData, isLoading: requestsLoading } = useRequests();
   const { data: userMeetings, isLoading: meetingsLoading } = useUserMeetings();
@@ -428,7 +429,9 @@ export default function StudentDashboard() {
               </div>
             </Card>
 
-            {/* Upcoming Events Section */}
+            {/* Upcoming Events Section — Etkinlikler Değerler Halkası'na (part2)
+                ait; kurumun paketi yoksa bölüm hiç gösterilmez. */}
+            {seesEvents && (
             <section>
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-3">
@@ -481,6 +484,7 @@ export default function StudentDashboard() {
                 </Card>
               )}
             </section>
+            )}
 
             {/* Announcements Section */}
             <section>

@@ -301,7 +301,7 @@ export async function getCharacterGroupsOverview() {
         return { error: null, data: serialize({ groups, tutors }) };
     } catch (error) {
         console.error('Error fetching character groups overview:', error);
-        return { error: 'Değerler Halkası grupları yüklenirken bir hata oluştu', data: null };
+        return { error: 'Gruplar yüklenirken bir hata oluştu', data: null };
     }
 }
 

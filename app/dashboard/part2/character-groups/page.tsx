@@ -115,7 +115,7 @@ export default function CharacterGroupsPage() {
                     <div className="flex items-center gap-3">
                         <div className="p-2 bg-teal-100 rounded-lg"><Users2 className="h-6 w-6 text-teal-600" /></div>
                         <div>
-                            <h1 className="text-2xl font-bold text-gray-800">Değerler Halkası Grupları</h1>
+                            <h1 className="text-2xl font-bold text-gray-800">Gruplar</h1>
                             <p className="text-sm text-gray-500">Gruplar, sorumlu rehberler ve rehber durumları</p>
                         </div>
                     </div>

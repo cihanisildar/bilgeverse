@@ -71,10 +71,16 @@ export function useLeaderboard() {
     });
 }
 
-export function useEvents() {
+/**
+ * Etkinlikler Değerler Halkası'na (part 2) ait ve API o paketi arıyor.
+ * Kurumda paket yoksa istek 403 döner; `enabled` ile hiç atılmaması sağlanır
+ * (yoksa TanStack boşuna 3 kez deneyip konsolu kirletiyor).
+ */
+export function useEvents(enabled = true) {
     return useQuery({
         queryKey: ['events'],
         queryFn: () => fetchJson<EventsResponse>('/api/events'),
+        enabled,
     });
 }
 

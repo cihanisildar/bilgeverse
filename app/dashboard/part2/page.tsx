@@ -122,9 +122,10 @@ export default async function Part2Page() {
             </Link>
           )}
 
-          {/* Etkinlikler — Bilgeverse (part7) sidebar'ından buraya taşındı */}
+          {/* Etkinlikler — Değerler Halkası'na özel kendi sayfası var; part7'deki
+              ekran ayrıca duruyor ama veriler ortak (aynı /api/events). */}
           {canManage && (
-            <Link href="/dashboard/part7/admin/events" className="block">
+            <Link href="/dashboard/part2/events" className="block">
               <Card className="border-0 shadow-lg rounded-xl overflow-hidden transition-all duration-200 hover:shadow-xl hover:-translate-y-1 cursor-pointer bg-gradient-to-br from-amber-50 to-orange-50">
                 <div className="h-2 bg-gradient-to-r from-amber-500 to-orange-500"></div>
                 <CardHeader>
@@ -150,7 +151,8 @@ export default async function Part2Page() {
             </Link>
           )}
 
-          {/* Değerler Halkası Grupları — sayfa İnsan Kaynağı'ndan buraya taşındı, part3'teki kart kaldırıldı */}
+          {/* Gruplar — sayfa İnsan Kaynağı'ndan buraya taşındı, part3'teki kart kaldırıldı.
+              Kart adı modülün adını tekrarlamasın diye sadece "Gruplar". */}
           {canManage && (
             <Link href="/dashboard/part2/character-groups" className="block">
               <Card className="border-0 shadow-lg rounded-xl overflow-hidden transition-all duration-200 hover:shadow-xl hover:-translate-y-1 cursor-pointer bg-gradient-to-br from-emerald-50 to-green-50">
@@ -161,7 +163,7 @@ export default async function Part2Page() {
                       <Users className="h-8 w-8" />
                     </div>
                     <div>
-                      <CardTitle className="text-xl">Değerler Halkası Grupları</CardTitle>
+                      <CardTitle className="text-xl">Gruplar</CardTitle>
                       <CardDescription className="mt-1">
                         Grupları ve rehber atamalarını yönetin
                       </CardDescription>
@@ -180,7 +182,7 @@ export default async function Part2Page() {
 
           {/* Toplu Yoklama Özeti — İnsan Kaynağı'ndan buraya taşındı */}
           {canManage && (
-            <Link href="/dashboard/part3/tutor-participation" className="block">
+            <Link href="/dashboard/part2/tutor-participation" className="block">
               <Card className="border-0 shadow-lg rounded-xl overflow-hidden transition-all duration-200 hover:shadow-xl hover:-translate-y-1 cursor-pointer bg-gradient-to-br from-sky-50 to-blue-50">
                 <div className="h-2 bg-gradient-to-r from-sky-500 to-blue-500"></div>
                 <CardHeader>
@@ -208,7 +210,7 @@ export default async function Part2Page() {
 
           {/* Raporlar — İnsan Kaynağı'ndan buraya taşındı */}
           {canManage && (
-            <Link href="/dashboard/part3/reports" className="block">
+            <Link href="/dashboard/part2/reports" className="block">
               <Card className="border-0 shadow-lg rounded-xl overflow-hidden transition-all duration-200 hover:shadow-xl hover:-translate-y-1 cursor-pointer bg-gradient-to-br from-rose-50 to-pink-50">
                 <div className="h-2 bg-gradient-to-r from-rose-500 to-pink-500"></div>
                 <CardHeader>

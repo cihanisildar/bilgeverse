@@ -437,7 +437,7 @@ export default function TagTemplateManager({ embedded = false }: TagTemplateMana
                             <DialogDescription>
                                 {editingTemplate
                                     ? 'Etiket şablonunu güncelleyin'
-                                    : 'Öğretmenlerin kullanabileceği yeni bir etiket şablonu oluşturun'}
+                                    : 'Rehberlerin kullanabileceği yeni bir etiket şablonu oluşturun'}
                             </DialogDescription>
                         </DialogHeader>
                         {formContent}
@@ -499,7 +499,7 @@ export default function TagTemplateManager({ embedded = false }: TagTemplateMana
             <Card className="border-0 shadow-lg">
                 <CardHeader>
                     <CardTitle className="text-lg">Aktif Şablonlar</CardTitle>
-                    <CardDescription>Öğretmenlerin kullanabileceği etiketler</CardDescription>
+                    <CardDescription>Rehberlerin kullanabileceği etiketler</CardDescription>
                 </CardHeader>
                 <CardContent>
                     {activeTemplates.length === 0 ? (
@@ -592,7 +592,7 @@ export default function TagTemplateManager({ embedded = false }: TagTemplateMana
                 <Card className="border-0 shadow-lg border-t-2 border-t-gray-200">
                     <CardHeader>
                         <CardTitle className="text-lg text-gray-500">Pasif Şablonlar</CardTitle>
-                        <CardDescription>Öğretmenler tarafından kullanılamayan şablonlar</CardDescription>
+                        <CardDescription>Rehberler tarafından kullanılamayan şablonlar</CardDescription>
                     </CardHeader>
                     <CardContent>
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
