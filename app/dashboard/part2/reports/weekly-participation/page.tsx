@@ -66,7 +66,7 @@ export default function WeeklyParticipationPage() {
 
     if (!report) return null;
 
-    const { summary, weekStart, weekEnd } = report;
+    const { summary, weekStart, weekEnd, period } = report;
 
     return (
         <div className="min-h-screen bg-gray-50 p-6 lg:p-8">
@@ -81,7 +81,9 @@ export default function WeeklyParticipationPage() {
                         </Link>
                         <h1 className="text-3xl font-bold text-gray-900 tracking-tight">Genel Katılım Raporu</h1>
                         <p className="text-gray-500 mt-1">
-                            {format(new Date(weekStart), 'dd MMMM yyyy', { locale: tr })} - {format(new Date(weekEnd), 'dd MMMM yyyy', { locale: tr })} tarihleri arası genel katılım analizi.
+                            {period
+                                ? <>{period.name} dönemi ({format(new Date(weekStart), 'dd MMMM yyyy', { locale: tr })} - {format(new Date(weekEnd), 'dd MMMM yyyy', { locale: tr })}) genel katılım analizi.</>
+                                : "Aktif dönem bulunamadı. Dönem Yönetimi'nden bir dönemi aktif hale getirin."}
                         </p>
                     </div>
                 </div>
@@ -106,7 +108,7 @@ export default function WeeklyParticipationPage() {
                         </CardHeader>
                         <CardContent>
                             <div className="text-3xl font-bold text-gray-900">{summary.activeTutors}</div>
-                            <p className="text-[10px] text-gray-400 mt-1 font-bold italic">{summary.totalTutors} ÖĞRETMEN İÇİNDEN</p>
+                            <p className="text-[10px] text-gray-400 mt-1 font-bold italic">{summary.totalTutors} REHBER İÇİNDEN</p>
                         </CardContent>
                     </Card>
 
@@ -159,6 +161,7 @@ export default function WeeklyParticipationPage() {
                                     <tr className="bg-gray-50/50 text-left border-b border-gray-100">
                                         <th className="py-4 px-6 font-bold text-[10px] text-gray-400 uppercase tracking-widest">Sıra</th>
                                         <th className="py-4 px-6 font-bold text-[10px] text-gray-400 uppercase tracking-widest">Rehber</th>
+                                        <th className="py-4 px-6 font-bold text-[10px] text-gray-400 uppercase tracking-widest text-center">Aktif Öğrenci</th>
                                         <th className="py-4 px-6 font-bold text-[10px] text-gray-400 uppercase tracking-widest text-center">Haftalık Yoklama</th>
                                         <th className="py-4 px-6 font-bold text-[10px] text-gray-400 uppercase tracking-widest text-center">Katılım Oranı</th>
                                         <th className="py-4 px-6 font-bold text-[10px] text-gray-400 uppercase tracking-widest text-center">Katılım/Kayıt</th>
@@ -188,6 +191,12 @@ export default function WeeklyParticipationPage() {
                                                             <p className="font-bold text-gray-900 group-hover:text-indigo-600 transition-colors">{tutor.name}</p>
                                                             <p className="text-[10px] text-gray-400 font-bold uppercase tracking-tighter">@{tutor.username}</p>
                                                         </div>
+                                                    </div>
+                                                </td>
+                                                <td className="py-4 px-6 text-center">
+                                                    <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-gray-50 rounded-full border border-gray-100">
+                                                        <Users className="h-3 w-3 text-gray-400" />
+                                                        <span className="text-sm font-black text-gray-700">{tutor.groupSize}</span>
                                                     </div>
                                                 </td>
                                                 <td className="py-4 px-6 text-center">
@@ -230,7 +239,7 @@ export default function WeeklyParticipationPage() {
                             <div className="text-center py-20 text-gray-500">
                                 <Search className="h-8 w-8 text-gray-200 mx-auto mb-3" />
                                 <p className="font-medium text-gray-900">Sonuç bulunamadı.</p>
-                                <p className="text-sm mt-1">Bu hafta için verisi olan rehber bulunamadı.</p>
+                                <p className="text-sm mt-1">Aktif dönemde verisi olan rehber bulunamadı.</p>
                             </div>
                         )}
 
@@ -323,7 +332,11 @@ export default function WeeklyParticipationPage() {
                                         </div>
                                     </div>
 
-                                    <div className="grid grid-cols-2 gap-3">
+                                    <div className="grid grid-cols-3 gap-3">
+                                        <div className="bg-gray-50 rounded-xl p-3 border border-gray-100">
+                                            <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1">Aktif Öğrenci</p>
+                                            <p className="text-lg font-black text-gray-700">{selectedTeacher.groupSize}</p>
+                                        </div>
                                         <div className="bg-gray-50 rounded-xl p-3 border border-gray-100">
                                             <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1">Oturum Sayısı</p>
                                             <p className="text-lg font-black text-gray-700">{selectedTeacher.eventsCreated}</p>

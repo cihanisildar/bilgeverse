@@ -5,8 +5,8 @@ import { authOptions } from '@/app/api/auth/[...nextauth]/auth.config';
 import { isPartLicensed, requirePartLicense } from '@/app/lib/permissions.server';
 import prisma from '@/lib/prisma';
 import { UserRole } from '@prisma/client';
-import { startOfWeek, endOfWeek } from 'date-fns';
-import { getActivePeriod, periodStudentWhere } from '@/lib/periods';
+import { startOfWeek } from 'date-fns';
+import { getActivePeriod, periodDateRange, periodStudentWhere } from '@/lib/periods';
 
 /**
  * Kurumun Değerler Halkası raporları paketi (part 2) + oturum.
@@ -40,6 +40,161 @@ import {
     MissedActivity
 } from '@/types/reports';
 
+type ActivePeriod = NonNullable<Awaited<ReturnType<typeof getActivePeriod>>>;
+
+type ActivityItem = {
+    id: string;
+    title: string;
+    type: 'ETKİNLİK' | 'ATÖLYE' | 'OTURUM';
+    date: Date;
+    registered: number;
+    attended: number;
+};
+
+/**
+ * Per-rehber activity for the ACTIVE PERIOD, shared by the "Haftalık Katılım"
+ * and "Etkinlik Özeti" reports. Uses the same rules as the Toplu Yoklama Özeti
+ * screen (app/api/admin/tutor-participation/route.ts) so the numbers match:
+ *   - rehberler : TUTOR, not deleted, active, tutorStatus ACTIVE (or null = legacy)
+ *   - group     : students enrolled in the active period (periodStudentWhere)
+ *   - sessions  : created by the rehber or by their asistan (lider), inside the
+ *                 period's date range; only the group's own students are counted
+ *   - events    : Event by periodId, Part2Event by date range
+ */
+async function loadActivePeriodTutorActivity(activePeriod: ActivePeriod) {
+    const dateRange = periodDateRange(activePeriod);
+
+    const tutors = await prisma.user.findMany({
+        where: {
+            roles: { has: UserRole.TUTOR },
+            deletedAt: null,
+            isActive: true,
+            OR: [{ tutorStatus: 'ACTIVE' }, { tutorStatus: null }],
+        },
+        select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            username: true,
+            students: {
+                where: {
+                    roles: { has: UserRole.STUDENT },
+                    isActive: true,
+                    ...periodStudentWhere(activePeriod.id),
+                },
+                select: { id: true },
+            },
+        },
+    });
+
+    const tutorIds = tutors.map((t) => t.id);
+    if (tutorIds.length === 0) return [];
+
+    const [events, part2Events, sessions] = await Promise.all([
+        prisma.event.findMany({
+            where: {
+                periodId: activePeriod.id,
+                OR: [
+                    { createdForTutorId: { in: tutorIds } },
+                    { createdById: { in: tutorIds } },
+                ],
+            },
+            select: {
+                id: true,
+                title: true,
+                startDateTime: true,
+                createdById: true,
+                createdForTutorId: true,
+                participants: { select: { status: true } },
+            },
+        }),
+        prisma.part2Event.findMany({
+            where: { createdById: { in: tutorIds }, eventDate: dateRange },
+            select: {
+                id: true,
+                title: true,
+                eventDate: true,
+                createdById: true,
+                participants: { select: { status: true } },
+            },
+        }),
+        prisma.attendanceSession.findMany({
+            where: {
+                sessionDate: dateRange,
+                OR: [
+                    { createdById: { in: tutorIds } },
+                    { createdBy: { assistedTutorId: { in: tutorIds } } },
+                ],
+            },
+            select: {
+                id: true,
+                title: true,
+                sessionDate: true,
+                createdById: true,
+                createdBy: { select: { assistedTutorId: true } },
+                attendances: { select: { studentId: true } },
+            },
+        }),
+    ]);
+
+    return tutors.map((tutor) => {
+        const groupStudentIds = new Set(tutor.students.map((s) => s.id));
+        const groupSize = groupStudentIds.size;
+
+        const items: ActivityItem[] = [
+            ...events
+                .filter((e) => e.createdById === tutor.id || e.createdForTutorId === tutor.id)
+                .map((e) => ({
+                    id: e.id,
+                    title: e.title,
+                    type: 'ETKİNLİK' as const,
+                    date: e.startDateTime,
+                    registered: e.participants.length,
+                    attended: e.participants.filter((p) => p.status === 'ATTENDED').length,
+                })),
+            ...part2Events
+                .filter((e) => e.createdById === tutor.id)
+                .map((e) => ({
+                    id: e.id,
+                    title: e.title,
+                    type: 'ATÖLYE' as const,
+                    date: e.eventDate,
+                    registered: e.participants.length,
+                    attended: e.participants.filter((p) => p.status === 'ATTENDED').length,
+                })),
+            ...sessions
+                .filter((s) => s.createdById === tutor.id || s.createdBy.assistedTutorId === tutor.id)
+                .map((s) => ({
+                    id: s.id,
+                    title: s.title,
+                    type: 'OTURUM' as const,
+                    date: s.sessionDate,
+                    // Group meeting: everyone in the group this period is expected.
+                    registered: groupSize,
+                    // Students who left the period are out of the denominator, so
+                    // counting them here would push the rate above 100%.
+                    attended: s.attendances.filter((a) => groupStudentIds.has(a.studentId)).length,
+                })),
+        ].sort((a, b) => b.date.getTime() - a.date.getTime());
+
+        const totalRegistered = items.reduce((sum, i) => sum + i.registered, 0);
+        const totalAttended = items.reduce((sum, i) => sum + i.attended, 0);
+
+        return {
+            id: tutor.id,
+            name: tutor.firstName && tutor.lastName ? `${tutor.firstName} ${tutor.lastName}` : tutor.username,
+            username: tutor.username,
+            groupSize,
+            items,
+            totalRegistered,
+            totalAttended,
+            participationRate: totalRegistered > 0 ? Math.round((totalAttended / totalRegistered) * 100) : 0,
+        };
+    });
+}
+
+const toReportItem = (i: ActivityItem) => ({ ...i, date: i.date.toISOString() });
+
 export async function getWeeklyParticipationReport(): Promise<BaseReportResponse<WeeklyParticipationReport>> {
     try {
         const session = await getLicensedSession();
@@ -52,159 +207,58 @@ export async function getWeeklyParticipationReport(): Promise<BaseReportResponse
             return { error: 'Yetkisiz erişim', data: null };
         }
 
-        const activePeriod = await prisma.period.findFirst({
-            where: { status: 'ACTIVE' }
-        });
+        const activePeriod = await getActivePeriod();
+        if (!activePeriod) {
+            const now = new Date().toISOString();
+            return {
+                error: null,
+                data: {
+                    period: null,
+                    weekStart: now,
+                    weekEnd: now,
+                    summary: { totalEvents: 0, totalAttendance: 0, totalRegistered: 0, avgParticipation: 0, activeTutors: 0, totalTutors: 0 },
+                    tutorStats: [],
+                },
+            };
+        }
 
-        const startDate = activePeriod?.startDate || new Date(0);
-        const endDate = activePeriod?.endDate || new Date();
+        const activity = await loadActivePeriodTutorActivity(activePeriod);
 
-        // Get all tutors
-        const tutors = await prisma.user.findMany({
-            where: { roles: { has: UserRole.TUTOR } },
-            select: {
-                id: true,
-                firstName: true,
-                lastName: true,
-                username: true,
-            },
-        });
-
-        const tutorStats = await Promise.all(
-            tutors.map(async (tutor) => {
-                // Fetch regular events this week
-                const regularEvents = await prisma.event.findMany({
-                    where: {
-                        OR: [
-                            { createdForTutorId: tutor.id },
-                            { createdById: tutor.id }
-                        ],
-                        startDateTime: { gte: startDate, lte: endDate },
-                    },
-                    select: {
-                        id: true,
-                        title: true,
-                        startDateTime: true,
-                        participants: { select: { status: true } },
-                    },
-                });
-
-                // Fetch Part 2 (Atölye) events this week
-                const part2Events = await prisma.part2Event.findMany({
-                    where: {
-                        createdById: tutor.id,
-                        eventDate: { gte: startDate, lte: endDate },
-                    },
-                    select: {
-                        id: true,
-                        title: true,
-                        eventDate: true,
-                        participants: { select: { status: true } },
-                    },
-                });
-
-                // Fetch AttendanceSessions involving this tutor's students
-                const sessions = await prisma.attendanceSession.findMany({
-                    where: {
-                        OR: [
-                            { createdById: tutor.id },
-                            { createdBy: { assistedTutorId: tutor.id } },
-                            {
-                                attendances: {
-                                    some: {
-                                        student: { tutorId: tutor.id }
-                                    }
-                                }
-                            }
-                        ],
-                        sessionDate: { gte: startDate, lte: endDate },
-                    },
-                    select: {
-                        id: true,
-                        title: true,
-                        sessionDate: true,
-                        attendances: {
-                            where: { student: { tutorId: tutor.id } },
-                            select: { id: true }
-                        },
-                    },
-                });
-
-                // Get students for this tutor to calculate registration count for sessions
-                const studentsCount = await prisma.user.count({
-                    where: { tutorId: tutor.id, roles: { has: UserRole.STUDENT } }
-                });
-
-                const weeklySessions = [
-                    ...regularEvents.map(e => ({
-                        id: e.id,
-                        title: e.title,
-                        type: 'ETKİNLİK',
-                        date: e.startDateTime.toISOString(),
-                        registered: e.participants.length,
-                        attended: e.participants.filter(p => p.status === 'ATTENDED').length,
-                    })),
-                    ...part2Events.map(e => ({
-                        id: e.id,
-                        title: e.title,
-                        type: 'ATÖLYE',
-                        date: e.eventDate.toISOString(),
-                        registered: e.participants.length,
-                        attended: e.participants.filter(p => p.status === 'ATTENDED').length,
-                    })),
-                    ...sessions.map(s => ({
-                        id: s.id,
-                        title: s.title,
-                        type: 'OTURUM',
-                        date: s.sessionDate.toISOString(),
-                        registered: studentsCount,
-                        attended: s.attendances.length,
-                    })),
-                ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-
-                let totalRegistered = 0;
-                let totalAttended = 0;
-                weeklySessions.forEach(s => {
-                    totalRegistered += s.registered;
-                    totalAttended += s.attended;
-                });
-
-                const participationRate = totalRegistered > 0
-                    ? Math.round((totalAttended / totalRegistered) * 100)
-                    : 0;
-
-                return {
-                    id: tutor.id,
-                    name: `${tutor.firstName} ${tutor.lastName}`,
-                    username: tutor.username,
-                    eventsCreated: weeklySessions.length,
-                    totalAttendance: totalAttended,
-                    totalRegistered,
-                    participationRate,
-                    weeklySessions,
-                };
-            })
-        );
+        const tutorStats = activity.map((t) => ({
+            id: t.id,
+            name: t.name,
+            username: t.username,
+            groupSize: t.groupSize,
+            eventsCreated: t.items.length,
+            totalAttendance: t.totalAttended,
+            totalRegistered: t.totalRegistered,
+            participationRate: t.participationRate,
+            weeklySessions: t.items.map(toReportItem),
+        }));
 
         const totalEvents = tutorStats.reduce((sum, t) => sum + t.eventsCreated, 0);
         const totalAttendance = tutorStats.reduce((sum, t) => sum + t.totalAttendance, 0);
         const totalRegistered = tutorStats.reduce((sum, t) => sum + t.totalRegistered, 0);
-        const avgParticipation = tutorStats.length > 0
-            ? Math.round(tutorStats.reduce((sum, t) => sum + t.participationRate, 0) / tutorStats.length)
+        // Average only over rehberler who actually did something — idle groups
+        // would otherwise drag the average down with a meaningless 0%.
+        const withActivity = tutorStats.filter((t) => t.eventsCreated > 0);
+        const avgParticipation = withActivity.length > 0
+            ? Math.round(withActivity.reduce((sum, t) => sum + t.participationRate, 0) / withActivity.length)
             : 0;
 
         return {
             error: null,
             data: {
-                weekStart: startDate.toISOString(),
-                weekEnd: endDate.toISOString(),
+                period: { id: activePeriod.id, name: activePeriod.name },
+                weekStart: activePeriod.startDate.toISOString(),
+                weekEnd: (activePeriod.endDate ?? new Date()).toISOString(),
                 summary: {
                     totalEvents,
                     totalAttendance,
                     totalRegistered,
                     avgParticipation,
-                    activeTutors: tutorStats.filter(t => t.eventsCreated > 0).length,
-                    totalTutors: tutors.length,
+                    activeTutors: withActivity.length,
+                    totalTutors: tutorStats.length,
                 },
                 tutorStats: tutorStats.sort((a, b) => b.eventsCreated - a.eventsCreated),
             },
@@ -548,213 +602,65 @@ export async function getEventsOverviewReport(): Promise<BaseReportResponse<Even
             return { error: 'Yetkisiz erişim', data: null };
         }
 
+        const activePeriod = await getActivePeriod();
+        if (!activePeriod) {
+            return {
+                error: null,
+                data: {
+                    period: null,
+                    summary: { totalTutors: 0, totalEvents: 0, avgParticipation: 0, totalAttended: 0, totalRegistered: 0 },
+                    tutors: [],
+                },
+            };
+        }
+
         const now = new Date();
         const weekStart = startOfWeek(now, { weekStartsOn: 1 });
         const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
 
-        // Fetch all tutors
-        const tutors = await prisma.user.findMany({
-            where: { roles: { has: UserRole.TUTOR } },
-            select: {
-                id: true,
-                firstName: true,
-                lastName: true,
-                username: true,
-            },
-        });
+        const activity = await loadActivePeriodTutorActivity(activePeriod);
 
-        const tutorsData = await Promise.all(tutors.map(async (tutor) => {
-            // Get regular events created for this tutor
-            const regularEvents = await prisma.event.findMany({
-                where: {
-                    OR: [
-                        { createdForTutorId: tutor.id },
-                        { createdById: tutor.id }
-                    ]
-                },
-                select: {
-                    id: true,
-                    startDateTime: true,
-                    participants: {
-                        select: {
-                            status: true,
-                        },
-                    },
-                },
-            });
-
-            // Get Part 2 events created by this tutor
-            const part2Events = await prisma.part2Event.findMany({
-                where: { createdById: tutor.id },
-                select: {
-                    id: true,
-                    eventDate: true,
-                    participants: {
-                        select: {
-                            status: true,
-                        },
-                    },
-                },
-            });
-
-            // Get Attendance Sessions involving this tutor's students
-            const sessions = await prisma.attendanceSession.findMany({
-                where: {
-                    OR: [
-                        { createdById: tutor.id },
-                        { createdBy: { assistedTutorId: tutor.id } },
-                        {
-                            attendances: {
-                                some: {
-                                    student: { tutorId: tutor.id }
-                                }
-                            }
-                        }
-                    ],
-                },
-                select: {
-                    id: true,
-                    sessionDate: true,
-                    attendances: {
-                        where: { student: { tutorId: tutor.id } },
-                        select: { id: true }
-                    }
-                }
-            });
-
-            // Get students for this tutor
-            const studentsCount = await prisma.user.count({
-                where: { tutorId: tutor.id, roles: { has: UserRole.STUDENT } }
-            });
-
-            // Combine events for unified analysis
-            const allEvents = [
-                ...regularEvents.map(e => ({
-                    id: e.id,
-                    type: 'REGULAR',
-                    date: e.startDateTime,
-                    participantsCount: e.participants.length,
-                    attendedCount: e.participants.filter(p => p.status === 'ATTENDED').length
-                })),
-                ...part2Events.map(e => ({
-                    id: e.id,
-                    type: 'PART2',
-                    date: e.eventDate,
-                    participantsCount: e.participants.length,
-                    attendedCount: e.participants.filter(p => p.status === 'ATTENDED').length
-                })),
-                ...sessions.map(s => ({
-                    id: s.id,
-                    type: 'SESSION',
-                    date: s.sessionDate,
-                    participantsCount: studentsCount,
-                    attendedCount: s.attendances.length
-                }))
-            ];
-
-            // Re-fetch with titles for the detail list
-            const detailedEvents = await Promise.all([
-                prisma.event.findMany({
-                    where: { id: { in: regularEvents.map(e => e.id) } },
-                    select: { id: true, title: true, startDateTime: true, participants: { select: { status: true } } },
-                    orderBy: { startDateTime: 'desc' },
-                    take: 10
-                }),
-                prisma.part2Event.findMany({
-                    where: { id: { in: part2Events.map(e => e.id) } },
-                    select: { id: true, title: true, eventDate: true, participants: { select: { status: true } } },
-                    orderBy: { eventDate: 'desc' },
-                    take: 10
-                }),
-                prisma.attendanceSession.findMany({
-                    where: { id: { in: sessions.map(s => s.id) } },
-                    select: { id: true, title: true, sessionDate: true, attendances: { select: { id: true } } },
-                    orderBy: { sessionDate: 'desc' },
-                    take: 10
-                })
-            ]);
-
-            const recentEvents = [
-                ...detailedEvents[0].map(e => ({
-                    id: e.id,
-                    title: e.title,
-                    type: 'ETKİNLİK',
-                    date: e.startDateTime.toISOString(),
-                    registered: e.participants.length,
-                    attended: e.participants.filter(p => p.status === 'ATTENDED').length
-                })),
-                ...detailedEvents[1].map(e => ({
-                    id: e.id,
-                    title: e.title,
-                    type: 'ATÖLYE',
-                    date: e.eventDate.toISOString(),
-                    registered: e.participants.length,
-                    attended: e.participants.filter(p => p.status === 'ATTENDED').length
-                })),
-                ...detailedEvents[2].map(s => ({
-                    id: s.id,
-                    title: s.title,
-                    type: 'OTURUM',
-                    date: s.sessionDate.toISOString(),
-                    registered: studentsCount,
-                    attended: s.attendances.length
-                }))
-            ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).slice(0, 15);
-
-            const totalEvents = allEvents.length;
-            const eventsThisWeek = allEvents.filter(e => e.date >= weekStart).length;
-            const eventsThisMonth = allEvents.filter(e => e.date >= monthStart).length;
-
-            let totalRegistered = 0;
-            let totalAttended = 0;
-
-            allEvents.forEach(e => {
-                totalRegistered += e.participantsCount;
-                totalAttended += e.attendedCount;
-            });
-
-            const participationRate = totalRegistered > 0
-                ? Math.round((totalAttended / totalRegistered) * 100)
-                : 0;
-
-            return {
-                id: tutor.id,
-                name: `${tutor.firstName} ${tutor.lastName}`,
-                username: tutor.username,
-                totalEvents,
-                eventsThisWeek,
-                eventsThisMonth,
-                totalRegistered,
-                totalAttended,
-                participationRate,
-                recentEvents,
-            };
+        const tutorsData = activity.map((t) => ({
+            id: t.id,
+            name: t.name,
+            username: t.username,
+            groupSize: t.groupSize,
+            totalEvents: t.items.length,
+            eventsThisWeek: t.items.filter((i) => i.date >= weekStart).length,
+            eventsThisMonth: t.items.filter((i) => i.date >= monthStart).length,
+            totalRegistered: t.totalRegistered,
+            totalAttended: t.totalAttended,
+            participationRate: t.participationRate,
+            // Same data as the totals above (items are already sorted newest first)
+            recentEvents: t.items.slice(0, 15).map(toReportItem),
         }));
 
-        // Global Summary Metrics
         const sortedTutors = tutorsData.sort((a, b) => b.totalEvents - a.totalEvents);
 
-        // Fetch Global Events & Sessions (those not assigned to a specific tutor in tutorsData)
+        // Admin-created general events/sessions of this period that are not tied to a rehber
         const [globalEventsCount, globalSessionsCount] = await Promise.all([
             prisma.event.count({
                 where: {
+                    periodId: activePeriod.id,
                     createdForTutorId: null,
-                    createdBy: { roles: { has: UserRole.ADMIN } }
-                }
+                    createdBy: { roles: { has: UserRole.ADMIN } },
+                },
             }),
             prisma.attendanceSession.count({
                 where: {
+                    sessionDate: periodDateRange(activePeriod),
                     createdBy: { roles: { has: UserRole.ADMIN } },
-                    attendances: { none: {} } // Sessions with no attendances yet or general ones
-                }
-            })
+                    attendances: { none: {} },
+                },
+            }),
         ]);
 
+        const withActivity = tutorsData.filter((t) => t.totalEvents > 0);
         const summary = {
-            totalTutors: tutors.length,
+            totalTutors: tutorsData.length,
             totalEvents: tutorsData.reduce((sum, t) => sum + t.totalEvents, 0) + globalEventsCount + globalSessionsCount,
-            avgParticipation: tutorsData.length > 0
-                ? Math.round(tutorsData.reduce((sum, t) => sum + t.participationRate, 0) / tutorsData.length)
+            avgParticipation: withActivity.length > 0
+                ? Math.round(withActivity.reduce((sum, t) => sum + t.participationRate, 0) / withActivity.length)
                 : 0,
             totalAttended: tutorsData.reduce((sum, t) => sum + t.totalAttended, 0),
             totalRegistered: tutorsData.reduce((sum, t) => sum + t.totalRegistered, 0),
@@ -763,6 +669,7 @@ export async function getEventsOverviewReport(): Promise<BaseReportResponse<Even
         return {
             error: null,
             data: {
+                period: { id: activePeriod.id, name: activePeriod.name },
                 summary,
                 tutors: sortedTutors,
             },

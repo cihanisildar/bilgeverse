@@ -4,6 +4,7 @@ import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/app/api/auth/[...nextauth]/auth.config';
 import prisma from '@/lib/prisma';
 import { UserRole } from '@prisma/client';
+import { getActivePeriod as getActivePeriodRecord } from '@/lib/periods';
 
 // Get all weekly reports for the current user (based on role)
 export async function getWeeklyReports() {
@@ -13,7 +14,15 @@ export async function getWeeklyReports() {
     }
 
     try {
-        const where: any = {};
+        // Only the ACTIVE period's reports. Without this every period's reports
+        // were mixed together (old period's week 8 sorted above the current
+        // period's reports, stats/week filter counted all periods).
+        const activePeriod = await getActivePeriodRecord();
+        if (!activePeriod) {
+            return { data: [], error: null };
+        }
+
+        const where: any = { periodId: activePeriod.id };
 
         const user = session?.user as any;
         const userRoles = user?.roles || [user?.role].filter(Boolean) as UserRole[];

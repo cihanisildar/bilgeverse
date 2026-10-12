@@ -82,7 +82,7 @@ export default function EventsOverviewPage() {
 
     if (!report) return null;
 
-    const { summary } = report;
+    const { summary, period } = report;
 
     return (
         <div className="min-h-screen bg-gray-50 p-6 lg:p-8">
@@ -96,7 +96,11 @@ export default function EventsOverviewPage() {
                             </Button>
                         </Link>
                         <h1 className="text-3xl font-bold text-gray-900 tracking-tight">Etkinlik Performans Özeti</h1>
-                        <p className="text-gray-500 mt-1">Rehber bazlı etkinlik oluşturma ve katılım analizi.</p>
+                        <p className="text-gray-500 mt-1">
+                            {period
+                                ? `${period.name} dönemi rehber bazlı etkinlik oluşturma ve katılım analizi.`
+                                : "Aktif dönem bulunamadı. Dönem Yönetimi'nden bir dönemi aktif hale getirin."}
+                        </p>
                     </div>
                 </div>
 
@@ -109,7 +113,7 @@ export default function EventsOverviewPage() {
                         </CardHeader>
                         <CardContent>
                             <div className="text-3xl font-bold text-gray-900">{summary.totalEvents}</div>
-                            <p className="text-[10px] text-gray-400 mt-1 font-bold italic">TÜM ZAMANLAR</p>
+                            <p className="text-[10px] text-gray-400 mt-1 font-bold italic">AKTİF DÖNEM</p>
                         </CardContent>
                     </Card>
 
@@ -120,7 +124,7 @@ export default function EventsOverviewPage() {
                         </CardHeader>
                         <CardContent>
                             <div className="text-3xl font-bold text-gray-900">{summary.totalTutors}</div>
-                            <p className="text-[10px] text-gray-400 mt-1 font-bold italic">SİSTEMDE KAYITLI</p>
+                            <p className="text-[10px] text-gray-400 mt-1 font-bold italic">AKTİF DÖNEMDE</p>
                         </CardContent>
                     </Card>
 

@@ -54,6 +54,21 @@ export function periodStudentWhere(periodId: string) {
 }
 
 /**
+ * Date-range filter for records that have no periodId column (AttendanceSession,
+ * Part2Event…) and are bounded by their date instead.
+ *
+ * The period may still be open (endDate null) — then there is no upper bound.
+ * endDate is stored at midnight, so `lte: endDate` would drop everything held
+ * during the final day; the bound is pushed to the end of that day instead.
+ */
+export function periodDateRange(period: { startDate: Date; endDate: Date | null }) {
+  if (!period.endDate) return { gte: period.startDate };
+  const end = new Date(period.endDate);
+  end.setHours(23, 59, 59, 999);
+  return { gte: period.startDate, lte: end };
+}
+
+/**
  * Reusable Prisma `where` fragment for listing store items visible in a period.
  * Includes items belonging to the given period plus legacy items that predate
  * period-scoping (periodId === null), so old data keeps showing.

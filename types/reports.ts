@@ -13,10 +13,17 @@ export interface WeeklySession {
     attended: number;
 }
 
+export interface ReportPeriod {
+    id: string;
+    name: string;
+}
+
 export interface TutorWeeklyStats {
     id: string;
     name: string;
     username: string;
+    /** Students in this rehber's group who are enrolled in the active period */
+    groupSize: number;
     eventsCreated: number;
     totalAttendance: number;
     totalRegistered: number;
@@ -25,6 +32,8 @@ export interface TutorWeeklyStats {
 }
 
 export interface WeeklyParticipationReport {
+    /** null when there is no active period — report is then empty */
+    period: ReportPeriod | null;
     weekStart: string;
     weekEnd: string;
     summary: {
@@ -132,6 +141,7 @@ export interface TutorEventStats {
     id: string;
     name: string;
     username: string;
+    groupSize: number;
     totalEvents: number;
     eventsThisWeek: number;
     eventsThisMonth: number;
@@ -142,6 +152,8 @@ export interface TutorEventStats {
 }
 
 export interface EventsOverviewReport {
+    /** null when there is no active period — report is then empty */
+    period: ReportPeriod | null;
     summary: {
         totalTutors: number;
         totalEvents: number;

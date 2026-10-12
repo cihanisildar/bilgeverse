@@ -33,6 +33,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
 import toast from "react-hot-toast";
 
 interface WeeklyReport {
@@ -90,6 +91,7 @@ export default function AdminWeeklyReportsPage() {
   const { data: reports = [], isLoading, error, refetch } = useWeeklyReports();
   const { data: currentPeriod } = useActivePeriod();
   const updateReport = useUpdateWeeklyReport();
+  const queryClient = useQueryClient();
 
   // Filters
   const [statusFilter, setStatusFilter] = useState("");
@@ -275,6 +277,7 @@ export default function AdminWeeklyReportsPage() {
       if (response.ok) {
         toast.success("Dönem ayarları güncellendi.");
         setIsPeriodDialogOpen(false);
+        queryClient.invalidateQueries({ queryKey: ["active-period"] });
         refetch(); // Refresh data with TanStack Query
       } else {
         const error = await response.json();
@@ -353,7 +356,13 @@ export default function AdminWeeklyReportsPage() {
             </p>
           </div>
           <div className="flex gap-2">
-            <Dialog open={isPeriodDialogOpen} onOpenChange={setIsPeriodDialogOpen}>
+            <Dialog
+              open={isPeriodDialogOpen}
+              onOpenChange={(open) => {
+                if (open && currentPeriod?.totalWeeks) setPeriodTotalWeeks(currentPeriod.totalWeeks);
+                setIsPeriodDialogOpen(open);
+              }}
+            >
               <DialogTrigger asChild>
                 <Button variant="outline">
                   <Calendar className="h-4 w-4 mr-2" />

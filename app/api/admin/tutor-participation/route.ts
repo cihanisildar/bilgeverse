@@ -4,7 +4,7 @@ import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/app/api/auth/[...nextauth]/auth.config';
 import prisma from '@/lib/prisma';
 import { UserRole } from '@prisma/client';
-import { getActivePeriod, periodStudentWhere } from '@/lib/periods';
+import { getActivePeriod, periodDateRange, periodStudentWhere } from '@/lib/periods';
 import { requireApiPartLicense } from '@/app/lib/permissions.server';
 
 /**
@@ -52,24 +52,9 @@ export async function GET() {
             });
         }
 
-        // Sessions belonging to the active period. The period may still be open
-        // (endDate null), in which case there is no upper bound.
-        //
-        // endDate is stored at midnight, so comparing `sessionDate <= endDate`
-        // would drop every session held during the final day. Push the bound to
-        // the end of that day instead.
-        let sessionEnd: Date | null = null;
-        if (activePeriod.endDate) {
-            sessionEnd = new Date(activePeriod.endDate);
-            sessionEnd.setHours(23, 59, 59, 999);
-        }
-
-        const sessionDateFilter = {
-            sessionDate: {
-                gte: activePeriod.startDate,
-                ...(sessionEnd ? { lte: sessionEnd } : {}),
-            },
-        };
+        // Sessions belonging to the active period (end-of-day bound, open-ended
+        // when the period has no endDate).
+        const sessionDateFilter = { sessionDate: periodDateRange(activePeriod) };
 
         // Only real rehberler (TUTOR). Assistants/leaders are excluded on purpose.
         // Only those the admin marked ACTIVE for this period are listed —
