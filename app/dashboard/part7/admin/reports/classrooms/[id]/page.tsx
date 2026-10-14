@@ -78,7 +78,7 @@ export default function ClassReportPage() {
     } catch (error) {
       console.error('Error fetching class report:', error);
       toast.error('Sınıf raporu yüklenirken bir hata oluştu');
-      router.push('/dashboard/part7/admin/reports');
+      router.push('/dashboard/part7/admin/reports?tab=class');
     } finally {
       setLoading(false);
     }
@@ -122,7 +122,7 @@ export default function ClassReportPage() {
             <h2 className="text-2xl font-bold text-gray-900">Sınıf Bulunamadı</h2>
             <p className="text-gray-600">Aradığınız sınıf raporu bulunamadı veya erişim izniniz yok.</p>
             <Button
-              onClick={() => router.push('/dashboard/part7/admin/reports')}
+              onClick={() => router.push('/dashboard/part7/admin/reports?tab=class')}
               className="bg-gradient-to-r from-blue-500 to-indigo-500 hover:from-blue-600 hover:to-indigo-600"
             >
               <ArrowLeft className="h-4 w-4 mr-2" />
@@ -141,7 +141,7 @@ export default function ClassReportPage() {
         <div className="flex items-center justify-start">
           <Button
             variant="outline"
-            onClick={() => router.push('/dashboard/part7/admin/reports')}
+            onClick={() => router.push('/dashboard/part7/admin/reports?tab=class')}
             className="flex items-center gap-2 bg-white/70 backdrop-blur-sm border-white/20 hover:bg-white/90 transition-all duration-200 shadow-sm"
           >
             <ArrowLeft className="h-4 w-4" />

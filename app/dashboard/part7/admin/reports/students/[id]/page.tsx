@@ -52,7 +52,7 @@ export default function StudentReportPage() {
   const fromClassroom = searchParams.get("fromClassroom");
   const backHref = fromClassroom
     ? `/dashboard/part7/admin/reports/classrooms/${fromClassroom}`
-    : "/dashboard/part7/admin/reports";
+    : "/dashboard/part7/admin/reports?tab=individual";
 
   useEffect(() => {
     if (studentId) {
@@ -75,13 +75,13 @@ export default function StudentReportPage() {
           setStudent(foundStudent);
         } else {
           toast.error("Öğrenci bulunamadı");
-          router.push("/dashboard/part7/admin/reports");
+          router.push("/dashboard/part7/admin/reports?tab=individual");
         }
       }
     } catch (error) {
       console.error("Error fetching student:", error);
       toast.error("Öğrenci bilgileri yüklenirken bir hata oluştu");
-      router.push("/dashboard/part7/admin/reports");
+      router.push("/dashboard/part7/admin/reports?tab=individual");
     } finally {
       setLoading(false);
     }

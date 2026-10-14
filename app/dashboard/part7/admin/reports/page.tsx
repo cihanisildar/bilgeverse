@@ -22,8 +22,8 @@ import {
   TrendingUp,
   Users
 } from 'lucide-react';
-import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { Suspense, useEffect, useState } from 'react';
 import { useToast } from '@/app/hooks/use-toast';
 
 type Student = {
@@ -44,10 +44,37 @@ type Tutor = {
   students: { id: string; username: string; firstName?: string; lastName?: string; points: number }[];
 };
 
+const REPORT_TABS = ['overview', 'individual', 'class'] as const;
+type ReportTab = (typeof REPORT_TABS)[number];
+
+// useSearchParams statik sayfada Suspense sınırı ister.
 export default function AdminReportsPage() {
+  return (
+    <Suspense>
+      <AdminReportsContent />
+    </Suspense>
+  );
+}
+
+function AdminReportsContent() {
   const toast = useToast();
   const { user } = useAuth();
   const router = useRouter();
+  const searchParams = useSearchParams();
+
+  // Aktif sekme URL'de (?tab=) tutulur: öğrenci/sınıf raporu detayından
+  // "geri" dönüldüğünde aynı sekme açılsın, genel rapora atmasın.
+  const tabParam = searchParams.get('tab');
+  const [activeTab, setActiveTab] = useState<ReportTab>(
+    REPORT_TABS.includes(tabParam as ReportTab) ? (tabParam as ReportTab) : 'overview'
+  );
+  const handleTabChange = (value: string) => {
+    setActiveTab(value as ReportTab);
+    router.replace(
+      value === 'overview' ? '/dashboard/part7/admin/reports' : `/dashboard/part7/admin/reports?tab=${value}`,
+      { scroll: false }
+    );
+  };
   const [students, setStudents] = useState<Student[]>([]);
   const [filteredStudents, setFilteredStudents] = useState<Student[]>([]);
   const [studentSearchTerm, setStudentSearchTerm] = useState('');
@@ -227,7 +254,7 @@ export default function AdminReportsPage() {
 
 
         {/* Enhanced Tabs */}
-        <Tabs defaultValue="overview" className="space-y-6 sm:space-y-8">
+        <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-6 sm:space-y-8">
           <div className="flex justify-center">
             <TabsList className="grid w-full max-w-2xl grid-cols-3 h-12 bg-white/90 backdrop-blur-sm border border-gray-200 shadow-lg rounded-xl p-1">
               <TabsTrigger
