@@ -5,6 +5,7 @@ import { useRouter, useParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
 import AttendanceRecording from '../../AttendanceRecording';
+import ManagerGuard from '../../_components/ManagerGuard';
 
 export default function Part9AttendancePage() {
     const router = useRouter();
@@ -24,10 +25,12 @@ export default function Part9AttendancePage() {
                 </Button>
 
                 <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-6">
-                    <AttendanceRecording
-                        trainingId={trainingId}
-                        onBack={() => router.push('/dashboard/part9/schedule')}
-                    />
+                    <ManagerGuard>
+                        <AttendanceRecording
+                            trainingId={trainingId}
+                            onBack={() => router.push('/dashboard/part9/schedule')}
+                        />
+                    </ManagerGuard>
                 </div>
             </div>
         </div>

@@ -48,9 +48,11 @@ interface Training {
 interface TrainingCalendarProps {
     trainings: Training[];
     onSelectSession: (id: string) => void;
+    /** Öğrenci/sporcu görünümü: sil ve yoklama butonları gizlenir. */
+    readOnly?: boolean;
 }
 
-export default function TrainingCalendar({ trainings, onSelectSession }: TrainingCalendarProps) {
+export default function TrainingCalendar({ trainings, onSelectSession, readOnly = false }: TrainingCalendarProps) {
     const [currentMonth, setCurrentMonth] = useState(new Date());
     const [selectedTraining, setSelectedTraining] = useState<Training | null>(null);
     const [selectedDayTrainings, setSelectedDayTrainings] = useState<{ day: Date, items: Training[] } | null>(null);
@@ -318,6 +320,7 @@ export default function TrainingCalendar({ trainings, onSelectSession }: Trainin
                             </div>
 
                             <DialogFooter className="gap-2 sm:gap-0 sm:justify-between">
+                                {!readOnly && (
                                 <Button
                                     variant="outline"
                                     onClick={() => setTrainingToDelete(selectedTraining)}
@@ -326,8 +329,10 @@ export default function TrainingCalendar({ trainings, onSelectSession }: Trainin
                                     <Trash2 className="h-4 w-4 mr-2" />
                                     Sil
                                 </Button>
+                                )}
                                 <div className="flex gap-2">
                                     <Button variant="ghost" onClick={() => setSelectedTraining(null)} className="flex-1 sm:flex-none">Kapat</Button>
+                                    {!readOnly && (
                                     <Button
                                         onClick={() => {
                                             onSelectSession(selectedTraining.id);
@@ -338,6 +343,7 @@ export default function TrainingCalendar({ trainings, onSelectSession }: Trainin
                                         <ExternalLink className="h-4 w-4 mr-2" />
                                         Yoklama Sayfasına Git
                                     </Button>
+                                    )}
                                 </div>
                             </DialogFooter>
                         </>

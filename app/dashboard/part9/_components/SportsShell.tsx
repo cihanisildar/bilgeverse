@@ -33,10 +33,14 @@ interface NavItem {
     managerOnly?: boolean;
     /** Only visible to athletes (their own read-only view). */
     athleteOnly?: boolean;
+    /** Kulübe kayıtlı olmayan öğrencilere gösterilir (sporcunun "Panelim"inin yerine). */
+    visitorOnly?: boolean;
 }
 
 const NAV_ITEMS: NavItem[] = [
     { label: 'Panelim', icon: LayoutDashboard, path: '/me', athleteOnly: true },
+    // Aynı sayfa: kayıtsız öğrenci kişisel değil, kulübün genel görünümünü alır.
+    { label: 'Kulüp', icon: LayoutDashboard, path: '/me', visitorOnly: true },
     { label: 'Genel Bakış', icon: LayoutDashboard, path: '', managerOnly: true },
     { label: 'Sporcular', icon: Users, path: '/athletes', managerOnly: true },
     { label: 'Branşlar', icon: Dumbbell, path: '/branches', managerOnly: true },
@@ -81,9 +85,15 @@ export default function SportsShell({
         ([UserRole.ADMIN, UserRole.TUTOR, UserRole.ASISTAN, UserRole.BOARD_MEMBER] as UserRole[]).includes(r as UserRole)
     );
 
+    // Spor Kulübü tüm öğrencilere açık; kişisel bölümler (Panelim, Disiplin)
+    // yalnız kulübe kayıtlı sporculara. Kayıt sporcu rolünü de ekliyor
+    // (upsertAthleteProfile / registerNewAthlete).
+    const isAthlete = roles.includes((UserRole as any).ATHLETE);
+
     const items = NAV_ITEMS.filter((item) => {
         if (item.managerOnly) return isManager;
-        if (item.athleteOnly) return !isManager;
+        if (item.athleteOnly) return !isManager && isAthlete;
+        if (item.visitorOnly) return !isManager && !isAthlete;
         return true;
     });
 

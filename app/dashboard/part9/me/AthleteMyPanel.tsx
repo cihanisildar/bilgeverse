@@ -3,13 +3,15 @@
 // Sporcunun kendi paneli. İki yerden render ediliyor:
 //   /dashboard/part9/me                 → Bilge Spor Kulübü kabuğu içinde
 //   (Bilgeverse içindeki ikinci girişi kaldırıldı — Spor Kulübü Paket 3'e ait)
+// Kulübe kayıtlı olmayan öğrenci de buraya gelir (profile: null): ona yalnızca
+// kulübün genel programı ve genel duyurular gösterilir.
 // Bu yüzden kendi başlık/çerçevesini kurmaz, sadece içeriği döndürür.
 
 import { useQuery } from '@tanstack/react-query';
 import { getMyAthleteOverview } from '@/app/actions/athlete-actions';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { CalendarDays, Dumbbell, Trophy, ClipboardCheck, LineChart, Megaphone, MapPin, Clock } from 'lucide-react';
+import { CalendarDays, Dumbbell, Trophy, ClipboardCheck, LineChart, Megaphone, MapPin, Clock, Info } from 'lucide-react';
 import { format } from 'date-fns';
 import { tr } from 'date-fns/locale';
 
@@ -51,6 +53,28 @@ export default function AthleteMyPanel() {
     }
 
     const { profile, upcomingTrainings, attendances, performances, announcements, stats } = result.data as any;
+
+    if (!profile) {
+        return (
+            <div className="space-y-6">
+                <div className="bg-gradient-to-r from-indigo-600 to-blue-600 rounded-2xl p-6 text-white">
+                    <h1 className="text-2xl font-bold">Bilge Spor Kulübü</h1>
+                    <p className="text-white/85 text-sm mt-1">Kulübün antrenman programını, turnuvalarını ve duyurularını buradan takip edebilirsin.</p>
+                </div>
+
+                <div className="flex items-start gap-3 p-4 rounded-2xl border border-indigo-100 bg-indigo-50/60">
+                    <Info className="h-5 w-5 text-indigo-600 mt-0.5 flex-shrink-0" />
+                    <p className="text-sm text-indigo-900">
+                        Henüz kulübe sporcu olarak kayıtlı değilsin. Bir branşa katılmak istersen kulüp yönetimiyle
+                        iletişime geçebilir ya da <span className="font-semibold">Geri Bildirim</span> bölümünden talebini iletebilirsin.
+                    </p>
+                </div>
+
+                <UpcomingTrainingsCard trainings={upcomingTrainings} showBranch />
+                <AnnouncementsCard announcements={announcements} />
+            </div>
+        );
+    }
 
     return (
         <div className="space-y-6">
@@ -102,29 +126,7 @@ export default function AthleteMyPanel() {
                 </Card>
             </div>
 
-            {/* Upcoming trainings */}
-            <Card className="border-none shadow-sm">
-                <CardHeader><CardTitle className="text-lg flex items-center gap-2"><CalendarDays className="h-5 w-5 text-indigo-600" /> Antrenman Programı</CardTitle></CardHeader>
-                <CardContent className="space-y-3">
-                    {upcomingTrainings.length === 0 && <p className="text-sm text-gray-500">Yaklaşan antrenman bulunmuyor.</p>}
-                    {upcomingTrainings.map((t: any) => (
-                        <div key={t.id} className="flex items-center justify-between p-3 rounded-xl border border-gray-100 bg-gray-50/50">
-                            <div className="flex items-center gap-3">
-                                <div className={`p-2 rounded-lg ${t.type === 'MATCH' ? 'bg-amber-100 text-amber-600' : 'bg-indigo-100 text-indigo-600'}`}>
-                                    {t.type === 'MATCH' ? <Trophy className="h-4 w-4" /> : <Dumbbell className="h-4 w-4" />}
-                                </div>
-                                <div>
-                                    <p className="font-medium text-gray-800">{t.title}</p>
-                                    <p className="text-xs text-gray-500 flex items-center gap-2">
-                                        <Clock className="h-3 w-3" /> {t.startTime || ''} {t.location && (<><MapPin className="h-3 w-3 ml-1" /> {t.location}</>)}
-                                    </p>
-                                </div>
-                            </div>
-                            <span className="text-sm font-medium text-gray-600">{fmtDate(t.date)}</span>
-                        </div>
-                    ))}
-                </CardContent>
-            </Card>
+            <UpcomingTrainingsCard trainings={upcomingTrainings} />
 
             {/* My attendance */}
             <Card className="border-none shadow-sm">
@@ -163,22 +165,57 @@ export default function AthleteMyPanel() {
                 </CardContent>
             </Card>
 
-            {/* Announcements */}
-            <Card className="border-none shadow-sm">
-                <CardHeader><CardTitle className="text-lg flex items-center gap-2"><Megaphone className="h-5 w-5 text-rose-600" /> Duyurular</CardTitle></CardHeader>
-                <CardContent className="space-y-3">
-                    {announcements.length === 0 && <p className="text-sm text-gray-500">Duyuru bulunmuyor.</p>}
-                    {announcements.map((a: any) => (
-                        <div key={a.id} className="p-3 rounded-xl border border-gray-100 bg-rose-50/30">
-                            <div className="flex items-center justify-between">
-                                <p className="font-medium text-gray-800">{a.title}</p>
-                                <span className="text-xs text-gray-400">{fmtDate(a.createdAt)}</span>
-                            </div>
-                            <p className="text-sm text-gray-600 mt-1 whitespace-pre-line">{a.content}</p>
-                        </div>
-                    ))}
-                </CardContent>
-            </Card>
+            <AnnouncementsCard announcements={announcements} />
         </div>
+    );
+}
+
+function UpcomingTrainingsCard({ trainings, showBranch = false }: { trainings: any[]; showBranch?: boolean }) {
+    return (
+        <Card className="border-none shadow-sm">
+            <CardHeader><CardTitle className="text-lg flex items-center gap-2"><CalendarDays className="h-5 w-5 text-indigo-600" /> Antrenman Programı</CardTitle></CardHeader>
+            <CardContent className="space-y-3">
+                {trainings.length === 0 && <p className="text-sm text-gray-500">Yaklaşan antrenman bulunmuyor.</p>}
+                {trainings.map((t: any) => (
+                    <div key={t.id} className="flex items-center justify-between p-3 rounded-xl border border-gray-100 bg-gray-50/50">
+                        <div className="flex items-center gap-3">
+                            <div className={`p-2 rounded-lg ${t.type === 'MATCH' ? 'bg-amber-100 text-amber-600' : 'bg-indigo-100 text-indigo-600'}`}>
+                                {t.type === 'MATCH' ? <Trophy className="h-4 w-4" /> : <Dumbbell className="h-4 w-4" />}
+                            </div>
+                            <div>
+                                <p className="font-medium text-gray-800">
+                                    {t.title}
+                                    {showBranch && t.branch?.name && <span className="ml-2 text-xs font-normal text-gray-500">· {t.branch.name}</span>}
+                                </p>
+                                <p className="text-xs text-gray-500 flex items-center gap-2">
+                                    <Clock className="h-3 w-3" /> {t.startTime || ''} {t.location && (<><MapPin className="h-3 w-3 ml-1" /> {t.location}</>)}
+                                </p>
+                            </div>
+                        </div>
+                        <span className="text-sm font-medium text-gray-600">{fmtDate(t.date)}</span>
+                    </div>
+                ))}
+            </CardContent>
+        </Card>
+    );
+}
+
+function AnnouncementsCard({ announcements }: { announcements: any[] }) {
+    return (
+        <Card className="border-none shadow-sm">
+            <CardHeader><CardTitle className="text-lg flex items-center gap-2"><Megaphone className="h-5 w-5 text-rose-600" /> Duyurular</CardTitle></CardHeader>
+            <CardContent className="space-y-3">
+                {announcements.length === 0 && <p className="text-sm text-gray-500">Duyuru bulunmuyor.</p>}
+                {announcements.map((a: any) => (
+                    <div key={a.id} className="p-3 rounded-xl border border-gray-100 bg-rose-50/30">
+                        <div className="flex items-center justify-between">
+                            <p className="font-medium text-gray-800">{a.title}</p>
+                            <span className="text-xs text-gray-400">{fmtDate(a.createdAt)}</span>
+                        </div>
+                        <p className="text-sm text-gray-600 mt-1 whitespace-pre-line">{a.content}</p>
+                    </div>
+                ))}
+            </CardContent>
+        </Card>
     );
 }

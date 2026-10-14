@@ -6,7 +6,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import Link from 'next/link';
 import { Button } from "../../../components/ui/button";
 import { Avatar, AvatarFallback } from "../../../components/ui/avatar";
-import { LogOut, LayoutDashboard, Users, FileText, ShoppingBag, PieChart, GraduationCap, Trophy, ShoppingCart, ClipboardList, School, Award, TrendingUp, Menu, Bell, Clock, Grid3x3, Settings, Building2 } from "lucide-react";
+import { LogOut, LayoutDashboard, Users, FileText, ShoppingBag, PieChart, GraduationCap, Trophy, ShoppingCart, ClipboardList, School, Award, TrendingUp, Menu, Bell, Clock, Grid3x3, Settings, Building2, Dumbbell } from "lucide-react";
 import { UserRole } from '@prisma/client';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "../../../components/ui/sheet";
 
@@ -24,6 +24,8 @@ interface NavLink {
 // Paket 1 alan kurumun bu modülleri hiçbir biçimde görmemesi gerekiyor.
 // Modüllere artık kendi bölümlerinden erişiliyor (/dashboard/part9,
 // /dashboard/part6); ana bölüm ızgarası zaten kurumun paketine göre süzülüyor.
+// İstisna: öğrencinin /dashboard ızgarası yok, bu yüzden Spor Kulübü linki
+// öğrenci menüsünde duruyor (kurum part9'u aldıysa, Akademi gibi herkese).
 
 export default function Part7Shell({
   children,
@@ -114,6 +116,9 @@ export default function Part7Shell({
     { href: '/dashboard/part7/student/store', label: 'Mağaza', icon: <ShoppingCart className="h-5 w-5" /> },
     ...(orgHas(4) ? [{ href: '/dashboard/part7/student/workshops', label: 'Atölyeler', icon: <Grid3x3 className="h-5 w-5" /> } as NavLink] : []),
     ...(orgHas(11) ? [{ href: '/dashboard/part7/student/academy', label: 'Akademi', icon: <GraduationCap className="h-5 w-5" /> } as NavLink] : []),
+    // Kayıtlı sporcu kendi panelini, diğer öğrenciler kulübün genel görünümünü
+    // görür (aynı sayfa, /dashboard/part9/me). Yönetim bölümleri gizli.
+    ...(orgHas(9) ? [{ href: '/dashboard/part9/me', label: 'Bilge Spor Kulübü', icon: <Dumbbell className="h-5 w-5" /> } as NavLink] : []),
     { isSeparator: true },
     { href: '/dashboard/part7/student/tips', label: 'Nasıl Bilge Para Kazanırım', icon: <TrendingUp className="h-5 w-5" /> },
   ];

@@ -162,6 +162,12 @@ export async function middleware(request: NextRequest) {
     const userAllowedParts = ((token as any)?.allowedParts as number[]) || [];
     const grantedThisPart = partMatch ? userAllowedParts.includes(Number(partMatch[1])) : false;
 
+    // Bilge Spor Kulübü (part9) tüm öğrencilere ve sporculara açık — Akademi
+    // gibi. Kurum paketi yukarıda zaten kontrol edildi; yönetim sayfaları
+    // ManagerGuard + server action rol kontrolleriyle korunuyor.
+    const hasAthlete = userRoles.includes((UserRole as any).ATHLETE);
+    const isSportsClubForMember = pathname.startsWith('/dashboard/part9') && (hasStudent || hasAthlete);
+
     // Redirect non-admin/board users away from parts 1, 3-6 and 8-9 to part 7 (except check-in and detail pages)
     if (pathname.startsWith('/dashboard/part') &&
       !pathname.startsWith('/dashboard/part7') &&
@@ -169,7 +175,8 @@ export async function middleware(request: NextRequest) {
       !pathname.startsWith('/dashboard/part4') &&
       !isCheckInPage &&
       !isMeetingDetailPage &&
-      !grantedThisPart) {
+      !grantedThisPart &&
+      !isSportsClubForMember) {
       if (!hasAdmin && !hasBoardMember) {
         debug('Non-admin/board user attempting to access restricted part, redirecting to part 7');
         const roleBasedPath = hasStudent

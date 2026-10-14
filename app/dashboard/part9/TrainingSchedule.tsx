@@ -18,7 +18,7 @@ import { ReqMark, RequiredLegend } from './_components/ReqMark';
 
 import { useTrainings, useSportBranches, useCreateTraining } from '@/app/hooks/use-athlete-data';
 
-export default function TrainingSchedule({ onSelectSession }: { onSelectSession: (id: string) => void }) {
+export default function TrainingSchedule({ onSelectSession, readOnly = false }: { onSelectSession: (id: string) => void; readOnly?: boolean }) {
     const { data: branches = [] } = useSportBranches();
     const { data: trainings = [], isLoading: loading } = useTrainings({
         startDate: startOfMonth(new Date())
@@ -62,11 +62,13 @@ export default function TrainingSchedule({ onSelectSession }: { onSelectSession:
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <div>
                     <h3 className="text-xl font-semibold text-gray-800">Antrenman & Maç Takvimi</h3>
-                    <p className="text-sm text-gray-500">Yaklaşan oturumları takip edin ve planlayın</p>
+                    <p className="text-sm text-gray-500">{readOnly ? 'Kulübün antrenman ve maç programı' : 'Yaklaşan oturumları takip edin ve planlayın'}</p>
                 </div>
-                <Button onClick={() => setIsAdding(true)} className="bg-indigo-600 hover:bg-indigo-700 text-white shadow-md w-full sm:w-auto">
-                    <Plus className="h-4 w-4 mr-2" /> Program Ekle
-                </Button>
+                {!readOnly && (
+                    <Button onClick={() => setIsAdding(true)} className="bg-indigo-600 hover:bg-indigo-700 text-white shadow-md w-full sm:w-auto">
+                        <Plus className="h-4 w-4 mr-2" /> Program Ekle
+                    </Button>
+                )}
             </div>
 
             <div className="min-h-[400px]">
@@ -75,7 +77,7 @@ export default function TrainingSchedule({ onSelectSession }: { onSelectSession:
                         {Array(3).fill(0).map((_, i) => <Card key={i} className="animate-pulse h-24 bg-gray-50 border-0" />)}
                     </div>
                 ) : (
-                    <TrainingCalendar trainings={trainings} onSelectSession={onSelectSession} />
+                    <TrainingCalendar trainings={trainings} onSelectSession={onSelectSession} readOnly={readOnly} />
                 )}
             </div>
 

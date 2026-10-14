@@ -18,7 +18,7 @@ export const ROLE_PART_PERMISSIONS: Record<UserRole, number[]> = {
     [UserRole.BOARD_MEMBER]: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11], // Board Member can see all parts
     [UserRole.TUTOR]: [2, 4, 7, 11], // Tutor can see Part 2, Part 4, Part 7 and Part 11
     [UserRole.ASISTAN]: [2, 4, 7, 11], // Asistan can see Part 2, Part 4, Part 7 and Part 11
-    [UserRole.STUDENT]: [4, 7, 11], // Students can access Part 4, Part 7 and Part 11
+    [UserRole.STUDENT]: [4, 7, 9, 11], // Students can access Part 4, Part 7, Part 9 (Spor Kulübü, salt okunur bölümler) and Part 11
     [UserRole.DONOR]: [], // Donors don't have dashboard access by default
     [UserRole.ATHLETE]: [9, 11], // Athletes can access Part 9 and Part 11
 };

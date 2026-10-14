@@ -32,6 +32,17 @@ async function getLicensedSession() {
     return session;
 }
 
+const SPORTS_MANAGER_ROLES = [UserRole.ADMIN, UserRole.TUTOR, UserRole.ASISTAN, UserRole.BOARD_MEMBER];
+
+/**
+ * Kulübün kişi verisini (sporcu listesi, istatistik, öğrenci araması) döndüren
+ * okuma uçları için: paket + yönetim rolü. Spor Kulübü tüm öğrencilere açık
+ * olduğundan yalnız paket kontrolü bu uçlar için yetmez.
+ */
+async function isSportsManager() {
+    return hasRole(await getLicensedSession(), SPORTS_MANAGER_ROLES);
+}
+
 /** Oturuma bakmayan okuma uçları için yalnız paket kontrolü. */
 async function requireLicense() {
     const gate = await requirePartLicense(LICENSED_PART);
@@ -105,8 +116,7 @@ export async function deleteSportBranch(id: string) {
 
 // Athlete Actions
 export async function getAthletes(branchId?: string) {
-    const lic = await requireLicense();
-    if (!lic.ok) return { error: lic.error, data: null };
+    if (!(await isSportsManager())) return { error: 'Yetkisiz erişim', data: null };
     try {
         const athletes = await prisma.athleteProfile.findMany({
             where: branchId ? { branches: { some: { id: branchId } } } : undefined,
@@ -288,8 +298,9 @@ export async function deleteTraining(id: string) {
 
 // Attendance and Performance Actions
 export async function getTrainingDetails(trainingId: string) {
-    const lic = await requireLicense();
-    if (!lic.ok) return { error: lic.error, data: null };
+    // Branşın tüm sporcu listesi + yoklamaları döner: yalnız yönetim görür.
+    // (Spor Kulübü artık tüm öğrencilere açık olduğu için bu kapı şart.)
+    if (!(await isSportsManager())) return { error: 'Yetkisiz erişim', data: null };
     try {
         const training = await prisma.athleteTraining.findUnique({
             where: { id: trainingId },
@@ -381,8 +392,7 @@ export async function recordPerformance(trainingId: string, performances: {
 }
 
 export async function getAthleteStats(athleteId: string) {
-    const lic = await requireLicense();
-    if (!lic.ok) return { error: lic.error, data: null };
+    if (!(await isSportsManager())) return { error: 'Yetkisiz erişim', data: null };
     try {
         const performances = await prisma.athletePerformance.findMany({
             where: { athleteId },
@@ -412,8 +422,7 @@ export async function getAthleteStats(athleteId: string) {
 }
 
 export async function searchStudents(query: string) {
-    const lic = await requireLicense();
-    if (!lic.ok) return { error: lic.error, data: null };
+    if (!(await isSportsManager())) return { error: 'Yetkisiz erişim', data: null };
     try {
         const students = await prisma.user.findMany({
             where: {
@@ -657,12 +666,39 @@ export async function getMyAthleteOverview() {
             },
         });
 
+        const now = new Date();
+
+        // Kulübe kayıtlı olmayan öğrenci: Spor Kulübü tüm öğrencilere açık,
+        // ama kişisel bölümler (yoklama, performans) ona boş. Kulübün genel
+        // programını ve genel duyurularını görür.
         if (!profile) {
-            return { error: 'Sporcu profili bulunamadı', data: null };
+            const [upcomingTrainings, announcements] = await Promise.all([
+                prisma.athleteTraining.findMany({
+                    where: { date: { gte: now } },
+                    include: { branch: { select: { name: true } } },
+                    orderBy: { date: 'asc' },
+                    take: 10,
+                }),
+                prisma.sportAnnouncement.findMany({
+                    where: { branchId: null },
+                    orderBy: { createdAt: 'desc' },
+                    take: 10,
+                }),
+            ]);
+            return {
+                error: null,
+                data: JSON.parse(JSON.stringify({
+                    profile: null,
+                    upcomingTrainings,
+                    attendances: [],
+                    performances: [],
+                    announcements,
+                    stats: { attendedCount: 0, totalMarked: 0, attendanceRate: null },
+                })),
+            };
         }
 
         const branchIds = profile.branches.map((b) => b.id);
-        const now = new Date();
 
         const [upcomingTrainings, attendances, performances, announcements] = await Promise.all([
             branchIds.length
